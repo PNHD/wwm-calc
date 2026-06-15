@@ -251,6 +251,17 @@ const SLOTS = [
   { name: "Bow/Ring",  icon: <Target    className="w-4 h-4" />, label: "◯" },
 ];
 
+const SLOT_IMAGES: Record<string, string> = {
+  "Umbrella":  "icon/icon1.jpg",
+  "Rope Dart": "icon/icon1_1.jpg",
+  "Helmet":    "icon/icon3.jpg",
+  "Chest":     "icon/icon4.jpg",
+  "Bracers":   "icon/icon5.jpg",
+  "Greaves":   "icon/icon6.jpg",
+  "Pendant":   "icon/icon7.jpg",
+  "Bow/Ring":  "icon/icon8.jpg"
+};
+
 // Gradient colors per armor set (used for Equipped Slots icon badges since no
 // verified per-piece CDN images exist for armor — keeps each set visually
 // distinct without fabricating image URLs)
@@ -1799,7 +1810,7 @@ export default function App() {
                       )}
                       <div className="card-header">
                         <div className="equip-icon-wrap" style={{ width: '50px', height: '50px', borderRadius: '4px', border: '1px solid #555', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#1a1a1d' }}>
-                          <span style={{ fontSize: '1.5rem' }}>{slotIcon}</span>
+                          <img src={SLOT_IMAGES[item.slot]} alt={item.slot} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                         </div>
                         <div className="card-title">
                           <h3>{item.name}</h3>
@@ -1980,10 +1991,14 @@ export default function App() {
                   >
                     {item ? (
                       <>
+                        <img src={SLOT_IMAGES[slot.name]} alt={item.name} className="slot-image" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                         <div className="slot-name-overlay">{item.name}</div>
                       </>
                     ) : (
-                      <div className="slot-placeholder">{slot.label}</div>
+                      <>
+                        <img src={SLOT_IMAGES[slot.name]} alt={slot.label} className="slot-image-placeholder" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.3, filter: 'grayscale(1)' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                        <div className="slot-placeholder">{slot.label}</div>
+                      </>
                     )}
                   </div>
                 );
