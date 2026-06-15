@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Shield,
   HelpCircle,
@@ -210,6 +210,7 @@ export interface GearItem {
   set: string;
   subs: GearSub[];
   mastery?: number;
+  isEquipped?: boolean;
 }
 
 export interface Scheme {
@@ -530,6 +531,8 @@ export default function App() {
   const [isBatchOcrModalOpen, setIsBatchOcrModalOpen] = useState<boolean>(false);
   const [isXinfaModalOpen, setIsXinfaModalOpen] = useState<boolean>(false);
   const [xinfaModalIndex, setXinfaModalIndex] = useState<number | null>(null);
+  const [pvpMode, setPvpMode] = useState<boolean>(false);
+  const [loanDingyin, setLoanDingyin] = useState<boolean>(false);
 
   const isItemEquipped = (item: GearItem, allGear: GearItem[]): boolean => {
     if (item.isEquipped !== undefined) {
@@ -1586,10 +1589,10 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#1a1a1d] text-[#e0e0e0] font-sans antialiased selection:bg-amber-600/30 selection:text-amber-200">
-      {{/* Accent line */}}
+      {/* Accent line */}
       <div className="h-0.5 w-full bg-gradient-to-r from-amber-700 via-amber-500 to-amber-700" />
 
-      {{/* ── HEADER ── */}}
+      {/* ── HEADER ── */}
       <header>
         <div className="header-title-container">
           <div className="header-title-group">
@@ -1702,9 +1705,9 @@ export default function App() {
         </div>
       </header>
 
-      {{/* ── MAIN LAYOUT ── */}}
+      {/* ── MAIN LAYOUT ── */}
       <div className="app-layout">
-        {{/* Left Column: Inventory */}}
+        {/* Left Column: Inventory */}
         <div className="layout-left" id="main-content">
           <div id="filter-bar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative' }}>
             <div className="filter-capsule">
@@ -1830,7 +1833,7 @@ export default function App() {
           )}
         </div>
 
-        {{/* Right Column: Simulator Panel */}}
+        {/* Right Column: Simulator Panel */}
         <aside id="simulator-panel">
           <div className="sim-header" style={{ cursor: 'default' }}>
             <h2>Panel Simulator</h2>
@@ -1915,7 +1918,7 @@ export default function App() {
             </button>
           </div>
 
-          {{/* Xinfa (Inner Ways) Slots */}}
+          {/* Xinfa (Inner Ways) Slots */}
           <div className="xinfa-section" style={{ marginTop: '10px' }}>
             <div className="xinfa-grid">
               {[0, 1, 2, 3].map(index => {
@@ -1947,7 +1950,7 @@ export default function App() {
             </div>
           </div>
 
-          {{/* Equipped Slots Grid */}}
+          {/* Equipped Slots Grid */}
           <div className="sim-layout-container" style={{ marginTop: '15px' }}>
             <div className="sim-slots-grid">
               {[
@@ -2047,7 +2050,7 @@ export default function App() {
             </div>
           </div>
 
-          {{/* Graduation rate banner */}}
+          {/* Graduation rate banner */}
           <div
             className="graduation-banner"
             id="open-grad-modal-btn"
@@ -2073,7 +2076,7 @@ export default function App() {
             <div className="banner-arrow">›</div>
           </div>
 
-          {{/* Stats Display */}}
+          {/* Stats Display */}
           <div id="stats-display" className="stats-panel">
             {[
               { label: "Min Physical Atk", val: adjustedPanel.minOuter },
@@ -2103,7 +2106,7 @@ export default function App() {
         </aside>
       </div>
 
-      {{/* ── GRADUATION ANALYSIS MODAL ── */}}
+      {/* ── GRADUATION ANALYSIS MODAL ── */}
       {isGradModalOpen && (
         <div className="modal" onClick={() => setIsGradModalOpen(false)}>
           <div className="modal-content modal-content-xlarge" onClick={e => e.stopPropagation()} style={{ height: '90vh', display: 'flex', flexDirection: 'column' }}>
@@ -2112,7 +2115,7 @@ export default function App() {
               <span className="close-btn" onClick={() => setIsGradModalOpen(false)}>&times;</span>
             </div>
             <div className="modal-body grad-layout-container grad-layout-container-inline" style={{ display: 'flex', flex: 1, minHeight: 0, padding: 0 }}>
-              {{/* Left Panel */}}
+              {/* Left Panel */}
               <div className="grad-left-panel" style={{ width: '280px', flexShrink: 0, borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
                 <div className="current-rate-box">
                   <div className="label">Graduation Rate</div>
@@ -2142,7 +2145,7 @@ export default function App() {
                   })}
                 </div>
               </div>
-              {{/* Right Panel */}}
+              {/* Right Panel */}
               <div className="grad-right-panel" style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
                 <div className="grad-tabs">
                   {[
@@ -2164,7 +2167,7 @@ export default function App() {
                   ))}
                 </div>
                 <div className="grad-tab-content" style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
-                  {{/* Tab Panes */}}
+                  {/* Tab Panes */}
                   {gradModalActiveTab === "manual" && (
                     <div className="space-y-6" style={{ textAlign: 'left' }}>
                       <div className="bg-[#1c1a17] border border-amber-900/20 rounded-xl p-4 space-y-2">
@@ -3592,7 +3595,7 @@ export default function App() {
         </div>
       )}
 
-      {{/* ── EDIT ITEM MODAL ── */}}
+      {/* ── EDIT ITEM MODAL ── */}
       {isItemModalOpen && (
         <div className="modal" onClick={() => setIsItemModalOpen(false)}>
           <div className="modal-content" onClick={e => e.stopPropagation()} style={{ width: '500px', maxWidth: '95%' }}>
@@ -3749,7 +3752,7 @@ export default function App() {
         </div>
       )}
 
-      {{/* ── EXPORT/IMPORT MODAL ── */}}
+      {/* ── EXPORT/IMPORT MODAL ── */}
       {isExportImportModalOpen && (
         <div className="modal" onClick={() => setIsExportImportModalOpen(false)}>
           <div className="modal-content modal-content-export" onClick={e => e.stopPropagation()} style={{ height: '80vh', display: 'flex', flexDirection: 'column' }}>
@@ -3852,7 +3855,7 @@ export default function App() {
         </div>
       )}
 
-      {{/* ── BATCH OCR MODAL ── */}}
+      {/* ── BATCH OCR MODAL ── */}
       {isBatchOcrModalOpen && (
         <div className="modal" onClick={() => setIsBatchOcrModalOpen(false)}>
           <div className="modal-content modal-content-large" onClick={e => e.stopPropagation()} style={{ width: '600px', maxWidth: '95%' }}>
@@ -3872,7 +3875,7 @@ export default function App() {
         </div>
       )}
 
-      {{/* ── SELECT XINFA MODAL ── */}}
+      {/* ── SELECT XINFA MODAL ── */}
       {isXinfaModalOpen && (
         <div className="modal" onClick={() => setIsXinfaModalOpen(false)}>
           <div className="modal-content modal-content-large" onClick={e => e.stopPropagation()} style={{ width: '900px', maxWidth: '95%', height: '80vh', display: 'flex', flexDirection: 'column' }}>
@@ -3904,7 +3907,7 @@ export default function App() {
                   if (innerWaySearch && !iw.name.toLowerCase().includes(innerWaySearch.toLowerCase())) return false;
                   if (innerWaysFilter === "recommended") {
                     const priorityStats = (BUILD_PROFILES as any)[selectedBuild]?.priorityStats || [];
-                    const statsKeys = Object.keys(iw.stats || {});
+                    const statsKeys = iw.tiers.flatMap(t => Object.keys(t.stat || {}));
                     return statsKeys.some(s => priorityStats.includes(SUB_MAP[s] || s));
                   }
                   return true;
