@@ -1,5 +1,6 @@
-﻿import { PanelStats, TierConstants, SkillDefinition, RotationItem } from "../types";
+import { PanelStats, TierConstants, SkillDefinition, RotationItem } from "../types";
 import { WWM_DATA } from "../data/wwmData";
+import { ClassConfig, SkillData } from "../data/referenceData";
 
 const t95 = WWM_DATA.tiers["95下"];
 
@@ -24,6 +25,47 @@ export const TIERS: { [key: string]: TierConstants } = {
     name: "Tier 91 / Lv95 ★ Global (Season 3)",
   }
 };
+
+export const BUILD_MAP_TO_CHINESE: Record<string, string> = {
+  "bamboocut-dust": "破竹尘",
+  "bellstrike-umbra": "鸣金影",
+  "bellstrike-splendor": "鸣金虹",
+  "bamboocut-wind": "破竹风",
+  "stonesplit-might": "裂石钧",
+  "silkbind-jade": "牵丝玉",
+  "silkbind-deluge": "牵丝霖",
+  "bamboocut-kite": "破竹鸢",
+  "stonesplit-awe": "裂石威",
+  "stonesplit-pure-datang": "裂石钧（纯唐）",
+};
+
+function getWeaponTypeKey(weaponName: string): string {
+  const name = weaponName.toLowerCase();
+  if (name.includes("umbrella")) return "umb";
+  if (name.includes("rope")) return "rope";
+  if (name.includes("sword")) return "sword";
+  if (name.includes("spear")) return "spear";
+  if (name.includes("fan")) return "fan";
+  if (name.includes("twinblades")) return "twinblades";
+  if (name.includes("gauntlets")) return "gauntlets";
+  if (name.includes("thundercry")) return "modao";
+  if (name.includes("phalanxbane")) return "modao";
+  if (name.includes("snowparting")) return "hengdao";
+  return "single";
+}
+
+function getWeaponTypeKeyFromChinese(chType: string): string {
+  if (chType === "伞") return "umb";
+  if (chType === "绳标") return "rope";
+  if (chType === "剑") return "sword";
+  if (chType === "枪") return "spear";
+  if (chType === "扇") return "fan";
+  if (chType === "双刀") return "twinblades";
+  if (chType === "陌刀") return "modao";
+  if (chType === "横刀") return "hengdao";
+  if (chType === "拳甲") return "gauntlets";
+  return "single";
+}
 
 export const SKILL_DB: { [key: string]: SkillDefinition } = {};
 
@@ -287,8 +329,7 @@ Object.assign(SKILL_DB, STATIC_SKILLS);
 
 // Dynamically augment SKILL_DB with WWM_DATA.skills
 WWM_DATA.skills.forEach(s => {
-  const isUmb = s.weapon.toLowerCase().includes("umbrella");
-  const isRope = s.weapon.toLowerCase().includes("rope");
+  const wKey = getWeaponTypeKey(s.weapon);
   const isXinfa = s.name.toLowerCase().includes("resonance") || s.name.toLowerCase().includes("camps") || s.name.toLowerCase().includes("xinfa");
 
   SKILL_DB[s.name] = {
@@ -300,7 +341,7 @@ WWM_DATA.skills.forEach(s => {
     exPen: 0,
     isCharge: 0,
     type: isXinfa ? "xinfa" : "weapon",
-    wType: isUmb ? "umb" : isRope ? "rope" : "single",
+    wType: wKey,
     force: "",
     special: "",
     csBonus: 0,
@@ -337,20 +378,20 @@ export const ROTATION: RotationItem[] = [
 export const ROTATION_TIME = 78.5;
 
 export function getRotationForBuild(buildKey?: string): RotationItem[] {
-  if (buildKey === "nine-nine" || buildKey === "Nine-Nine" || buildKey === "nine-nine-aoe") {
-    return [
-      { name: "九枪重2蓄", count: 3, isDingyin: false, generalBonus: 0.315, yishui: 10, tiaozhan: 1 },
-      { name: "九剑Q", count: 4, isDingyin: true, generalBonus: 0.315, yishui: 10, tiaozhan: 1 },
-      { name: "九剑~", count: 12, isDingyin: false, generalBonus: 0.315, yishui: 10, tiaozhan: 1 },
-      { name: "九枪Q满", count: 2, isDingyin: true, generalBonus: 0.315, yishui: 10, tiaozhan: 1 },
-      { name: "九剑~流血", count: 8, isDingyin: false, generalBonus: 0.315, yishui: 10, tiaozhan: 1 },
-    ];
+  const cnClass = BUILD_MAP_TO_CHINESE[buildKey || "bamboocut-dust"] || "破竹尘";
+  const cfg = ClassConfig.ROTATIONS[cnClass];
+  if (cfg && cfg.rotation) {
+    return cfg.rotation;
   }
   return ROTATION;
 }
 
 export function getRotationTimeForBuild(buildKey?: string): number {
-  if (buildKey === "nine-nine" || buildKey === "Nine-Nine" || buildKey === "nine-nine-aoe") return 60;
+  const cnClass = BUILD_MAP_TO_CHINESE[buildKey || "bamboocut-dust"] || "破竹尘";
+  const cfg = ClassConfig.ROTATIONS[cnClass];
+  if (cfg && cfg.useTime !== undefined) {
+    return cfg.useTime;
+  }
   return ROTATION_TIME;
 }
 
@@ -360,7 +401,34 @@ export function calcSkill(
   tier: TierConstants,
   opts: { set: string; datang: boolean; yishui: boolean; buildKey?: string }
 ) {
-  const sk = SKILL_DB[rot.name];
+  let sk = SKILL_DB[rot.name];
+  if (!sk) {
+    const cnClass = BUILD_MAP_TO_CHINESE[opts.buildKey || "bamboocut-dust"] || "破竹尘";
+    const cfg = ClassConfig.ROTATIONS[cnClass];
+    const classSkills = cfg && cfg.skillDatabase ? cfg.skillDatabase : SkillData[cnClass];
+    const dynSk = classSkills ? classSkills[rot.name] : null;
+    if (dynSk) {
+      const wKey = getWeaponTypeKeyFromChinese(dynSk.weaponType || "");
+      const isXinfa = dynSk.type === "心法" || rot.name.includes("Resonance") || rot.name.includes("Camps") || rot.name.includes("xinfa") || rot.name.includes("歌") || rot.name.includes("章") || rot.name.includes("法") || rot.name.includes("心经");
+      
+      sk = {
+        outerRatio: dynSk.outerRatio || 0,
+        fixed: dynSk.fixed || 0,
+        eleRatio: dynSk.eleRatio || 0,
+        exCritDmg: dynSk.exCritDmg !== undefined ? dynSk.exCritDmg : 0.27,
+        exDmg: dynSk.exDmg !== undefined ? dynSk.exDmg : 0.05,
+        exPen: dynSk.exPen || 0,
+        isCharge: dynSk.isCharge || 0,
+        type: isXinfa ? "xinfa" : "weapon",
+        wType: wKey !== "single" ? wKey : (dynSk.weaponType === "伞" ? "umb" : dynSk.weaponType === "绳标" ? "rope" : "single"),
+        force: dynSk.force || "",
+        special: dynSk.special || "",
+        csBonus: dynSk.csBonus || 0,
+      };
+      SKILL_DB[rot.name] = sk;
+    }
+  }
+
   if (!sk) return { perHit: 0, total: 0 };
 
   const set = opts.set;
@@ -369,15 +437,15 @@ export function calcSkill(
   const attrRes = tier.attrRes;
 
   const jR = 1 + judgeRes;
-  let critRateInput = panel.crit;
+  let critRateInput = panel.crit || 0;
   if (set === "ivorybloom") {
     critRateInput += 5.0; 
   }
   let critEff = Math.min(0.8, critRateInput / 100 / jR);
-  let affEff = Math.min(0.4, panel.aff / 100 / jR);
-  let precEff = Math.min(1.0, 0.65 + Math.max(0, panel.prec - 65) / 100 / jR);
-  let dirCrit = panel.dcrit / 100;
-  let dirAff = panel.daff / 100;
+  let affEff = Math.min(0.4, (panel.aff || 0) / 100 / jR);
+  let precEff = Math.min(1.0, 0.65 + Math.max(0, (panel.prec || 0) - 65) / 100 / jR);
+  let dirCrit = (panel.dcrit || 0) / 100;
+  let dirAff = (panel.daff || 0) / 100;
 
   if (set === "stormrain") precEff = Math.min(1.0, precEff + 10.8 / 100 / jR);
   if (set === "eaglerise") affEff = Math.min(0.4, affEff + 6.1 / 100 / jR);
@@ -399,14 +467,21 @@ export function calcSkill(
   }
   const pWhite = Math.max(0, 1 - pCrit - pAff - pGraze);
 
-  let critMult = 1 + panel.critDmg / 100 + (sk.exCritDmg || 0);
-  let affMult = 1 + panel.affDmg / 100;
+  let critMult = 1 + (panel.critDmg || 0) / 100 + (sk.exCritDmg || 0);
+  let affMult = 1 + (panel.affDmg || 0) / 100;
   if (set === "stormrain") critMult += 0.1;
   if (opts.datang && sk.wType === "umb" && sk.type === "weapon") critMult += 0.15;
 
-  let weapBonus = panel.allArts / 100;
-  if (sk.wType === "umb") weapBonus += panel.umbBonus / 100;
-  if (sk.wType === "rope") weapBonus += panel.ropeBonus / 100;
+  let weapBonus = (panel.allArts || 0) / 100;
+  if (sk.wType === "umb") weapBonus += (panel.umbBonus || 0) / 100;
+  if (sk.wType === "rope") weapBonus += (panel.ropeBonus || 0) / 100;
+  if (sk.wType === "sword") weapBonus += (panel.swordBonus || 0) / 100;
+  if (sk.wType === "spear") weapBonus += (panel.spearBonus || 0) / 100;
+  if (sk.wType === "fan") weapBonus += (panel.fanBonus || 0) / 100;
+  if (sk.wType === "twinblades") weapBonus += (panel.twinbladesBonus || 0) / 100;
+  if (sk.wType === "modao") weapBonus += (panel.modaoBonus || 0) / 100;
+  if (sk.wType === "hengdao") weapBonus += (panel.hengdaoBonus || 0) / 100;
+  if (sk.wType === "gauntlets") weapBonus += (panel.gauntletsBonus || 0) / 100;
   if (sk.wType === "N/A") weapBonus = 0;
 
   const csBonus = set === "stars" ? 0.15 : 0;
@@ -420,17 +495,17 @@ export function calcSkill(
   const T =
     1 +
     rot.generalBonus +
-    panel.bossDmg / 100 +
+    (panel.bossDmg || 0) / 100 +
     weapBonus +
-    panel.outerDmg / 100 +
+    (panel.outerDmg || 0) / 100 +
     (sk.exDmg || 0) +
     csBonus +
     spinBonus +
-    (panel.iwGeneralDmg || 0) / 100 +
+    ((panel.iwGeneralDmg || 0) / 100) +
     setDmgBonus;
 
   const totalOuterPen =
-    panel.outerPen +
+    (panel.outerPen || 0) +
     (sk.exPen || 0) +
     (opts.yishui && rot.yishui ? rot.yishui : 0) -
     physRes;
@@ -438,8 +513,8 @@ export function calcSkill(
 
   let atkMult = set === "ironweave" ? 1.05 : 1.0;
   if (set === "eaglerise") atkMult = 1.1;
-  let minO = panel.minOuter * atkMult;
-  let maxO = panel.maxOuter * atkMult;
+  let minO = (panel.minOuter || 0) * atkMult;
+  let maxO = (panel.maxOuter || 0) * atkMult;
   if (maxO < minO) maxO = minO;
   const minO_e = Math.max(0, minO - tier.def);
   const maxO_e = Math.max(0, maxO - tier.def);
@@ -458,15 +533,15 @@ export function calcSkill(
   const dA_F = fixed * (1 + F) * T * affMult;
   const dmgFixed = (pGraze + pWhite) * dN_F + pCrit * dC_F + pAff * dA_F;
 
-  const totalPzPen = panel.pzPen - attrRes;
+  const totalPzPen = (panel.pzPen || 0) - attrRes;
   const Fpz = totalPzPen >= 0 ? totalPzPen / 200 : totalPzPen / 100;
 
   const pzMult = set === "formbend" ? 1.05 : 1.0;
-  const minPz_e = Math.max(0, (panel.minPz + (panel.wuxiangMin || 0)) * pzMult - tier.def);
-  const maxPz_e = Math.max(0, (panel.maxPz + (panel.wuxiangMax || 0)) * pzMult - tier.def);
+  const minPz_e = Math.max(0, ((panel.minPz || 0) + (panel.wuxiangMin || 0)) * pzMult - tier.def);
+  const maxPz_e = Math.max(0, ((panel.maxPz || 0) + (panel.wuxiangMax || 0)) * pzMult - tier.def);
   const avgPz_e = (minPz_e + maxPz_e) / 2;
 
-  const pzDmgBonus = panel.pzDmg / 100;
+  const pzDmgBonus = (panel.pzDmg || 0) / 100;
   const dN_PZ = avgPz_e * sk.eleRatio * (1 + Fpz) * T * (1 + pzDmgBonus);
   const dC_PZ = avgPz_e * sk.eleRatio * (1 + Fpz) * T * (1 + pzDmgBonus) * critMult;
   const dA_PZ = maxPz_e * sk.eleRatio * (1 + Fpz) * T * (1 + pzDmgBonus) * affMult;
@@ -474,7 +549,7 @@ export function calcSkill(
 
   let perHit = dmgOuter + dmgFixed + dmgPz;
 
-  if (rot.isDingyin && panel.attunedBonus > 0) {
+  if (rot.isDingyin && (panel.attunedBonus || 0) > 0) {
     perHit *= 1 + panel.attunedBonus / 100;
   }
 
@@ -482,13 +557,10 @@ export function calcSkill(
   return { perHit, total };
 }
 
-export function calcBaseline(tier: TierConstants) {
-  // Reference "graduation" build for Global T91 — sourced from wherewindsmeetcalculator.com
-  // These are PANEL stats (what you see on character screen), NOT including food
-  // Food is added separately below matching how the game works
+export function calcBaseline(tier: TierConstants, buildKey?: string): number {
   const ref: PanelStats = {
-    minOuter: 1745,   // panel min phys atk (NOT including food)
-    maxOuter: 4046,   // panel max phys atk (NOT including food)
+    minOuter: 1745,
+    maxOuter: 4046,
     outerPen: 56.3,
     minPz: 402.9,
     maxPz: 721.0,
@@ -512,12 +584,14 @@ export function calcBaseline(tier: TierConstants) {
     set: "stars",
   };
 
+  const rotation = getRotationForBuild(buildKey);
   let total = 0;
-  ROTATION.forEach((sk) => {
-    total += calcSkill(sk, ref, tier, {
+  rotation.forEach((item) => {
+    total += calcSkill(item, ref, tier, {
       set: "stars",
       datang: false,
-      yishui: true,   // Song of Yi active (standard)
+      yishui: true,
+      buildKey,
     }).total;
   });
   return total;

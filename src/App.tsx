@@ -34,7 +34,7 @@ import {
   Crosshair,
 } from "lucide-react";
 import { PanelStats, TierConstants } from "./types";
-import { TIERS, calcSkill, calcBaseline, ROTATION, ROTATION_TIME } from "./utils/calc";
+import { TIERS, calcSkill, calcBaseline, getRotationForBuild, getRotationTimeForBuild } from "./utils/calc";
 import { INNER_WAYS } from "./data/innerways";
 import { INNER_WAY_IMAGES, WEAPON_IMAGES_G8, MYSTIC_SKILL_IMAGES, ARMOR_SET_IMAGES } from "./data/game8Images";
 import { WWM_DATA } from "./data/wwmData";
@@ -51,6 +51,9 @@ const PATH_ICONS: Record<string, string> = {
   "stonesplit-might":    "https://static0.fextralifeimages.com/file/wherewindsmeet/d/d1/Stonesplit-might.png",
   "bamboocut-dust":      "https://static0.fextralifeimages.com/file/wherewindsmeet/0/05/Bamboocut-dust-where-winds-meet-wiki-guide.webp",
   "stonesplit-scale":    "https://static0.fextralifeimages.com/file/wherewindsmeet/9/96/Stonesplit-strength-path-where-winds-meet-wiki-guide.webp",
+  "bamboocut-kite":      "https://static0.fextralifeimages.com/file/wherewindsmeet/9/9f/Bamboocut-wind.png",
+  "stonesplit-awe":      "https://static0.fextralifeimages.com/file/wherewindsmeet/d/d1/Stonesplit-might.png",
+  "stonesplit-pure-datang": "https://static0.fextralifeimages.com/file/wherewindsmeet/9/96/Stonesplit-strength-path-where-winds-meet-wiki-guide.webp",
 };
 
 const WEAPON_ICONS: Record<string, string> = {
@@ -79,8 +82,11 @@ const BUILD_WEAPONS: Record<string, [string, string]> = {
   "bellstrike-umbra":   ["strategic-sword", "heavenquaker-spear"],
   "silkbind-jade":      ["inkwell-fan", "vernal-umbrella"],
   "silkbind-deluge":    ["panacea-fan", "soulshade-umbrella"],
-  "stonesplit-might":   ["thundercry-blade", "stormbreaker-spear"],
+  "stonesplit-might":   ["snowparting-blade", "phalanxbane-blade"],
   "stonesplit-scale":   ["snowparting-blade", "phalanxbane-blade"],
+  "bamboocut-kite":     ["heavenstrike-gauntlets", "unfettered-rope-dart"],
+  "stonesplit-awe":     ["thundercry-blade", "stormbreaker-spear"],
+  "stonesplit-pure-datang": ["thundercry-blade", "snowparting-blade"],
 };
 
 const CLASS_WEAPONS: Record<string, string[]> = {
@@ -93,6 +99,7 @@ const CLASS_WEAPONS: Record<string, string[]> = {
   "Rocksplit-Jun": ["Snowparting Blade", "Phalanxbane Blade"],
   "Pure-Healer": ["Panacea Fan", "Soulshade Umbrella"],
   "Fire-Fist-Healer": ["Panacea Fan", "Soulshade Umbrella"],
+  "Bamboocut-Bird": ["Heavenstrike Gauntlets", "Unfettered Rope Dart"],
 };
 
 const PREDEFINED_WEAPONS = [
@@ -150,14 +157,15 @@ const GRAD_MARKERS = [
 
 const ATTUNED_BONUS_LABEL: Record<string, string> = {
   "bamboocut-dust": "Drunken Spring: Skill DMG Bonus (Attuned Weapon Bonus)",
-  "bamboocut-wind": "Mortal Rope Dart: Skill DMG Bonus (Attuned Weapon Bonus)",
-  "bamboocut-kite": "Fist: Charged Skill DMG Bonus (Attuned Weapon Bonus)",
-  "bellstrike-umbra": "Strategic Sword: Skill DMG Bonus (Attuned Weapon Bonus)",
-  "bellstrike-splendor": "Nameless Sword: Charged Skill DMG Bonus (Attuned Weapon Bonus)",
-  "silkbind-jade": "Vernal Umbrella: Special Skill DMG Bonus (Attuned Weapon Bonus)",
-  "stonesplit-might": "Guandao: Charged/Derived Skill DMG Bonus (Attuned Weapon Bonus)",
-  "stonesplit-scale": "Guandao: Charged/Derived Skill DMG Bonus (Attuned Weapon Bonus)",
-  "silkbind-deluge": "Panacea Fan: Healing Bonus (Attuned Weapon Bonus)",
+  "bamboocut-wind": "Chestnut Wanderer: Rat DMG Bonus (Attuned Weapon Bonus)",
+  "bamboocut-kite": "Heavenstrike: Charge Skill DMG Bonus (Attuned Weapon Bonus)",
+  "bellstrike-umbra": "Ji Ju Nine Swords: Bleed DMG Bonus (Attuned Weapon Bonus)",
+  "bellstrike-splendor": "Nameless Swordplay: Charge Skill DMG Bonus (Attuned Weapon Bonus)",
+  "silkbind-jade": "Ninefold Spring: Special Skill DMG Bonus (Attuned Weapon Bonus)",
+  "silkbind-deluge": "River Pharmacopoeia: Healing Bonus (Attuned Weapon Bonus)",
+  "stonesplit-might": "Ten Directions Array: Charge Skill DMG Bonus (Attuned Weapon Bonus)",
+  "stonesplit-awe": "Alas Swordplay: Charge Skill DMG Bonus (Attuned Weapon Bonus)",
+  "stonesplit-pure-datang": "Snowparting Blade: Derivation DMG Bonus (Attuned Weapon Bonus)",
 };
 
 const INITIAL_PANEL: PanelStats = {
@@ -179,6 +187,13 @@ const INITIAL_PANEL: PanelStats = {
   bossDmg: 0,
   umbBonus: 5.1,
   ropeBonus: 0,
+  swordBonus: 0,
+  spearBonus: 0,
+  fanBonus: 0,
+  twinbladesBonus: 0,
+  modaoBonus: 0,
+  hengdaoBonus: 0,
+  gauntletsBonus: 0,
   allArts: 0,
   attunedBonus: 0,
   wuxiangMin: 0,
@@ -211,6 +226,7 @@ export interface GearItem {
   subs: GearSub[];
   mastery?: number;
   isEquipped?: boolean;
+  weaponType?: string;
 }
 
 export interface Scheme {
@@ -252,15 +268,49 @@ const SLOTS = [
 ];
 
 const SLOT_IMAGES: Record<string, string> = {
-  "Umbrella":  "icon/icon1.jpg",
-  "Rope Dart": "icon/icon1_1.jpg",
-  "Helmet":    "icon/icon3.jpg",
-  "Chest":     "icon/icon4.jpg",
-  "Bracers":   "icon/icon5.jpg",
-  "Greaves":   "icon/icon6.jpg",
-  "Pendant":   "icon/icon7.jpg",
-  "Bow/Ring":  "icon/icon8.jpg"
+  "Umbrella":  "icon/icon1_3.jpg",
+  "Rope Dart": "icon/icon1_5.jpg",
+  "Helmet":    "icon/icon5.jpg",
+  "Chest":     "icon/icon6.jpg",
+  "Bracers":   "icon/icon8.jpg",
+  "Greaves":   "icon/icon7.jpg",
+  "Pendant":   "icon/icon4.jpg",
+  "Bow/Ring":  "icon/icon3.jpg"
 };
+
+const BUILD_WEAPON_TYPES: Record<string, [string, string]> = {
+  "bamboocut-dust": ["Umbrella", "Rope Dart"],
+  "bellstrike-umbra": ["Sword", "Spear"],
+  "bellstrike-splendor": ["Sword", "Spear"],
+  "bamboocut-wind": ["Dual Blades", "Rope Dart"],
+  "stonesplit-might": ["Hengdao", "Modao"],
+  "silkbind-jade": ["Umbrella", "Fan"],
+  "silkbind-deluge": ["Umbrella", "Fan"],
+  "bamboocut-kite": ["Gauntlets", "Rope Dart"],
+  "stonesplit-awe": ["Modao", "Spear"],
+  "stonesplit-pure-datang": ["Hengdao", "Modao"],
+};
+
+const WEAPON_ICON_MAP: Record<string, string> = {
+  "Sword": "icon/icon1_1.jpg",
+  "Spear": "icon/icon1_2.jpg",
+  "Umbrella": "icon/icon1_3.jpg",
+  "Fan": "icon/icon1_4.jpg",
+  "Rope Dart": "icon/icon1_5.jpg",
+  "Dual Blades": "icon/icon1_6.jpg",
+  "Modao": "icon/icon1_7.jpg",
+  "Hengdao": "icon/icon1_8.jpg",
+  "Gauntlets": "icon/icon1_9.jpg",
+};
+
+function getWeaponIconUrlByType(weaponType: string | undefined, fallbackSlot: string, buildKey: string): string {
+  if (weaponType && WEAPON_ICON_MAP[weaponType]) {
+    return WEAPON_ICON_MAP[weaponType];
+  }
+  const defaultTypes = BUILD_WEAPON_TYPES[buildKey] || ["Umbrella", "Rope Dart"];
+  const defaultType = fallbackSlot === "Umbrella" ? defaultTypes[0] : defaultTypes[1];
+  return WEAPON_ICON_MAP[defaultType] || SLOT_IMAGES[fallbackSlot];
+}
 
 // Gradient colors per armor set (used for Equipped Slots icon badges since no
 // verified per-piece CDN images exist for armor — keeps each set visually
@@ -273,6 +323,8 @@ const SET_BADGE_COLORS: Record<string, string> = {
   "ivorybloom":    "from-pink-400 to-rose-700",         // Ivorybloom
   "rainwhisper":   "from-indigo-400 to-blue-800",       // Rainwhisper
   "pursuing":      "from-purple-400 to-violet-700",     // Pursuing Shadow
+  "plume":         "from-cyan-400 to-blue-600",          // Plume
+  "string":        "from-indigo-500 to-purple-800",     // Startling String
   "shakenhill":    "from-stone-400 to-stone-700",
   "swallowreturn": "from-orange-400 to-orange-700",
   "ironweave":     "from-slate-400 to-slate-700",
@@ -312,6 +364,14 @@ const SUB_MAP: Record<string, keyof PanelStats> = {
   "Attr Pen": "pzPen",
   "Bamboocut DMG%": "pzDmg",
   "Umbrella Bonus": "umbBonus",
+  "Rope Dart Bonus": "ropeBonus",
+  "Sword Bonus": "swordBonus",
+  "Spear Bonus": "spearBonus",
+  "Fan Bonus": "fanBonus",
+  "Twinblades Bonus": "twinbladesBonus",
+  "Modao Bonus": "modaoBonus",
+  "Hengdao Bonus": "hengdaoBonus",
+  "Gauntlets Bonus": "gauntletsBonus",
   "All Weapon": "allArts",
   "Phys DMG%": "outerDmg",
   "Boss DMG%": "bossDmg",
@@ -394,7 +454,7 @@ const BUILD_PROFILES = {
     priorityStats: ["maxPz","pzPen","maxOuter","crit","outerPen"],
   },
   "stonesplit-might": {
-    label: "Stonesplit-Might", weapons: "Thundercry Blade + Stormbreaker Spear",
+    label: "Stonesplit-Might", weapons: "Snowparting Blade + Phalanxbane Blade",
     tier: "T1 Tank", color: "text-stone-400",
     gradTargets: { maxOuter: 3500, minOuter: 1400, outerPen: 38.0, crit: 81.2, aff: 21.75, critDmg: 45 },
     notes: "Priority: Max Phys ATK → Crit Rate → Phys Pen. Avoid Attr ATK stats (useless for this path).",
@@ -414,6 +474,27 @@ const BUILD_PROFILES = {
     notes: "Focus on healing power > personal DPS. Do NOT chase Bamboocut ATK or high pen.",
     priorityStats: ["maxOuter","crit","aff","outerPen","allArts"],
   },
+  "bamboocut-kite": {
+    label: "Bamboocut-Kite", weapons: "Heavenstrike Gauntlets + Unfettered Rope Dart",
+    tier: "T0 AoE", color: "text-amber-600",
+    gradTargets: { maxOuter: 3800, minOuter: 1500, outerPen: 45.0, crit: 116.9, aff: 14.7, critDmg: 54 },
+    notes: "Priority: Max Phys ATK → Bamboocut ATK → Phys Pen. Gauntlets + Rope Dart.",
+    priorityStats: ["maxOuter","outerPen","crit","critDmg","maxPz","ropeBonus"],
+  },
+  "stonesplit-awe": {
+    label: "Stonesplit-Awe", weapons: "Thundercry Blade + Stormbreaker Spear",
+    tier: "T0 Tank", color: "text-red-500",
+    gradTargets: { maxOuter: 3900, minOuter: 1600, outerPen: 42.0, crit: 90.0, aff: 30.0, critDmg: 50 },
+    notes: "Priority: Max Phys ATK → Crit Rate → Phys Pen. Modao + Spear.",
+    priorityStats: ["maxOuter","crit","outerPen","critDmg","allArts"],
+  },
+  "stonesplit-pure-datang": {
+    label: "Stonesplit-Pure Datang", weapons: "Thundercry Blade + Snowparting Blade",
+    tier: "T0 Single", color: "text-rose-600",
+    gradTargets: { maxOuter: 4200, minOuter: 1800, outerPen: 50.0, crit: 100.0, aff: 20.0, critDmg: 55 },
+    notes: "Priority: Max Phys ATK → Crit Rate → Phys Pen. Hengdao + Modao.",
+    priorityStats: ["maxOuter","crit","outerPen","critDmg","allArts"],
+  },
 };
 
 const SET_EMOJI: Record<string, string> = {
@@ -424,10 +505,46 @@ const SET_EMOJI: Record<string, string> = {
   "ivorybloom": "🌸",      // Ivorybloom
   "rainwhisper": "💧",     // Rainwhisper
   "pursuing": "👥",        // Pursuing Shadow
+  "plume": "🪶",          // Plume
+  "string": "🪕",         // Startling String
   "shakenhill": "⛰️",
   "swallowreturn": "🕊️",
   "ironweave": "🛡️",
   "none": "🔹",
+};
+
+const getSetName = (setKey: string): string => {
+  if (setKey === "pursuing") return "Pursuing Shadow";
+  if (setKey === "plume") return "Plume";
+  if (setKey === "string") return "Startling String";
+  if (setKey === "none") return "No Set / Mixed";
+  return ARMOR_SETS[setKey as keyof typeof ARMOR_SETS]?.name || setKey;
+};
+
+const getSlotLabel = (slotName: string): string => {
+  if (slotName === "Umbrella") return "Weapon 1";
+  if (slotName === "Rope Dart") return "Weapon 2";
+  return slotName;
+};
+
+const getSetOptionsForSlot = (slot: string) => {
+  if (slot === "Umbrella" || slot === "Rope Dart" || slot === "Pendant") {
+    return [
+      { key: "none", name: "No Set / Mixed" }
+    ];
+  }
+  if (slot === "Bow/Ring") {
+    return [
+      { key: "none", name: "No Set / Mixed" },
+      { key: "pursuing", name: "Pursuing Shadow" },
+      { key: "plume", name: "Plume" },
+      { key: "string", name: "Startling String" }
+    ];
+  }
+  return Object.entries(ARMOR_SETS).map(([key, s]) => ({
+    key,
+    name: s.name
+  }));
 };
 
 const ARMOR_SETS = {
@@ -436,7 +553,7 @@ const ARMOR_SETS = {
     stat2pc: { minOuter: 106 },
     desc2pc: "2/4: Min Physical Attack +106",
     desc4pc: "4/4: Hitting boss or 2+ enemies grants a Stars Align stack (5 sec): +3% Martial Art Skill DMG per stack, max 5 stacks = +15%. Stacks are lost when hit.",
-    recommended: ["bamboocut-dust"],
+    recommended: ["bamboocut-dust", "bamboocut-kite"],
   },
   "eaglerise": {
     name: "Hawking",
@@ -472,12 +589,12 @@ const ARMOR_SETS = {
     stat2pc: { prec: 10.8 },
     desc2pc: "+10.8% Precision Rate",
     desc4pc: "After Light Attack/Airborne Light Attack, Heavy Attack DMG increased",
-    recommended: ["silkbind-jade"],
+    recommended: ["silkbind-jade", "stonesplit-pure-datang"],
   },
   "swallowreturn": {
     name: "Swallow Return",
     stat2pc: { minOuter: 106 },
-    desc2pc: "+106 Min Physical ATK",
+    desc2pc: "+106 Min Physical Attack",
     desc4pc: "Light Attacks deal +15% DMG to targets above 50% HP",
     recommended: ["bamboocut-wind"],
   },
@@ -486,7 +603,7 @@ const ARMOR_SETS = {
     stat2pc: {},
     desc2pc: "+Max HP",
     desc4pc: "+10% Critical DMG and healing. Additional effects.",
-    recommended: ["stonesplit-might"],
+    recommended: ["stonesplit-might", "stonesplit-awe"],
   },
   "ivorybloom": {
     name: "Ivorybloom",
@@ -562,6 +679,22 @@ export default function App() {
     const updated = gear.map(g => {
       if (g.slot === slotName) {
         return { ...g, isEquipped: false };
+      }
+      return g;
+    });
+    saveActiveGear(updated);
+  };
+
+  const toggleEquip = (item: GearItem) => {
+    const gear = getActiveGear();
+    const isCurrentlyEquipped = isItemEquipped(item, gear);
+    const updated = gear.map(g => {
+      if (g.slot === item.slot) {
+        if (g.id === item.id) {
+          return { ...g, isEquipped: true };
+        } else {
+          return { ...g, isEquipped: false };
+        }
       }
       return g;
     });
@@ -767,6 +900,14 @@ export default function App() {
     "Attr Pen": 1,
     "Bamboocut DMG%": 1,
     "Umbrella Bonus": 1,
+    "Rope Dart Bonus": 1,
+    "Sword Bonus": 1,
+    "Spear Bonus": 1,
+    "Fan Bonus": 1,
+    "Twinblades Bonus": 1,
+    "Modao Bonus": 1,
+    "Hengdao Bonus": 1,
+    "Gauntlets Bonus": 1,
     "All Weapon": 1,
     "Phys DMG%": 1,
     "Boss DMG%": 1,
@@ -774,7 +915,7 @@ export default function App() {
 
   const computeTotalDamage = (p: PanelStats) => {
     let totalDmg = 0;
-    ROTATION.forEach((item) => {
+    getRotationForBuild(selectedBuild).forEach((item) => {
       const { total } = calcSkill(item, p, activeTier, {
         set: p.set || "gold",
         datang,
@@ -833,6 +974,7 @@ export default function App() {
   const [formMain, setFormMain] = useState("");
   const [formSet, setFormSet] = useState("stars");
   const [formMastery, setFormMastery] = useState<string>("");
+  const [formWeaponType, setFormWeaponType] = useState<string>("Sword");
   const [formSubs, setFormSubs] = useState<{type: string; val: string; isTuned?: boolean}[]>(
     Array(6).fill(null).map(() => ({ type: "Max Phys Atk", val: "", isTuned: false }))
   );
@@ -842,8 +984,16 @@ export default function App() {
     setFormName("");
     setFormQuality("gold");
     setFormMain("");
-    setFormSet("stars");
+    if (selectedSlot === "Umbrella" || selectedSlot === "Rope Dart" || selectedSlot === "Pendant") {
+      setFormSet("none");
+    } else if (selectedSlot === "Bow/Ring") {
+      setFormSet("pursuing");
+    } else {
+      setFormSet("stars");
+    }
     setFormMastery("");
+    const defaultTypes = BUILD_WEAPON_TYPES[selectedBuild] || ["Umbrella", "Rope Dart"];
+    setFormWeaponType(selectedSlot === "Umbrella" ? defaultTypes[0] : selectedSlot === "Rope Dart" ? defaultTypes[1] : "Sword");
     setFormSubs(Array(6).fill(null).map(() => ({ type: "Max Phys Atk", val: "", isTuned: false })));
     setIsItemModalOpen(true);
   };
@@ -855,6 +1005,9 @@ export default function App() {
     setFormMain(item.main);
     setFormSet(item.set);
     setFormMastery(item.mastery !== undefined ? item.mastery.toString() : "");
+    setSelectedSlot(item.slot);
+    const defaultTypes = BUILD_WEAPON_TYPES[selectedBuild] || ["Umbrella", "Rope Dart"];
+    setFormWeaponType(item.weaponType || (item.slot === "Umbrella" ? defaultTypes[0] : item.slot === "Rope Dart" ? defaultTypes[1] : "Sword"));
     const subs = [...item.subs];
     while (subs.length < 6) {
       subs.push({ type: "Other", val: "", isTuned: false });
@@ -881,6 +1034,7 @@ export default function App() {
     if (editingItem) {
       updatedGear = activeGear.map(it => {
         if (it.id === editingItem.id) {
+          const isWeapon = it.slot === "Umbrella" || it.slot === "Rope Dart";
           return {
             ...it,
             name: formName,
@@ -888,12 +1042,14 @@ export default function App() {
             main: formMain,
             set: formSet,
             mastery: masteryVal,
-            subs: savedSubs
+            subs: savedSubs,
+            weaponType: isWeapon ? formWeaponType : undefined
           };
         }
         return it;
       });
     } else {
+      const isWeapon = selectedSlot === "Umbrella" || selectedSlot === "Rope Dart";
       const newItem: GearItem = {
         id: "gear-" + Date.now(),
         slot: selectedSlot,
@@ -902,7 +1058,8 @@ export default function App() {
         main: formMain,
         set: formSet,
         mastery: masteryVal,
-        subs: savedSubs
+        subs: savedSubs,
+        weaponType: isWeapon ? formWeaponType : undefined
       };
       updatedGear = [...activeGear, newItem];
     }
@@ -1184,6 +1341,13 @@ export default function App() {
             bossDmg: 0,
             umbBonus: 2.0,
             ropeBonus: 0,
+            swordBonus: 0,
+            spearBonus: 0,
+            fanBonus: 0,
+            twinbladesBonus: 0,
+            modaoBonus: 0,
+            hengdaoBonus: 0,
+            gauntletsBonus: 0,
             allArts: 0,
             attunedBonus: 0,
             wuxiangMin: 0,
@@ -1216,6 +1380,13 @@ export default function App() {
             bossDmg: 4.0,
             umbBonus: 4.5,
             ropeBonus: 0,
+            swordBonus: 0,
+            spearBonus: 0,
+            fanBonus: 0,
+            twinbladesBonus: 0,
+            modaoBonus: 0,
+            hengdaoBonus: 0,
+            gauntletsBonus: 0,
             allArts: 3.5,
             attunedBonus: 0,
             wuxiangMin: 0,
@@ -1248,6 +1419,13 @@ export default function App() {
             bossDmg: 7.6,
             umbBonus: 7.4,
             ropeBonus: 0,
+            swordBonus: 0,
+            spearBonus: 0,
+            fanBonus: 0,
+            twinbladesBonus: 0,
+            modaoBonus: 0,
+            hengdaoBonus: 0,
+            gauntletsBonus: 0,
             allArts: 7.2,
             attunedBonus: 0,
             wuxiangMin: 0,
@@ -1364,13 +1542,13 @@ export default function App() {
 
   // 3. Compute baseline reference graduation score
   const baselineScore = useMemo(() => {
-    return calcBaseline(activeTier);
-  }, [activeTier]);
+    return calcBaseline(activeTier, selectedBuild);
+  }, [activeTier, selectedBuild]);
 
   // 4. Compute Rotation list damage
   const rotationStats = useMemo(() => {
     let totalDmg = 0;
-    const items = ROTATION.map((item) => {
+    const items = getRotationForBuild(selectedBuild).map((item) => {
       const { perHit, total } = calcSkill(item, adjustedPanel, activeTier, {
         set: adjustedPanel.set,
         datang,
@@ -1385,7 +1563,7 @@ export default function App() {
       };
     });
 
-    const dps = totalDmg / ROTATION_TIME;
+    const dps = totalDmg / getRotationTimeForBuild(selectedBuild);
     const gradRate = (totalDmg / baselineScore) * 100;
 
     return {
@@ -1394,7 +1572,7 @@ export default function App() {
       dps,
       gradRate,
     };
-  }, [adjustedPanel, activeTier, datang, yishui, baselineScore]);
+  }, [adjustedPanel, activeTier, datang, yishui, selectedBuild, baselineScore]);
 
   // 5. Live Stat Priority: % graduation gain/loss per substat roll, computed against the CURRENT panel
   const statPriorityList = useMemo(() => {
@@ -1411,6 +1589,14 @@ export default function App() {
       { key: "pzPen", label: "Bamboocut Pen", roll: 9.0, unit: "%" },
       { key: "dcrit", label: "Direct Crit Rate", roll: 4.6, unit: "%" },
       { key: "umbBonus", label: "Umbrella Bonus", roll: 2.0, unit: "%" },
+      { key: "ropeBonus", label: "Rope Dart Bonus", roll: 2.0, unit: "%" },
+      { key: "swordBonus", label: "Sword Bonus", roll: 2.0, unit: "%" },
+      { key: "spearBonus", label: "Spear Bonus", roll: 2.0, unit: "%" },
+      { key: "fanBonus", label: "Fan Bonus", roll: 2.0, unit: "%" },
+      { key: "twinbladesBonus", label: "Twinblades Bonus", roll: 2.0, unit: "%" },
+      { key: "modaoBonus", label: "Modao Bonus", roll: 2.0, unit: "%" },
+      { key: "hengdaoBonus", label: "Hengdao Bonus", roll: 2.0, unit: "%" },
+      { key: "gauntletsBonus", label: "Gauntlets Bonus", roll: 2.0, unit: "%" },
       { key: "allArts", label: "All Weapon Bonus", roll: 2.0, unit: "%" },
       { key: "bossDmg", label: "Boss DMG", roll: 2.0, unit: "%" },
       { key: "outerDmg", label: "Phys DMG", roll: 2.0, unit: "%" },
@@ -1418,7 +1604,7 @@ export default function App() {
 
     const gradFor = (p: PanelStats) => {
       let total = 0;
-      ROTATION.forEach((item) => {
+      getRotationForBuild(selectedBuild).forEach((item) => {
         const { total: dmg } = calcSkill(item, p, activeTier, {
           set: p.set || adjustedPanel.set,
           datang,
@@ -1459,7 +1645,7 @@ export default function App() {
     profPanel.iwPzDmg = iwStats.pzDmg;
 
     let totalDmg = 0;
-    ROTATION.forEach((item) => {
+    getRotationForBuild(selectedBuild).forEach((item) => {
       const { total } = calcSkill(item, profPanel, activeTier, {
         set: profPanel.set || "gold",
         datang,
@@ -1469,7 +1655,7 @@ export default function App() {
       totalDmg += total;
     });
 
-    const dps = totalDmg / ROTATION_TIME;
+    const dps = totalDmg / getRotationTimeForBuild(selectedBuild);
     const gradRate = (totalDmg / baselineScore) * 100;
 
     return {
@@ -1750,7 +1936,15 @@ export default function App() {
                 const initialSlot = gearFilterSlot === "ALL" ? "Umbrella" : gearFilterSlot;
                 setSelectedSlot(initialSlot);
                 setFormMain("");
-                setFormSet("stars");
+                if (initialSlot === "Umbrella" || initialSlot === "Rope Dart" || initialSlot === "Pendant") {
+                  setFormSet("none");
+                } else if (initialSlot === "Bow/Ring") {
+                  setFormSet("pursuing");
+                } else {
+                  setFormSet("stars");
+                }
+                const defaultTypes = BUILD_WEAPON_TYPES[selectedBuild] || ["Umbrella", "Rope Dart"];
+                setFormWeaponType(initialSlot === "Umbrella" ? defaultTypes[0] : initialSlot === "Rope Dart" ? defaultTypes[1] : "Sword");
                 setFormMastery("");
                 setFormSubs([
                   { type: "Other", val: "" },
@@ -1802,20 +1996,47 @@ export default function App() {
                   return (
                     <div
                       key={item.id}
-                      onClick={() => openEditModal(item)}
+                      onClick={() => toggleEquip(item)}
                       className={`equip-card ${borderClass}`}
+                      style={{ cursor: 'pointer', position: 'relative' }}
                     >
                       {isEquipped && (
                         <span className="equipped-badge">Equipped</span>
                       )}
-                      <div className="card-header">
+                      <div className="card-header" style={{ position: 'relative', paddingRight: '35px' }}>
                         <div className="equip-icon-wrap" style={{ width: '50px', height: '50px', borderRadius: '4px', border: '1px solid #555', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#1a1a1d' }}>
-                          <img src={SLOT_IMAGES[item.slot]} alt={item.slot} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                          <img src={(item.slot === "Umbrella" || item.slot === "Rope Dart") ? getWeaponIconUrlByType(item.weaponType, item.slot, selectedBuild) : SLOT_IMAGES[item.slot]} alt={item.slot} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                         </div>
-                        <div className="card-title">
-                          <h3>{item.name}</h3>
-                          <span>{item.slot}</span>
+                        <div className="card-title" style={{ flex: 1, minWidth: 0 }}>
+                          <h3 style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.name}</h3>
+                          <span style={{ fontSize: '0.8rem', color: 'var(--text-sub)' }}>
+                            {getSlotLabel(item.slot)}{item.weaponType ? ` (${item.weaponType})` : ""}
+                          </span>
                         </div>
+                        <button
+                          className="edit-btn"
+                          style={{
+                            position: 'absolute',
+                            right: '0px',
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            background: 'transparent',
+                            border: 'none',
+                            color: '#d48c2a',
+                            fontSize: '18px',
+                            cursor: 'pointer',
+                            padding: '4px 8px',
+                            borderRadius: '4px',
+                            zIndex: 10
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEditModal(item);
+                          }}
+                          title="Edit Gear"
+                        >
+                          ✎
+                        </button>
                       </div>
                       <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '10px' }}>
                         <div className="stat-line main-stat">
@@ -1964,45 +2185,52 @@ export default function App() {
           {/* Equipped Slots Grid */}
           <div className="sim-layout-container" style={{ marginTop: '15px' }}>
             <div className="sim-slots-grid">
-              {[
-                { name: "Umbrella", key: "weapon1", label: "Weapon 1" },
-                { name: "Rope Dart", key: "weapon2", label: "Weapon 2" },
-                { name: "Helmet", key: "head", label: "Helmet" },
-                { name: "Chest", key: "chest", label: "Chest" },
-                { name: "Bracers", key: "hands", label: "Hands" },
-                { name: "Greaves", key: "legs", label: "Legs" },
-                { name: "Pendant", key: "pendant", label: "Pendant" },
-                { name: "Bow/Ring", key: "ring", label: "Ring" }
-              ].map(slot => {
-                const item = getActiveGear().find(it => it.slot === slot.name && isItemEquipped(it, getActiveGear()));
-                return (
-                  <div
-                    key={slot.key}
-                    className="sim-slot"
-                    data-slot-key={slot.key}
-                    onClick={() => {
-                      if (item) {
-                        unequipItem(slot.name);
-                      } else {
-                        setGearFilterSlot(slot.name);
-                      }
-                    }}
-                    title={item ? `Equipped: ${item.name}. Click to unequip.` : `Empty. Click to filter inventory.`}
-                  >
-                    {item ? (
-                      <>
-                        <img src={SLOT_IMAGES[slot.name]} alt={item.name} className="slot-image" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                        <div className="slot-name-overlay">{item.name}</div>
-                      </>
-                    ) : (
-                      <>
-                        <img src={SLOT_IMAGES[slot.name]} alt={slot.label} className="slot-image-placeholder" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.3, filter: 'grayscale(1)' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                        <div className="slot-placeholder">{slot.label}</div>
-                      </>
-                    )}
-                  </div>
-                );
-              })}
+              {(() => {
+                const defaultTypes = BUILD_WEAPON_TYPES[selectedBuild] || ["Umbrella", "Rope Dart"];
+                return [
+                  { name: "Umbrella", key: "weapon1", label: "Weapon 1" },
+                  { name: "Rope Dart", key: "weapon2", label: "Weapon 2" },
+                  { name: "Helmet", key: "head", label: "Helmet" },
+                  { name: "Chest", key: "chest", label: "Chest" },
+                  { name: "Bracers", key: "hands", label: "Hands" },
+                  { name: "Greaves", key: "legs", label: "Legs" },
+                  { name: "Pendant", key: "pendant", label: "Pendant" },
+                  { name: "Bow/Ring", key: "ring", label: "Ring" }
+                ].map(slot => {
+                  const item = getActiveGear().find(it => it.slot === slot.name && isItemEquipped(it, getActiveGear()));
+                  const isWeapon = slot.name === "Umbrella" || slot.name === "Rope Dart";
+                  const slotImgSrc = isWeapon 
+                    ? getWeaponIconUrlByType(item?.weaponType, slot.name, selectedBuild) 
+                    : SLOT_IMAGES[slot.name];
+                  return (
+                    <div
+                      key={slot.key}
+                      className="sim-slot"
+                      data-slot-key={slot.key}
+                      onClick={() => {
+                        if (item) {
+                          unequipItem(slot.name);
+                        } else {
+                          setGearFilterSlot(slot.name);
+                        }
+                      }}
+                      title={item ? `Equipped: ${item.name}. Click to unequip.` : `Empty. Click to filter inventory.`}
+                    >
+                      {item ? (
+                        <>
+                          <img src={slotImgSrc} alt={item.name} className="slot-image" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                          <div className="slot-name-overlay">{item.name}</div>
+                        </>
+                      ) : (
+                        <>
+                          <img src={slotImgSrc} alt={slot.label} className="slot-image-placeholder" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.3, filter: 'grayscale(1)' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                          <div className="slot-placeholder">{slot.label}</div>
+                        </>
+                      )}
+                    </div>
+                  );
+                });
+              })()}
             </div>
             <div className="sim-side-panel">
               <div className="sim-slot bow-slot">
@@ -2153,7 +2381,7 @@ export default function App() {
                       <div key={slot.name} className="grad-equip-item" onClick={() => { setIsGradModalOpen(false); setGearFilterSlot(slot.name); }}>
                         <div className="grad-equip-info">
                           <div className="grad-equip-name">{item ? item.name : "— Empty Slot —"}</div>
-                          <div className="grad-equip-sub">{slot.name}</div>
+                          <div className="grad-equip-sub">{getSlotLabel(slot.name)}</div>
                         </div>
                       </div>
                     );
@@ -2272,7 +2500,7 @@ export default function App() {
                   )}
                   {gradModalActiveTab === "priority" && (
                     <div style={{ textAlign: 'left' }}>
-                      {activeTab === "priority" && (
+                      {gradModalActiveTab === "priority" && (
           <div className="space-y-6">
             <div className="bg-[#141210] border border-amber-500/20 rounded-xl p-6 shadow-lg">
               <div className="border-b border-amber-500/25 pb-4 mb-5">
@@ -2390,7 +2618,7 @@ export default function App() {
                   )}
                   {gradModalActiveTab === "cultivate" && (
                     <div style={{ textAlign: 'left' }}>
-                      {activeTab === "cultivate" && (
+                      {gradModalActiveTab === "cultivate" && (
           <div className="space-y-6">
             <div className="bg-[#141210] border border-amber-500/20 rounded-xl p-6 shadow-lg">
               <div className="border-b border-amber-500/25 pb-4 mb-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -2699,7 +2927,7 @@ export default function App() {
                   )}
                   {gradModalActiveTab === "compare" && (
                     <div style={{ textAlign: 'left' }}>
-                      {activeTab === "compare" && (
+                      {gradModalActiveTab === "compare" && (
           <div className="space-y-6">
             <div className="bg-[#141210] border border-amber-500/20 rounded-xl p-6">
               <div className="mb-4 border-b border-amber-500/20 pb-3">
@@ -2730,7 +2958,7 @@ export default function App() {
                     >
                       <span className="text-lg">{slot.icon}</span>
                       <div className="flex-1 min-w-0">
-                        <div className="text-[13px] truncate uppercase tracking-wide font-semibold">{slot.name}</div>
+                        <div className="text-[13px] truncate uppercase tracking-wide font-semibold">{getSlotLabel(slot.name)}</div>
                         {hasItems && (
                           <div className={`text-[11px] mt-0.5 ${isSelected ? "text-slate-900 font-bold" : "text-slate-500"}`}>
                             {itemsInSlot.length} item{itemsInSlot.length > 1 ? "s" : ""}
@@ -2750,7 +2978,7 @@ export default function App() {
               {/* Comparison list section */}
               <div>
                 <h3 className="text-sm uppercase font-bold tracking-widest text-slate-500 font-mono mb-4">
-                  Graduation ranking for slot: <span className="text-amber-500 font-serif">{selectedSlot}</span>
+                  Graduation ranking for slot: <span className="text-amber-500 font-serif">{getSlotLabel(selectedSlot)}</span>
                 </h3>
 
                 {(() => {
@@ -2878,7 +3106,7 @@ export default function App() {
                   )}
                   {gradModalActiveTab === "rot-sim" && (
                     <div style={{ textAlign: 'left' }}>
-                      {activeTab === "rot-sim" && (() => {
+                      {gradModalActiveTab === "rot-sim" && (() => {
           const allowedWeapons = CLASS_WEAPONS[rotSimClass] || [];
           const simulatorSkills = WWM_DATA.skills.filter(s => allowedWeapons.includes(s.weapon));
 
@@ -3283,7 +3511,7 @@ export default function App() {
                   )}
                   {gradModalActiveTab === "profiles" && (
                     <div style={{ textAlign: 'left' }}>
-                      {activeTab === "profiles" && (
+                      {gradModalActiveTab === "profiles" && (
           <div className="space-y-6">
             <div className="bg-[#141210] border border-amber-500/20 rounded-xl p-6 shadow-lg">
               <h2 className="text-lg font-bold font-serif text-slate-100 flex items-center gap-2 border-b border-amber-500/25 pb-4 mb-5">
@@ -3624,12 +3852,26 @@ export default function App() {
                   <label>Slot</label>
                   <select
                     value={selectedSlot}
-                    onChange={e => setSelectedSlot(e.target.value)}
+                    onChange={e => {
+                      const newSlot = e.target.value;
+                      setSelectedSlot(newSlot);
+                      if (newSlot === "Umbrella") setFormWeaponType("Umbrella");
+                      else if (newSlot === "Rope Dart") setFormWeaponType("Rope Dart");
+                      
+                      // reset set selection based on slot
+                      if (newSlot === "Umbrella" || newSlot === "Rope Dart" || newSlot === "Pendant") {
+                        setFormSet("none");
+                      } else if (newSlot === "Bow/Ring") {
+                        setFormSet("pursuing");
+                      } else {
+                        setFormSet("stars");
+                      }
+                    }}
                     disabled={!!editingItem}
                     required
                   >
                     {SLOTS.map(s => (
-                      <option key={s.name} value={s.name}>{s.name}</option>
+                      <option key={s.name} value={s.name}>{getSlotLabel(s.name)}</option>
                     ))}
                   </select>
                 </div>
@@ -3655,6 +3897,27 @@ export default function App() {
                   />
                 </div>
               </div>
+              {(selectedSlot === "Umbrella" || selectedSlot === "Rope Dart") && (
+                <div className="form-row">
+                  <div className="form-group flex-1">
+                    <label>Weapon Type</label>
+                    <select
+                      value={formWeaponType}
+                      onChange={e => setFormWeaponType(e.target.value)}
+                    >
+                      <option value="Sword">Sword</option>
+                      <option value="Spear">Spear</option>
+                      <option value="Umbrella">Umbrella</option>
+                      <option value="Fan">Fan</option>
+                      <option value="Rope Dart">Rope Dart</option>
+                      <option value="Dual Blades">Dual Blades</option>
+                      <option value="Modao">Modao</option>
+                      <option value="Hengdao">Hengdao</option>
+                      <option value="Gauntlets">Gauntlets</option>
+                    </select>
+                  </div>
+                </div>
+              )}
               <div className="form-row">
                 <div className="form-group">
                   <label>Main Stat Text</label>
@@ -3672,8 +3935,8 @@ export default function App() {
                     value={formSet}
                     onChange={e => setFormSet(e.target.value)}
                   >
-                    {Object.entries(ARMOR_SETS).map(([key, s]) => (
-                      <option key={key} value={key}>{s.name}</option>
+                    {getSetOptionsForSlot(selectedSlot).map(opt => (
+                      <option key={opt.key} value={opt.key}>{opt.name}</option>
                     ))}
                   </select>
                 </div>
@@ -3898,8 +4161,8 @@ export default function App() {
               <h2>Select Inner Way (Xinfa)</h2>
               <span className="close-btn" onClick={() => setIsXinfaModalOpen(false)}>&times;</span>
             </div>
-            <div className="modal-body" style={{ flex: 1, overflowY: 'auto' }}>
-              <div className="flex gap-4 mb-4">
+            <div className="modal-body" style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '15px' }}>
+              <div className="flex gap-4">
                 <input
                   type="text"
                   value={innerWaySearch}
@@ -3908,23 +4171,10 @@ export default function App() {
                   className="flex-1"
                   style={{ padding: '8px', borderRadius: '4px', border: '1px solid var(--border)', background: '#1a1a1d', color: '#fff' }}
                 />
-                <select
-                  value={innerWaysFilter}
-                  onChange={(e) => setInnerWaysFilter(e.target.value as any)}
-                  className="w-40 bg-slate-900 border border-slate-700 text-slate-300 rounded px-2"
-                >
-                  <option value="recommended">Recommended Only</option>
-                  <option value="all">Show All</option>
-                </select>
               </div>
-              <div className="xinfa-select-grid">
+              <div className="xinfa-select-grid" style={{ flex: 1, overflowY: 'auto' }}>
                 {INNER_WAYS.filter(iw => {
                   if (innerWaySearch && !iw.name.toLowerCase().includes(innerWaySearch.toLowerCase())) return false;
-                  if (innerWaysFilter === "recommended") {
-                    const priorityStats = (BUILD_PROFILES as any)[selectedBuild]?.priorityStats || [];
-                    const statsKeys = iw.tiers.flatMap(t => Object.keys(t.stat || {}));
-                    return statsKeys.some(s => priorityStats.includes(SUB_MAP[s] || s));
-                  }
                   return true;
                 }).map(iw => {
                   const isSelected = selectedInnerWays.includes(iw.id);
@@ -3932,43 +4182,71 @@ export default function App() {
                   return (
                     <div
                       key={iw.id}
-                      className="xinfa-select-item"
+                      className={`xinfa-select-item ${isSelected ? "selected-innerway" : ""}`}
                       onClick={() => {
                         let updated = [...selectedInnerWays];
                         if (isSelected) {
                           updated = updated.filter(id => id !== iw.id);
                         } else {
-                          if (xinfaModalIndex !== null) {
-                            updated[xinfaModalIndex] = iw.id;
-                          } else if (updated.length < 4) {
+                          if (updated.length < 4) {
                             updated.push(iw.id);
+                          } else {
+                            alert("You can select up to 4 Inner Ways.");
                           }
                         }
                         updated = updated.filter(Boolean);
                         setSelectedInnerWays(updated);
-                        setIsXinfaModalOpen(false);
                       }}
                     >
-                      <div className="xinfa-img-wrapper">
+                      <div className="xinfa-img-wrapper" style={{ position: 'relative' }}>
                         <img src={imageUrl || ""} alt={iw.name} onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                        {isSelected && (
+                          <div style={{
+                            position: 'absolute',
+                            top: '8px',
+                            right: '8px',
+                            background: 'gold',
+                            color: '#1a1a1d',
+                            width: '22px',
+                            height: '22px',
+                            borderRadius: '50%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontWeight: 'bold',
+                            fontSize: '12px',
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.5)',
+                            zIndex: 2
+                          }}>
+                            ✓
+                          </div>
+                        )}
                       </div>
                       <div className="xinfa-select-name">{iw.name}</div>
                     </div>
                   );
                 })}
-                {xinfaModalIndex !== null && selectedInnerWays[xinfaModalIndex] && (
-                  <div
-                    className="xinfa-select-item flex items-center justify-center p-6 border-dashed border-rose-500/30 bg-rose-950/10 text-rose-400 font-bold"
-                    onClick={() => {
-                      const updated = [...selectedInnerWays];
-                      updated.splice(xinfaModalIndex, 1);
-                      setSelectedInnerWays(updated.filter(Boolean));
-                      setIsXinfaModalOpen(false);
-                    }}
+              </div>
+              <div className="modal-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#232328', padding: '15px 20px', margin: '0 -20px -20px -20px', borderRadius: '0 0 12px 12px', borderTop: '1px solid #3d3d42' }}>
+                <span style={{ color: 'var(--text-sub)', fontSize: '0.9rem', fontWeight: 'bold' }}>
+                  Selected: {selectedInnerWays.length} / 4
+                </span>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button
+                    className="cancel-btn"
+                    onClick={() => setSelectedInnerWays([])}
+                    style={{ padding: '8px 16px', borderRadius: '4px', fontWeight: 'bold' }}
                   >
-                    Clear Slot
-                  </div>
-                )}
+                    Clear All
+                  </button>
+                  <button
+                    className="primary-btn"
+                    onClick={() => setIsXinfaModalOpen(false)}
+                    style={{ padding: '8px 24px', borderRadius: '4px', fontWeight: 'bold' }}
+                  >
+                    Confirm & Close
+                  </button>
+                </div>
               </div>
             </div>
           </div>

@@ -17,6 +17,13 @@ export interface PanelStats {
   bossDmg: number;
   umbBonus: number;
   ropeBonus: number;
+  swordBonus: number;
+  spearBonus: number;
+  fanBonus: number;
+  twinbladesBonus: number;
+  modaoBonus: number;
+  hengdaoBonus: number;
+  gauntletsBonus: number;
   allArts: number;
   attunedBonus: number; // Attuned Damage Bonus % (定音增伤)
   wuxiangMin: number;
