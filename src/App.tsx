@@ -498,19 +498,34 @@ const BUILD_PROFILES = {
 };
 
 const SET_EMOJI: Record<string, string> = {
-  "stars": "🌙",          // Moonflare
-  "eaglerise": "🦅",       // Hawking
-  "stormrain": "🌧️",       // Eaglerise
-  "jadeware": "💚",        // Jadeware
-  "ivorybloom": "🌸",      // Ivorybloom
-  "rainwhisper": "💧",     // Rainwhisper
-  "pursuing": "👥",        // Pursuing Shadow
-  "plume": "🪶",          // Plume
-  "string": "🪕",         // Startling String
-  "shakenhill": "⛰️",
-  "swallowreturn": "🕊️",
-  "ironweave": "🛡️",
-  "none": "🔹",
+  // Offensive sets
+  "stars":         "⭐",  // Stars Align
+  "eaglerise":     "🦅",  // Hawkwing
+  "jadeware":      "💚",  // Jadeware
+  "ivorybloom":    "🌸",  // Ivorybloom
+  "shakenhill":    "🗡️",  // Shattered Ridge
+  "swallowreturn": "🕊️",  // Swaying Heights
+  "swiftgale":     "💨",  // Swift Gale
+  "swallowcall":   "🐦",  // Swallowcall
+  "mistwillow":    "🌿",  // Mistwillow
+  "stormrain":     "🌧️",  // Eaglerise
+  "obsidian":      "🖤",  // Obsidian Armor
+  // Defensive sets
+  "moonflare":     "🌙",  // Moonflare
+  "rainwhisper":   "💧",  // Rainwhisper
+  "formbend":      "🛡️",  // Formbend
+  "calmwaters":    "🌊",  // Calmwaters
+  "beyondchill":   "❄️",  // Beyond the Chill
+  "whirlsnow":     "⛄",  // Whirlsnow
+  "jadeembrace":   "🐉",  // Jade Embrace
+  "agilesteps":    "👟",  // Agile Steps
+  "flawlessdef":   "⚜️",  // Flawless Defense
+  "ironweave":     "🔗",  // Ironweave
+  // Bow/Ring sets
+  "pursuing":      "👥",  // Pursuing Shadow
+  "plume":         "🪶",  // Plume
+  "string":        "🪕",  // Startling String
+  "none":          "🔹",
 };
 
 const getSetName = (setKey: string): string => {
@@ -547,70 +562,157 @@ const getSetOptionsForSlot = (slot: string) => {
   }));
 };
 
+// ⚠️ stat2pc values marked with (~) are estimates pending T91 verification.
+// Stars Align +64 minOuter confirmed by user. All others approximate.
 const ARMOR_SETS = {
+  // ── Offensive (DPS-relevant 2pc stats) ──────────────────────────────────
   "stars": {
-    name: "Moonflare",
-    stat2pc: { minOuter: 106 },
-    desc2pc: "2/4: Min Physical Attack +106",
-    desc4pc: "4/4: Hitting boss or 2+ enemies grants a Stars Align stack (5 sec): +3% Martial Art Skill DMG per stack, max 5 stacks = +15%. Stacks are lost when hit.",
+    name: "Stars Align",
+    stat2pc: { minOuter: 64 },           // ✅ confirmed T91
+    desc2pc: "2/4: Min Physical ATK +64",
+    desc4pc: "4/4: Hit boss or 2+ enemies → Stars Align stack (+3% Martial Art Skill DMG / stack, 5s, max 5 stacks = +15%). Stack lost on hit.",
     recommended: ["bamboocut-dust", "bamboocut-kite"],
   },
   "eaglerise": {
-    name: "Hawking",
-    stat2pc: { aff: 6.1 },
+    name: "Hawkwing",
+    stat2pc: { aff: 6.1 },               // (~) estimate
     desc2pc: "2/4: +6.1% Affinity Rate",
-    desc3pc: "3/4: Outgoing Healing +10%",
-    desc4pc: "4/4: When Affinity DMG triggers, gain a stack: +2% Physical ATK per stack (5s, max 5 stacks = +10% Phys ATK)",
-    recommended: ["bamboocut-wind", "stonesplit-might"],
-  },
-  "stormrain": {
-    name: "Eaglerise",
-    stat2pc: { prec: 10.8 },
-    desc2pc: "2/4: +10.8% Precision Rate",
-    desc4pc: "4/4: Dealing damage over time OR healing grants a stack that increases DMG and healing.",
-    recommended: ["bellstrike-umbra"],
+    desc4pc: "4/4: Affinity DMG triggers give a stack: +2% Phys ATK/stack (5s, max 5 = +10% Phys ATK)",
+    recommended: ["bamboocut-wind", "stonesplit-might", "bellstrike-umbra"],
   },
   "jadeware": {
     name: "Jadeware",
-    stat2pc: { maxOuter: 106 },
-    desc2pc: "+106 Max Physical ATK",
-    desc4pc: "Martial Art Skill activates Jadeware: Increases Affinity DMG when dealing Affinity damage",
+    stat2pc: { maxOuter: 64 },           // (~) estimate
+    desc2pc: "2/4: Max Physical ATK +64",
+    desc4pc: "4/4: Martial Art Skill → Jadeware buff: each Affinity hit further increases Affinity DMG.",
     recommended: ["bellstrike-umbra", "bellstrike-splendor"],
   },
-  "ironweave": {
-    name: "Ironweave",
-    stat2pc: {},
-    desc2pc: "+Physical Defense",
-    desc4pc: "Shield duration +2s. If shield broken, gain additional DMG reduction",
-    recommended: [],
+  "ivorybloom": {
+    name: "Ivorybloom",
+    stat2pc: { crit: 7.3 },              // (~) estimate
+    desc2pc: "2/4: +7.3% Critical Rate",
+    desc4pc: "4/4: At Max HP: +5% Crit Chance and +15% Critical DMG/Heal.",
+    recommended: ["silkbind-deluge", "silkbind-jade"],
   },
   "shakenhill": {
-    name: "Shakenhill",
-    stat2pc: { prec: 10.8 },
-    desc2pc: "+10.8% Precision Rate",
-    desc4pc: "After Light Attack/Airborne Light Attack, Heavy Attack DMG increased",
-    recommended: ["silkbind-jade", "stonesplit-pure-datang"],
+    name: "Shattered Ridge",
+    stat2pc: { prec: 6.1 },              // (~) estimate
+    desc2pc: "2/4: +6.1% Precision Rate",
+    desc4pc: "4/4: Perfect Deflect boosts next skill/heavy attack DMG significantly.",
+    recommended: ["stonesplit-pure-datang"],
   },
   "swallowreturn": {
-    name: "Swallow Return",
-    stat2pc: { minOuter: 106 },
-    desc2pc: "+106 Min Physical Attack",
-    desc4pc: "Light Attacks deal +15% DMG to targets above 50% HP",
-    recommended: ["bamboocut-wind"],
+    name: "Swaying Heights",
+    stat2pc: { minOuter: 64 },           // (~) estimate
+    desc2pc: "2/4: Min Physical ATK +64",
+    desc4pc: "4/4: DMG +10% vs targets above 50% HP.",
+    recommended: ["bamboocut-wind", "bamboocut-dust"],
+  },
+  "swiftgale": {
+    name: "Swift Gale",
+    stat2pc: { maxOuter: 64 },           // (~) estimate
+    desc2pc: "2/4: Max Physical ATK +64",
+    desc4pc: "4/4: Airborne Heavy Attacks gain +DMG and knock targets back.",
+    recommended: [],
+  },
+  "swallowcall": {
+    name: "Swallowcall",
+    stat2pc: {},
+    desc2pc: "2/4: (stat pending verification)",
+    desc4pc: "4/4: Various effect — verify in-game.",
+    recommended: [],
+  },
+  "mistwillow": {
+    name: "Mistwillow",
+    stat2pc: {},
+    desc2pc: "2/4: (stat pending verification)",
+    desc4pc: "4/4: After Light/Heavy Attack, following attacks deal bonus DMG for 10s.",
+    recommended: [],
+  },
+  "stormrain": {
+    name: "Eaglerise",
+    stat2pc: {},
+    desc2pc: "2/4: +Physical Defense",
+    desc4pc: "4/4: DMG/healing grants Eaglerise stacks (DMG taken −1.2%/stack, max 5). At max stacks, Eagle Guard reduces next hit by 90% (30s CD).",
+    recommended: [],
+  },
+  "obsidian": {
+    name: "Obsidian Armor",
+    stat2pc: {},
+    desc2pc: "2/4: (stat pending verification)",
+    desc4pc: "4/4: (effect pending verification)",
+    recommended: [],
+  },
+  // ── Defensive (no DPS stat — listed for completeness) ───────────────────
+  "moonflare": {
+    name: "Moonflare",
+    stat2pc: {},
+    desc2pc: "2/4: +Max HP",
+    desc4pc: "4/4: 30% chance on attack to create a shield (10% Max HP, 20s). If shield active, restore 2% HP.",
+    recommended: [],
   },
   "rainwhisper": {
     name: "Rainwhisper",
     stat2pc: {},
-    desc2pc: "+Max HP",
-    desc4pc: "+10% Critical DMG and healing. Additional effects.",
-    recommended: ["stonesplit-might", "stonesplit-awe"],
+    desc2pc: "2/4: +Max HP",
+    desc4pc: "4/4: +10% Crit DMG & Heal. Bonus rises to +15% if HP shield is active.",
+    recommended: [],
   },
-  "ivorybloom": {
-    name: "Ivorybloom",
-    stat2pc: { crit: 12.1 },
-    desc2pc: "+12.1% Critical Rate",
-    desc4pc: "At Max HP: +5% Critical chance and +15% Critical heal/DMG",
-    recommended: ["silkbind-deluge"],
+  "formbend": {
+    name: "Formbend",
+    stat2pc: {},
+    desc2pc: "2/4: +Physical Defense",
+    desc4pc: "4/4: Shield duration +2s. If Qi >85% or Qi immunity shield active, reduce HP DMG taken by 20%.",
+    recommended: [],
+  },
+  "calmwaters": {
+    name: "Calmwaters",
+    stat2pc: {},
+    desc2pc: "2/4: +Physical Defense",
+    desc4pc: "4/4: Perfect Dodge has 50% chance to restore 3% Max HP and 10 Endurance.",
+    recommended: [],
+  },
+  "beyondchill": {
+    name: "Beyond the Chill",
+    stat2pc: {},
+    desc2pc: "2/4: +Max HP",
+    desc4pc: "4/4: After 10s in combat with no DMG taken, gain Beyond the Chill: reduces next hit and all DMG within 2s by 40%.",
+    recommended: [],
+  },
+  "whirlsnow": {
+    name: "Whirlsnow",
+    stat2pc: {},
+    desc2pc: "2/4: +Physical Defense",
+    desc4pc: "4/4: Heavy hit or drop below 20% HP → next heal within 5s restores +25% Max HP (60s CD).",
+    recommended: [],
+  },
+  "jadeembrace": {
+    name: "Jade Embrace",
+    stat2pc: {},
+    desc2pc: "2/4: (stat pending verification)",
+    desc4pc: "4/4: (effect pending verification)",
+    recommended: [],
+  },
+  "agilesteps": {
+    name: "Agile Steps",
+    stat2pc: {},
+    desc2pc: "2/4: (stat pending verification)",
+    desc4pc: "4/4: (effect pending verification)",
+    recommended: [],
+  },
+  "flawlessdef": {
+    name: "Flawless Defense",
+    stat2pc: {},
+    desc2pc: "2/4: (stat pending verification)",
+    desc4pc: "4/4: (effect pending verification)",
+    recommended: [],
+  },
+  "ironweave": {
+    name: "Ironweave",
+    stat2pc: {},
+    desc2pc: "2/4: +Physical Defense",
+    desc4pc: "4/4: Shield duration +2s. If shield broken, gain additional DMG reduction.",
+    recommended: [],
   },
   "none": { name: "No Set / Mixed", stat2pc: {}, desc2pc: "—", desc4pc: "—", recommended: [] },
 };
