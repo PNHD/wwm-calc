@@ -281,7 +281,6 @@ const SLOTS = [
   { name: "Chest",     icon: <Shirt     className="w-4 h-4" />, label: "▣" },
   { name: "Greaves",   icon: <Target    className="w-4 h-4" />, label: "◎" },
   { name: "Bracers",   icon: <Hand      className="w-4 h-4" />, label: "✋" },
-  { name: "Bow/Ring",  icon: <Target    className="w-4 h-4" />, label: "◯" },
 ];
 
 const SLOT_IMAGES: Record<string, string> = {
@@ -292,8 +291,7 @@ const SLOT_IMAGES: Record<string, string> = {
   "Chest":     "icon/icon6.jpg",
   "Bracers":   "icon/icon8.jpg",
   "Greaves":   "icon/icon7.jpg",
-  "Pendant":   "icon/icon4.jpg",
-  "Bow/Ring":  "icon/icon3.jpg"
+  "Pendant":   "icon/icon4.jpg"
 };
 
 const BUILD_WEAPON_TYPES: Record<string, [string, string]> = {
@@ -309,6 +307,22 @@ const BUILD_WEAPON_TYPES: Record<string, [string, string]> = {
   "stonesplit-pure-datang": ["Hengdao", "Modao"],
 };
 
+// Weapon display name -> panel-stat key prefix (umbAll/umbMartial/...).
+const WEAPON_NAME_TO_PREFIX: Record<string, string> = {
+  "Umbrella": "umb", "Rope Dart": "rope", "Sword": "sword", "Spear": "spear",
+  "Fan": "fan", "Dual Blades": "twinblades", "Modao": "modao", "Mo Blade": "modao",
+  "Hengdao": "hengdao", "Heng Blade": "hengdao", "Gauntlets": "gauntlets",
+};
+
+// Panel-stat key prefixes for the two weapons of the given build.
+function getBuildWeaponPrefixes(buildKey: string): string[] {
+  const names = BUILD_WEAPON_TYPES[buildKey] || [];
+  return names.map((n) => WEAPON_NAME_TO_PREFIX[n]).filter(Boolean);
+}
+
+// True if a panel-stat key is a weapon-specific boost (umbAll, ropeMartial, ...).
+const WEAPON_STAT_KEY_RE = /^(umb|rope|sword|spear|fan|twinblades|modao|hengdao|gauntlets)(All|Martial|Special|Charged)$/;
+
 // Inner-attribute (本系) display name per build family. Bamboocut-Dust uses
 // "Bamboocut"; Silkbind / Bellstrike / Stonesplit families use their own.
 const INNER_ATTR_BY_BUILD: Record<string, string> = {
@@ -321,6 +335,23 @@ const innerAttrName = (buildKey: string): string => INNER_ATTR_BY_BUILD[buildKey
 
 // Builds whose T91 graduation DPS is estimated (no dedicated Lv95 source row yet).
 const ESTIMATED_BUILDS = new Set(["bamboocut-kite", "stonesplit-pure-datang"]);
+
+// WWM_DATA.classes uses an older naming scheme. Map each key to the canonical
+// build name (same labels as the main path dropdown) for consistent display.
+// Mappings derived from each class's attuned weapon pair (not guessed).
+const CLASS_DISPLAY_NAME: Record<string, string> = {
+  "Bamboocut-Dust": "Bamboocut-Dust",
+  "Bamboocut-Wind": "Bamboocut-Wind",
+  "Nameless": "Bellstrike-Splendor",        // Nameless Sword + Nameless Spear
+  "Nine-Nine": "Bellstrike-Umbra",          // Strategic Sword + Heavenquaker Spear
+  "Jade": "Silkbind-Jade",                  // Inkwell Fan + Vernal Umbrella
+  "Pure-Healer": "Silkbind-Deluge (Healer)",// Panacea Fan + Soulshade Umbrella
+  "Rocksplit-Jun": "Stonesplit-Might",      // Snowparting + Phalanxbane Blade
+  "Rocksplit-Might": "Stonesplit-Awe",      // Thundercry Blade + Stormbreaker Spear
+  "Bamboocut-Bird": "Bamboocut-Kite (est.)",// Heavenstrike Gauntlets + Rope Dart
+  "Fire-Fist-Healer": "Fire-Fist Healer (beta)", // gauntlet healer, no main-list equivalent
+};
+const classDisplayName = (key: string): string => CLASS_DISPLAY_NAME[key] || key;
 
 const WEAPON_ICON_MAP: Record<string, string> = {
   "Sword": "icon/icon1_1.jpg",
@@ -392,8 +423,6 @@ const DEFAULT_GEAR: GearItem[] = [
     subs:[{type:"Crit Rate",val:"6.8%"},{type:"Max Phys Atk",val:"63.8",isTuned:true},{type:"Precision",val:"6.6%"},{type:"Crit Rate",val:"6.9%"},{type:"Min Bamboocut Atk",val:"33.7"},{type:"Umbrella Bonus",val:"4.5%"}]},
   { id:"g7", slot:"Bracers", name:"Nightfarer Bracers", quality:"purple", set:"stormrain",
     subs:[{type:"Crit Rate",val:"7.2%"},{type:"Max Bamboocut Atk",val:"36.2"},{type:"Min Phys Atk",val:"63.8",isTuned:true},{type:"Crit Rate",val:"7.3%"},{type:"Max Phys Atk",val:"59.8"},{type:"Umbrella Bonus",val:"5.0%"}]},
-  { id:"g8", slot:"Bow/Ring", name:"Eastgaze Bow: Divine + Eastgaze Ring", quality:"gold",
-    set:"pursuing", subs:[{type:"Affinity Rate",val:"1.8% (set)"},{type:"All Martial Arts",val:"12.5%"},{type:"Crit Rate",val:"6.8%"}]},
 ];
 
 const SUB_MAP: Record<string, keyof PanelStats> = {
@@ -1166,7 +1195,9 @@ export default function App() {
   }, [charsData.activeCharId, charsData.activeSchemeId]);
 
   const getActiveGear = (): GearItem[] => {
-    return activeScheme?.gear ?? DEFAULT_GEAR;
+    // Bow/Ring is no longer an addable gear slot (handled via the Bow attribute
+    // dropdown). Drop any legacy Bow/Ring items saved in older data.
+    return (activeScheme?.gear ?? DEFAULT_GEAR).filter(it => it.slot !== "Bow/Ring");
   };
 
   const saveActiveGear = (newGear: GearItem[]) => {
@@ -1348,10 +1379,10 @@ export default function App() {
 
       setFormSubs(subs.map(s => ({ type: s.type, val: s.val, isTuned: !!s.isTuned })));
       if (mastery) setFormMastery(mastery);
-      alert(`🎉 OCR thành công! Đã tự động điền ${subs.filter(s => s.type !== "Other").length} dòng chỉ số.`);
+      alert(`🎉 OCR complete! Auto-filled ${subs.filter(s => s.type !== "Other").length} substats.`);
     } catch (e) {
       console.error(e);
-      alert("❌ Có lỗi xảy ra trong quá trình nhận diện OCR.");
+      alert("❌ An error occurred during OCR scanning.");
     } finally {
       setIsModalOcrProcessing(false);
     }
@@ -1380,8 +1411,6 @@ export default function App() {
       detectedSlot = "Bracers";
     } else if (lcText.includes("boots") || lcText.includes("shoes") || lcText.includes("legs") || lcText.includes("giày") || lcText.includes("greaves") || lcText.includes("腿甲")) {
       detectedSlot = "Greaves";
-    } else if (lcText.includes("ring") || lcText.includes("nhẫn") || lcText.includes("bow") || lcText.includes("戒指")) {
-      detectedSlot = "Bow/Ring";
     } else if (lcText.includes("rope dart") || lcText.includes("rope_dart")) {
       detectedSlot = "Rope Dart";
       detectedWeaponType = "Rope Dart";
@@ -2158,42 +2187,11 @@ export default function App() {
     return p;
   }, [panel, bowSelect, food, script50, earlySeason, activeTier, iwStats, autoGearPanel, activeScheme?.gear]);
 
-  // 3. Compute baseline reference graduation score using a "100% graduated" reference panel
-  const gradRefPanel = useMemo((): PanelStats => {
-    const build = BUILD_PROFILES[selectedBuild as keyof typeof BUILD_PROFILES];
-    const gt = build?.gradTargets || BUILD_PROFILES["bamboocut-dust"].gradTargets;
-    return {
-      ...INITIAL_PANEL,
-      minOuter: gt.minOuter || 1340,
-      maxOuter: gt.maxOuter || 3050,
-      outerPen: gt.outerPen || 42.0,
-      crit: gt.crit || 116.9,
-      aff: gt.aff || 14.7,
-      critDmg: gt.critDmg || 54,
-      prec: 116.9,
-      dcrit: 4.6,
-      daff: 0,
-      affDmg: 35,
-      outerDmg: 2.8,
-      bossDmg: 7.6,
-      minPz: 340,
-      maxPz: 600,
-      pzPen: 22.0,
-      pzDmg: 9.5,
-      umbMartial: 6.0,
-      allArts: 6.0,
-      attunedBonus: 15,
-      iwGeneralDmg: 10,
-      iwOuterPen: 15,
-      iwPzPen: 10,
-      iwPzDmg: 5,
-      set: "stars",
-    };
-  }, [selectedBuild]);
-
+  // 3. Baseline = authoritative "fully graduated" T91/Lv95 DPS per build (from the
+  //    源 spreadsheet, converted to rotation-window total). See calcBaseline / T91_GRAD_DPS.
   const baselineScore = useMemo(() => {
-    return calcBaseline(activeTier, selectedBuild, gradRefPanel);
-  }, [activeTier, selectedBuild, gradRefPanel]);
+    return calcBaseline(activeTier, selectedBuild);
+  }, [activeTier, selectedBuild]);
 
   // 4. Compute Rotation list damage
   const rotationStats = useMemo(() => {
@@ -2227,7 +2225,7 @@ export default function App() {
 
   // 5. Live Stat Priority: % graduation gain/loss per substat roll, computed against the CURRENT panel
   const statPriorityList = useMemo(() => {
-    const STAT_ROLLS: { key: keyof PanelStats; label: string; roll: number; unit: string }[] = [
+    const ALL_STAT_ROLLS: { key: keyof PanelStats; label: string; roll: number; unit: string }[] = [
       { key: "maxOuter", label: "Max Phys ATK", roll: 63.8, unit: "" },
       { key: "minOuter", label: "Min Phys ATK", roll: 26, unit: "" },
       { key: "outerPen", label: "Phys Pen", roll: 9.0, unit: "%" },
@@ -2261,6 +2259,15 @@ export default function App() {
       { key: "bossDmg", label: "Boss DMG", roll: 2.0, unit: "%" },
       { key: "outerDmg", label: "Phys DMG", roll: 2.0, unit: "%" },
     ];
+
+    // Only show weapon-specific boosts for THIS build's two weapons; keep all
+    // universal stats. Avoids cluttering the list with irrelevant weapon paths.
+    const buildPrefixes = getBuildWeaponPrefixes(selectedBuild);
+    const STAT_ROLLS = ALL_STAT_ROLLS.filter(({ key }) => {
+      const m = (key as string).match(WEAPON_STAT_KEY_RE);
+      if (!m) return true; // universal stat
+      return buildPrefixes.includes(m[1]);
+    });
 
     const gradFor = (p: PanelStats) => {
       let total = 0;
@@ -2577,8 +2584,7 @@ export default function App() {
                 { key: "Bracers", label: "Hands" },
                 { key: "Greaves", label: "Legs" },
                 { key: "Disc", label: "Disc" },
-                { key: "Pendant", label: "Pendant" },
-                { key: "Bow/Ring", label: "Ring" }
+                { key: "Pendant", label: "Pendant" }
               ].map(tab => (
                 <button
                   key={tab.key}
@@ -2890,7 +2896,7 @@ export default function App() {
             </div>
             <div className="sim-side-panel">
               <div className="sim-slot bow-slot">
-                <img id="bow-icon" src="icon/icon9_1.jpg" alt="Bow" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                <img id="bow-icon" src="icon/icon3.jpg" alt="Bow" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
               </div>
               <div className="sim-controls">
                 <select
@@ -3036,7 +3042,7 @@ export default function App() {
                     );
                   })}
                   <p style={{ fontSize: 10.5, color: "#6e7681", marginTop: 6, lineHeight: 1.4 }}>
-                    <b style={{ color: "#8b949e" }}>Menu</b> = đúng bảng Combat Attributes trong game · <b style={{ color: "#f0b400" }}>Combat</b> = khi đánh (đã cộng Inner Ways tại max stack + buff đang bật). Số xanh = được Inner Ways/buff tăng.
+                    <b style={{ color: "#8b949e" }}>Menu</b> = matches your in-game Combat Attributes screen · <b style={{ color: "#f0b400" }}>Combat</b> = effective in fight (Inner Ways at max stacks + active buffs). Green = boosted by Inner Ways/buffs.
                   </p>
                 </>
               );
@@ -3090,10 +3096,10 @@ export default function App() {
                   {[
                     { key: "manual", label: "Manual Sheet" },
                     { key: "priority", label: "Stat Priority" },
-                    { key: "cultivate", label: "Cultivate" },
+                    { key: "cultivate", label: "Cultivate (beta)" },
                     { key: "compare", label: "Compare" },
                     { key: "simulators", label: "Swap Sim" },
-                    { key: "rot-sim", label: "Rotation Sim" },
+                    { key: "rot-sim", label: "Rotation Sim (beta)" },
                     { key: "profiles", label: "Sets & Backup" }
                   ].map(tab => (
                     <div
@@ -3127,7 +3133,7 @@ export default function App() {
                             : "OFF — all stats below are entered manually and will not update when you change gear."}
                         </p>
                         <p className="text-[11.5px] text-amber-500/80 leading-snug border-t border-amber-900/20 pt-2">
-                          ⓘ Enter your <b>in-game Combat Attributes</b> values here (the "base trần" — character menu panel). Inner Ways are in-combat buffs and are <b>added automatically on top</b>; do not include them here. The stat readout on the right shows the effective in-combat panel (base + Inner Ways).
+                          ⓘ Enter your <b>in-game Combat Attributes</b> values here (the naked character-menu panel). Inner Ways are in-combat buffs and are <b>added automatically on top</b>; do not include them here. The stat readout on the right shows the effective in-combat panel (base + Inner Ways).
                         </p>
                         <button
                           type="button"
@@ -3347,7 +3353,7 @@ export default function App() {
                   >
                     {Object.keys(WWM_DATA.classes).map((cls) => (
                       <option key={cls} value={cls}>
-                        {cls}
+                        {classDisplayName(cls)}
                       </option>
                     ))}
                   </select>
@@ -3904,7 +3910,7 @@ export default function App() {
                           className="bg-slate-950 border border-amber-900/45 text-amber-500 text-sm rounded-md px-3 py-1.5 focus:outline-none font-bold"
                         >
                           {Object.keys(WWM_DATA.classes).map(c => (
-                            <option key={c} value={c}>{c}</option>
+                            <option key={c} value={c}>{classDisplayName(c)}</option>
                           ))}
                         </select>
                       </div>
@@ -4702,11 +4708,11 @@ export default function App() {
                   />
                   {isModalOcrProcessing ? (
                     <span style={{ fontSize: '12px', color: 'gold', fontWeight: 'bold' }} className="blink">
-                      ⏳ Đang nhận diện thuộc tính trang bị bằng OCR...
+                      ⏳ Scanning gear stats with OCR...
                     </span>
                   ) : (
                     <div style={{ fontSize: '11px', color: '#b5a297' }}>
-                      📸 <strong>OCR Điền Nhanh:</strong> <span style={{ textDecoration: 'underline', color: '#f59e0b', cursor: 'pointer' }} onClick={() => modalFileInputRef.current?.click()}>Chọn hình có trong máy</span>, kéo thả, hoặc nhấn <strong>Ctrl+V</strong> vào trang này để tự động nhập chỉ số!
+                      📸 <strong>Quick OCR:</strong> <span style={{ textDecoration: 'underline', color: '#f59e0b', cursor: 'pointer' }} onClick={() => modalFileInputRef.current?.click()}>Choose an image</span>, drag &amp; drop, or press <strong>Ctrl+V</strong> on this page to auto-fill stats!
                     </div>
                   )}
                 </div>
@@ -4743,7 +4749,7 @@ export default function App() {
                         <label
                           className="flex items-center gap-1 cursor-pointer select-none"
                           style={{ minWidth: '65px' }}
-                          title="Định Âm (Attuned / Tuned) - Tăng 15% hiệu quả của dòng chỉ số này (x1.15)"
+                          title="Attuned / Tuned (Dingyin) — boosts this substat's effect by 15% (x1.15)"
                         >
                           <input
                             type="checkbox"
@@ -4761,7 +4767,7 @@ export default function App() {
                             }}
                             className="accent-amber-500 h-3.5 w-3.5"
                           />
-                          <span className="text-amber-500 font-bold text-[10px] uppercase font-mono">Đ.Âm ✦</span>
+                          <span className="text-amber-500 font-bold text-[10px] uppercase font-mono">Tuned ✦</span>
                         </label>
                       </div>
                     ))}
@@ -4948,7 +4954,7 @@ export default function App() {
                   });
 
                   setIsBatchOcrModalOpen(false);
-                  alert(`🎉 Đã nhập thành công ${newItems.length} món trang bị mới vào kho đồ!`);
+                  alert(`🎉 Successfully imported ${newItems.length} new gear items into your inventory!`);
                 }}
               />
             </div>

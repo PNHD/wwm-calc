@@ -293,11 +293,11 @@ export default function OcrScanner({ onImportGears }: OcrScannerProps) {
           <Image className="w-4 h-4 text-amber-400" /> BATCH OCR LIBRARY SCANNER
         </h3>
         <p className="text-xs text-slate-400 mt-1">
-          Tải lên một hoặc <strong>nhiều ảnh chụp trang bị từ máy của bạn</strong>. Công cụ sẽ nhận dạng tất cả 6 dòng chỉ số và tự động thêm vào kho đồ.
+          Upload one or <strong>several gear screenshots from your device</strong>. The tool reads all 6 substats and adds them straight to your inventory.
         </p>
         <div className="mt-2 flex items-center gap-2 text-[11px] text-slate-500">
           <kbd className="px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-slate-300 font-mono text-[10px]">Ctrl+V</kbd>
-          <span>— Nhấn Ctrl+V ở bất kỳ đâu trên bảng này để dán trực tiếp ảnh chụp màn hình từ khay nhớ tạm</span>
+          <span>— Press Ctrl+V anywhere on this panel to paste a screenshot directly from your clipboard</span>
         </div>
       </div>
 
@@ -315,10 +315,10 @@ export default function OcrScanner({ onImportGears }: OcrScannerProps) {
         />
         <FileUp className="w-10 h-10 text-amber-500/80 mb-1 hover:scale-110 transition-transform" />
         <p className="text-sm font-medium text-slate-200">
-          Chọn ảnh trang bị từ thiết bị của bạn
+          Choose gear screenshots from your device
         </p>
         <p className="text-xs text-slate-500">
-          Hỗ trợ nhận dạng hàng loạt nhiều trang bị cùng lúc.
+          Supports batch scanning of multiple gear pieces at once.
         </p>
       </div>
 
@@ -326,8 +326,8 @@ export default function OcrScanner({ onImportGears }: OcrScannerProps) {
         <div className="mt-5 border-t border-slate-900 pt-4">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
             <div className="text-xs font-mono text-slate-400">
-              Danh sách hàng đợi: <strong className="text-amber-500">{queue.length} ảnh</strong>
-              {isProcessing && ` (Đang xử lý ảnh thứ #${currentFileIndex + 1})`}
+              Queue: <strong className="text-amber-500">{queue.length} image(s)</strong>
+              {isProcessing && ` (Processing image #${currentFileIndex + 1})`}
             </div>
             <div className="flex gap-2">
               <button
@@ -337,11 +337,11 @@ export default function OcrScanner({ onImportGears }: OcrScannerProps) {
               >
                 {isProcessing ? (
                   <>
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" /> Đang quét OCR...
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" /> Scanning OCR...
                   </>
                 ) : (
                   <>
-                    <Sparkles className="w-3.5 h-3.5" /> Bắt đầu quét OCR
+                    <Sparkles className="w-3.5 h-3.5" /> Start OCR scan
                   </>
                 )}
               </button>
@@ -350,7 +350,7 @@ export default function OcrScanner({ onImportGears }: OcrScannerProps) {
                 disabled={isProcessing}
                 className="bg-slate-900 hover:bg-slate-800 text-slate-400 border border-slate-800 font-bold px-3 py-1.5 rounded text-xs flex items-center gap-1.5 transition-colors"
               >
-                <Trash2 className="w-3.5 h-3.5" /> Xóa hàng đợi
+                <Trash2 className="w-3.5 h-3.5" /> Clear queue
               </button>
             </div>
           </div>
@@ -427,7 +427,7 @@ export default function OcrScanner({ onImportGears }: OcrScannerProps) {
                   {hasSubs && (
                     <div className="bg-[#0b0a09]/50 p-2.5 rounded border border-slate-950 text-[10px] space-y-2">
                       <div className="text-slate-500 uppercase font-bold font-mono pb-1 border-b border-slate-900">
-                        Chỉ số nhận diện (nhấp vào để sửa nếu sai):
+                        Detected stats (click to fix if wrong):
                       </div>
                       <div className="flex flex-col gap-1.5 font-mono text-slate-300">
                         {item.subs.map((sub, sidx) => (
@@ -453,7 +453,7 @@ export default function OcrScanner({ onImportGears }: OcrScannerProps) {
                                 onChange={(e) => handleStatEdit(item.id, sidx, 'isTuned', e.target.checked)}
                                 className="accent-amber-500 w-3 h-3"
                               />
-                              <span className="text-amber-500 font-bold text-[8px]">Đ.ÂM</span>
+                              <span className="text-amber-500 font-bold text-[8px]">TUNED</span>
                             </label>
                           </div>
                         ))}
@@ -469,7 +469,7 @@ export default function OcrScanner({ onImportGears }: OcrScannerProps) {
           <div className="mt-5 bg-amber-950/10 border border-amber-900/20 rounded-xl p-4 flex flex-row justify-between items-center gap-4">
             <div>
               <p className="text-[11px] text-slate-400">
-                Nhấp vào nút bên cạnh để thêm trực tiếp tất cả các trang bị đã quét thành công vào kho đồ của nhân vật hiện tại.
+                Click the button to add all successfully scanned gear straight into your current character's inventory.
               </p>
             </div>
 
@@ -500,7 +500,7 @@ export default function OcrScanner({ onImportGears }: OcrScannerProps) {
                   disabled={queue.filter((it) => it.isSelected && it.status === "success").length === 0}
                   className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold px-4 py-2.5 rounded-lg text-xs flex items-center gap-1.5 shrink-0 transition-colors shadow-lg cursor-pointer"
                 >
-                  📥 Thêm vào kho đồ
+                  📥 Add to inventory
                 </button>
               )}
             </div>

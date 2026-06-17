@@ -32,8 +32,8 @@ export const INNER_WAYS: InnerWay[] = [
   },
   {
     id:"light_anew", name:"Light Anew", cat:"BAMBOOCUT-DUST",
-    desc:"When hitting 3 or more enemies at once, apply Candle Flicer for 3s (max 5 stacks). Each stack: -4% enemy Movement Speed, +2% damage taken from caster. Triggers once per 0.5s, 1 stack per 0.5s per source.",
-    recommended:true, note:"AoE debuff � each stack makes enemies take 2% more damage from you (max +10% at 5 stacks).",
+    desc:"When hitting 3 or more enemies at once, apply Candle Flicker for 3s (max 5 stacks). Each stack: -4% enemy Movement Speed, +2% damage taken from caster. Triggers once per 0.5s, 1 stack per 0.5s per source.",
+    recommended:true, note:"AoE debuff — each stack makes enemies take 2% more damage from you (max +10% at 5 stacks).",
     tiers:[
       {tier:1,effect:"Each stack: +0.8% damage taken by enemies (max 5 stacks = +4%)",stat:{generalDmg:4}},
       {tier:2,effect:"Each stack: +1.2% damage taken (max +6%)",stat:{generalDmg:6}},
@@ -46,7 +46,7 @@ export const INNER_WAYS: InnerWay[] = [
   {
     id:"towline_sweep", name:"Towline Sweep", cat:"BAMBOOCUT-DUST",
     desc:"Gain 50 Tokens of Gratitude after casting Soul Sweep. In Soulbound state, each hit of Piercing Dart's sweeping combo applies 2 stacks of Soulbreak, and the first hit pulls enemies forward.",
-    recommended:false, note:"Utility/setup inner way � no direct DPS stat. Helps maintain combo resources.",
+    recommended:false, note:"Utility/setup inner way — no direct DPS stat. Helps maintain combo resources.",
     tiers:[
       {tier:1,effect:"Gain 10 Tokens of Gratitude after Soul Sweep",stat:{}},
       {tier:2,effect:"Gain 20 Tokens of Gratitude after Soul Sweep",stat:{}},
@@ -167,7 +167,7 @@ export const INNER_WAYS: InnerWay[] = [
   {
     id:"sandswirl_tail", name:"Sandswirl Tail", cat:"BELLSTRIKE-SPLENDOR",
     desc:"When transformed into a brocade carp via Moonleap Morph, sprinting and jumping consume less endurance.",
-    recommended:false, note:"Mobility utility only � no combat DPS stat.",
+    recommended:false, note:"Mobility utility only — no combat DPS stat.",
     tiers:[
       {tier:1,effect:"Carp form sprint/jump cost -10%",stat:{}},
       {tier:2,effect:"Carp form sprint/jump cost -15%",stat:{}},
@@ -327,7 +327,7 @@ export const INNER_WAYS: InnerWay[] = [
   {
     id:"divine_roulette", name:"Divine Roulette", cat:"GENERAL",
     desc:"Upon a successful deflection, gain one of three effects for 10s (once per 30s): applies to Martial Arts, Perception, Special, Charged Skills, and Varied Combos.",
-    recommended:false, note:"Requires perfect deflect timing � less consistent in PvE boss fights.",
+    recommended:false, note:"Requires perfect deflect timing — less consistent in PvE boss fights.",
     tiers:[
       {tier:1,effect:"One random buff (35s CD): ~+1.5% avg DMG",stat:{generalDmg:1.5}},
       {tier:2,effect:"One random buff (32s CD): ~+2% avg DMG",stat:{generalDmg:2}},
@@ -528,7 +528,7 @@ export const INNER_WAYS: InnerWay[] = [
   {
     id:"rock_solid", name:"Rock Solid", cat:"STONESPLIT-MIGHT",
     desc:"Stormbreaker Spear's Storm Roar DMG Reduction: +20% after taunting a boss, +5% non-boss (max 20%). While DMG Reduction active, reduces all damage dealt by 10%.",
-    recommended:false, note:"Tank utility � reduces your own DPS while active.",
+    recommended:false, note:"Tank utility — reduces your own DPS while active.",
     tiers:[
       {tier:1,effect:"After boss taunt: -4% DMG taken. -10% own DMG dealt",stat:{}},
       {tier:2,effect:"After boss taunt: -8% DMG taken. -10% own DMG",stat:{}},
