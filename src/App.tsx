@@ -423,6 +423,8 @@ const DEFAULT_GEAR: GearItem[] = [
     subs:[{type:"Crit Rate",val:"6.8%"},{type:"Max Phys Atk",val:"63.8",isTuned:true},{type:"Precision",val:"6.6%"},{type:"Crit Rate",val:"6.9%"},{type:"Min Bamboocut Atk",val:"33.7"},{type:"Umbrella Bonus",val:"4.5%"}]},
   { id:"g7", slot:"Bracers", name:"Nightfarer Bracers", quality:"purple", set:"stormrain",
     subs:[{type:"Crit Rate",val:"7.2%"},{type:"Max Bamboocut Atk",val:"36.2"},{type:"Min Phys Atk",val:"63.8",isTuned:true},{type:"Crit Rate",val:"7.3%"},{type:"Max Phys Atk",val:"59.8"},{type:"Umbrella Bonus",val:"5.0%"}]},
+  { id:"g8", slot:"Disc", name:"Swiftwing Disc", quality:"gold", set:"stars",
+    subs:[{type:"Min Phys Atk",val:"56.2"},{type:"Max Phys Atk",val:"59.9"},{type:"Min Phys Atk",val:"61.7",isTuned:true},{type:"Crit Rate",val:"6.8%"},{type:"Phys Pen",val:"8.6"}]},
 ];
 
 const SUB_MAP: Record<string, keyof PanelStats> = {
@@ -658,7 +660,7 @@ const BUILD_PROFILES = {
     priorityStats: ["maxOuter","crit","aff","outerPen","critDmg"],
   },
   "bamboocut-wind": {
-    label: "Bamboocut-Wind", weapons: "Infernal Twinblades + Mortal Rope Dart",
+    label: "Bamboocut-Wind (beta)", weapons: "Infernal Twinblades + Mortal Rope Dart",
     tier: "T0 AoE", color: "text-orange-400",
     gradTargets: { maxOuter: 1800, minOuter: 800, outerPen: 40.0, crit: 108.8, aff: 14.5, critDmg: 50 },
     notes: "Priority: Bamboocut ATK → Phys Pen → Crit Rate. Different scaling from Bamboocut-Dust.",
@@ -686,7 +688,7 @@ const BUILD_PROFILES = {
     priorityStats: ["maxOuter","crit","aff","outerPen","allArts"],
   },
   "bamboocut-kite": {
-    label: "Bamboocut-Kite", weapons: "Heavenstrike Gauntlets + Unfettered Rope Dart",
+    label: "Bamboocut-Kite (beta)", weapons: "Heavenstrike Gauntlets + Unfettered Rope Dart",
     tier: "T0 AoE", color: "text-amber-600",
     gradTargets: { maxOuter: 2830, minOuter: 1185, outerPen: 36.5, crit: 116.9, aff: 14.7, critDmg: 54 },
     notes: "Priority: Max Phys ATK → Bamboocut ATK → Phys Pen. Gauntlets + Rope Dart.",
@@ -700,7 +702,7 @@ const BUILD_PROFILES = {
     priorityStats: ["maxOuter","crit","outerPen","critDmg","allArts"],
   },
   "stonesplit-pure-datang": {
-    label: "Stonesplit-Pure Datang", weapons: "Thundercry Blade + Snowparting Blade",
+    label: "Stonesplit-Pure Datang (beta)", weapons: "Thundercry Blade + Snowparting Blade",
     tier: "T0 Single", color: "text-rose-600",
     gradTargets: { maxOuter: 3135, minOuter: 1425, outerPen: 40.5, crit: 100.0, aff: 20.0, critDmg: 55 },
     notes: "Priority: Max Phys ATK → Crit Rate → Phys Pen. Hengdao + Modao.",
