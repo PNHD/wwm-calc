@@ -171,23 +171,26 @@ const ATTUNED_BONUS_LABEL: Record<string, string> = {
   "stonesplit-pure-datang": "Snowparting Blade: Derivation DMG Bonus (Attuned Weapon Bonus)",
 };
 
+// Naked character-menu panel ("base trần") for a T91/Lv95 Bamboocut-Dust example,
+// taken directly from the in-game Combat Attributes screen. Inner ways are NOT
+// included here — they are in-combat buffs added on top in `adjustedPanel`.
 const INITIAL_PANEL: PanelStats = {
-  minOuter: 1507,
-  maxOuter: 2278,
-  outerPen: 36.4,
+  minOuter: 1418,
+  maxOuter: 2311,
+  outerPen: 28.7,
   minPz: 377,
-  maxPz: 688,
+  maxPz: 725,
   pzPen: 18.0,
   pzDmg: 9.0,
-  prec: 116.9,
-  crit: 116.9,
-  aff: 14.7,
+  prec: 119.1,
+  crit: 115.6,
+  aff: 17.0,
   dcrit: 4.6,
   daff: 0,
   critDmg: 54,
   affDmg: 35,
   outerDmg: 2.8,
-  bossDmg: 0,
+  bossDmg: 2.6,
   umbAll: 0, umbMartial: 5.1, umbSpecial: 0, umbCharged: 0,
   ropeAll: 0, ropeMartial: 0, ropeSpecial: 0, ropeCharged: 0,
   swordAll: 0, swordMartial: 0, swordSpecial: 0, swordCharged: 0,
@@ -197,7 +200,7 @@ const INITIAL_PANEL: PanelStats = {
   modaoAll: 0, modaoMartial: 0, modaoSpecial: 0, modaoCharged: 0,
   hengdaoAll: 0, hengdaoMartial: 0, hengdaoSpecial: 0, hengdaoCharged: 0,
   gauntletsAll: 0, gauntletsMartial: 0, gauntletsSpecial: 0, gauntletsCharged: 0,
-  allArts: 0,
+  allArts: 2.4,
   attunedBonus: 0,
   wuxiangMin: 0,
   wuxiangMax: 0,
@@ -2118,8 +2121,22 @@ export default function App() {
     const starsCount = setCounts["stars"] || 0;
     (p as any).weaponStars = starsCount >= 4 || p.set === "stars";
 
-    // Pass inner way factors for formula use (e.g. general DMG multiplier)
-    // but do NOT add iwStats to panel — they're already in the game totals
+    // Inner ways are IN-COMBAT buffs (proc/stack effects) — they do NOT appear in
+    // the game's character-menu panel. The manual `panel` fields therefore represent
+    // the naked character-menu panel ("base trần"); here we add the selected inner
+    // ways' stats on top to produce the effective in-combat panel used by the DPS
+    // formula and the stat readout. (Previously only generalDmg was applied, so
+    // pen / crit / crit-dmg / etc. from inner ways were silently ignored.)
+    p.outerPen += iwStats.outerPen;
+    p.pzPen += iwStats.pzPen;
+    p.crit += iwStats.crit;
+    p.aff += iwStats.aff;
+    p.dcrit += iwStats.dcrit;
+    p.critDmg += iwStats.critDmg;
+    p.affDmg += iwStats.affDmg;
+    p.outerDmg += iwStats.outerDmg;
+    p.pzDmg += iwStats.pzDmg;
+    // generalDmg stays in its own "general DMG%" multiplier bucket in the formula.
     p.iwGeneralDmg = iwStats.generalDmg;
     p.iwOuterPen = iwStats.outerPen;
     p.iwPzPen = iwStats.pzPen;
@@ -3069,6 +3086,18 @@ export default function App() {
                             ? "ON — Panel stats are computed from equipped items. Change gear to change stats."
                             : "OFF — all stats below are entered manually and will not update when you change gear."}
                         </p>
+                        <p className="text-[11.5px] text-amber-500/80 leading-snug border-t border-amber-900/20 pt-2">
+                          ⓘ Enter your <b>in-game Combat Attributes</b> values here (the "base trần" — character menu panel). Inner Ways are in-combat buffs and are <b>added automatically on top</b>; do not include them here. The stat readout on the right shows the effective in-combat panel (base + Inner Ways).
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => { if (!autoGearPanel) setPanel({ ...INITIAL_PANEL, set: panel.set }); }}
+                          disabled={autoGearPanel}
+                          className="text-[11px] font-mono px-3 py-1.5 rounded bg-amber-600/20 hover:bg-amber-600/30 text-amber-400 border border-amber-700/40 disabled:opacity-40 disabled:cursor-not-allowed"
+                          title="Load the game-accurate T91/Lv95 base panel (you can then tweak each value to match your own character)"
+                        >
+                          ↺ Load T91 game-default base
+                        </button>
                       </div>
 
                       <div className="bg-[#1c1a17] border border-amber-900/20 rounded-xl p-4 space-y-3">
