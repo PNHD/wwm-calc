@@ -309,6 +309,19 @@ const BUILD_WEAPON_TYPES: Record<string, [string, string]> = {
   "stonesplit-pure-datang": ["Hengdao", "Modao"],
 };
 
+// Inner-attribute (本系) display name per build family. Bamboocut-Dust uses
+// "Bamboocut"; Silkbind / Bellstrike / Stonesplit families use their own.
+const INNER_ATTR_BY_BUILD: Record<string, string> = {
+  "bamboocut-dust": "Bamboocut", "bamboocut-wind": "Bamboocut", "bamboocut-kite": "Bamboocut",
+  "bellstrike-umbra": "Bellstrike", "bellstrike-splendor": "Bellstrike",
+  "silkbind-jade": "Silkbind", "silkbind-deluge": "Silkbind",
+  "stonesplit-might": "Stonesplit", "stonesplit-awe": "Stonesplit", "stonesplit-pure-datang": "Stonesplit",
+};
+const innerAttrName = (buildKey: string): string => INNER_ATTR_BY_BUILD[buildKey] || "Bamboocut";
+
+// Builds whose T91 graduation DPS is estimated (no dedicated Lv95 source row yet).
+const ESTIMATED_BUILDS = new Set(["bamboocut-kite", "stonesplit-pure-datang"]);
+
 const WEAPON_ICON_MAP: Record<string, string> = {
   "Sword": "icon/icon1_1.jpg",
   "Spear": "icon/icon1_2.jpg",
@@ -2720,7 +2733,7 @@ export default function App() {
                 title="Select build path"
               >
                 {Object.entries(BUILD_PROFILES).map(([key, b]) => (
-                  <option key={key} value={key}>{b.label}</option>
+                  <option key={key} value={key}>{b.label}{ESTIMATED_BUILDS.has(key) ? " (est.)" : ""}</option>
                 ))}
               </select>
             </div>
@@ -2991,11 +3004,11 @@ export default function App() {
                 { label: "Affinity DMG", base: panel.affDmg, combat: adjustedPanel.affDmg, pct: true, plus: true },
                 { label: "Precision Rate", base: panel.prec, combat: adjustedPanel.prec, pct: true },
                 { label: "↳ Effective", combat: effPrecision, pct: true, derived: true },
-                { label: "Min Bamboocut Atk", base: panel.minPz, combat: adjustedPanel.minPz },
-                { label: "Max Bamboocut Atk", base: panel.maxPz, combat: adjustedPanel.maxPz },
-                { label: "Bamboocut Pen", base: panel.pzPen, combat: adjustedPanel.pzPen, pct: true },
+                { label: `Min ${innerAttrName(selectedBuild)} Atk`, base: panel.minPz, combat: adjustedPanel.minPz },
+                { label: `Max ${innerAttrName(selectedBuild)} Atk`, base: panel.maxPz, combat: adjustedPanel.maxPz },
+                { label: `${innerAttrName(selectedBuild)} Pen`, base: panel.pzPen, combat: adjustedPanel.pzPen, pct: true },
                 { label: "↳ Net (after enemy res)", combat: netPzPen, pct: true, derived: true },
-                { label: "Bamboocut DMG Bonus", base: panel.pzDmg, combat: adjustedPanel.pzDmg, pct: true },
+                { label: `${innerAttrName(selectedBuild)} DMG Bonus`, base: panel.pzDmg, combat: adjustedPanel.pzDmg, pct: true },
               ];
               return (
                 <>
@@ -3168,13 +3181,13 @@ export default function App() {
                         </div>
 
                         <div>
-                          <h3 className="text-sm font-semibold text-amber-500 uppercase tracking-widest mb-3 border-b border-amber-500/20 pb-1">Bamboocut Attributes</h3>
+                          <h3 className="text-sm font-semibold text-amber-500 uppercase tracking-widest mb-3 border-b border-amber-500/20 pb-1">{innerAttrName(selectedBuild)} Attributes</h3>
                           <div className="space-y-2">
                             {[
-                              { label: "Min Bamboocut Atk", key: "minPz" },
-                              { label: "Max Bamboocut Atk", key: "maxPz" },
-                              { label: "Bamboocut Pen %", key: "pzPen", step: 0.1 },
-                              { label: "Bamboocut DMG Bonus %", key: "pzDmg", step: 0.1 }
+                              { label: `Min ${innerAttrName(selectedBuild)} Atk`, key: "minPz" },
+                              { label: `Max ${innerAttrName(selectedBuild)} Atk`, key: "maxPz" },
+                              { label: `${innerAttrName(selectedBuild)} Pen %`, key: "pzPen", step: 0.1 },
+                              { label: `${innerAttrName(selectedBuild)} DMG Bonus %`, key: "pzDmg", step: 0.1 }
                             ].map(st => (
                               <div key={st.key} className="flex justify-between items-center bg-slate-950/70 p-2 rounded border border-slate-800 text-sm">
                                 <span className="text-slate-500">{st.label}</span>
