@@ -129,6 +129,15 @@ export interface InnerWayTier {
   stat: { [key: string]: number };
 }
 
+// How an inner way's combat stat is delivered:
+//  "passive"     — flat, always-on; appears in the character-menu panel
+//  "ramp"        — stacks up from 0 after combat starts (gained by attacking/
+//                  healing); reaches the listed max after a few seconds
+//  "conditional" — only while a specific condition holds (enemy exhausted,
+//                  >50% HP, random proc, 3+ enemies, airborne, etc.)
+//  "utility"     — no combat stat (endurance/mobility/resource only)
+export type InnerWayTrigger = "passive" | "ramp" | "conditional" | "utility";
+
 export interface InnerWay {
   id: string;
   name: string;
@@ -138,6 +147,9 @@ export interface InnerWay {
   tiers: InnerWayTier[];
   recommended?: boolean;
   note?: string;
+  // Activation type for the stat in `tiers[].stat`. The calculator applies the
+  // max-stack value as an in-combat buff; this field documents the assumption.
+  trigger?: InnerWayTrigger;
 }
 
 export interface ArsenalWeapon {

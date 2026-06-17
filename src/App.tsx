@@ -4986,10 +4986,43 @@ export default function App() {
                         )}
                       </div>
                       <div className="xinfa-select-name">{iw.name}</div>
+                      {(() => {
+                        const trig = iw.trigger || "utility";
+                        const meta: Record<string, { label: string; color: string; bg: string }> = {
+                          passive:     { label: "Always-on", color: "#7ee787", bg: "rgba(46,160,67,0.15)" },
+                          ramp:        { label: "Ramps in combat", color: "#f0b400", bg: "rgba(187,128,9,0.15)" },
+                          conditional: { label: "Conditional", color: "#ff9f6b", bg: "rgba(219,109,40,0.15)" },
+                          utility:     { label: "Utility (no stat)", color: "#8b949e", bg: "rgba(110,118,129,0.12)" },
+                        };
+                        const m = meta[trig];
+                        const maxStat = iw.tiers[iw.tiers.length - 1]?.stat || {};
+                        const labels: Record<string, string> = {
+                          outerPen: "Pen", pzPen: "Attr Pen", crit: "Crit", aff: "Aff", dcrit: "D.Crit",
+                          critDmg: "Crit DMG%", affDmg: "Aff DMG%", outerDmg: "Phys DMG%", pzDmg: "Attr DMG%", generalDmg: "DMG%",
+                        };
+                        const parts = Object.entries(maxStat)
+                          .filter(([, v]) => (v as number) > 0)
+                          .map(([k, v]) => `+${v}${k === "outerPen" || k === "pzPen" || k === "dcrit" ? "" : "%"} ${labels[k] || k}`);
+                        return (
+                          <div style={{ marginTop: 4, display: "flex", flexDirection: "column", gap: 2, alignItems: "center" }}>
+                            <span style={{ fontSize: 9.5, fontWeight: 700, color: m.color, background: m.bg, padding: "1px 6px", borderRadius: 999, textTransform: "uppercase", letterSpacing: 0.3 }}>
+                              {m.label}
+                            </span>
+                            {parts.length > 0 && (
+                              <span style={{ fontSize: 9.5, color: "#a7b0bb", fontFamily: "monospace" }} title="Max value applied as in-combat buff">
+                                {parts.join(" · ")}
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </div>
                   );
                 })}
               </div>
+              <p style={{ fontSize: 11.5, color: "#f0b400cc", lineHeight: 1.4, margin: 0 }}>
+                ⓘ Inner Ways are <b>in-combat buffs</b> — they do NOT appear in your character-menu panel. The calculator adds each selected stat at its <b>max value</b> (full stacks / condition met) on top of your base panel. "Conditional" ones require a specific state (enemy exhausted, &gt;50% HP, random proc…), so real uptime may be lower.
+              </p>
               <div className="modal-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#232328', padding: '15px 20px', margin: '0 -20px -20px -20px', borderRadius: '0 0 12px 12px', borderTop: '1px solid #3d3d42' }}>
                 <span style={{ color: 'var(--text-sub)', fontSize: '0.9rem', fontWeight: 'bold' }}>
                   Selected: {selectedInnerWays.length} / 4
