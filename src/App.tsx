@@ -2970,32 +2970,64 @@ export default function App() {
             <div className="banner-arrow">›</div>
           </div>
 
-          {/* Stats Display */}
+          {/* Stats Display — two columns: in-game menu base vs in-combat (with Inner Ways + buffs) */}
           <div id="stats-display" className="stats-panel">
-            {[
-              { label: "Min Physical Atk", val: adjustedPanel.minOuter },
-              { label: "Max Physical Atk", val: adjustedPanel.maxOuter },
-              { label: "Physical Pen %", val: `${adjustedPanel.outerPen.toFixed(1)}%` },
-              { label: "Net Phys Pen (after enemy res)", val: `${netPhysPen.toFixed(1)}%` },
-              { label: "Crit Rate %", val: `${adjustedPanel.crit.toFixed(1)}%` },
-              { label: "Effective Crit Rate %", val: `${effCritRate.toFixed(1)}%` },
-              { label: "Crit DMG %", val: `+${adjustedPanel.critDmg.toFixed(1)}%` },
-              { label: "Affinity Rate %", val: `${adjustedPanel.aff.toFixed(1)}%` },
-              { label: "Effective Affinity Rate %", val: `${effAffRate.toFixed(1)}%` },
-              { label: "Affinity DMG %", val: `+${adjustedPanel.affDmg.toFixed(1)}%` },
-              { label: "Precision Rate %", val: `${adjustedPanel.prec.toFixed(1)}%` },
-              { label: "Effective Precision %", val: `${effPrecision.toFixed(1)}%` },
-              { label: "Min Bamboocut Atk", val: adjustedPanel.minPz },
-              { label: "Max Bamboocut Atk", val: adjustedPanel.maxPz },
-              { label: "Bamboocut Pen %", val: `${adjustedPanel.pzPen.toFixed(1)}%` },
-              { label: "Net Bamboocut Pen (after enemy res)", val: `${netPzPen.toFixed(1)}%` },
-              { label: "Bamboocut DMG Bonus %", val: `${adjustedPanel.pzDmg.toFixed(1)}%` }
-            ].map((stat, idx) => (
-              <div key={idx} className="stat-row-display">
-                <span className="stat-label">{stat.label}</span>
-                <span className="stat-val">{stat.val}</span>
-              </div>
-            ))}
+            {(() => {
+              const fmt = (v: number | undefined, pct?: boolean, plus?: boolean) => {
+                if (v === undefined) return "—";
+                const n = pct ? `${v.toFixed(1)}%` : `${Math.round(v)}`;
+                return plus ? `+${n}` : n;
+              };
+              const rows: { label: string; base?: number; combat?: number; pct?: boolean; plus?: boolean; derived?: boolean }[] = [
+                { label: "Min Physical Atk", base: panel.minOuter, combat: adjustedPanel.minOuter },
+                { label: "Max Physical Atk", base: panel.maxOuter, combat: adjustedPanel.maxOuter },
+                { label: "Physical Pen", base: panel.outerPen, combat: adjustedPanel.outerPen, pct: true },
+                { label: "↳ Net (after enemy res)", combat: netPhysPen, pct: true, derived: true },
+                { label: "Crit Rate", base: panel.crit, combat: adjustedPanel.crit, pct: true },
+                { label: "↳ Effective", combat: effCritRate, pct: true, derived: true },
+                { label: "Crit DMG", base: panel.critDmg, combat: adjustedPanel.critDmg, pct: true, plus: true },
+                { label: "Affinity Rate", base: panel.aff, combat: adjustedPanel.aff, pct: true },
+                { label: "↳ Effective", combat: effAffRate, pct: true, derived: true },
+                { label: "Affinity DMG", base: panel.affDmg, combat: adjustedPanel.affDmg, pct: true, plus: true },
+                { label: "Precision Rate", base: panel.prec, combat: adjustedPanel.prec, pct: true },
+                { label: "↳ Effective", combat: effPrecision, pct: true, derived: true },
+                { label: "Min Bamboocut Atk", base: panel.minPz, combat: adjustedPanel.minPz },
+                { label: "Max Bamboocut Atk", base: panel.maxPz, combat: adjustedPanel.maxPz },
+                { label: "Bamboocut Pen", base: panel.pzPen, combat: adjustedPanel.pzPen, pct: true },
+                { label: "↳ Net (after enemy res)", combat: netPzPen, pct: true, derived: true },
+                { label: "Bamboocut DMG Bonus", base: panel.pzDmg, combat: adjustedPanel.pzDmg, pct: true },
+              ];
+              return (
+                <>
+                  <div className="stat-row-display" style={{ borderBottom: "1px solid rgba(245,180,0,0.25)", paddingBottom: 4, marginBottom: 2 }}>
+                    <span className="stat-label" style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: 0.5, color: "#8b949e" }}>Stat</span>
+                    <span style={{ display: "flex", gap: 14 }}>
+                      <span style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: 0.5, color: "#8b949e", width: 56, textAlign: "right" }} title="Value shown in the in-game Combat Attributes menu (no Inner Ways)">Menu</span>
+                      <span style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: 0.5, color: "#f0b400", width: 56, textAlign: "right" }} title="Effective in-combat value = base + Inner Ways + toggled buffs">Combat</span>
+                    </span>
+                  </div>
+                  {rows.map((r, idx) => {
+                    const boosted = !r.derived && r.base !== undefined && r.combat !== undefined && Math.abs(r.combat - r.base) > 0.05;
+                    return (
+                      <div key={idx} className="stat-row-display">
+                        <span className="stat-label" style={r.derived ? { paddingLeft: 10, color: "#7b8794", fontSize: 11.5 } : undefined}>{r.label}</span>
+                        <span style={{ display: "flex", gap: 14 }}>
+                          <span className="stat-val" style={{ width: 56, textAlign: "right", color: r.derived ? "#5b6570" : undefined }}>
+                            {r.derived ? "—" : fmt(r.base, r.pct, r.plus)}
+                          </span>
+                          <span className="stat-val" style={{ width: 56, textAlign: "right", color: boosted ? "#7ee787" : (r.derived ? "#a7b0bb" : undefined), fontWeight: boosted ? 700 : undefined }}>
+                            {fmt(r.combat, r.pct, r.plus)}
+                          </span>
+                        </span>
+                      </div>
+                    );
+                  })}
+                  <p style={{ fontSize: 10.5, color: "#6e7681", marginTop: 6, lineHeight: 1.4 }}>
+                    <b style={{ color: "#8b949e" }}>Menu</b> = đúng bảng Combat Attributes trong game · <b style={{ color: "#f0b400" }}>Combat</b> = khi đánh (đã cộng Inner Ways tại max stack + buff đang bật). Số xanh = được Inner Ways/buff tăng.
+                  </p>
+                </>
+              );
+            })()}
           </div>
         </aside>
       </div>
