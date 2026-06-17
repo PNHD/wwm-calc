@@ -660,7 +660,7 @@ const BUILD_PROFILES = {
     priorityStats: ["maxOuter","crit","aff","outerPen","critDmg"],
   },
   "bamboocut-wind": {
-    label: "Bamboocut-Wind (beta)", weapons: "Infernal Twinblades + Mortal Rope Dart",
+    label: "Bamboocut-Wind", weapons: "Infernal Twinblades + Mortal Rope Dart",
     tier: "T0 AoE", color: "text-orange-400",
     gradTargets: { maxOuter: 1800, minOuter: 800, outerPen: 40.0, crit: 108.8, aff: 14.5, critDmg: 50 },
     notes: "Priority: Bamboocut ATK → Phys Pen → Crit Rate. Different scaling from Bamboocut-Dust.",
@@ -702,7 +702,7 @@ const BUILD_PROFILES = {
     priorityStats: ["maxOuter","crit","outerPen","critDmg","allArts"],
   },
   "stonesplit-pure-datang": {
-    label: "Stonesplit-Pure Datang (beta)", weapons: "Thundercry Blade + Snowparting Blade",
+    label: "Stonesplit-Pure Datang", weapons: "Thundercry Blade + Snowparting Blade",
     tier: "T0 Single", color: "text-rose-600",
     gradTargets: { maxOuter: 3135, minOuter: 1425, outerPen: 40.5, crit: 100.0, aff: 20.0, critDmg: 55 },
     notes: "Priority: Max Phys ATK → Crit Rate → Phys Pen. Hengdao + Modao.",
