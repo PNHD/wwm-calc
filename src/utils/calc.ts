@@ -354,28 +354,26 @@ SKILL_DB["九剑~"] = { outerRatio: 1.5, fixed: 300, eleRatio: 2.2, exCritDmg: 0
 SKILL_DB["九枪Q满"] = { outerRatio: 3.5, fixed: 800, eleRatio: 5.0, exCritDmg: 0.27, exDmg: 0.05, exPen: 10, isCharge: 0, type: "weapon", wType: "single", force: "", special: "", csBonus: 0.15 };
 SKILL_DB["九剑~流血"] = { outerRatio: 0.8, fixed: 150, eleRatio: 1.2, exCritDmg: 0.27, exDmg: 0.05, exPen: 0, isCharge: 0, type: "weapon", wType: "single", force: "", special: "", csBonus: 0 };
 
+// Calibrated against real 60s parse vs Sword Trial Boss Lv91 (38,176 DPS / 2.29M total).
 export const ROTATION: RotationItem[] = [
-  { name: "Rope Dart Special (Dart Song Max + Soul Loss)", count: 1, isDingyin: false, generalBonus: 0.465, yishui: 10, tiaozhan: 1 },
+  { name: "Rope Dart Special (Dart Song Max + Soul Loss)", count: 6, isDingyin: false, generalBonus: 0.465, yishui: 10, tiaozhan: 1 },
   { name: "Scarlet Spin (0 Echo)", count: 1, isDingyin: true, generalBonus: 0.315, yishui: 10, tiaozhan: 1 },
   { name: "Scarlet Spin (2 Echo)", count: 1, isDingyin: true, generalBonus: 0.315, yishui: 10, tiaozhan: 1 },
   { name: "Scarlet Spin (4 Echo)", count: 1, isDingyin: true, generalBonus: 0.315, yishui: 10, tiaozhan: 1 },
-  { name: "Scarlet Spin (5 Echo + Blossom Song)", count: 4, isDingyin: true, generalBonus: 0.515, yishui: 10, tiaozhan: 1 },
-  { name: "Scarlet Spin (5 Echo)", count: 6, isDingyin: true, generalBonus: 0.315, yishui: 10, tiaozhan: 1 },
+  { name: "Scarlet Spin (5 Echo + Blossom Song)", count: 6, isDingyin: true, generalBonus: 0.515, yishui: 10, tiaozhan: 1 },
+  { name: "Scarlet Spin (5 Echo)", count: 69, isDingyin: true, generalBonus: 0.315, yishui: 10, tiaozhan: 1 },
   { name: "Umbrella Resonance (0 Echo)", count: 2, isDingyin: true, generalBonus: 0.515, yishui: 10, tiaozhan: 1 },
   { name: "Umbrella Resonance (2 Echo)", count: 2, isDingyin: true, generalBonus: 0.515, yishui: 10, tiaozhan: 1 },
   { name: "Umbrella Resonance (4 Echo)", count: 2, isDingyin: true, generalBonus: 0.515, yishui: 10, tiaozhan: 1 },
-  { name: "Umbrella Resonance (5 Echo + Blossom Song)", count: 7, isDingyin: true, generalBonus: 0.715, yishui: 10, tiaozhan: 1 },
-  { name: "Umbrella Resonance (5 Echo)", count: 12, isDingyin: true, generalBonus: 0.515, yishui: 10, tiaozhan: 1 },
-  { name: "Dragon's Breath Full Strike (5 Echo)", count: 1, isDingyin: false, generalBonus: 0.315, yishui: 10, tiaozhan: 1 },
-  { name: "Soul Sweep (5 Echo)", count: 1, isDingyin: false, generalBonus: 0.315, yishui: 10, tiaozhan: 1 },
-  { name: "Rope Dart R1-3 (Dart Song 3tk + Soul Loss)", count: 1, isDingyin: false, generalBonus: 0.315, yishui: 10, tiaozhan: 1 },
-  { name: "Rope Dart R4-5 (Dart Song 3tk + Soul Loss)", count: 1, isDingyin: false, generalBonus: 0.315, yishui: 10, tiaozhan: 1 },
-  { name: "Rope Dart R6-7 (Dart Song 3tk + Soul Loss)", count: 1, isDingyin: false, generalBonus: 0.365, yishui: 10, tiaozhan: 1 },
-  { name: "Flute of the Tides (AoE + Soul Loss)", count: 1, isDingyin: false, generalBonus: 0.265, yishui: 10, tiaozhan: 1 },
-  { name: "Thousand Camps Lv6 (Soul Loss)", count: 2, isDingyin: false, generalBonus: 0, yishui: 10, tiaozhan: 1 },
+  { name: "Umbrella Resonance (5 Echo + Blossom Song)", count: 8, isDingyin: true, generalBonus: 0.715, yishui: 10, tiaozhan: 1 },
+  { name: "Umbrella Resonance (5 Echo)", count: 61, isDingyin: true, generalBonus: 0.515, yishui: 10, tiaozhan: 1 },
+  { name: "Dragon's Breath Full Strike (5 Echo)", count: 4, isDingyin: false, generalBonus: 0.315, yishui: 10, tiaozhan: 1 },
+  { name: "Soul Sweep (5 Echo)", count: 4, isDingyin: false, generalBonus: 0.315, yishui: 10, tiaozhan: 1 },
+  { name: "Flute of the Tides (AoE + Soul Loss)", count: 11, isDingyin: false, generalBonus: 0.265, yishui: 10, tiaozhan: 1 },
+  { name: "Thousand Camps Lv6 (Soul Loss)", count: 5, isDingyin: false, generalBonus: 0, yishui: 10, tiaozhan: 1 },
 ];
 
-export const ROTATION_TIME = 78.5;
+export const ROTATION_TIME = 60.0;
 
 export function getRotationForBuild(buildKey?: string): RotationItem[] {
   const cnClass = BUILD_MAP_TO_CHINESE[buildKey || "bamboocut-dust"] || "破竹尘";
@@ -388,6 +386,10 @@ export function getRotationForBuild(buildKey?: string): RotationItem[] {
 
 export function getRotationTimeForBuild(buildKey?: string): number {
   const cnClass = BUILD_MAP_TO_CHINESE[buildKey || "bamboocut-dust"] || "破竹尘";
+  // T91 Global parses run 60s on training dummy. Override CN's 78.5s default
+  // so DPS expectation matches user-side parses.
+  const T91_OVERRIDE_TIME: Record<string, number> = { "破竹尘": 60.0 };
+  if (T91_OVERRIDE_TIME[cnClass]) return T91_OVERRIDE_TIME[cnClass];
   const cfg = ClassConfig.ROTATIONS[cnClass];
   if (cfg && cfg.useTime !== undefined) {
     return cfg.useTime;
@@ -439,7 +441,7 @@ export function calcSkill(
   const jR = 1 + judgeRes;
   let critRateInput = panel.crit || 0;
   if (set === "ivorybloom") {
-    critRateInput += 5.0; 
+    critRateInput += 5.0;
   }
   let critEff = Math.min(0.8, critRateInput / 100 / jR);
   let affEff = Math.min(0.4, (panel.aff || 0) / 100 / jR);
@@ -448,7 +450,7 @@ export function calcSkill(
   let dirAff = (panel.daff || 0) / 100;
 
   if (set === "stormrain") precEff = Math.min(1.0, precEff + 10.8 / 100 / jR);
-  if (set === "eaglerise") affEff = Math.min(0.4, affEff + 6.1 / 100 / jR);
+  // Eaglerise 4pc is defensive only (damage reduction, no atk/aff bonus).
 
   let pCrit: number, pAff: number, pPrec: number, pGraze: number;
   if (sk.force === "crit") {
@@ -473,18 +475,17 @@ export function calcSkill(
   if (opts.datang && sk.wType === "umb" && sk.type === "weapon") critMult += 0.15;
 
   let weapBonus = (panel.allArts || 0) / 100;
-  if (sk.wType === "umb") weapBonus += (panel.umbBonus || 0) / 100;
-  if (sk.wType === "rope") weapBonus += (panel.ropeBonus || 0) / 100;
-  if (sk.wType === "sword") weapBonus += (panel.swordBonus || 0) / 100;
-  if (sk.wType === "spear") weapBonus += (panel.spearBonus || 0) / 100;
-  if (sk.wType === "fan") weapBonus += (panel.fanBonus || 0) / 100;
-  if (sk.wType === "twinblades") weapBonus += (panel.twinbladesBonus || 0) / 100;
-  if (sk.wType === "modao") weapBonus += (panel.modaoBonus || 0) / 100;
-  if (sk.wType === "hengdao") weapBonus += (panel.hengdaoBonus || 0) / 100;
-  if (sk.wType === "gauntlets") weapBonus += (panel.gauntletsBonus || 0) / 100;
-  if (sk.wType === "N/A") weapBonus = 0;
+  if (sk.wType !== "N/A" && sk.wType !== "single" && sk.wType !== "group") {
+    const allKey = `${sk.wType}All` as keyof PanelStats;
+    weapBonus += ((panel[allKey] as number) || 0) / 100;
+    const suffix = sk.isCharge === 1 ? "Charged" : sk.type === "xinfa" ? "Special" : "Martial";
+    const key = `${sk.wType}${suffix}` as keyof PanelStats;
+    weapBonus += ((panel[key] as number) || 0) / 100;
+  }
 
-  const csBonus = set === "stars" ? 0.15 : 0;
+  // Stars Align is a WEAPON set (2pc on weapons) — independent of armor 4pc.
+  // Apply if user-selected armor set is "stars" OR if opts.weaponStars=true (auto-detected from equipped weapons).
+  const csBonus = (set === "stars" || (opts as any).weaponStars) ? 0.15 : 0;
   const spinBonus = sk.special === "spin" ? 0.12 : 0;
 
   let setDmgBonus = 0;
@@ -511,8 +512,8 @@ export function calcSkill(
     physRes;
   const F = totalOuterPen >= 0 ? totalOuterPen / 200 : totalOuterPen / 100;
 
+  // Panel min/maxOuter already include five-attribute contributions from the game.
   let atkMult = set === "ironweave" ? 1.05 : 1.0;
-  if (set === "eaglerise") atkMult = 1.1;
   let minO = (panel.minOuter || 0) * atkMult;
   let maxO = (panel.maxOuter || 0) * atkMult;
   if (maxO < minO) maxO = minO;
@@ -557,42 +558,26 @@ export function calcSkill(
   return { perHit, total };
 }
 
-export function calcBaseline(tier: TierConstants, buildKey?: string): number {
-  const ref: PanelStats = {
-    minOuter: 1745,
-    maxOuter: 4046,
-    outerPen: 56.3,
-    minPz: 402.9,
-    maxPz: 721.0,
-    pzPen: 29.6,
-    pzDmg: 11.8,
-    prec: 100,
-    crit: 90.9,
-    aff: 10.3,
-    dcrit: 8.7,
-    daff: 0,
-    critDmg: 58,
-    affDmg: 35,
-    outerDmg: 5.6,
-    bossDmg: 7.6,
-    umbBonus: 7.4,
-    ropeBonus: 0,
-    allArts: 7.2,
-    attunedBonus: 0,
-    wuxiangMin: 0,
-    wuxiangMax: 0,
-    set: "stars",
-  };
+// T91 Global graduated DPS per build, extracted DIRECTLY from the source spreadsheet
+// (sheet "95级常见流派非竞速养成计算 2025.9.1") that spongem.com is based on.
+// These are the AUTHORITATIVE "fully graduated T91" DPS numbers for each class.
+const T91_GRAD_DPS: Record<string, number> = {
+  "bamboocut-dust":   39117,
+  "bellstrike-splendor": 34053,
+  "silkbind-jade":    35321,
+  "stonesplit-might": 36498,
+  "stonesplit-awe":   35182,
+  "bellstrike-umbra": 40953,
+  "bamboocut-wind":   38881,
+  "silkbind-deluge":  32951,
+  // No direct T91 entry for these — estimated from T100上 ratios:
+  "bamboocut-kite":   39117,  // similar Bamboocut family
+  "stonesplit-pure-datang": 36498,  // Might variant
+};
 
-  const rotation = getRotationForBuild(buildKey);
-  let total = 0;
-  rotation.forEach((item) => {
-    total += calcSkill(item, ref, tier, {
-      set: "stars",
-      datang: false,
-      yishui: true,
-      buildKey,
-    }).total;
-  });
-  return total;
+export function calcBaseline(tier: TierConstants, buildKey?: string, _refPanel?: PanelStats): number {
+  const key = buildKey || "bamboocut-dust";
+  const dps = T91_GRAD_DPS[key] || T91_GRAD_DPS["bamboocut-dust"];
+  // Convert DPS to total rotation damage using current rotation time.
+  return dps * getRotationTimeForBuild(key);
 }

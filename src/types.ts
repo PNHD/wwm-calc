@@ -15,15 +15,42 @@ export interface PanelStats {
   affDmg: number;
   outerDmg: number;
   bossDmg: number;
-  umbBonus: number;
-  ropeBonus: number;
-  swordBonus: number;
-  spearBonus: number;
-  fanBonus: number;
-  twinbladesBonus: number;
-  modaoBonus: number;
-  hengdaoBonus: number;
-  gauntletsBonus: number;
+  umbAll: number;
+  umbMartial: number;
+  umbSpecial: number;
+  umbCharged: number;
+  ropeAll: number;
+  ropeMartial: number;
+  ropeSpecial: number;
+  ropeCharged: number;
+  swordAll: number;
+  swordMartial: number;
+  swordSpecial: number;
+  swordCharged: number;
+  spearAll: number;
+  spearMartial: number;
+  spearSpecial: number;
+  spearCharged: number;
+  fanAll: number;
+  fanMartial: number;
+  fanSpecial: number;
+  fanCharged: number;
+  twinbladesAll: number;
+  twinbladesMartial: number;
+  twinbladesSpecial: number;
+  twinbladesCharged: number;
+  modaoAll: number;
+  modaoMartial: number;
+  modaoSpecial: number;
+  modaoCharged: number;
+  hengdaoAll: number;
+  hengdaoMartial: number;
+  hengdaoSpecial: number;
+  hengdaoCharged: number;
+  gauntletsAll: number;
+  gauntletsMartial: number;
+  gauntletsSpecial: number;
+  gauntletsCharged: number;
   allArts: number;
   attunedBonus: number; // Attuned Damage Bonus % (定音增伤)
   wuxiangMin: number;
@@ -33,6 +60,16 @@ export interface PanelStats {
   iwOuterPen?: number;
   iwPzPen?: number;
   iwPzDmg?: number;
+  constitution: number;
+  power: number;
+  defense: number;
+  agility: number;
+  momentum: number;
+  physResGear: number;
+  physDmgReduction: number;
+  groupDmg: number;
+  singleTargetDmg: number;
+  strength: number;
 }
 
 export interface TierConstants {

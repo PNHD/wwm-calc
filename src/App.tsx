@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
+import { createWorker } from "tesseract.js";
 import {
   Shield,
   HelpCircle,
@@ -39,7 +40,9 @@ import { INNER_WAYS } from "./data/innerways";
 import { INNER_WAY_IMAGES, WEAPON_IMAGES_G8, MYSTIC_SKILL_IMAGES, ARMOR_SET_IMAGES } from "./data/game8Images";
 import { WWM_DATA } from "./data/wwmData";
 import OcrScanner from "./components/OcrScanner";
+import { runDualPassOcr } from "./utils/ocrParser";
 import StatSwapSimulator from "./components/StatSwapSimulator";
+import SearchableSelect from "./components/SearchableSelect";
 
 // Constants
 const PATH_ICONS: Record<string, string> = {
@@ -185,20 +188,30 @@ const INITIAL_PANEL: PanelStats = {
   affDmg: 35,
   outerDmg: 2.8,
   bossDmg: 0,
-  umbBonus: 5.1,
-  ropeBonus: 0,
-  swordBonus: 0,
-  spearBonus: 0,
-  fanBonus: 0,
-  twinbladesBonus: 0,
-  modaoBonus: 0,
-  hengdaoBonus: 0,
-  gauntletsBonus: 0,
+  umbAll: 0, umbMartial: 5.1, umbSpecial: 0, umbCharged: 0,
+  ropeAll: 0, ropeMartial: 0, ropeSpecial: 0, ropeCharged: 0,
+  swordAll: 0, swordMartial: 0, swordSpecial: 0, swordCharged: 0,
+  spearAll: 0, spearMartial: 0, spearSpecial: 0, spearCharged: 0,
+  fanAll: 0, fanMartial: 0, fanSpecial: 0, fanCharged: 0,
+  twinbladesAll: 0, twinbladesMartial: 0, twinbladesSpecial: 0, twinbladesCharged: 0,
+  modaoAll: 0, modaoMartial: 0, modaoSpecial: 0, modaoCharged: 0,
+  hengdaoAll: 0, hengdaoMartial: 0, hengdaoSpecial: 0, hengdaoCharged: 0,
+  gauntletsAll: 0, gauntletsMartial: 0, gauntletsSpecial: 0, gauntletsCharged: 0,
   allArts: 0,
   attunedBonus: 0,
   wuxiangMin: 0,
   wuxiangMax: 0,
   set: "stars",
+  constitution: 137,
+  power: 176,
+  defense: 137,
+  agility: 295,
+  momentum: 137,
+  physResGear: 0,
+  physDmgReduction: 0,
+  groupDmg: 0,
+  singleTargetDmg: 0,
+  strength: 0,
 };
 
 export interface SavedProfile {
@@ -221,7 +234,7 @@ export interface GearItem {
   slot: string;
   name: string;
   quality: "gold" | "purple" | "blue";
-  main: string;
+  main?: string;  // legacy field, no longer used in new items
   set: string;
   subs: GearSub[];
   mastery?: number;
@@ -259,6 +272,7 @@ export interface TuneCooldown {
 const SLOTS = [
   { name: "Umbrella",  icon: <Umbrella  className="w-4 h-4" />, label: "☂" },
   { name: "Rope Dart", icon: <Crosshair className="w-4 h-4" />, label: "✦" },
+  { name: "Disc",      icon: <Database  className="w-4 h-4" />, label: "◉" },
   { name: "Pendant",   icon: <Gem       className="w-4 h-4" />, label: "◇" },
   { name: "Helmet",    icon: <HardHat   className="w-4 h-4" />, label: "▲" },
   { name: "Chest",     icon: <Shirt     className="w-4 h-4" />, label: "▣" },
@@ -270,6 +284,7 @@ const SLOTS = [
 const SLOT_IMAGES: Record<string, string> = {
   "Umbrella":  "icon/icon1_3.jpg",
   "Rope Dart": "icon/icon1_5.jpg",
+  "Disc":      "icon/icon3.jpg",
   "Helmet":    "icon/icon5.jpg",
   "Chest":     "icon/icon6.jpg",
   "Bracers":   "icon/icon8.jpg",
@@ -316,38 +331,53 @@ function getWeaponIconUrlByType(weaponType: string | undefined, fallbackSlot: st
 // verified per-piece CDN images exist for armor — keeps each set visually
 // distinct without fabricating image URLs)
 const SET_BADGE_COLORS: Record<string, string> = {
-  "stars":         "from-amber-500 to-yellow-700",      // Moonflare
-  "eaglerise":     "from-sky-500 to-blue-700",          // Hawking
-  "stormrain":     "from-teal-400 to-cyan-700",         // Eaglerise
-  "jadeware":      "from-emerald-400 to-green-700",     // Jadeware
-  "ivorybloom":    "from-pink-400 to-rose-700",         // Ivorybloom
-  "rainwhisper":   "from-indigo-400 to-blue-800",       // Rainwhisper
-  "pursuing":      "from-purple-400 to-violet-700",     // Pursuing Shadow
-  "plume":         "from-cyan-400 to-blue-600",          // Plume
-  "string":        "from-indigo-500 to-purple-800",     // Startling String
+  // Weapon / accessory sets
+  "stars":         "from-amber-500 to-yellow-700",
+  "eaglerise":     "from-sky-500 to-blue-700",
+  "jadeware":      "from-emerald-400 to-green-700",
+  "ivorybloom":    "from-pink-400 to-rose-700",
   "shakenhill":    "from-stone-400 to-stone-700",
   "swallowreturn": "from-orange-400 to-orange-700",
+  "swiftgale":     "from-cyan-300 to-sky-600",
+  "swallowcall":   "from-teal-400 to-teal-700",
+  "mistwillow":    "from-lime-400 to-green-700",
+  "rainwhisper":   "from-indigo-400 to-blue-800",
+  // Armor sets
+  "stormrain":     "from-teal-400 to-cyan-700",
+  "formbend":      "from-amber-700 to-yellow-900",
+  "moonflare":     "from-purple-400 to-violet-700",
+  "obsidian":      "from-slate-800 to-slate-950",
+  "beyondchill":   "from-blue-300 to-cyan-600",
+  "whirlsnow":     "from-white to-slate-400",
+  "calmwaters":    "from-blue-500 to-blue-800",
+  "jadeembrace":   "from-emerald-700 to-teal-900",
+  "agilesteps":    "from-yellow-500 to-orange-700",
+  "flawlessdef":   "from-yellow-200 to-amber-500",
   "ironweave":     "from-slate-400 to-slate-700",
+  // Bow/Ring sets
+  "pursuing":      "from-purple-400 to-violet-700",
+  "plume":         "from-cyan-400 to-blue-600",
+  "string":        "from-indigo-500 to-purple-800",
   "none":          "from-slate-600 to-slate-800",
 };
 
 const DEFAULT_GEAR: GearItem[] = [
-  { id:"g1", slot:"Umbrella", name:"Swiftwing Cloud Umbrella", quality:"gold", main:"Phys Atk 48~112", set:"stars",
+  { id:"g1", slot:"Umbrella", name:"Swiftwing Cloud Umbrella", quality:"gold", set:"stars",
     subs:[{type:"Max Phys Atk",val:"59.2"},{type:"Max Phys Atk",val:"63.8"},{type:"Umbrella Bonus",val:"5.1%"},{type:"Min Phys Atk",val:"62.9"},{type:"Crit Rate",val:"7.4%"},{type:"Phys Pen",val:"7.4"}]},
-  { id:"g2", slot:"Rope Dart", name:"Swiftwing Charm", quality:"gold", main:"Min Phys Atk 71", set:"stars",
+  { id:"g2", slot:"Rope Dart", name:"Swiftwing Charm", quality:"gold", set:"stars",
     subs:[{type:"Min Phys Atk",val:"56.2"},{type:"Max Phys Atk",val:"59.9"},{type:"Min Phys Atk",val:"61.7"},{type:"Max Bamboocut Atk",val:"35.0"},{type:"Crit Rate",val:"7.4%"},{type:"Phys Pen",val:"6.4"}]},
-  { id:"g3", slot:"Pendant", name:"Swiftwing Pendant", quality:"gold", main:"Max Phys Atk 106", set:"stars",
+  { id:"g3", slot:"Pendant", name:"Swiftwing Pendant", quality:"gold", set:"stars",
     subs:[{type:"Max Phys Atk",val:"49.9"},{type:"Max Phys Atk",val:"58.3"},{type:"Min Phys Atk",val:"63.8",isTuned:true},{type:"Crit Rate",val:"6.8%"},{type:"Phys Pen",val:"8.6"}]},
-  { id:"g4", slot:"Helmet", name:"Nightfarer Crown", quality:"gold", main:"HP 4614 / DEF 18", set:"eaglerise",
+  { id:"g4", slot:"Helmet", name:"Nightfarer Crown", quality:"gold", set:"stormrain",
     subs:[{type:"Crit Rate",val:"7.0%"},{type:"Crit Rate",val:"7.1%"},{type:"Min Phys Atk",val:"63.8",isTuned:true},{type:"Max Bamboocut Atk",val:"33.4"},{type:"Max Phys Atk",val:"62.7"},{type:"Umbrella Bonus",val:"4.8%"}]},
-  { id:"g5", slot:"Chest", name:"Nightfarer Armor", quality:"gold", main:"HP 9227 / DEF 18", set:"eaglerise",
+  { id:"g5", slot:"Chest", name:"Nightfarer Armor", quality:"gold", set:"stormrain",
     subs:[{type:"Precision",val:"6.3%"},{type:"Max Bamboocut Atk",val:"34.8"},{type:"Min Bamboocut Atk",val:"35.4"},{type:"Crit Rate",val:"7.4%",isTuned:true},{type:"Max Phys Atk",val:"59.7"},{type:"Umbrella Bonus",val:"4.8%"}]},
-  { id:"g6", slot:"Greaves", name:"Nightfarer Night Leg Armor", quality:"purple", main:"HP 4153 / DEF 32", set:"eaglerise",
+  { id:"g6", slot:"Greaves", name:"Nightfarer Night Leg Armor", quality:"purple", set:"stormrain",
     subs:[{type:"Crit Rate",val:"6.8%"},{type:"Max Phys Atk",val:"63.8",isTuned:true},{type:"Precision",val:"6.6%"},{type:"Crit Rate",val:"6.9%"},{type:"Min Bamboocut Atk",val:"33.7"},{type:"Umbrella Bonus",val:"4.5%"}]},
-  { id:"g7", slot:"Bracers", name:"Nightfarer Bracers", quality:"purple", main:"HP 4614 / DEF 18", set:"eaglerise",
+  { id:"g7", slot:"Bracers", name:"Nightfarer Bracers", quality:"purple", set:"stormrain",
     subs:[{type:"Crit Rate",val:"7.2%"},{type:"Max Bamboocut Atk",val:"36.2"},{type:"Min Phys Atk",val:"63.8",isTuned:true},{type:"Crit Rate",val:"7.3%"},{type:"Max Phys Atk",val:"59.8"},{type:"Umbrella Bonus",val:"5.0%"}]},
-  { id:"g8", slot:"Bow/Ring", name:"Eastgaze Bow: Divine + Eastgaze Ring", quality:"gold", main:"Pursuing Shadow Set 2/2",
-    set:"pursuing", subs:[{type:"Affinity Rate",val:"1.8% (set)"},{type:"All Weapon",val:"12.5%"},{type:"Crit Rate",val:"6.8%"}]},
+  { id:"g8", slot:"Bow/Ring", name:"Eastgaze Bow: Divine + Eastgaze Ring", quality:"gold",
+    set:"pursuing", subs:[{type:"Affinity Rate",val:"1.8% (set)"},{type:"All Martial Arts",val:"12.5%"},{type:"Crit Rate",val:"6.8%"}]},
 ];
 
 const SUB_MAP: Record<string, keyof PanelStats> = {
@@ -363,19 +393,155 @@ const SUB_MAP: Record<string, keyof PanelStats> = {
   "Min Bamboocut Atk": "minPz",
   "Attr Pen": "pzPen",
   "Bamboocut DMG%": "pzDmg",
-  "Umbrella Bonus": "umbBonus",
-  "Rope Dart Bonus": "ropeBonus",
-  "Sword Bonus": "swordBonus",
-  "Spear Bonus": "spearBonus",
-  "Fan Bonus": "fanBonus",
-  "Twinblades Bonus": "twinbladesBonus",
-  "Modao Bonus": "modaoBonus",
-  "Hengdao Bonus": "hengdaoBonus",
-  "Gauntlets Bonus": "gauntletsBonus",
-  "All Weapon": "allArts",
+  "Art of Umbrella Boost": "umbAll",
+  "Umb Martial Art Skill DMG Boost": "umbMartial",
+  "Umb Special Skill DMG Boost": "umbSpecial",
+  "Umb Charged Skill DMG Boost": "umbCharged",
+  "Umbrella Bonus": "umbMartial",
+  "Umb Martial": "umbMartial",
+  "Umb Special": "umbSpecial",
+  "Umb Charged": "umbCharged",
+  "Art of Rope Dart Boost": "ropeAll",
+  "Rope Dart Martial Art Skill DMG Boost": "ropeMartial",
+  "Rope Dart Special Skill DMG Boost": "ropeSpecial",
+  "Rope Dart Charged Skill DMG Boost": "ropeCharged",
+  "Rope Dart Bonus": "ropeMartial",
+  "Rope Martial": "ropeMartial",
+  "Rope Special": "ropeSpecial",
+  "Rope Charged": "ropeCharged",
+  "Art of Sword Boost": "swordAll",
+  "Sword Martial Art Skill DMG Boost": "swordMartial",
+  "Sword Special Skill DMG Boost": "swordSpecial",
+  "Sword Charged Skill DMG Boost": "swordCharged",
+  "Sword Bonus": "swordMartial",
+  "Sword Martial": "swordMartial",
+  "Sword Special": "swordSpecial",
+  "Sword Charged": "swordCharged",
+  "Art of Spear Boost": "spearAll",
+  "Spear Martial Art Skill DMG Boost": "spearMartial",
+  "Spear Special Skill DMG Boost": "spearSpecial",
+  "Spear Charged Skill DMG Boost": "spearCharged",
+  "Spear Bonus": "spearMartial",
+  "Spear Martial": "spearMartial",
+  "Spear Special": "spearSpecial",
+  "Spear Charged": "spearCharged",
+  "Art of Fan Boost": "fanAll",
+  "Fan Martial Art Skill DMG Boost": "fanMartial",
+  "Fan Special Skill DMG Boost": "fanSpecial",
+  "Fan Charged Skill DMG Boost": "fanCharged",
+  "Fan Bonus": "fanMartial",
+  "Fan Martial": "fanMartial",
+  "Fan Special": "fanSpecial",
+  "Fan Charged": "fanCharged",
+  "Art of Dual Blades Boost": "twinbladesAll",
+  "Dual Blades Martial Art Skill DMG Boost": "twinbladesMartial",
+  "Dual Blades Special Skill DMG Boost": "twinbladesSpecial",
+  "Dual Blades Charged Skill DMG Boost": "twinbladesCharged",
+  "Twinblades Bonus": "twinbladesMartial",
+  "Twinblades Martial": "twinbladesMartial",
+  "Twinblades Special": "twinbladesSpecial",
+  "Twinblades Charged": "twinbladesCharged",
+  "Art of Mo Blade Boost": "modaoAll",
+  "Mo Blade Martial Art Skill DMG Boost": "modaoMartial",
+  "Mo Blade Special Skill DMG Boost": "modaoSpecial",
+  "Mo Blade Charged Skill DMG Boost": "modaoCharged",
+  "Modao Bonus": "modaoMartial",
+  "Modao Martial": "modaoMartial",
+  "Modao Special": "modaoSpecial",
+  "Modao Charged": "modaoCharged",
+  "Art of Heng Blade Boost": "hengdaoAll",
+  "Heng Blade Martial Art Skill DMG Boost": "hengdaoMartial",
+  "Heng Blade Special Skill DMG Boost": "hengdaoSpecial",
+  "Heng Blade Charged Skill DMG Boost": "hengdaoCharged",
+  "Hengdao Bonus": "hengdaoMartial",
+  "Hengdao Martial": "hengdaoMartial",
+  "Hengdao Special": "hengdaoSpecial",
+  "Hengdao Charged": "hengdaoCharged",
+  "Art of Gauntlets Boost": "gauntletsAll",
+  "Gauntlets Martial Art Skill DMG Boost": "gauntletsMartial",
+  "Gauntlets Special Skill DMG Boost": "gauntletsSpecial",
+  "Gauntlets Charged Skill DMG Boost": "gauntletsCharged",
+  "Gauntlets Bonus": "gauntletsMartial",
+  "Gauntlets Martial": "gauntletsMartial",
+  "Gauntlets Special": "gauntletsSpecial",
+  "Gauntlets Charged": "gauntletsCharged",
+  "All Martial Arts": "allArts",
   "Phys DMG%": "outerDmg",
   "Boss DMG%": "bossDmg",
+  "HP": "constitution",
+  "Power": "power",
+  "Strength": "strength",
+  "Defense": "defense",
+  "Agility": "agility",
+  "Momentum": "momentum",
+  "Max Silkbind Atk": "maxPz",
+  "Min Silkbind Atk": "minPz",
+  "Silkbind DMG%": "pzDmg",
+  "Max Bellstrike Atk": "maxPz",
+  "Min Bellstrike Atk": "minPz",
+  "Bellstrike DMG%": "pzDmg",
+  "Max Stonesplit Atk": "maxPz",
+  "Min Stonesplit Atk": "minPz",
+  "Stonesplit DMG%": "pzDmg",
+  "Bamboocut Pen": "pzPen",
+  "Silkbind Pen": "pzPen",
+  "Bellstrike Pen": "pzPen",
+  "Stonesplit Pen": "pzPen",
+  "Phys Resist": "physResGear",
+  "Phys DMG Reduction": "physDmgReduction",
+  "Direct Crit": "dcrit",
+  "Group Anomaly DMG": "groupDmg",
+  "Single Target DMG": "singleTargetDmg",
 };
+
+const COMPAT_ALIASES = [
+  "Umbrella Bonus","Rope Dart Bonus","Sword Bonus","Spear Bonus","Fan Bonus",
+  "Twinblades Bonus","Modao Bonus","Hengdao Bonus","Gauntlets Bonus",
+  "Umb Martial","Rope Martial","Sword Martial","Spear Martial","Fan Martial",
+  "Twinblades Martial","Modao Martial","Hengdao Martial","Gauntlets Martial",
+  "Umb Special","Umb Charged","Rope Special","Rope Charged",
+  "Sword Special","Sword Charged","Spear Special","Spear Charged",
+  "Fan Special","Fan Charged","Twinblades Special","Twinblades Charged",
+  "Modao Special","Modao Charged","Hengdao Special","Hengdao Charged",
+  "Gauntlets Special","Gauntlets Charged",
+];
+
+function buildSubStatOptions(): { value: string; label: string; group?: string }[] {
+  const weaponGroups: Record<string, string> = {
+    "Art of Umbrella": "Umbrella", "Art of Rope Dart": "Rope Dart",
+    "Art of Sword": "Sword", "Art of Spear": "Spear", "Art of Fan": "Fan",
+    "Art of Dual Blades": "Dual Blades", "Art of Mo Blade": "Mo Blade",
+    "Art of Heng Blade": "Heng Blade", "Art of Gauntlets": "Gauntlets",
+  };
+  const opts: { value: string; label: string; group?: string }[] = [
+    { value: "Other", label: "Select stat / Empty" },
+  ];
+  for (const k of Object.keys(SUB_MAP)) {
+    if (COMPAT_ALIASES.includes(k)) continue;
+    let group: string | undefined;
+    for (const [prefix, gName] of Object.entries(weaponGroups)) {
+      if (k.startsWith(prefix)) { group = gName; break; }
+    }
+    if (!group && (k.endsWith("Martial Art Skill DMG Boost") || k.endsWith("Special Skill DMG Boost") || k.endsWith("Charged Skill DMG Boost"))) {
+      const wName = k.replace(/ (Martial Art|Special|Charged) Skill DMG Boost$/, "");
+      for (const [, gName] of Object.entries(weaponGroups)) {
+        if (gName === wName || (wName === "Umb" && gName === "Umbrella")) { group = gName; break; }
+      }
+      if (!group) group = "Weapon";
+    }
+    if (k === "All Martial Arts") group = "Weapon";
+    if (!group) {
+      if (["Min Outer ATK","Max Outer ATK","Outer Pen","Outer DMG Bonus"].includes(k)) group = "Outer";
+      else if (k.startsWith("Min Pz") || k.startsWith("Max Pz") || k.startsWith("Pz")) group = "Attribute";
+      else if (["Crit","Direct Crit","Crit DMG","Affinity","Affinity DMG","Precision"].includes(k)) group = "Crit/Aff";
+      else group = "Other";
+    }
+    opts.push({ value: k, label: k, group });
+  }
+  return opts;
+}
+
+const SUB_STAT_OPTIONS = buildSubStatOptions();
 
 // --- Gear-driven panel engine -------------------------------------------------
 // Parses a gear sub-stat display value like "59.2", "5.1%", "1.8% (set)" into a number.
@@ -428,22 +594,22 @@ const BUILD_PROFILES = {
   "bamboocut-dust": {
     label: "Bamboocut-Dust", weapons: "Everspring Umbrella + Unfettered Rope Dart",
     tier: "T0 AoE", color: "text-amber-500",
-    gradTargets: { maxOuter: 4046, minOuter: 1657, outerPen: 51.2, crit: 116.9, aff: 14.7, critDmg: 54 },
-    notes: "Priority: Max Phys ATK → Phys Pen → Bamboocut ATK. Prec ~116% (effectively capped). Crit ~116%+ panel to cap at 80% eff.",
-    priorityStats: ["maxOuter","outerPen","crit","critDmg","maxPz","umbBonus"],
+    gradTargets: { maxOuter: 3050, minOuter: 1340, outerPen: 42.0, crit: 116.9, aff: 14.7, critDmg: 54 },
+    notes: "T91 Global graduation target. Priority: Max Phys ATK → Phys Pen → Bamboocut ATK. Crit ~116%+ panel to cap at 80% eff.",
+    priorityStats: ["maxOuter","outerPen","crit","critDmg","maxPz","umbMartial"],
   },
   "bellstrike-umbra": {
     label: "Bellstrike-Umbra", weapons: "Strategic Sword + Heavenquaker Spear",
     tier: "T0 Single", color: "text-indigo-400",
-    gradTargets: { maxOuter: 4231, minOuter: 1800, outerPen: 45.0, crit: 95.4, aff: 71.6, critDmg: 60 },
+    gradTargets: { maxOuter: 3160, minOuter: 1425, outerPen: 37.0, crit: 95.4, aff: 71.6, critDmg: 60 },
     notes: "Priority: Affinity Rate → Max Phys ATK → Crit DMG. Aff cap = 40% eff (need ~58% panel at T91).",
     priorityStats: ["aff","affDmg","maxOuter","crit","outerPen"],
   },
   "bellstrike-splendor": {
     label: "Bellstrike-Splendor", weapons: "Nameless Sword + Nameless Spear",
     tier: "T1 Easy", color: "text-blue-400",
-    gradTargets: { maxOuter: 3800, minOuter: 1500, outerPen: 40.0, crit: 54.4, aff: 43.5, critDmg: 45 },
-    notes: "Priority: Max Phys ATK → Crit Rate → Affinity Rate. Forgiving build for beginners.",
+    gradTargets: { maxOuter: 2830, minOuter: 1185, outerPen: 32.5, crit: 54.4, aff: 43.5, critDmg: 45 },
+    notes: "T91 Global. Priority: Max Phys ATK → Crit Rate → Affinity Rate. Forgiving build for beginners.",
     priorityStats: ["maxOuter","crit","aff","outerPen","critDmg"],
   },
   "bamboocut-wind": {
@@ -456,42 +622,42 @@ const BUILD_PROFILES = {
   "stonesplit-might": {
     label: "Stonesplit-Might", weapons: "Snowparting Blade + Phalanxbane Blade",
     tier: "T1 Tank", color: "text-stone-400",
-    gradTargets: { maxOuter: 3500, minOuter: 1400, outerPen: 38.0, crit: 81.2, aff: 21.75, critDmg: 45 },
+    gradTargets: { maxOuter: 2610, minOuter: 1105, outerPen: 30.5, crit: 81.2, aff: 21.75, critDmg: 45 },
     notes: "Priority: Max Phys ATK → Crit Rate → Phys Pen. Avoid Attr ATK stats (useless for this path).",
     priorityStats: ["maxOuter","crit","outerPen","critDmg","allArts"],
   },
   "silkbind-jade": {
     label: "Silkbind-Jade", weapons: "Vernal Umbrella + Inkwell Fan",
     tier: "T1 Ranged", color: "text-teal-400",
-    gradTargets: { maxOuter: 4007, minOuter: 1700, outerPen: 44.0, crit: 107.6, aff: 43.5, critDmg: 50 },
+    gradTargets: { maxOuter: 2990, minOuter: 1345, outerPen: 35.5, crit: 107.6, aff: 43.5, critDmg: 50 },
     notes: "Priority: Max Phys ATK → Bamboocut ATK → Crit Rate → Affinity Rate.",
-    priorityStats: ["maxOuter","crit","aff","affDmg","outerPen","umbBonus"],
+    priorityStats: ["maxOuter","crit","aff","affDmg","outerPen","umbMartial"],
   },
   "silkbind-deluge": {
     label: "Silkbind-Deluge (Healer)", weapons: "Panacea Fan + Soulshade Umbrella",
     tier: "T1 Healer", color: "text-emerald-400",
-    gradTargets: { maxOuter: 2800, minOuter: 1200, outerPen: 30.0, crit: 43.5, aff: 29.0, critDmg: 40 },
+    gradTargets: { maxOuter: 2090, minOuter: 950, outerPen: 24.5, crit: 43.5, aff: 29.0, critDmg: 40 },
     notes: "Focus on healing power > personal DPS. Do NOT chase Bamboocut ATK or high pen.",
     priorityStats: ["maxOuter","crit","aff","outerPen","allArts"],
   },
   "bamboocut-kite": {
     label: "Bamboocut-Kite", weapons: "Heavenstrike Gauntlets + Unfettered Rope Dart",
     tier: "T0 AoE", color: "text-amber-600",
-    gradTargets: { maxOuter: 3800, minOuter: 1500, outerPen: 45.0, crit: 116.9, aff: 14.7, critDmg: 54 },
+    gradTargets: { maxOuter: 2830, minOuter: 1185, outerPen: 36.5, crit: 116.9, aff: 14.7, critDmg: 54 },
     notes: "Priority: Max Phys ATK → Bamboocut ATK → Phys Pen. Gauntlets + Rope Dart.",
-    priorityStats: ["maxOuter","outerPen","crit","critDmg","maxPz","ropeBonus"],
+    priorityStats: ["maxOuter","outerPen","crit","critDmg","maxPz","ropeMartial"],
   },
   "stonesplit-awe": {
     label: "Stonesplit-Awe", weapons: "Thundercry Blade + Stormbreaker Spear",
     tier: "T0 Tank", color: "text-red-500",
-    gradTargets: { maxOuter: 3900, minOuter: 1600, outerPen: 42.0, crit: 90.0, aff: 30.0, critDmg: 50 },
+    gradTargets: { maxOuter: 2910, minOuter: 1270, outerPen: 34.0, crit: 90.0, aff: 30.0, critDmg: 50 },
     notes: "Priority: Max Phys ATK → Crit Rate → Phys Pen. Modao + Spear.",
     priorityStats: ["maxOuter","crit","outerPen","critDmg","allArts"],
   },
   "stonesplit-pure-datang": {
     label: "Stonesplit-Pure Datang", weapons: "Thundercry Blade + Snowparting Blade",
     tier: "T0 Single", color: "text-rose-600",
-    gradTargets: { maxOuter: 4200, minOuter: 1800, outerPen: 50.0, crit: 100.0, aff: 20.0, critDmg: 55 },
+    gradTargets: { maxOuter: 3135, minOuter: 1425, outerPen: 40.5, crit: 100.0, aff: 20.0, critDmg: 55 },
     notes: "Priority: Max Phys ATK → Crit Rate → Phys Pen. Hengdao + Modao.",
     priorityStats: ["maxOuter","crit","outerPen","critDmg","allArts"],
   },
@@ -542,24 +708,31 @@ const getSlotLabel = (slotName: string): string => {
   return slotName;
 };
 
+// Sets available per slot category (from in-game Switch Set screens)
+const WEAPON_SET_KEYS = [
+  "stars","eaglerise","jadeware","ivorybloom","shakenhill",
+  "swallowreturn","swiftgale","swallowcall","mistwillow","stormrain","none"
+];
+const ARMOR_SET_KEYS = [
+  "stormrain","formbend","moonflare","obsidian","beyondchill",
+  "whirlsnow","calmwaters","jadeembrace","agilesteps","flawlessdef","ironweave","none"
+];
+
 const getSetOptionsForSlot = (slot: string) => {
-  if (slot === "Umbrella" || slot === "Rope Dart" || slot === "Pendant") {
-    return [
-      { key: "none", name: "No Set / Mixed" }
-    ];
+  if (slot === "Umbrella" || slot === "Rope Dart" || slot === "Pendant" || slot === "Disc") {
+    // Weapon / accessory sets
+    return WEAPON_SET_KEYS.map(k => ({ key: k, name: ARMOR_SETS[k as keyof typeof ARMOR_SETS]?.name || k }));
   }
   if (slot === "Bow/Ring") {
     return [
-      { key: "none", name: "No Set / Mixed" },
       { key: "pursuing", name: "Pursuing Shadow" },
       { key: "plume", name: "Plume" },
-      { key: "string", name: "Startling String" }
+      { key: "string", name: "Startling String" },
+      { key: "none", name: "No Set / Mixed" }
     ];
   }
-  return Object.entries(ARMOR_SETS).map(([key, s]) => ({
-    key,
-    name: s.name
-  }));
+  // Armor slots (Helmet/Chest/Greaves/Bracers) → armor sets
+  return ARMOR_SET_KEYS.map(k => ({ key: k, name: ARMOR_SETS[k as keyof typeof ARMOR_SETS]?.name || k }));
 };
 
 // ⚠️ stat2pc values marked with (~) are estimates pending T91 verification.
@@ -575,57 +748,57 @@ const ARMOR_SETS = {
   },
   "eaglerise": {
     name: "Hawkwing",
-    stat2pc: { aff: 6.1 },               // (~) estimate
-    desc2pc: "2/4: +6.1% Affinity Rate",
+    stat2pc: { aff: 3.7 },               // ✅ confirmed T91
+    desc2pc: "2/4: +3.7% Affinity Rate",
     desc4pc: "4/4: Affinity DMG triggers give a stack: +2% Phys ATK/stack (5s, max 5 = +10% Phys ATK)",
     recommended: ["bamboocut-wind", "stonesplit-might", "bellstrike-umbra"],
   },
   "jadeware": {
     name: "Jadeware",
-    stat2pc: { maxOuter: 64 },           // (~) estimate
+    stat2pc: { maxOuter: 64 },           // ✅ confirmed T91
     desc2pc: "2/4: Max Physical ATK +64",
     desc4pc: "4/4: Martial Art Skill → Jadeware buff: each Affinity hit further increases Affinity DMG.",
     recommended: ["bellstrike-umbra", "bellstrike-splendor"],
   },
   "ivorybloom": {
     name: "Ivorybloom",
-    stat2pc: { crit: 7.3 },              // (~) estimate
-    desc2pc: "2/4: +7.3% Critical Rate",
+    stat2pc: { crit: 7.4 },              // ✅ confirmed T91
+    desc2pc: "2/4: +7.4% Critical Rate",
     desc4pc: "4/4: At Max HP: +5% Crit Chance and +15% Critical DMG/Heal.",
     recommended: ["silkbind-deluge", "silkbind-jade"],
   },
   "shakenhill": {
     name: "Shattered Ridge",
-    stat2pc: { prec: 6.1 },              // (~) estimate
-    desc2pc: "2/4: +6.1% Precision Rate",
+    stat2pc: { minOuter: 64 },           // ✅ confirmed T91
+    desc2pc: "2/4: Min Physical ATK +64",
     desc4pc: "4/4: Perfect Deflect boosts next skill/heavy attack DMG significantly.",
     recommended: ["stonesplit-pure-datang"],
   },
   "swallowreturn": {
     name: "Swaying Heights",
-    stat2pc: { minOuter: 64 },           // (~) estimate
+    stat2pc: { minOuter: 64 },           // ✅ confirmed T91
     desc2pc: "2/4: Min Physical ATK +64",
     desc4pc: "4/4: DMG +10% vs targets above 50% HP.",
     recommended: ["bamboocut-wind", "bamboocut-dust"],
   },
   "swiftgale": {
     name: "Swift Gale",
-    stat2pc: { maxOuter: 64 },           // (~) estimate
+    stat2pc: { maxOuter: 64 },           // ✅ confirmed T91
     desc2pc: "2/4: Max Physical ATK +64",
     desc4pc: "4/4: Airborne Heavy Attacks gain +DMG and knock targets back.",
     recommended: [],
   },
   "swallowcall": {
     name: "Swallowcall",
-    stat2pc: {},
-    desc2pc: "2/4: (stat pending verification)",
+    stat2pc: { minOuter: 64 },           // ✅ confirmed T91
+    desc2pc: "2/4: Min Physical ATK +64",
     desc4pc: "4/4: Various effect — verify in-game.",
     recommended: [],
   },
   "mistwillow": {
     name: "Mistwillow",
-    stat2pc: {},
-    desc2pc: "2/4: (stat pending verification)",
+    stat2pc: { prec: 6.6 },              // ✅ confirmed T91
+    desc2pc: "2/4: +6.6% Precision Rate",
     desc4pc: "4/4: After Light/Heavy Attack, following attacks deal bonus DMG for 10s.",
     recommended: [],
   },
@@ -712,6 +885,28 @@ const ARMOR_SETS = {
     stat2pc: {},
     desc2pc: "2/4: +Physical Defense",
     desc4pc: "4/4: Shield duration +2s. If shield broken, gain additional DMG reduction.",
+    recommended: [],
+  },
+  // ── Bow/Ring Sets (stat bonus from bow attribute, not gear substats) ─────
+  "pursuing": {
+    name: "Pursuing Shadow",
+    stat2pc: {},
+    desc2pc: "Bow/Ring set — stat selected via Bow attribute dropdown",
+    desc4pc: "—",
+    recommended: [],
+  },
+  "plume": {
+    name: "Plume",
+    stat2pc: {},
+    desc2pc: "Bow/Ring set — stat selected via Bow attribute dropdown",
+    desc4pc: "—",
+    recommended: [],
+  },
+  "string": {
+    name: "Startling String",
+    stat2pc: {},
+    desc2pc: "Bow/Ring set — stat selected via Bow attribute dropdown",
+    desc4pc: "—",
     recommended: [],
   },
   "none": { name: "No Set / Mixed", stat2pc: {}, desc2pc: "—", desc4pc: "—", recommended: [] },
@@ -982,11 +1177,9 @@ export default function App() {
   // Atk, etc. from the 8 equipped gear pieces (Gear tab) and overwrite those fields
   // in `panel`. Other fields (set, attunedBonus, dcrit/daff, wuxiang, boss dmg %)
   // stay manually-controlled.
-  useEffect(() => {
-    if (!autoGearPanel) return;
-    const gear = getActiveGear();
-    setPanel(prev => computeGearPanel(prev, gear));
-  }, [autoGearPanel, activeScheme?.gear]);
+  // NOTE: autoGearPanel no longer overwrites panel stats because the user enters
+  // TOTAL game values (already includes gear substats). autoGearPanel is now only
+  // used for: (1) auto-detecting the active 4pc set, (2) disabling manual set picker.
 
   const STEPS: Record<string, number> = {
     "Max Phys Atk": 10,
@@ -1001,18 +1194,37 @@ export default function App() {
     "Min Bamboocut Atk": 10,
     "Attr Pen": 1,
     "Bamboocut DMG%": 1,
-    "Umbrella Bonus": 1,
-    "Rope Dart Bonus": 1,
-    "Sword Bonus": 1,
-    "Spear Bonus": 1,
-    "Fan Bonus": 1,
-    "Twinblades Bonus": 1,
-    "Modao Bonus": 1,
-    "Hengdao Bonus": 1,
-    "Gauntlets Bonus": 1,
-    "All Weapon": 1,
+    "Art of Umbrella Boost": 1, "Umb Martial Art Skill DMG Boost": 1, "Umb Special Skill DMG Boost": 1, "Umb Charged Skill DMG Boost": 1, "Umbrella Bonus": 1, "Umb Martial": 1, "Umb Special": 1, "Umb Charged": 1,
+    "Art of Rope Dart Boost": 1, "Rope Dart Martial Art Skill DMG Boost": 1, "Rope Dart Special Skill DMG Boost": 1, "Rope Dart Charged Skill DMG Boost": 1, "Rope Dart Bonus": 1, "Rope Martial": 1, "Rope Special": 1, "Rope Charged": 1,
+    "Art of Sword Boost": 1, "Sword Martial Art Skill DMG Boost": 1, "Sword Special Skill DMG Boost": 1, "Sword Charged Skill DMG Boost": 1, "Sword Bonus": 1, "Sword Martial": 1, "Sword Special": 1, "Sword Charged": 1,
+    "Art of Spear Boost": 1, "Spear Martial Art Skill DMG Boost": 1, "Spear Special Skill DMG Boost": 1, "Spear Charged Skill DMG Boost": 1, "Spear Bonus": 1, "Spear Martial": 1, "Spear Special": 1, "Spear Charged": 1,
+    "Art of Fan Boost": 1, "Fan Martial Art Skill DMG Boost": 1, "Fan Special Skill DMG Boost": 1, "Fan Charged Skill DMG Boost": 1, "Fan Bonus": 1, "Fan Martial": 1, "Fan Special": 1, "Fan Charged": 1,
+    "Art of Dual Blades Boost": 1, "Dual Blades Martial Art Skill DMG Boost": 1, "Dual Blades Special Skill DMG Boost": 1, "Dual Blades Charged Skill DMG Boost": 1, "Twinblades Bonus": 1, "Twinblades Martial": 1, "Twinblades Special": 1, "Twinblades Charged": 1,
+    "Art of Mo Blade Boost": 1, "Mo Blade Martial Art Skill DMG Boost": 1, "Mo Blade Special Skill DMG Boost": 1, "Mo Blade Charged Skill DMG Boost": 1, "Modao Bonus": 1, "Modao Martial": 1, "Modao Special": 1, "Modao Charged": 1,
+    "Art of Heng Blade Boost": 1, "Heng Blade Martial Art Skill DMG Boost": 1, "Heng Blade Special Skill DMG Boost": 1, "Heng Blade Charged Skill DMG Boost": 1, "Hengdao Bonus": 1, "Hengdao Martial": 1, "Hengdao Special": 1, "Hengdao Charged": 1,
+    "Art of Gauntlets Boost": 1, "Gauntlets Martial Art Skill DMG Boost": 1, "Gauntlets Special Skill DMG Boost": 1, "Gauntlets Charged Skill DMG Boost": 1, "Gauntlets Bonus": 1, "Gauntlets Martial": 1, "Gauntlets Special": 1, "Gauntlets Charged": 1,
+    "All Martial Arts": 1,
     "Phys DMG%": 1,
     "Boss DMG%": 1,
+    "HP": 1,
+    "Power": 1,
+    "Strength": 1,
+    "Defense": 1,
+    "Agility": 1,
+    "Momentum": 1,
+    "Max Silkbind Atk": 10,
+    "Min Silkbind Atk": 10,
+    "Silkbind DMG%": 1,
+    "Max Bellstrike Atk": 10,
+    "Min Bellstrike Atk": 10,
+    "Bellstrike DMG%": 1,
+    "Max Stonesplit Atk": 10,
+    "Min Stonesplit Atk": 10,
+    "Stonesplit DMG%": 1,
+    "Bamboocut Pen": 1,
+    "Silkbind Pen": 1,
+    "Bellstrike Pen": 1,
+    "Stonesplit Pen": 1,
   };
 
   const computeTotalDamage = (p: PanelStats) => {
@@ -1073,7 +1285,7 @@ export default function App() {
   const [editingItem, setEditingItem] = useState<GearItem | null>(null);
   const [formName, setFormName] = useState("");
   const [formQuality, setFormQuality] = useState<"gold" | "purple" | "blue">("gold");
-  const [formMain, setFormMain] = useState("");
+  // formMain removed — items no longer store a separate main stat text
   const [formSet, setFormSet] = useState("stars");
   const [formMastery, setFormMastery] = useState<string>("");
   const [formWeaponType, setFormWeaponType] = useState<string>("Sword");
@@ -1081,17 +1293,282 @@ export default function App() {
     Array(6).fill(null).map(() => ({ type: "Max Phys Atk", val: "", isTuned: false }))
   );
 
+  const [isModalOcrProcessing, setIsModalOcrProcessing] = useState(false);
+  const modalFileInputRef = useRef<HTMLInputElement>(null);
+
+  // Global paste event when add/edit gear item modal is open
+  useEffect(() => {
+    const handleGlobalPaste = (e: ClipboardEvent) => {
+      if (!isItemModalOpen || isModalOcrProcessing) return;
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (const item of Array.from(items)) {
+        if (item.type.startsWith("image/")) {
+          const file = item.getAsFile();
+          if (file) {
+            e.preventDefault();
+            handleModalOcr(file);
+            break;
+          }
+        }
+      }
+    };
+    window.addEventListener("paste", handleGlobalPaste);
+    return () => window.removeEventListener("paste", handleGlobalPaste);
+  }, [isItemModalOpen, isModalOcrProcessing]);
+
+  const handleModalOcr = async (file: File) => {
+    setIsModalOcrProcessing(true);
+    try {
+      const objectUrl = URL.createObjectURL(file);
+
+      const worker: any = await createWorker();
+      if (typeof worker.loadLanguage === "function") await worker.loadLanguage("chi_sim+eng");
+      if (typeof worker.initialize === "function") await worker.initialize("chi_sim+eng");
+
+      const { subs, mastery } = await runDualPassOcr(worker, objectUrl);
+      await worker.terminate();
+      URL.revokeObjectURL(objectUrl);
+
+      setFormSubs(subs.map(s => ({ type: s.type, val: s.val, isTuned: !!s.isTuned })));
+      if (mastery) setFormMastery(mastery);
+      alert(`🎉 OCR thành công! Đã tự động điền ${subs.filter(s => s.type !== "Other").length} dòng chỉ số.`);
+    } catch (e) {
+      console.error(e);
+      alert("❌ Có lỗi xảy ra trong quá trình nhận diện OCR.");
+    } finally {
+      setIsModalOcrProcessing(false);
+    }
+  };
+
+  const parseTextToGearItem = (text: string, fileName: string): GearItem => {
+    const lines = text.split("\n");
+    const parsedSubs: GearSub[] = [];
+    let masteryVal = 832;
+    let detectedSlot = "Umbrella"; // Default
+    let detectedWeaponType = "Sword"; // Default
+    let detectedName = fileName.replace(/\.[^/.]+$/, "").replace(/screenshot_\d+/gi, "Scanned Gear"); // default name
+
+    const lcText = text.toLowerCase();
+    
+    // 1. Detect Slot — check armor/accessories FIRST (explicit slot names), then weapons
+    if (lcText.includes("pendant") || lcText.includes("necklace") || lcText.includes("dây chuyền") || lcText.includes("项链")) {
+      detectedSlot = "Pendant";
+    } else if (lcText.includes("disc") || lcText.includes("đĩa") || lcText.includes("唱片")) {
+      detectedSlot = "Disc";
+    } else if (lcText.includes("helmet") || lcText.includes("head") || lcText.includes("mũ") || lcText.includes("头盔")) {
+      detectedSlot = "Helmet";
+    } else if (lcText.includes("chest") || lcText.includes("armor") || lcText.includes("áo") || lcText.includes("胸甲")) {
+      detectedSlot = "Chest";
+    } else if (lcText.includes("bracers") || lcText.includes("hands") || lcText.includes("tay") || lcText.includes("护腕")) {
+      detectedSlot = "Bracers";
+    } else if (lcText.includes("boots") || lcText.includes("shoes") || lcText.includes("legs") || lcText.includes("giày") || lcText.includes("greaves") || lcText.includes("腿甲")) {
+      detectedSlot = "Greaves";
+    } else if (lcText.includes("ring") || lcText.includes("nhẫn") || lcText.includes("bow") || lcText.includes("戒指")) {
+      detectedSlot = "Bow/Ring";
+    } else if (lcText.includes("rope dart") || lcText.includes("rope_dart")) {
+      detectedSlot = "Rope Dart";
+      detectedWeaponType = "Rope Dart";
+    } else if (lcText.includes("umbrella")) {
+      detectedSlot = "Umbrella";
+      detectedWeaponType = "Umbrella";
+    } else if (lcText.includes("sword")) {
+      detectedSlot = "Umbrella";
+      detectedWeaponType = "Sword";
+    } else if (lcText.includes("spear")) {
+      detectedSlot = "Rope Dart";
+      detectedWeaponType = "Spear";
+    } else if (lcText.includes("dual blades") || lcText.includes("twinblades")) {
+      detectedSlot = "Rope Dart";
+      detectedWeaponType = "Dual Blades";
+    } else if (lcText.includes("modao")) {
+      detectedSlot = "Rope Dart";
+      detectedWeaponType = "Modao";
+    } else if (lcText.includes("hengdao")) {
+      detectedSlot = "Umbrella";
+      detectedWeaponType = "Hengdao";
+    } else if (lcText.includes("gauntlets") || lcText.includes("fist")) {
+      detectedSlot = "Umbrella";
+      detectedWeaponType = "Gauntlets";
+    } else if (lcText.includes("fan")) {
+      detectedSlot = "Umbrella";
+      detectedWeaponType = "Fan";
+    }
+
+    // Detect Name
+    const linesNonEmpty = lines.map(l => l.trim()).filter(l => l.length > 0);
+    if (linesNonEmpty.length > 0) {
+      const firstLine = linesNonEmpty[0];
+      if (firstLine.length > 3 && !firstLine.toLowerCase().includes("equipped") && !firstLine.toLowerCase().includes("weapon")) {
+        detectedName = firstLine;
+      }
+    }
+
+    const cleanNum = (str: string) => {
+      const match = str.match(/\d+(?:\.\d+)?/);
+      return match ? match[0] : "";
+    };
+
+    lines.forEach((line) => {
+      const lcLine = line.toLowerCase();
+      
+      // Mastery match
+      if (lcLine.includes("mastery") || lcLine.includes("chế bực") || lcLine.includes("chế ngự")) {
+        const match = line.match(/\b\d{3,4}\b/);
+        if (match) masteryVal = parseInt(match[0], 10);
+      }
+
+      // Match value
+      const valueMatch = line.match(/\d+(?:\.\d+)?%?/);
+      if (valueMatch) {
+        const valStr = cleanNum(valueMatch[0]);
+        if (!valStr || parseFloat(valStr) === 0) return;
+
+        let matchedType = "";
+        
+        if (
+          (lcLine.includes("破防") || lcLine.includes("破甲") || lcLine.includes("xuyên") || lcLine.includes("phá giáp") || lcLine.includes("pen") || lcLine.includes("vật lý") || lcLine.includes("penetration")) &&
+          !(lcLine.includes("破竹") || lcLine.includes("bamboo") || lcLine.includes("phá trúc"))
+        ) {
+          matchedType = "Physical Penetration";
+        }
+        else if (
+          (lcLine.includes("tối đa") || lcLine.includes("max") || lcLine.includes("最大") || lcLine.includes("[turn]max")) &&
+          (lcLine.includes("ngoại") || lcLine.includes("tấn công") || lcLine.includes("atk") || lcLine.includes("phys") || lcLine.includes("công") || lcLine.includes("attack") || lcLine.includes("physical")) &&
+          !(lcLine.includes("破竹") || lcLine.includes("bamboo") || lcLine.includes("phá trúc"))
+        ) {
+          matchedType = "Max Physical Attack";
+        }
+        else if (
+          (lcLine.includes("tối thiểu") || lcLine.includes("min") || lcLine.includes("最小")) &&
+          (lcLine.includes("ngoại") || lcLine.includes("tấn công") || lcLine.includes("atk") || lcLine.includes("phys") || lcLine.includes("công") || lcLine.includes("attack") || lcLine.includes("physical")) &&
+          !(lcLine.includes("破竹") || lcLine.includes("bamboo") || lcLine.includes("phá trúc"))
+        ) {
+          matchedType = "Min Physical Attack";
+        }
+        else if (
+          (lcLine.includes("hội tâm") || lcLine.includes("crit") || lcLine.includes("会心")) &&
+          !(lcLine.includes("伤害") || lcLine.includes("sát thương") || lcLine.includes("dmg") || lcLine.includes("damage") || lcLine.includes("hội thương") || lcLine.includes("加成"))
+        ) {
+          matchedType = "Crit Rate";
+        }
+        else if (
+          lcLine.includes("hội thương") ||
+          (lcLine.includes("hội tâm") && (lcLine.includes("sát thương") || lcLine.includes("伤害") || lcLine.includes("加成"))) ||
+          lcLine.includes("crit dmg") ||
+          lcLine.includes("crit_dmg") ||
+          lcLine.includes("会心伤害")
+        ) {
+          matchedType = "Crit Damage";
+        }
+        else if (
+          (lcLine.includes("thức phá") || lcLine.includes("affinity") || lcLine.includes("aff") || lcLine.includes("识破")) &&
+          !(lcLine.includes("sát thương") || lcLine.includes("dmg") || lcLine.includes("damage") || lcLine.includes("伤害") || lcLine.includes("加成"))
+        ) {
+          matchedType = "Affinity Rate";
+        }
+        else if (
+          (lcLine.includes("thức phá") && (lcLine.includes("sát thương") || lcLine.includes("伤害") || lcLine.includes("加成"))) ||
+          lcLine.includes("affinity dmg") ||
+          lcLine.includes("aff_dmg") ||
+          lcLine.includes("识破伤害")
+        ) {
+          matchedType = "Affinity Damage";
+        }
+        else if (
+          (lcLine.includes("破竹") || lcLine.includes("bamboo") || lcLine.includes("phá trúc")) &&
+          (lcLine.includes("破防") || lcLine.includes("xuyên") || lcLine.includes("pen"))
+        ) {
+          matchedType = "Bamboocut Penetration";
+        }
+        else if (
+          (lcLine.includes("破竹") || lcLine.includes("bamboo") || lcLine.includes("phá trúc")) &&
+          (lcLine.includes("伤害") || lcLine.includes("sát thương") || lcLine.includes("dmg") || lcLine.includes("damage"))
+        ) {
+          matchedType = "Bamboocut DMG";
+        }
+        else if (
+          lcLine.includes("precision") || lcLine.includes("chính xác") || lcLine.includes("精准") || lcLine.includes("prec")
+        ) {
+          matchedType = "Precision Rate";
+        }
+        else if (
+          lcLine.includes("agility") || lcLine.includes("thân pháp") || lcLine.includes("身法")
+        ) {
+          matchedType = "Agility";
+        }
+        else if (
+          lcLine.includes("power") || lcLine.includes("lực lượng") || lcLine.includes("力量")
+        ) {
+          matchedType = "Power";
+        }
+        else if (
+          lcLine.includes("momentum") || lcLine.includes("thế năng") || lcLine.includes("势能")
+        ) {
+          matchedType = "Momentum";
+        }
+        else if (
+          lcLine.includes("constitution") || lcLine.includes("body") || lcLine.includes("thể chất") || lcLine.includes("体质")
+        ) {
+          matchedType = "HP";
+        }
+        else if (
+          lcLine.includes("defense") || lcLine.includes("phòng ngự") || lcLine.includes("防御")
+        ) {
+          matchedType = "Defense";
+        }
+
+        if (matchedType && parsedSubs.length < 6) {
+          const isTuned = lcLine.includes("[turn]") || lcLine.includes("turn") || lcLine.includes("tuned") || lcLine.includes("attuned") || lcLine.includes("👍") || lcLine.includes("✦") || lcLine.includes("định âm") || lcLine.includes("dingyin") || lcLine.includes("定音");
+          parsedSubs.push({ type: matchedType, val: valStr, isTuned });
+        }
+      }
+    });
+
+    // Enforce max 1 attuned
+    let foundTuned = false;
+    parsedSubs.forEach(sub => {
+      if (sub.isTuned) {
+        if (foundTuned) sub.isTuned = false;
+        else foundTuned = true;
+      }
+    });
+
+    while (parsedSubs.length < 6) {
+      parsedSubs.push({ type: "Other", val: "", isTuned: false });
+    }
+
+    // Default set based on slot
+    let defaultSet = "none";
+    if (detectedSlot !== "Umbrella" && detectedSlot !== "Rope Dart" && detectedSlot !== "Pendant") {
+      defaultSet = detectedSlot === "Bow/Ring" ? "pursuing" : "stars";
+    }
+
+    return {
+      id: Math.random().toString(),
+      slot: detectedSlot,
+      name: detectedName,
+      quality: "gold",
+      set: defaultSet,
+      subs: parsedSubs,
+      mastery: masteryVal,
+      isEquipped: false,
+      weaponType: (detectedSlot === "Umbrella" || detectedSlot === "Rope Dart") ? detectedWeaponType : undefined
+    };
+  };
+
   const openAddModal = () => {
     setEditingItem(null);
-    setFormName("");
+    const slotLabel = getSlotLabel(selectedSlot);
+    const existingCount = getActiveGear().filter(it => it.slot === selectedSlot).length;
+    setFormName(`${slotLabel} ${existingCount + 1}`);
     setFormQuality("gold");
-    setFormMain("");
-    if (selectedSlot === "Umbrella" || selectedSlot === "Rope Dart" || selectedSlot === "Pendant") {
-      setFormSet("none");
+    if (selectedSlot === "Umbrella" || selectedSlot === "Rope Dart" || selectedSlot === "Pendant" || selectedSlot === "Disc") {
+      setFormSet("stars"); // default weapon set
     } else if (selectedSlot === "Bow/Ring") {
       setFormSet("pursuing");
     } else {
-      setFormSet("stars");
+      setFormSet("stormrain"); // default armor set
     }
     setFormMastery("");
     const defaultTypes = BUILD_WEAPON_TYPES[selectedBuild] || ["Umbrella", "Rope Dart"];
@@ -1104,7 +1581,6 @@ export default function App() {
     setEditingItem(item);
     setFormName(item.name);
     setFormQuality(item.quality);
-    setFormMain(item.main);
     setFormSet(item.set);
     setFormMastery(item.mastery !== undefined ? item.mastery.toString() : "");
     setSelectedSlot(item.slot);
@@ -1136,12 +1612,12 @@ export default function App() {
     if (editingItem) {
       updatedGear = activeGear.map(it => {
         if (it.id === editingItem.id) {
-          const isWeapon = it.slot === "Umbrella" || it.slot === "Rope Dart";
+          const isWeapon = selectedSlot === "Umbrella" || selectedSlot === "Rope Dart";
           return {
             ...it,
+            slot: selectedSlot,
             name: formName,
             quality: formQuality,
-            main: formMain,
             set: formSet,
             mastery: masteryVal,
             subs: savedSubs,
@@ -1157,7 +1633,6 @@ export default function App() {
         slot: selectedSlot,
         name: formName,
         quality: formQuality,
-        main: formMain,
         set: formSet,
         mastery: masteryVal,
         subs: savedSubs,
@@ -1441,20 +1916,21 @@ export default function App() {
             affDmg: 20,
             outerDmg: 1.0,
             bossDmg: 0,
-            umbBonus: 2.0,
-            ropeBonus: 0,
-            swordBonus: 0,
-            spearBonus: 0,
-            fanBonus: 0,
-            twinbladesBonus: 0,
-            modaoBonus: 0,
-            hengdaoBonus: 0,
-            gauntletsBonus: 0,
+            umbAll: 0, umbMartial: 2.0, umbSpecial: 0, umbCharged: 0,
+            ropeAll: 0, ropeMartial: 0, ropeSpecial: 0, ropeCharged: 0,
+            swordAll: 0, swordMartial: 0, swordSpecial: 0, swordCharged: 0,
+            spearAll: 0, spearMartial: 0, spearSpecial: 0, spearCharged: 0,
+            fanAll: 0, fanMartial: 0, fanSpecial: 0, fanCharged: 0,
+            twinbladesAll: 0, twinbladesMartial: 0, twinbladesSpecial: 0, twinbladesCharged: 0,
+            modaoAll: 0, modaoMartial: 0, modaoSpecial: 0, modaoCharged: 0,
+            hengdaoAll: 0, hengdaoMartial: 0, hengdaoSpecial: 0, hengdaoCharged: 0,
+            gauntletsAll: 0, gauntletsMartial: 0, gauntletsSpecial: 0, gauntletsCharged: 0,
             allArts: 0,
             attunedBonus: 0,
             wuxiangMin: 0,
             wuxiangMax: 0,
-            set: "none"
+            set: "none",
+            constitution: 0, power: 0, defense: 0, agility: 0, momentum: 0, physResGear: 0, physDmgReduction: 0, groupDmg: 0, singleTargetDmg: 0, strength: 0
           },
           gradRate: 42.5,
           dps: 15400
@@ -1480,20 +1956,21 @@ export default function App() {
             affDmg: 30,
             outerDmg: 2.3,
             bossDmg: 4.0,
-            umbBonus: 4.5,
-            ropeBonus: 0,
-            swordBonus: 0,
-            spearBonus: 0,
-            fanBonus: 0,
-            twinbladesBonus: 0,
-            modaoBonus: 0,
-            hengdaoBonus: 0,
-            gauntletsBonus: 0,
+            umbAll: 0, umbMartial: 4.5, umbSpecial: 0, umbCharged: 0,
+            ropeAll: 0, ropeMartial: 0, ropeSpecial: 0, ropeCharged: 0,
+            swordAll: 0, swordMartial: 0, swordSpecial: 0, swordCharged: 0,
+            spearAll: 0, spearMartial: 0, spearSpecial: 0, spearCharged: 0,
+            fanAll: 0, fanMartial: 0, fanSpecial: 0, fanCharged: 0,
+            twinbladesAll: 0, twinbladesMartial: 0, twinbladesSpecial: 0, twinbladesCharged: 0,
+            modaoAll: 0, modaoMartial: 0, modaoSpecial: 0, modaoCharged: 0,
+            hengdaoAll: 0, hengdaoMartial: 0, hengdaoSpecial: 0, hengdaoCharged: 0,
+            gauntletsAll: 0, gauntletsMartial: 0, gauntletsSpecial: 0, gauntletsCharged: 0,
             allArts: 3.5,
             attunedBonus: 0,
             wuxiangMin: 0,
             wuxiangMax: 0,
-            set: "stars"
+            set: "stars",
+            constitution: 0, power: 0, defense: 0, agility: 0, momentum: 0, physResGear: 0, physDmgReduction: 0, groupDmg: 0, singleTargetDmg: 0, strength: 0
           },
           gradRate: 70.8,
           dps: 31200
@@ -1519,20 +1996,21 @@ export default function App() {
             affDmg: 35,
             outerDmg: 2.8,
             bossDmg: 7.6,
-            umbBonus: 7.4,
-            ropeBonus: 0,
-            swordBonus: 0,
-            spearBonus: 0,
-            fanBonus: 0,
-            twinbladesBonus: 0,
-            modaoBonus: 0,
-            hengdaoBonus: 0,
-            gauntletsBonus: 0,
+            umbAll: 0, umbMartial: 7.4, umbSpecial: 0, umbCharged: 0,
+            ropeAll: 0, ropeMartial: 0, ropeSpecial: 0, ropeCharged: 0,
+            swordAll: 0, swordMartial: 0, swordSpecial: 0, swordCharged: 0,
+            spearAll: 0, spearMartial: 0, spearSpecial: 0, spearCharged: 0,
+            fanAll: 0, fanMartial: 0, fanSpecial: 0, fanCharged: 0,
+            twinbladesAll: 0, twinbladesMartial: 0, twinbladesSpecial: 0, twinbladesCharged: 0,
+            modaoAll: 0, modaoMartial: 0, modaoSpecial: 0, modaoCharged: 0,
+            hengdaoAll: 0, hengdaoMartial: 0, hengdaoSpecial: 0, hengdaoCharged: 0,
+            gauntletsAll: 0, gauntletsMartial: 0, gauntletsSpecial: 0, gauntletsCharged: 0,
             allArts: 7.2,
             attunedBonus: 0,
             wuxiangMin: 0,
             wuxiangMax: 0,
-            set: "stars"
+            set: "stars",
+            constitution: 0, power: 0, defense: 0, agility: 0, momentum: 0, physResGear: 0, physDmgReduction: 0, groupDmg: 0, singleTargetDmg: 0, strength: 0
           },
           gradRate: 98.4,
           dps: 45600
@@ -1589,63 +2067,103 @@ export default function App() {
   const adjustedPanel = useMemo((): PanelStats => {
     let p = { ...panel };
 
-    // Apply Bow stats
-    if (bowSelect === "crit") p.crit += 7.0;
-    if (bowSelect === "prec") p.prec += 6.1;
-    if (bowSelect === "aff") p.aff += 3.5;
+    // The user's panel stats are TOTAL values from the game screen, which already
+    // include: gear substats, five-attribute conversions, bow bonus, inner ways,
+    // and set bonuses. We only add TOGGLEABLE TEMPORARY BUFFS here.
 
-    // Apply food buff
+    // Apply food buff (temporary, not in base game panel)
     if (food) {
       p.minOuter += activeTier.foodMin;
       p.maxOuter += activeTier.foodMax;
     }
 
-    // Apply Sub-50% HP passive buff
+    // Apply Bow/Ring set bonus (player picks one stat via dropdown).
+    // The bow bonus is NOT part of the in-game look panel — it's selectable here
+    // because the in-game system lets you swap bow attribute without re-equipping.
+    if (bowSelect === "crit") p.crit += 3.7;
+    else if (bowSelect === "prec") p.prec += 3.3;
+    else if (bowSelect === "aff") p.aff += 1.8;
+
+    // Apply Sub-50% HP passive buff (conditional combat buff)
     if (script50) {
       p.dcrit += 15.0;
     }
 
-    // Season early bonus
+    // Season early bonus (temporary seasonal buff)
     if (earlySeason) {
       p.minOuter += 4.4;
       p.maxOuter += 27.2;
     }
 
-    // Apply Inner Ways direct stat offsets
-    p.outerPen += iwStats.outerPen;
-    p.pzPen += iwStats.pzPen;
-    p.critDmg += iwStats.critDmg;
-    p.affDmg += iwStats.affDmg;
-    p.outerDmg += iwStats.outerDmg;
-    p.pzDmg += iwStats.pzDmg;
-    p.crit += iwStats.crit;
-    p.aff += iwStats.aff;
-    p.dcrit += iwStats.dcrit;
+    // Determine active set from equipped gear for the DPS formula
+    const gear = getActiveGear();
+    const setCounts: Record<string, number> = {};
+    gear.forEach(item => {
+      if (item.set && item.set !== "none") {
+        setCounts[item.set] = (setCounts[item.set] || 0) + 1;
+      }
+    });
+    let active4pcSet = "none";
+    Object.entries(setCounts).forEach(([setKey, count]) => {
+      if (count >= 4) {
+        active4pcSet = setKey;
+      }
+    });
+    if (autoGearPanel) {
+      p.set = active4pcSet;
+    }
+    // Stars Align 4pc gives the Martial Art Skill stack effect. Tracked separately
+    // so it applies alongside any armor 4pc (e.g. Eaglerise). The 2pc +64 Min Atk
+    // bonus is already baked into the user's panel input (game shows post-2pc).
+    const starsCount = setCounts["stars"] || 0;
+    (p as any).weaponStars = starsCount >= 4 || p.set === "stars";
 
-    // Store raw innerway factors so they pass to formula
+    // Pass inner way factors for formula use (e.g. general DMG multiplier)
+    // but do NOT add iwStats to panel — they're already in the game totals
     p.iwGeneralDmg = iwStats.generalDmg;
     p.iwOuterPen = iwStats.outerPen;
     p.iwPzPen = iwStats.pzPen;
     p.iwPzDmg = iwStats.pzDmg;
 
-    // Apply Armor Set 2pc flat/percentage stat bonuses
-    const activeSet = ARMOR_SETS[p.set as keyof typeof ARMOR_SETS];
-    if (activeSet && activeSet.stat2pc) {
-      const s2 = (activeSet as any).stat2pc;
-      if (s2.minOuter) p.minOuter += s2.minOuter;
-      if (s2.maxOuter) p.maxOuter += s2.maxOuter;
-      if (s2.prec) p.prec += s2.prec;
-      if (s2.crit) p.crit += s2.crit;
-      if (s2.aff) p.aff += s2.aff;
-    }
-
     return p;
-  }, [panel, bowSelect, food, script50, earlySeason, activeTier, iwStats]);
+  }, [panel, bowSelect, food, script50, earlySeason, activeTier, iwStats, autoGearPanel, activeScheme?.gear]);
 
-  // 3. Compute baseline reference graduation score
+  // 3. Compute baseline reference graduation score using a "100% graduated" reference panel
+  const gradRefPanel = useMemo((): PanelStats => {
+    const build = BUILD_PROFILES[selectedBuild as keyof typeof BUILD_PROFILES];
+    const gt = build?.gradTargets || BUILD_PROFILES["bamboocut-dust"].gradTargets;
+    return {
+      ...INITIAL_PANEL,
+      minOuter: gt.minOuter || 1340,
+      maxOuter: gt.maxOuter || 3050,
+      outerPen: gt.outerPen || 42.0,
+      crit: gt.crit || 116.9,
+      aff: gt.aff || 14.7,
+      critDmg: gt.critDmg || 54,
+      prec: 116.9,
+      dcrit: 4.6,
+      daff: 0,
+      affDmg: 35,
+      outerDmg: 2.8,
+      bossDmg: 7.6,
+      minPz: 340,
+      maxPz: 600,
+      pzPen: 22.0,
+      pzDmg: 9.5,
+      umbMartial: 6.0,
+      allArts: 6.0,
+      attunedBonus: 15,
+      iwGeneralDmg: 10,
+      iwOuterPen: 15,
+      iwPzPen: 10,
+      iwPzDmg: 5,
+      set: "stars",
+    };
+  }, [selectedBuild]);
+
   const baselineScore = useMemo(() => {
-    return calcBaseline(activeTier, selectedBuild);
-  }, [activeTier, selectedBuild]);
+    return calcBaseline(activeTier, selectedBuild, gradRefPanel);
+  }, [activeTier, selectedBuild, gradRefPanel]);
 
   // 4. Compute Rotation list damage
   const rotationStats = useMemo(() => {
@@ -1656,7 +2174,8 @@ export default function App() {
         datang,
         yishui,
         buildKey: selectedBuild,
-      });
+        weaponStars: (adjustedPanel as any).weaponStars,
+      } as any);
       totalDmg += total;
       return {
         ...item,
@@ -1690,16 +2209,25 @@ export default function App() {
       { key: "maxPz", label: "Max Bamboocut ATK", roll: 30, unit: "" },
       { key: "pzPen", label: "Bamboocut Pen", roll: 9.0, unit: "%" },
       { key: "dcrit", label: "Direct Crit Rate", roll: 4.6, unit: "%" },
-      { key: "umbBonus", label: "Umbrella Bonus", roll: 2.0, unit: "%" },
-      { key: "ropeBonus", label: "Rope Dart Bonus", roll: 2.0, unit: "%" },
-      { key: "swordBonus", label: "Sword Bonus", roll: 2.0, unit: "%" },
-      { key: "spearBonus", label: "Spear Bonus", roll: 2.0, unit: "%" },
-      { key: "fanBonus", label: "Fan Bonus", roll: 2.0, unit: "%" },
-      { key: "twinbladesBonus", label: "Twinblades Bonus", roll: 2.0, unit: "%" },
-      { key: "modaoBonus", label: "Modao Bonus", roll: 2.0, unit: "%" },
-      { key: "hengdaoBonus", label: "Hengdao Bonus", roll: 2.0, unit: "%" },
-      { key: "gauntletsBonus", label: "Gauntlets Bonus", roll: 2.0, unit: "%" },
-      { key: "allArts", label: "All Weapon Bonus", roll: 2.0, unit: "%" },
+      { key: "umbAll", label: "Art of Umbrella Boost", roll: 2.0, unit: "%" },
+      { key: "umbMartial", label: "Umb Martial Art Skill DMG Boost", roll: 2.0, unit: "%" },
+      { key: "ropeAll", label: "Art of Rope Dart Boost", roll: 2.0, unit: "%" },
+      { key: "ropeMartial", label: "Rope Dart Martial Art Skill DMG Boost", roll: 2.0, unit: "%" },
+      { key: "swordAll", label: "Art of Sword Boost", roll: 2.0, unit: "%" },
+      { key: "swordMartial", label: "Sword Martial Art Skill DMG Boost", roll: 2.0, unit: "%" },
+      { key: "spearAll", label: "Art of Spear Boost", roll: 2.0, unit: "%" },
+      { key: "spearMartial", label: "Spear Martial Art Skill DMG Boost", roll: 2.0, unit: "%" },
+      { key: "fanAll", label: "Art of Fan Boost", roll: 2.0, unit: "%" },
+      { key: "fanMartial", label: "Fan Martial Art Skill DMG Boost", roll: 2.0, unit: "%" },
+      { key: "twinbladesAll", label: "Art of Dual Blades Boost", roll: 2.0, unit: "%" },
+      { key: "twinbladesMartial", label: "Dual Blades Martial Art Skill DMG Boost", roll: 2.0, unit: "%" },
+      { key: "modaoAll", label: "Art of Mo Blade Boost", roll: 2.0, unit: "%" },
+      { key: "modaoMartial", label: "Mo Blade Martial Art Skill DMG Boost", roll: 2.0, unit: "%" },
+      { key: "hengdaoAll", label: "Art of Heng Blade Boost", roll: 2.0, unit: "%" },
+      { key: "hengdaoMartial", label: "Heng Blade Martial Art Skill DMG Boost", roll: 2.0, unit: "%" },
+      { key: "gauntletsAll", label: "Art of Gauntlets Boost", roll: 2.0, unit: "%" },
+      { key: "gauntletsMartial", label: "Gauntlets Martial Art Skill DMG Boost", roll: 2.0, unit: "%" },
+      { key: "allArts", label: "All Martial Art Skill DMG Boost", roll: 2.0, unit: "%" },
       { key: "bossDmg", label: "Boss DMG", roll: 2.0, unit: "%" },
       { key: "outerDmg", label: "Phys DMG", roll: 2.0, unit: "%" },
     ];
@@ -2018,6 +2546,7 @@ export default function App() {
                 { key: "Chest", label: "Chest" },
                 { key: "Bracers", label: "Hands" },
                 { key: "Greaves", label: "Legs" },
+                { key: "Disc", label: "Disc" },
                 { key: "Pendant", label: "Pendant" },
                 { key: "Bow/Ring", label: "Ring" }
               ].map(tab => (
@@ -2037,8 +2566,7 @@ export default function App() {
                 setFormQuality("gold");
                 const initialSlot = gearFilterSlot === "ALL" ? "Umbrella" : gearFilterSlot;
                 setSelectedSlot(initialSlot);
-                setFormMain("");
-                if (initialSlot === "Umbrella" || initialSlot === "Rope Dart" || initialSlot === "Pendant") {
+                if (initialSlot === "Umbrella" || initialSlot === "Rope Dart" || initialSlot === "Pendant" || initialSlot === "Disc") {
                   setFormSet("none");
                 } else if (initialSlot === "Bow/Ring") {
                   setFormSet("pursuing");
@@ -2141,10 +2669,6 @@ export default function App() {
                         </button>
                       </div>
                       <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '10px' }}>
-                        <div className="stat-line main-stat">
-                          <span className="stat-label">Main Stat</span>
-                          <span className="val">{item.main}</span>
-                        </div>
                         {item.subs.slice(0, 4).map((sub, sidx) => (
                           <div key={sidx} className="stat-line sub-stat">
                             <span className="stat-label" style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
@@ -2292,12 +2816,12 @@ export default function App() {
                 return [
                   { name: "Umbrella", key: "weapon1", label: "Weapon 1" },
                   { name: "Rope Dart", key: "weapon2", label: "Weapon 2" },
+                  { name: "Disc", key: "disc", label: "Disc" },
+                  { name: "Pendant", key: "pendant", label: "Pendant" },
                   { name: "Helmet", key: "head", label: "Helmet" },
                   { name: "Chest", key: "chest", label: "Chest" },
                   { name: "Bracers", key: "hands", label: "Hands" },
-                  { name: "Greaves", key: "legs", label: "Legs" },
-                  { name: "Pendant", key: "pendant", label: "Pendant" },
-                  { name: "Bow/Ring", key: "ring", label: "Ring" }
+                  { name: "Greaves", key: "legs", label: "Legs" }
                 ].map(slot => {
                   const item = getActiveGear().find(it => it.slot === slot.name && isItemEquipped(it, getActiveGear()));
                   const isWeapon = slot.name === "Umbrella" || slot.name === "Rope Dart";
@@ -2345,19 +2869,9 @@ export default function App() {
                   className="mini-select"
                   title="Select bow attribute"
                 >
-                  <option value="precision">Precision Bow</option>
-                  <option value="crit">Crit Bow</option>
-                  <option value="intent">Affinity Bow</option>
-                </select>
-                <select
-                  value={panel.set}
-                  onChange={(e) => handleStatChange("set", e.target.value)}
-                  className="mini-select"
-                  title="Select set bonus"
-                >
-                  {Object.entries(ARMOR_SETS).map(([key, s]) => (
-                    <option key={key} value={key}>{s.name}</option>
-                  ))}
+                  <option value="crit">Crit Bow (+3.7%)</option>
+                  <option value="prec">Precision Bow (+3.3%)</option>
+                  <option value="aff">Affinity Bow (+1.8%)</option>
                 </select>
               </div>
             </div>
@@ -2365,6 +2879,24 @@ export default function App() {
 
           <div className="panel-checkbox-container">
             <div className="panel-checkbox-wrapper">
+              <label className="panel-checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={food}
+                  onChange={(e) => setFood(e.target.checked)}
+                  className="panel-checkbox-input"
+                />
+                <span>Food buff (+90 min / +180 max Phys Atk)</span>
+              </label>
+              <label className="panel-checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={script50}
+                  onChange={(e) => setScript50(e.target.checked)}
+                  className="panel-checkbox-input"
+                />
+                <span>Script &lt;50% HP (+15% Direct Crit)</span>
+              </label>
               <label className="panel-checkbox-label">
                 <input
                   type="checkbox"
@@ -2440,7 +2972,12 @@ export default function App() {
               { label: "Max Bamboocut Atk", val: adjustedPanel.maxPz },
               { label: "Bamboocut Pen %", val: `${adjustedPanel.pzPen.toFixed(1)}%` },
               { label: "Net Bamboocut Pen", val: `${netPzPen.toFixed(1)}%` },
-              { label: "Bamboocut DMG Bonus %", val: `${adjustedPanel.pzDmg.toFixed(1)}%` }
+              { label: "Bamboocut DMG Bonus %", val: `${adjustedPanel.pzDmg.toFixed(1)}%` },
+              { label: "Max HP", val: Math.round((adjustedPanel.constitution || 0) * 60 + (adjustedPanel.defense || 0) * 17) },
+              { label: "Defense", val: Math.round((adjustedPanel.defense || 0) * 0.5) },
+              { label: "Power", val: Math.round(adjustedPanel.power || 0) },
+              { label: "Agility", val: Math.round(adjustedPanel.agility || 0) },
+              { label: "Momentum", val: Math.round(adjustedPanel.momentum || 0) }
             ].map((stat, idx) => (
               <div key={idx} className="stat-row-display">
                 <span className="stat-label">{stat.label}</span>
@@ -2806,14 +3343,14 @@ export default function App() {
                     gearType = "Attr Pen";
                     gradKey = "Bamboocut Pen";
                     isPercentage = true;
-                  } else if (nameLower.includes("own weapon bonus")) {
-                    gearType = "Umbrella Bonus";
+                  } else if (nameLower.includes("own weapon bonus") || nameLower.includes("own weapon martial")) {
+                    gearType = "Art of Weapon Boost";
                     gradKey = "Own Weapon Bonus";
                     isPercentage = true;
                     fallbackTarget = 32.0;
-                  } else if (nameLower.includes("all weapon")) {
-                    gearType = "All Weapon";
-                    gradKey = "All Weapon Bonus";
+                  } else if (nameLower.includes("all weapon") || nameLower.includes("all martial")) {
+                    gearType = "All Martial Arts";
+                    gradKey = "All Martial Arts Bonus";
                     isPercentage = true;
                     fallbackTarget = 16.0;
                   } else if (nameLower.includes("boss dmg")) {
@@ -2883,9 +3420,11 @@ export default function App() {
                   
                   let currentVal = 0;
                   if (label.toLowerCase().includes("own weapon")) {
-                    currentVal = (currentSubsSum["Umbrella Bonus"] || 0) + (currentSubsSum["Rope Dart Bonus"] || 0);
+                    currentVal = Object.entries(currentSubsSum)
+                      .filter(([k]) => SUB_MAP[k] && (SUB_MAP[k] as string).match(/^(umb|rope|sword|spear|fan|twinblades|modao|hengdao|gauntlets)(All|Martial|Special|Charged)$/))
+                      .reduce((sum, [, v]) => sum + (v || 0), 0);
                   } else if (label.toLowerCase().includes("all weapon")) {
-                    currentVal = currentSubsSum["All Weapon"] || 0;
+                    currentVal = currentSubsSum["All Martial Arts"] || 0;
                   } else if (label.toLowerCase().includes("boss dmg")) {
                     currentVal = currentSubsSum["Boss DMG%"] || 0;
                   } else if (label.toLowerCase().includes("bamboocut pen")) {
@@ -3135,9 +3674,7 @@ export default function App() {
                                       </span>
                                     )}
                                   </h4>
-                                  <div className="text-[12px] text-slate-500 font-mono mt-0.5">
-                                    Main: {item.main}
-                                  </div>
+
                                 </div>
                                 <div className="text-right flex flex-col items-end gap-1.5">
                                   <div className="text-sm font-mono font-extrabold text-amber-400">
@@ -3959,17 +4496,23 @@ export default function App() {
                       setSelectedSlot(newSlot);
                       if (newSlot === "Umbrella") setFormWeaponType("Umbrella");
                       else if (newSlot === "Rope Dart") setFormWeaponType("Rope Dart");
-                      
+
                       // reset set selection based on slot
-                      if (newSlot === "Umbrella" || newSlot === "Rope Dart" || newSlot === "Pendant") {
+                      if (newSlot === "Umbrella" || newSlot === "Rope Dart" || newSlot === "Pendant" || newSlot === "Disc") {
                         setFormSet("none");
                       } else if (newSlot === "Bow/Ring") {
                         setFormSet("pursuing");
                       } else {
                         setFormSet("stars");
                       }
+
+                      // Auto-name: generate a default name based on slot
+                      const slotLabel = getSlotLabel(newSlot);
+                      const existingCount = getActiveGear().filter(it => it.slot === newSlot).length;
+                      const autoName = `${slotLabel} ${existingCount + 1}`;
+                      const isAutoNamed = !formName || SLOTS.some(s => formName.startsWith(getSlotLabel(s.name)));
+                      if (isAutoNamed) setFormName(autoName);
                     }}
-                    disabled={!!editingItem}
                     required
                   >
                     {SLOTS.map(s => (
@@ -4022,16 +4565,6 @@ export default function App() {
               )}
               <div className="form-row">
                 <div className="form-group">
-                  <label>Main Stat Text</label>
-                  <input
-                    type="text"
-                    value={formMain}
-                    onChange={e => setFormMain(e.target.value)}
-                    placeholder="e.g. Max Phys Atk 106"
-                    required
-                  />
-                </div>
-                <div className="form-group">
                   <label>Set</label>
                   <select
                     value={formSet}
@@ -4048,89 +4581,155 @@ export default function App() {
                     type="number"
                     value={formMastery}
                     onChange={e => setFormMastery(e.target.value)}
-                    placeholder="e.g. 832"
-                  />
+                      placeholder="e.g. 832"
+                    />
+                  </div>
                 </div>
-              </div>
 
-              <div className="stat-section" style={{ marginTop: '15px' }}>
-                <h3>Sub Stats</h3>
-                <div className="flex-column-gap8" style={{ marginTop: '8px' }}>
-                  {formSubs.map((sub, sidx) => (
-                    <div key={sidx} className="flex-row" style={{ gap: '8px', alignItems: 'center' }}>
-                      <select
-                        value={sub.type}
-                        onChange={e => {
-                          const next = [...formSubs];
-                          next[sidx].type = e.target.value;
-                          setFormSubs(next);
-                        }}
-                        style={{ flex: 1.5 }}
-                      >
-                        <option value="Other">Select stat / Empty</option>
-                        {Object.keys(SUB_MAP).map(k => (
-                          <option key={k} value={k}>{k}</option>
-                        ))}
-                      </select>
-                      <input
-                        type="text"
-                        value={sub.val}
-                        onChange={e => {
-                          const next = [...formSubs];
-                          next[sidx].val = e.target.value;
-                          setFormSubs(next);
-                        }}
-                        placeholder="e.g. 59.2 or 7.4%"
-                        style={{ flex: 1, fontFamily: 'monospace' }}
-                      />
-                      <label className="flex items-center gap-1 cursor-pointer select-none">
-                        <input
-                          type="checkbox"
-                          checked={!!sub.isTuned}
-                          onChange={e => {
+                {/* In-Modal Gear Quick OCR Zone */}
+                <div 
+                  style={{
+                    border: '1px dashed #78350f',
+                    padding: '12px',
+                    borderRadius: '6px',
+                    backgroundColor: '#1b1310',
+                    marginTop: '15px',
+                    marginBottom: '10px',
+                    textAlign: 'center',
+                    position: 'relative'
+                  }}
+                  onPaste={(e) => {
+                    const items = e.clipboardData?.items;
+                    if (!items) return;
+                    for (const item of Array.from(items)) {
+                      if (item.type.startsWith("image/")) {
+                        const file = item.getAsFile();
+                        if (file) {
+                          e.preventDefault();
+                          handleModalOcr(file);
+                        }
+                      }
+                    }
+                  }}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    const file = e.dataTransfer.files?.[0];
+                    if (file && file.type.startsWith("image/")) {
+                      handleModalOcr(file);
+                    }
+                  }}
+                  tabIndex={0}
+                >
+                  <input
+                    type="file"
+                    ref={modalFileInputRef}
+                    style={{ display: 'none' }}
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleModalOcr(file);
+                    }}
+                  />
+                  {isModalOcrProcessing ? (
+                    <span style={{ fontSize: '12px', color: 'gold', fontWeight: 'bold' }} className="blink">
+                      ⏳ Đang nhận diện thuộc tính trang bị bằng OCR...
+                    </span>
+                  ) : (
+                    <div style={{ fontSize: '11px', color: '#b5a297' }}>
+                      📸 <strong>OCR Điền Nhanh:</strong> <span style={{ textDecoration: 'underline', color: '#f59e0b', cursor: 'pointer' }} onClick={() => modalFileInputRef.current?.click()}>Chọn hình có trong máy</span>, kéo thả, hoặc nhấn <strong>Ctrl+V</strong> vào trang này để tự động nhập chỉ số!
+                    </div>
+                  )}
+                </div>
+
+                {selectedSlot !== "Bow/Ring" && (
+                <div className="stat-section" style={{ marginTop: '15px' }}>
+                  <div style={{ marginBottom: '8px' }}>
+                    <h3 style={{ margin: 0 }}>Sub Stats</h3>
+                  </div>
+                  <div className="flex-column-gap8">
+                    {formSubs.map((sub, sidx) => (
+                      <div key={sidx} className="flex-row" style={{ gap: '8px', alignItems: 'center' }}>
+                        <SearchableSelect
+                          value={sub.type}
+                          onChange={val => {
                             const next = [...formSubs];
-                            next[sidx].isTuned = e.target.checked;
+                            next[sidx].type = val;
                             setFormSubs(next);
                           }}
-                          className="accent-amber-500 h-3.5 w-3.5"
+                          options={SUB_STAT_OPTIONS}
+                          placeholder="Search stat..."
                         />
-                        <span className="text-amber-500 font-bold text-xs">✦</span>
-                      </label>
-                    </div>
-                  ))}
+                        <input
+                          type="text"
+                          value={sub.val}
+                          onChange={e => {
+                            const next = [...formSubs];
+                            next[sidx].val = e.target.value;
+                            setFormSubs(next);
+                          }}
+                          placeholder="e.g. 59.2 or 7.4%"
+                          style={{ flex: 1, fontFamily: 'monospace' }}
+                        />
+                        <label
+                          className="flex items-center gap-1 cursor-pointer select-none"
+                          style={{ minWidth: '65px' }}
+                          title="Định Âm (Attuned / Tuned) - Tăng 15% hiệu quả của dòng chỉ số này (x1.15)"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={!!sub.isTuned}
+                            onChange={e => {
+                              const next = [...formSubs];
+                              if (e.target.checked) {
+                                next.forEach((s, idx) => {
+                                  s.isTuned = idx === sidx;
+                                });
+                              } else {
+                                next[sidx].isTuned = false;
+                              }
+                              setFormSubs(next);
+                            }}
+                            className="accent-amber-500 h-3.5 w-3.5"
+                          />
+                          <span className="text-amber-500 font-bold text-[10px] uppercase font-mono">Đ.Âm ✦</span>
+                        </label>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            </div>
-            <div className="modal-footer modal-footer-between">
-              <div className="modal-footer-left">
-                {editingItem && (
-                  <button
-                    onClick={() => handleDeleteItem(editingItem.id)}
-                    className="danger-btn"
-                    style={{ padding: '8px 16px' }}
-                  >
-                    Delete Item
-                  </button>
                 )}
               </div>
-              <div className="modal-footer-right">
-                <button
-                  onClick={() => setIsItemModalOpen(false)}
-                  className="cancel-btn"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSaveItem}
-                  className="save-btn"
-                >
-                  Save Gear
-                </button>
+              <div className="modal-footer modal-footer-between">
+                <div className="modal-footer-left">
+                  {editingItem && (
+                    <button
+                      onClick={() => handleDeleteItem(editingItem.id)}
+                      className="danger-btn"
+                      style={{ padding: '8px 16px' }}
+                    >
+                      Delete Item
+                    </button>
+                  )}
+                </div>
+                <div className="modal-footer-right">
+                  <button
+                    onClick={() => setIsItemModalOpen(false)}
+                    className="cancel-btn"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSaveItem}
+                    className="save-btn"
+                  >
+                    Save Gear
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
       {/* ── EXPORT/IMPORT MODAL ── */}
       {isExportImportModalOpen && (
@@ -4238,16 +4837,49 @@ export default function App() {
       {/* ── BATCH OCR MODAL ── */}
       {isBatchOcrModalOpen && (
         <div className="modal" onClick={() => setIsBatchOcrModalOpen(false)}>
-          <div className="modal-content modal-content-large" onClick={e => e.stopPropagation()} style={{ width: '600px', maxWidth: '95%' }}>
+          <div className="modal-content modal-content-large" onClick={e => e.stopPropagation()} style={{ width: '900px', maxWidth: '95%', height: '80vh', display: 'flex', flexDirection: 'column' }}>
             <div className="modal-header">
               <h2>Batch OCR (Text Recognition)</h2>
               <span className="close-btn" onClick={() => setIsBatchOcrModalOpen(false)}>&times;</span>
             </div>
-            <div className="modal-body">
+            <div className="modal-body" style={{ flex: 1, overflowY: 'auto' }}>
               <OcrScanner
                 onOcrResult={(scanned) => {
                   handleOcrResult(scanned);
                   setIsBatchOcrModalOpen(false);
+                }}
+                onImportGears={(scannedGears) => {
+                  const newItems: GearItem[] = scannedGears.map(item => parseTextToGearItem(item.rawText, item.fileName));
+                  
+                  setCharsData(prev => {
+                    const activeCharIdx = prev.chars.findIndex(c => c.id === prev.activeCharId);
+                    if (activeCharIdx === -1) return prev;
+                    
+                    const char = prev.chars[activeCharIdx];
+                    const updatedChars = [...prev.chars];
+                    updatedChars[activeCharIdx] = {
+                      ...char,
+                      schemes: char.schemes.map(s => {
+                        if (s.id === prev.activeSchemeId) {
+                          return {
+                            ...s,
+                            gear: [...(s.gear || []), ...newItems]
+                          };
+                        }
+                        return s;
+                      })
+                    };
+                    
+                    const nextData = {
+                      ...prev,
+                      chars: updatedChars
+                    };
+                    localStorage.setItem("wwm_chars_v3", JSON.stringify(nextData));
+                    return nextData;
+                  });
+
+                  setIsBatchOcrModalOpen(false);
+                  alert(`🎉 Đã nhập thành công ${newItems.length} món trang bị mới vào kho đồ!`);
                 }}
               />
             </div>

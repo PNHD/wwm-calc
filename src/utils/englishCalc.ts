@@ -65,28 +65,18 @@ export const ROTATION: RotationEntry[] = [
 //  Damage Calculation
 // ──────────────────────────────────────────────
 
-/** Effective crit rate capped at 80%, factoring in Judge Resistance */
 function effectiveCrit(panelCrit: number, judgeRes: number): number {
-  const eff = panelCrit / (1 + judgeRes);
-  return Math.min(eff, 80);
+  return Math.min(80, panelCrit / (1 + judgeRes));
 }
 
-/** Effective affinity rate capped at 40%, factoring in Judge Resistance */
 function effectiveAff(panelAff: number, judgeRes: number): number {
-  const eff = panelAff / (1 + judgeRes);
-  return Math.min(eff, 40);
+  return Math.min(40, panelAff / (1 + judgeRes));
 }
 
-/** Effective precision rate capped at 100% */
 function effectivePrec(panelPrec: number, judgeRes: number): number {
-  // Precision base = 65%, not reduced by resistance
-  const base = 65;
-  const extra = Math.max(0, panelPrec - base);
-  const eff = base + extra / (1 + judgeRes);
-  return Math.min(eff, 100);
+  return Math.min(100, (0.65 + Math.max(0, panelPrec - 65) / 100 / (1 + judgeRes)) * 100);
 }
 
-/** Defense mitigation factor */
 function defMitigation(def: number, pen: number): number {
   const netDef = Math.max(0, def - pen);
   return 1 - netDef / (netDef + 1000);
@@ -133,13 +123,14 @@ export function calcSkill(
   dmgBonus += (p.bossDmg || 0) / 100;
   // IW General DMG bonus
   if (p.iwGeneralDmg) dmgBonus += p.iwGeneralDmg / 100;
-  // Umbrella weapon bonus
+  // Weapon-specific bonus (martial by default for englishCalc rotation)
   if (item.name.toLowerCase().includes("umbrella") || item.name.toLowerCase().includes("scarlet")) {
-    dmgBonus += (p.umbBonus || 0) / 100;
+    dmgBonus += (p.umbAll || 0) / 100;
+    dmgBonus += (p.umbMartial || 0) / 100;
   }
-  // Rope dart bonus
   if (item.name.toLowerCase().includes("rope") || item.name.toLowerCase().includes("dart") || item.name.toLowerCase().includes("piercing")) {
-    dmgBonus += (p.ropeBonus || 0) / 100;
+    dmgBonus += (p.ropeAll || 0) / 100;
+    dmgBonus += (p.ropeMartial || 0) / 100;
   }
   // All weapon bonus
   dmgBonus += (p.allArts || 0) / 100;
@@ -206,15 +197,15 @@ export function calcBaseline(tier: TierConstants): number {
     affDmg:       35,
     outerDmg:     2.8,
     bossDmg:      7.6,
-    umbBonus:     7.4,
-    ropeBonus:    0,
-    swordBonus:   0,
-    spearBonus:   0,
-    fanBonus:     0,
-    twinbladesBonus: 0,
-    modaoBonus:   0,
-    hengdaoBonus: 0,
-    gauntletsBonus: 0,
+    umbAll: 0, umbMartial: 7.4, umbSpecial: 0, umbCharged: 0,
+    ropeAll: 0, ropeMartial: 0, ropeSpecial: 0, ropeCharged: 0,
+    swordAll: 0, swordMartial: 0, swordSpecial: 0, swordCharged: 0,
+    spearAll: 0, spearMartial: 0, spearSpecial: 0, spearCharged: 0,
+    fanAll: 0, fanMartial: 0, fanSpecial: 0, fanCharged: 0,
+    twinbladesAll: 0, twinbladesMartial: 0, twinbladesSpecial: 0, twinbladesCharged: 0,
+    modaoAll: 0, modaoMartial: 0, modaoSpecial: 0, modaoCharged: 0,
+    hengdaoAll: 0, hengdaoMartial: 0, hengdaoSpecial: 0, hengdaoCharged: 0,
+    gauntletsAll: 0, gauntletsMartial: 0, gauntletsSpecial: 0, gauntletsCharged: 0,
     allArts:      7.2,
     attunedBonus: 15,
     wuxiangMin:   0,
@@ -224,6 +215,8 @@ export function calcBaseline(tier: TierConstants): number {
     iwOuterPen:   15,
     iwPzPen:      10,
     iwPzDmg:      5,
+    constitution: 0, power: 0, defense: 0, agility: 0, momentum: 0,
+    physResGear: 0, physDmgReduction: 0, groupDmg: 0, singleTargetDmg: 0, strength: 0,
   };
 
   let total = 0;

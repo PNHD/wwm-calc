@@ -1,25 +1,97 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { createWorker } from "tesseract.js";
+import { runDualPassOcr, type OcrSub } from "../utils/ocrParser";
+import SearchableSelect from "./SearchableSelect";
 import {
-  Camera,
   FileUp,
   Loader2,
-  CheckCircle2,
-  RotateCcw,
-  AlertCircle,
   Trash2,
-  Check,
   CheckSquare,
   Square,
-  Layers,
   Sparkles,
-  Sliders,
   Image
 } from "lucide-react";
-import { PanelStats } from "../types";
+
+const OCR_STAT_OPTIONS: { value: string; label: string; group?: string }[] = [
+  { value: "Other", label: "Select Stat / Empty" },
+  { value: "Max Phys Atk", label: "Max Phys Atk", group: "Physical" },
+  { value: "Min Phys Atk", label: "Min Phys Atk", group: "Physical" },
+  { value: "Phys Pen", label: "Phys Pen", group: "Physical" },
+  { value: "Phys DMG%", label: "Phys DMG%", group: "Physical" },
+  { value: "Max Silkbind Atk", label: "Max Silkbind Atk", group: "Inner" },
+  { value: "Min Silkbind Atk", label: "Min Silkbind Atk", group: "Inner" },
+  { value: "Silkbind Pen", label: "Silkbind Pen", group: "Inner" },
+  { value: "Silkbind DMG%", label: "Silkbind DMG%", group: "Inner" },
+  { value: "Max Bamboocut Atk", label: "Max Bamboocut Atk", group: "Inner" },
+  { value: "Min Bamboocut Atk", label: "Min Bamboocut Atk", group: "Inner" },
+  { value: "Bamboocut Pen", label: "Bamboocut Pen", group: "Inner" },
+  { value: "Bamboocut DMG%", label: "Bamboocut DMG%", group: "Inner" },
+  { value: "Max Bellstrike Atk", label: "Max Bellstrike Atk", group: "Inner" },
+  { value: "Min Bellstrike Atk", label: "Min Bellstrike Atk", group: "Inner" },
+  { value: "Bellstrike Pen", label: "Bellstrike Pen", group: "Inner" },
+  { value: "Bellstrike DMG%", label: "Bellstrike DMG%", group: "Inner" },
+  { value: "Max Stonesplit Atk", label: "Max Stonesplit Atk", group: "Inner" },
+  { value: "Min Stonesplit Atk", label: "Min Stonesplit Atk", group: "Inner" },
+  { value: "Stonesplit Pen", label: "Stonesplit Pen", group: "Inner" },
+  { value: "Stonesplit DMG%", label: "Stonesplit DMG%", group: "Inner" },
+  { value: "Crit Rate", label: "Crit Rate", group: "Rate" },
+  { value: "Crit DMG", label: "Crit DMG", group: "Rate" },
+  { value: "Affinity Rate", label: "Affinity Rate", group: "Rate" },
+  { value: "Affinity DMG", label: "Affinity DMG", group: "Rate" },
+  { value: "Precision", label: "Precision", group: "Rate" },
+  { value: "Agility", label: "Agility", group: "Base" },
+  { value: "Power", label: "Power", group: "Base" },
+  { value: "Momentum", label: "Momentum", group: "Base" },
+  { value: "HP", label: "HP (Constitution)", group: "Base" },
+  { value: "Defense", label: "Defense", group: "Base" },
+  { value: "Strength", label: "Strength", group: "Base" },
+  { value: "All Martial Arts", label: "All Martial Arts", group: "Bonus" },
+  { value: "Boss DMG%", label: "Boss DMG%", group: "Bonus" },
+  { value: "Group DMG", label: "Group DMG", group: "Bonus" },
+  { value: "Single Target DMG", label: "Single Target DMG", group: "Bonus" },
+  { value: "Art of Umbrella Boost", label: "Art of Umbrella Boost", group: "Weapon Art" },
+  { value: "Art of Rope Dart Boost", label: "Art of Rope Dart Boost", group: "Weapon Art" },
+  { value: "Art of Sword Boost", label: "Art of Sword Boost", group: "Weapon Art" },
+  { value: "Art of Spear Boost", label: "Art of Spear Boost", group: "Weapon Art" },
+  { value: "Art of Fan Boost", label: "Art of Fan Boost", group: "Weapon Art" },
+  { value: "Art of Dual Blades Boost", label: "Art of Dual Blades Boost", group: "Weapon Art" },
+  { value: "Art of Mo Blade Boost", label: "Art of Mo Blade Boost", group: "Weapon Art" },
+  { value: "Art of Heng Blade Boost", label: "Art of Heng Blade Boost", group: "Weapon Art" },
+  { value: "Art of Gauntlets Boost", label: "Art of Gauntlets Boost", group: "Weapon Art" },
+  { value: "Umb Martial Art Skill DMG Boost", label: "Umb Martial Art Skill DMG Boost", group: "Martial Skill" },
+  { value: "Rope Dart Martial Art Skill DMG Boost", label: "Rope Dart Martial Art Skill DMG Boost", group: "Martial Skill" },
+  { value: "Sword Martial Art Skill DMG Boost", label: "Sword Martial Art Skill DMG Boost", group: "Martial Skill" },
+  { value: "Spear Martial Art Skill DMG Boost", label: "Spear Martial Art Skill DMG Boost", group: "Martial Skill" },
+  { value: "Fan Martial Art Skill DMG Boost", label: "Fan Martial Art Skill DMG Boost", group: "Martial Skill" },
+  { value: "Dual Blades Martial Art Skill DMG Boost", label: "Dual Blades Martial Art Skill DMG Boost", group: "Martial Skill" },
+  { value: "Mo Blade Martial Art Skill DMG Boost", label: "Mo Blade Martial Art Skill DMG Boost", group: "Martial Skill" },
+  { value: "Heng Blade Martial Art Skill DMG Boost", label: "Heng Blade Martial Art Skill DMG Boost", group: "Martial Skill" },
+  { value: "Gauntlets Martial Art Skill DMG Boost", label: "Gauntlets Martial Art Skill DMG Boost", group: "Martial Skill" },
+  { value: "Umb Special Skill DMG Boost", label: "Umb Special Skill DMG Boost", group: "Special Skill" },
+  { value: "Rope Dart Special Skill DMG Boost", label: "Rope Dart Special Skill DMG Boost", group: "Special Skill" },
+  { value: "Sword Special Skill DMG Boost", label: "Sword Special Skill DMG Boost", group: "Special Skill" },
+  { value: "Spear Special Skill DMG Boost", label: "Spear Special Skill DMG Boost", group: "Special Skill" },
+  { value: "Fan Special Skill DMG Boost", label: "Fan Special Skill DMG Boost", group: "Special Skill" },
+  { value: "Dual Blades Special Skill DMG Boost", label: "Dual Blades Special Skill DMG Boost", group: "Special Skill" },
+  { value: "Mo Blade Special Skill DMG Boost", label: "Mo Blade Special Skill DMG Boost", group: "Special Skill" },
+  { value: "Heng Blade Special Skill DMG Boost", label: "Heng Blade Special Skill DMG Boost", group: "Special Skill" },
+  { value: "Gauntlets Special Skill DMG Boost", label: "Gauntlets Special Skill DMG Boost", group: "Special Skill" },
+  { value: "Umb Charged Skill DMG Boost", label: "Umb Charged Skill DMG Boost", group: "Charged Skill" },
+  { value: "Rope Dart Charged Skill DMG Boost", label: "Rope Dart Charged Skill DMG Boost", group: "Charged Skill" },
+  { value: "Sword Charged Skill DMG Boost", label: "Sword Charged Skill DMG Boost", group: "Charged Skill" },
+  { value: "Spear Charged Skill DMG Boost", label: "Spear Charged Skill DMG Boost", group: "Charged Skill" },
+  { value: "Fan Charged Skill DMG Boost", label: "Fan Charged Skill DMG Boost", group: "Charged Skill" },
+  { value: "Dual Blades Charged Skill DMG Boost", label: "Dual Blades Charged Skill DMG Boost", group: "Charged Skill" },
+  { value: "Mo Blade Charged Skill DMG Boost", label: "Mo Blade Charged Skill DMG Boost", group: "Charged Skill" },
+  { value: "Heng Blade Charged Skill DMG Boost", label: "Heng Blade Charged Skill DMG Boost", group: "Charged Skill" },
+  { value: "Gauntlets Charged Skill DMG Boost", label: "Gauntlets Charged Skill DMG Boost", group: "Charged Skill" },
+  { value: "Phys Resist", label: "Phys Resist", group: "Defense" },
+  { value: "Phys DMG Reduction", label: "Phys DMG Reduction", group: "Defense" },
+];
 
 interface OcrScannerProps {
-  onOcrResult: (stats: Partial<PanelStats>) => void;
+  onOcrResult: (stats: any) => void;
+  onImportGears?: (items: { rawText: string; fileName: string }[]) => void;
 }
 
 interface QueuedOcrItem {
@@ -28,160 +100,18 @@ interface QueuedOcrItem {
   objectUrl: string;
   status: "pending" | "processing" | "success" | "error";
   progress: string;
-  stats: Partial<PanelStats>;
+  subs: OcrSub[];
+  mastery?: number;
   isSelected: boolean;
   rawText: string;
 }
 
-export default function OcrScanner({ onOcrResult }: OcrScannerProps) {
+export default function OcrScanner({ onImportGears }: OcrScannerProps) {
   const [queue, setQueue] = useState<QueuedOcrItem[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [currentFileIndex, setCurrentFileIndex] = useState(-1);
-  const [mergeStrategy, setMergeStrategy] = useState<"sum" | "max">("sum");
   const [pasteToast, setPasteToast] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Parse Yanyun screenshot text (Panel range or single gear substats)
-  const parseYanyunStats = (text: string): Partial<PanelStats> => {
-    const stats: Partial<PanelStats> = {};
-    const lines = text.split("\n");
-
-    const cleanNum = (str: string) => {
-      const parsed = parseFloat(str.replace(/[^0-9.]/g, ""));
-      return isNaN(parsed) ? 0 : parsed;
-    };
-
-    lines.forEach((line) => {
-      const lcLine = line.toLowerCase();
-
-      // Priority 1: Range match (Typically from Full Character Panel screenshots)
-      const rangeMatch = line.match(/(\d{3,4})\s*[-~至]\s*(\d{3,4})/);
-      if (rangeMatch) {
-        // Physical Attack Range
-        const isOuterAtkLine = 
-          lcLine.includes("攻击") || 
-          lcLine.includes("ngoại công") || 
-          lcLine.includes("tấn công") || 
-          lcLine.includes("outer") || 
-          lcLine.includes("atk") || 
-          lcLine.includes("phys");
-
-        if (isOuterAtkLine) {
-          const minVal = parseInt(rangeMatch[1], 10);
-          const maxVal = parseInt(rangeMatch[2], 10);
-          if (minVal > 300 && maxVal > minVal) {
-            stats.minOuter = minVal;
-            stats.maxOuter = maxVal;
-          }
-        }
-
-        // Bamboocut Attack Range
-        const isPzRangeLine = 
-          lcLine.includes("破竹") || 
-          lcLine.includes("phá trúc") || 
-          lcLine.includes("bamboo") || 
-          lcLine.includes("pz");
-
-        if (isPzRangeLine && !lcLine.includes("破防") && !lcLine.includes("pen") && !lcLine.includes("伤害") && !lcLine.includes("dmg")) {
-          const minVal = parseInt(rangeMatch[1], 10);
-          const maxVal = parseInt(rangeMatch[2], 10);
-          if (minVal > 10 && maxVal > minVal) {
-            stats.minPz = minVal;
-            stats.maxPz = maxVal;
-          }
-        }
-        return; // Proceed to next line
-      }
-
-      // Priority 2: Single-line values (Typically from Individual Gear Slot screenshots)
-      const valueMatch = line.match(/([+-]?\s*\d+(?:\.\d+)?)\s*%?/);
-      if (valueMatch) {
-        const val = cleanNum(valueMatch[1]);
-        if (val === 0) return;
-
-        // 1. Physical Penetration
-        if (
-          (lcLine.includes("破防") || lcLine.includes("破甲") || lcLine.includes("xuyên") || lcLine.includes("phá giáp") || lcLine.includes("pen") || lcLine.includes("vật lý")) &&
-          !(lcLine.includes("破竹") || lcLine.includes("bamboo") || lcLine.includes("phá trúc"))
-        ) {
-          stats.outerPen = val;
-        }
-
-        // 2. Max Physical Atk
-        else if (
-          (lcLine.includes("tối đa") || lcLine.includes("max") || lcLine.includes("最大")) &&
-          (lcLine.includes("ngoại") || lcLine.includes("tấn công") || lcLine.includes("atk") || lcLine.includes("phys") || lcLine.includes("công")) &&
-          !(lcLine.includes("破竹") || lcLine.includes("bamboo") || lcLine.includes("phá trúc"))
-        ) {
-          stats.maxOuter = val;
-        }
-
-        // 3. Min Physical Atk
-        else if (
-          (lcLine.includes("tối thiểu") || lcLine.includes("min") || lcLine.includes("最小")) &&
-          (lcLine.includes("ngoại") || lcLine.includes("tấn công") || lcLine.includes("atk") || lcLine.includes("phys") || lcLine.includes("công")) &&
-          !(lcLine.includes("破竹") || lcLine.includes("bamboo") || lcLine.includes("phá trúc"))
-        ) {
-          stats.minOuter = val;
-        }
-
-        // 4. Crit Rate
-        else if (
-          (lcLine.includes("hội tâm") || lcLine.includes("crit") || lcLine.includes("会心")) &&
-          !(lcLine.includes("伤害") || lcLine.includes("sát thương") || lcLine.includes("dmg") || lcLine.includes("damage") || lcLine.includes("hội thương") || lcLine.includes("加成"))
-        ) {
-          stats.crit = val;
-        }
-
-        // 5. Crit DMG
-        else if (
-          lcLine.includes("hội thương") ||
-          (lcLine.includes("hội tâm") && (lcLine.includes("sát thương") || lcLine.includes("伤害") || lcLine.includes("加成"))) ||
-          lcLine.includes("crit dmg") ||
-          lcLine.includes("crit_dmg") ||
-          lcLine.includes("会心伤害")
-        ) {
-          stats.critDmg = val;
-        }
-
-        // 5b. Affinity Rate
-        else if (
-          (lcLine.includes("thức phá") || lcLine.includes("affinity") || lcLine.includes("aff") || lcLine.includes("识破")) &&
-          !(lcLine.includes("sát thương") || lcLine.includes("dmg") || lcLine.includes("damage") || lcLine.includes("伤害") || lcLine.includes("加成"))
-        ) {
-          stats.aff = val;
-        }
-
-        // 5c. Affinity Damage
-        else if (
-          (lcLine.includes("thức phá") && (lcLine.includes("sát thương") || lcLine.includes("伤害") || lcLine.includes("加成"))) ||
-          lcLine.includes("affinity dmg") ||
-          lcLine.includes("aff_dmg") ||
-          lcLine.includes("识破伤害")
-        ) {
-          stats.affDmg = val;
-        }
-
-        // 6. Bamboocut Penetration (Pz Pen)
-        else if (
-          (lcLine.includes("破竹") || lcLine.includes("bamboo") || lcLine.includes("phá trúc")) &&
-          (lcLine.includes("破防") || lcLine.includes("xuyên") || lcLine.includes("pen"))
-        ) {
-          stats.pzPen = val;
-        }
-
-        // 7. Bamboocut Break DMG % (Pz Dmg)
-        else if (
-          (lcLine.includes("破竹") || lcLine.includes("bamboo") || lcLine.includes("phá trúc")) &&
-          (lcLine.includes("伤害") || lcLine.includes("sát thương") || lcLine.includes("dmg") || lcLine.includes("damage"))
-        ) {
-          stats.pzDmg = val;
-        }
-      }
-    });
-
-    return stats;
-  };
 
   const handleFileSelection = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -200,7 +130,7 @@ export default function OcrScanner({ onOcrResult }: OcrScannerProps) {
       objectUrl: URL.createObjectURL(file),
       status: "pending",
       progress: "In Queue",
-      stats: {},
+      subs: [],
       isSelected: true,
       rawText: ""
     }));
@@ -251,16 +181,25 @@ export default function OcrScanner({ onOcrResult }: OcrScannerProps) {
     );
   };
 
-  const handleStatEdit = (id: string, key: keyof PanelStats, val: number) => {
+  const handleStatEdit = (id: string, index: number, key: 'type' | 'val' | 'isTuned', val: any) => {
     setQueue((prev) =>
       prev.map((it) => {
         if (it.id === id) {
+          const nextSubs = [...it.subs];
+          if (key === 'isTuned' && val === true) {
+            // Uncheck other tuned
+            nextSubs.forEach((sub, sidx) => {
+              sub.isTuned = sidx === index;
+            });
+          } else {
+            nextSubs[index] = {
+              ...nextSubs[index],
+              [key]: val
+            };
+          }
           return {
             ...it,
-            stats: {
-              ...it.stats,
-              [key]: val
-            }
+            subs: nextSubs
           };
         }
         return it;
@@ -279,7 +218,6 @@ export default function OcrScanner({ onOcrResult }: OcrScannerProps) {
     }
 
     const worker: any = await createWorker();
-    // Multi language support (Simplified Chinese + English)
     if (typeof worker.loadLanguage === "function") {
       await worker.loadLanguage("chi_sim+eng");
     }
@@ -291,22 +229,21 @@ export default function OcrScanner({ onOcrResult }: OcrScannerProps) {
       const { it, idx } = pendingItems[i];
       setCurrentFileIndex(idx);
 
-      setQueue((prev) =>
-        prev.map((item) =>
-          item.id === it.id
-            ? { ...item, status: "processing", progress: "Initializing OCR Engine..." }
-            : item
-        )
-      );
-
       try {
-        const response = await fetch(it.objectUrl);
-        const blob = await response.blob();
+        const { subs: parsedSubs, mastery: masteryStr, bestText } = await runDualPassOcr(
+          worker,
+          it.objectUrl,
+          (msg) => setQueue((prev) =>
+            prev.map((item) =>
+              item.id === it.id
+                ? { ...item, status: "processing", progress: msg }
+                : item
+            )
+          )
+        );
+        const parsedMastery = masteryStr ? parseInt(masteryStr, 10) : undefined;
+        const reconstructedText = bestText;
         
-        const { data: { text } } = await worker.recognize(blob);
-
-        const parsedStats = parseYanyunStats(text);
-
         setQueue((prev) =>
           prev.map((item) =>
             item.id === it.id
@@ -314,8 +251,9 @@ export default function OcrScanner({ onOcrResult }: OcrScannerProps) {
                   ...item,
                   status: "success",
                   progress: "Analyzed successfully!",
-                  stats: parsedStats,
-                  rawText: text
+                  subs: parsedSubs,
+                  mastery: parsedMastery,
+                  rawText: reconstructedText
                 }
               : item
           )
@@ -337,47 +275,6 @@ export default function OcrScanner({ onOcrResult }: OcrScannerProps) {
     setCurrentFileIndex(-1);
   };
 
-  const handleMergeAndSync = () => {
-    const activeItems = queue.filter((it) => it.isSelected && it.status === "success");
-    if (activeItems.length === 0) return;
-
-    const merged: Partial<PanelStats> = {};
-
-    activeItems.forEach((item) => {
-      Object.entries(item.stats).forEach(([k, v]) => {
-        const key = k as keyof PanelStats;
-        if (v === undefined || typeof v !== "number") return;
-
-        if (merged[key] === undefined) {
-          (merged as any)[key] = v;
-        } else {
-          if (mergeStrategy === "sum") {
-            // Addition: summing up substats
-            (merged as any)[key] = (merged[key] as number) + v;
-          } else {
-            // Maximum: keeping the maximum overview value
-            (merged as any)[key] = Math.max(merged[key] as number, v);
-          }
-        }
-      });
-    });
-
-    onOcrResult(merged);
-    alert("Stats merged and synchronized successfully to the calculator panel!");
-  };
-
-  const onDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-  };
-
-  const onDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    if (e.dataTransfer.files) {
-      const droppedFiles = Array.from(e.dataTransfer.files) as File[];
-      addFilesToQueue(droppedFiles);
-    }
-  };
-
   const clearAllQueue = () => {
     queue.forEach((it) => URL.revokeObjectURL(it.objectUrl));
     setQueue([]);
@@ -385,7 +282,6 @@ export default function OcrScanner({ onOcrResult }: OcrScannerProps) {
 
   return (
     <div className="bg-[#141210] border border-amber-900/10 rounded-xl p-5 mb-6">
-      {/* Paste Toast Notification */}
       {pasteToast && (
         <div className="fixed top-4 right-4 z-50 bg-amber-500 text-slate-950 text-xs font-bold px-4 py-2.5 rounded-lg shadow-xl flex items-center gap-2 animate-pulse">
           {pasteToast}
@@ -397,19 +293,15 @@ export default function OcrScanner({ onOcrResult }: OcrScannerProps) {
           <Image className="w-4 h-4 text-amber-400" /> BATCH OCR LIBRARY SCANNER
         </h3>
         <p className="text-xs text-slate-400 mt-1">
-          Upload one or <strong>multiple screenshots from your photo library</strong>. The engine will extract gear substats and physical panel metrics and merge them into your setup.
+          Tải lên một hoặc <strong>nhiều ảnh chụp trang bị từ máy của bạn</strong>. Công cụ sẽ nhận dạng tất cả 6 dòng chỉ số và tự động thêm vào kho đồ.
         </p>
-        {/* Ctrl+V hint */}
         <div className="mt-2 flex items-center gap-2 text-[11px] text-slate-500">
           <kbd className="px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-slate-300 font-mono text-[10px]">Ctrl+V</kbd>
-          <span>— Press anywhere on this tab to paste a screenshot directly from clipboard</span>
+          <span>— Nhấn Ctrl+V ở bất kỳ đâu trên bảng này để dán trực tiếp ảnh chụp màn hình từ khay nhớ tạm</span>
         </div>
       </div>
 
-      {/* Drag & Drop Area */}
       <div
-        onDragOver={onDragOver}
-        onDrop={onDrop}
         onClick={() => fileInputRef.current?.click()}
         className="border border-dashed border-amber-900/40 hover:border-amber-500/50 rounded-xl p-7 text-center cursor-pointer bg-slate-950/60 transition-all flex flex-col items-center justify-center gap-2"
       >
@@ -423,20 +315,19 @@ export default function OcrScanner({ onOcrResult }: OcrScannerProps) {
         />
         <FileUp className="w-10 h-10 text-amber-500/80 mb-1 hover:scale-110 transition-transform" />
         <p className="text-sm font-medium text-slate-200">
-          Choose screenshots from Photo Library / Album / Folder
+          Chọn ảnh trang bị từ thiết bị của bạn
         </p>
         <p className="text-xs text-slate-500">
-          Supports individual gear pieces or total character attribute screens. You can select multiple images at once.
+          Hỗ trợ nhận dạng hàng loạt nhiều trang bị cùng lúc.
         </p>
       </div>
 
-      {/* Queue Processing Controls */}
       {queue.length > 0 && (
         <div className="mt-5 border-t border-slate-900 pt-4">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
             <div className="text-xs font-mono text-slate-400">
-              Queue Status: <strong className="text-amber-500">{queue.length} images</strong>
-              {isProcessing && ` (Processing image #${currentFileIndex + 1})`}
+              Danh sách hàng đợi: <strong className="text-amber-500">{queue.length} ảnh</strong>
+              {isProcessing && ` (Đang xử lý ảnh thứ #${currentFileIndex + 1})`}
             </div>
             <div className="flex gap-2">
               <button
@@ -446,11 +337,11 @@ export default function OcrScanner({ onOcrResult }: OcrScannerProps) {
               >
                 {isProcessing ? (
                   <>
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" /> Running OCR Parser...
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" /> Đang quét OCR...
                   </>
                 ) : (
                   <>
-                    <Sparkles className="w-3.5 h-3.5" /> Start OCR Scan
+                    <Sparkles className="w-3.5 h-3.5" /> Bắt đầu quét OCR
                   </>
                 )}
               </button>
@@ -459,15 +350,14 @@ export default function OcrScanner({ onOcrResult }: OcrScannerProps) {
                 disabled={isProcessing}
                 className="bg-slate-900 hover:bg-slate-800 text-slate-400 border border-slate-800 font-bold px-3 py-1.5 rounded text-xs flex items-center gap-1.5 transition-colors"
               >
-                <Trash2 className="w-3.5 h-3.5" /> Clear Queue
+                <Trash2 className="w-3.5 h-3.5" /> Xóa hàng đợi
               </button>
             </div>
           </div>
 
-          {/* Queue items cards list */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {queue.map((item, qIdx) => {
-              const hasStats = Object.keys(item.stats).length > 0;
+            {queue.map((item) => {
+              const hasSubs = item.subs && item.subs.length > 0;
               return (
                 <div
                   key={item.id}
@@ -480,7 +370,6 @@ export default function OcrScanner({ onOcrResult }: OcrScannerProps) {
                   }`}
                 >
                   <div className="flex gap-3 items-center">
-                    {/* Select box for merge */}
                     <button
                       onClick={() => handleToggleSelect(item.id)}
                       className="text-slate-500 hover:text-amber-500 transition-colors shrink-0"
@@ -492,14 +381,12 @@ export default function OcrScanner({ onOcrResult }: OcrScannerProps) {
                       )}
                     </button>
 
-                    {/* Thumbnail */}
                     <img
                       src={item.objectUrl}
                       alt="Thumbnail"
                       className="w-12 h-12 rounded object-cover border border-slate-800 shrink-0"
                     />
 
-                    {/* Meta info */}
                     <div className="flex-1 min-w-0">
                       <div className="text-xs font-semibold text-slate-200 truncate pr-4">
                         {item.fileName}
@@ -529,7 +416,6 @@ export default function OcrScanner({ onOcrResult }: OcrScannerProps) {
                       </div>
                     </div>
 
-                    {/* Delete button */}
                     <button
                       onClick={() => handleRemoveItem(item.id)}
                       className="text-slate-600 hover:text-rose-400 transition-colors"
@@ -538,147 +424,39 @@ export default function OcrScanner({ onOcrResult }: OcrScannerProps) {
                     </button>
                   </div>
 
-                  {/* Scanned/Editable Stats */}
-                  {hasStats && (
+                  {hasSubs && (
                     <div className="bg-[#0b0a09]/50 p-2.5 rounded border border-slate-950 text-[10px] space-y-2">
                       <div className="text-slate-500 uppercase font-bold font-mono pb-1 border-b border-slate-900">
-                        Extracted Stats (Click to edit if wrong):
+                        Chỉ số nhận diện (nhấp vào để sửa nếu sai):
                       </div>
-                      <div className="grid grid-cols-2 gap-2 font-mono text-slate-300">
-                        {item.stats.maxOuter !== undefined && (
-                          <div className="flex justify-between items-center bg-slate-900/40 px-1.5 py-0.5 rounded border border-slate-900/20">
-                            <span>Max Atk:</span>
-                            <input
-                              type="number"
-                              value={item.stats.maxOuter}
-                              onChange={(e) =>
-                                handleStatEdit(item.id, "maxOuter", parseInt(e.target.value) || 0)
-                              }
-                              className="w-12 bg-slate-950 text-slate-100 border-none text-right px-1 rounded text-[10px] font-bold"
+                      <div className="flex flex-col gap-1.5 font-mono text-slate-300">
+                        {item.subs.map((sub, sidx) => (
+                          <div key={sidx} className="flex gap-2 items-center bg-slate-900/40 px-1.5 py-1 rounded border border-slate-900/20">
+                            <span className="text-slate-400 text-[9px] min-w-[12px]">#{sidx + 1}</span>
+                            <SearchableSelect
+                              value={sub.type}
+                              onChange={(val) => handleStatEdit(item.id, sidx, 'type', val)}
+                              options={OCR_STAT_OPTIONS}
+                              placeholder="Search stat..."
                             />
-                          </div>
-                        )}
-                        {item.stats.minOuter !== undefined && (
-                          <div className="flex justify-between items-center bg-slate-900/40 px-1.5 py-0.5 rounded border border-slate-900/20">
-                            <span>Min Atk:</span>
                             <input
-                              type="number"
-                              value={item.stats.minOuter}
-                              onChange={(e) =>
-                                handleStatEdit(item.id, "minOuter", parseInt(e.target.value) || 0)
-                              }
-                              className="w-12 bg-slate-950 text-slate-100 border-none text-right px-1 rounded text-[10px]"
+                              type="text"
+                              value={sub.val}
+                              onChange={(e) => handleStatEdit(item.id, sidx, 'val', e.target.value)}
+                              className="w-16 bg-slate-950 text-slate-100 border-none text-right px-1 rounded text-[10px] py-0.5"
+                              placeholder="0"
                             />
-                          </div>
-                        )}
-                        {item.stats.outerPen !== undefined && (
-                          <div className="flex justify-between items-center bg-slate-900/40 px-1.5 py-0.5 rounded border border-slate-900/20">
-                            <span>Phys Pen %:</span>
-                            <input
-                              type="number"
-                              step="0.1"
-                              value={item.stats.outerPen}
-                              onChange={(e) =>
-                                handleStatEdit(item.id, "outerPen", parseFloat(e.target.value) || 0)
-                              }
-                              className="w-12 bg-slate-950 text-slate-100 border-none text-right px-1 rounded text-[10px]"
-                            />
-                          </div>
-                        )}
-                        {item.stats.crit !== undefined && (
-                          <div className="flex justify-between items-center bg-slate-900/40 px-1.5 py-0.5 rounded border border-slate-900/20">
-                            <span>Crit %:</span>
-                            <input
-                              type="number"
-                              step="0.1"
-                              value={item.stats.crit}
-                              onChange={(e) =>
-                                handleStatEdit(item.id, "crit", parseFloat(e.target.value) || 0)
-                              }
-                              className="w-12 bg-slate-950 text-slate-100 border-none text-right px-1 rounded text-[10px]"
-                            />
-                          </div>
-                        )}
-                        {item.stats.prec !== undefined && (
-                          <div className="flex justify-between items-center bg-slate-900/40 px-1.5 py-0.5 rounded border border-slate-900/20">
-                            <span>Precision %:</span>
-                            <input
-                              type="number"
-                              step="0.1"
-                              value={item.stats.prec}
-                              onChange={(e) =>
-                                handleStatEdit(item.id, "prec", parseFloat(e.target.value) || 0)
-                              }
-                              className="w-12 bg-slate-950 text-slate-100 border-none text-right px-1 rounded text-[10px]"
-                            />
-                          </div>
-                        )}
-                        {item.stats.critDmg !== undefined && (
-                          <div className="flex justify-between items-center bg-slate-900/40 px-1.5 py-0.5 rounded border border-slate-900/20">
-                            <span>CritDmg %:</span>
-                            <input
-                              type="number"
-                              step="0.1"
-                              value={item.stats.critDmg}
-                              onChange={(e) =>
-                                handleStatEdit(item.id, "critDmg", parseFloat(e.target.value) || 0)
-                              }
-                              className="w-12 bg-slate-950 text-slate-100 border-none text-right px-1 rounded text-[10px]"
-                            />
-                          </div>
-                        )}
-                        {item.stats.aff !== undefined && (
-                          <div className="flex justify-between items-center bg-slate-900/40 px-1.5 py-0.5 rounded border border-slate-900/20">
-                            <span>Affinity %:</span>
-                            <input
-                              type="number"
-                              step="0.1"
-                              value={item.stats.aff}
-                              onChange={(e) =>
-                                handleStatEdit(item.id, "aff", parseFloat(e.target.value) || 0)
-                              }
-                              className="w-12 bg-slate-950 text-slate-100 border-none text-right px-1 rounded text-[10px]"
-                            />
-                          </div>
-                        )}
-                        {item.stats.affDmg !== undefined && (
-                          <div className="flex justify-between items-center bg-slate-900/40 px-1.5 py-0.5 rounded border border-slate-900/20">
-                            <span>AffDmg %:</span>
-                            <input
-                              type="number"
-                              step="0.1"
-                              value={item.stats.affDmg}
-                              onChange={(e) =>
-                                handleStatEdit(item.id, "affDmg", parseFloat(e.target.value) || 0)
-                              }
-                              className="w-12 bg-slate-950 text-slate-100 border-none text-right px-1 rounded text-[10px]"
-                            />
-                          </div>
-                        )}
-                        {item.stats.maxPz !== undefined && (
-                          <div className="flex justify-between items-center bg-slate-900/40 px-1.5 py-0.5 rounded border border-slate-900/20 col-span-2">
-                            <span>Bamboocut (Min/Max):</span>
-                            <div className="flex gap-1">
+                            <label className="flex items-center gap-1 cursor-pointer">
                               <input
-                                type="number"
-                                value={item.stats.minPz || 0}
-                                onChange={(e) =>
-                                  handleStatEdit(item.id, "minPz", parseInt(e.target.value) || 0)
-                                }
-                                className="w-10 bg-slate-950 text-slate-100 border-none text-right px-1 rounded text-[10px]"
+                                type="checkbox"
+                                checked={!!sub.isTuned}
+                                onChange={(e) => handleStatEdit(item.id, sidx, 'isTuned', e.target.checked)}
+                                className="accent-amber-500 w-3 h-3"
                               />
-                              <span>-</span>
-                              <input
-                                type="number"
-                                value={item.stats.maxPz}
-                                onChange={(e) =>
-                                  handleStatEdit(item.id, "maxPz", parseInt(e.target.value) || 0)
-                                }
-                                className="w-10 bg-slate-950 text-slate-100 border-none text-right px-1 rounded text-[10px]"
-                              />
-                            </div>
+                              <span className="text-amber-500 font-bold text-[8px]">Đ.ÂM</span>
+                            </label>
                           </div>
-                        )}
+                        ))}
                       </div>
                     </div>
                   )}
@@ -688,46 +466,44 @@ export default function OcrScanner({ onOcrResult }: OcrScannerProps) {
           </div>
 
           {/* Merge Operations Box */}
-          <div className="mt-5 bg-amber-950/10 border border-amber-900/20 rounded-xl p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div className="mt-5 bg-amber-950/10 border border-amber-900/20 rounded-xl p-4 flex flex-row justify-between items-center gap-4">
             <div>
-              <div className="text-xs font-semibold text-amber-200 uppercase tracking-wider flex items-center gap-1">
-                <Layers className="w-3.5 h-3.5 text-amber-400" /> Batch Merge Settings
-              </div>
-              <p className="text-[11px] text-slate-400 mt-0.5 max-w-xl">
-                Choose whether to combine stats across multiple items (such as individual gear pieces) or take the maximum value (such as multiple Full Character Panel screenshots).
+              <p className="text-[11px] text-slate-400">
+                Nhấp vào nút bên cạnh để thêm trực tiếp tất cả các trang bị đã quét thành công vào kho đồ của nhân vật hiện tại.
               </p>
-              
-              <div className="flex gap-4 mt-3">
-                <label className="flex items-center gap-1.5 text-xs text-slate-300 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="strategy"
-                    checked={mergeStrategy === "sum"}
-                    onChange={() => setMergeStrategy("sum")}
-                    className="accent-amber-500 w-3.5 h-3.5"
-                  />
-                  <span>Sum sub-stats (Gear Sub-stats Sum)</span>
-                </label>
-                <label className="flex items-center gap-1.5 text-xs text-slate-300 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="strategy"
-                    checked={mergeStrategy === "max"}
-                    onChange={() => setMergeStrategy("max")}
-                    className="accent-amber-500 w-3.5 h-3.5"
-                  />
-                  <span>Select highest value (Character Panel Max)</span>
-                </label>
-              </div>
             </div>
 
-            <button
-              onClick={handleMergeAndSync}
-              disabled={queue.filter((it) => it.isSelected && it.status === "success").length === 0}
-              className="bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-slate-950 font-bold px-4 py-2.5 rounded-lg text-xs flex items-center gap-1.5 shrink-0 transition-colors shadow-lg cursor-pointer font-serif"
-            >
-              <Sparkles className="w-4 h-4 text-slate-900" /> Sync to Calculator Panel
-            </button>
+            <div className="flex gap-2">
+              {onImportGears && (
+                <button
+                  onClick={() => {
+                    const activeItems = queue.filter((it) => it.isSelected && it.status === "success");
+                    // Custom raw text reconstruct to make it compatible with parent parser
+                    const scanned = activeItems.map(it => {
+                      // Reconstruct the text in linear raw style to pass values to parser
+                      let lines: string[] = [];
+                      if (it.mastery) {
+                        lines.push(`Mastery: ${it.mastery}`);
+                      }
+                      it.subs.forEach(s => {
+                        if (s.type !== "Other" && s.val) {
+                          lines.push(`${s.type}: ${s.val} ${s.isTuned ? "[turn]" : ""}`);
+                        }
+                      });
+                      return {
+                        rawText: lines.join("\n"),
+                        fileName: it.fileName
+                      };
+                    });
+                    onImportGears(scanned);
+                  }}
+                  disabled={queue.filter((it) => it.isSelected && it.status === "success").length === 0}
+                  className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold px-4 py-2.5 rounded-lg text-xs flex items-center gap-1.5 shrink-0 transition-colors shadow-lg cursor-pointer"
+                >
+                  📥 Thêm vào kho đồ
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}
