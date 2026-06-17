@@ -2976,7 +2976,7 @@ export default function App() {
               { label: "Min Physical Atk", val: adjustedPanel.minOuter },
               { label: "Max Physical Atk", val: adjustedPanel.maxOuter },
               { label: "Physical Pen %", val: `${adjustedPanel.outerPen.toFixed(1)}%` },
-              { label: "Net Phys Pen (in dungeon)", val: `${netPhysPen.toFixed(1)}%` },
+              { label: "Net Phys Pen (after enemy res)", val: `${netPhysPen.toFixed(1)}%` },
               { label: "Crit Rate %", val: `${adjustedPanel.crit.toFixed(1)}%` },
               { label: "Effective Crit Rate %", val: `${effCritRate.toFixed(1)}%` },
               { label: "Crit DMG %", val: `+${adjustedPanel.critDmg.toFixed(1)}%` },
@@ -2988,13 +2988,8 @@ export default function App() {
               { label: "Min Bamboocut Atk", val: adjustedPanel.minPz },
               { label: "Max Bamboocut Atk", val: adjustedPanel.maxPz },
               { label: "Bamboocut Pen %", val: `${adjustedPanel.pzPen.toFixed(1)}%` },
-              { label: "Net Bamboocut Pen", val: `${netPzPen.toFixed(1)}%` },
-              { label: "Bamboocut DMG Bonus %", val: `${adjustedPanel.pzDmg.toFixed(1)}%` },
-              { label: "Max HP", val: Math.round((adjustedPanel.constitution || 0) * 60 + (adjustedPanel.defense || 0) * 17) },
-              { label: "Defense", val: Math.round((adjustedPanel.defense || 0) * 0.5) },
-              { label: "Power", val: Math.round(adjustedPanel.power || 0) },
-              { label: "Agility", val: Math.round(adjustedPanel.agility || 0) },
-              { label: "Momentum", val: Math.round(adjustedPanel.momentum || 0) }
+              { label: "Net Bamboocut Pen (after enemy res)", val: `${netPzPen.toFixed(1)}%` },
+              { label: "Bamboocut DMG Bonus %", val: `${adjustedPanel.pzDmg.toFixed(1)}%` }
             ].map((stat, idx) => (
               <div key={idx} className="stat-row-display">
                 <span className="stat-label">{stat.label}</span>
