@@ -1031,17 +1031,9 @@ export default function App() {
     return config?.panel ?? INITIAL_PANEL;
   });
 
-  // Auto-compute panel stats (Min/Max Phys Atk, Pen, Crit, Aff, Bamboocut Atk, etc.)
-  // from the 8 equipped gear pieces, instead of manual entry.
-  const [autoGearPanel, setAutoGearPanel] = useState<boolean>(() => {
-    if (typeof window === "undefined") return false;
-    const stored = localStorage.getItem("wwm_auto_gear_panel");
-    return stored === null ? false : stored === "1";
-  });
-
-  useEffect(() => {
-    localStorage.setItem("wwm_auto_gear_panel", autoGearPanel ? "1" : "0");
-  }, [autoGearPanel]);
+  // Panel stats are ALWAYS computed from equipped gear (like spongem).
+  // No manual toggle — equip/unequip gear → panel updates automatically.
+  const autoGearPanel = true;
 
   const [activeTab, setActiveTab ] = useState<"calculator" | "priority" | "gear" | "compare" | "simulators" | "ocr" | "profiles" | "rot-sim" | "cultivate">("calculator");
 
@@ -3199,34 +3191,9 @@ export default function App() {
                         </div>
                       </div>
                       <div className="bg-[#2d2d35] border border-[#3d3d45] rounded-xl p-4 space-y-2">
-                        <label className="flex items-center justify-between gap-2 cursor-pointer">
-                          <span className="text-[12px] font-mono font-bold tracking-widest text-[#a19683] uppercase flex items-center gap-1.5">
-                            Auto Panel From Gear
-                          </span>
-                          <input
-                            type="checkbox"
-                            checked={autoGearPanel}
-                            onChange={(e) => setAutoGearPanel(e.target.checked)}
-                            className="w-4 h-4 accent-[#ffd700]"
-                          />
-                        </label>
-                        <p className="text-[11.5px] text-slate-500 leading-snug">
-                          {autoGearPanel
-                            ? "ON — Panel stats are computed from equipped items. Change gear to change stats."
-                            : "OFF — all stats below are entered manually and will not update when you change gear."}
+                        <p className="text-[11.5px] text-slate-400 leading-snug">
+                          Panel stats are <b className="text-[#ffd700]">auto-computed from equipped gear</b>. Equip/unequip items to see stats change. Inner Ways are added on top automatically.
                         </p>
-                        <p className="text-[11.5px] text-[#ffd700]/80 leading-snug border-t border-[#3d3d45] pt-2">
-                          ⓘ Enter your <b>in-game Combat Attributes</b> values here (the naked character-menu panel). Inner Ways are in-combat buffs and are <b>added automatically on top</b>; do not include them here. The stat readout on the right shows the effective in-combat panel (base + Inner Ways).
-                        </p>
-                        <button
-                          type="button"
-                          onClick={() => { if (!autoGearPanel) setPanel({ ...INITIAL_PANEL, set: panel.set }); }}
-                          disabled={autoGearPanel}
-                          className="text-[11px] font-mono px-3 py-1.5 rounded bg-[#ffd700]/20 hover:bg-[#e6c200]/30 text-[#ffd700] border border-[#3d3d45]/40 disabled:opacity-40 disabled:cursor-not-allowed"
-                          title="Load the game-accurate T91/Lv95 base panel (you can then tweak each value to match your own character)"
-                        >
-                          ↺ Load T91 game-default base
-                        </button>
                       </div>
 
                       <div className="bg-[#2d2d35] border border-[#3d3d45] rounded-xl p-4 space-y-3">
