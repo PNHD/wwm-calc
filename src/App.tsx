@@ -1395,6 +1395,8 @@ export default function App() {
 
   // Gear state fields
   const [selectedSlot, setSelectedSlot] = useState<string>("Umbrella");
+  const [transmuteSubIndex, setTransmuteSubIndex] = useState<number | null>(null);
+  const [transmuteSlot, setTransmuteSlot] = useState<string>("Umbrella");
   const [gearFilterSlot, setGearFilterSlot] = useState<string>("ALL");
   const [gearSortBy, setGearSortBy] = useState<"name" | "mastery">("name");
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
@@ -3146,9 +3148,7 @@ export default function App() {
                     { key: "priority", label: "Stat Priority" },
                     { key: "cultivate", label: "Cultivate (beta)" },
                     { key: "compare", label: "Compare" },
-                    { key: "simulators", label: "Swap Sim" },
-                    { key: "rot-sim", label: "Rotation Sim (beta)" },
-                    { key: "profiles", label: "Sets & Backup" }
+                    { key: "transmute", label: "Transmute Advice" },
                   ].map(tab => (
                     <div
                       key={tab.key}
@@ -4096,742 +4096,246 @@ export default function App() {
         )}
                     </div>
                   )}
-                  {gradModalActiveTab === "simulators" && (
+                  {gradModalActiveTab === "transmute" && (
                     <div style={{ textAlign: 'left' }}>
-                      <StatSwapSimulator
-                        adjustedPanel={adjustedPanel}
-                        activeTier={activeTier}
-                        datang={datang}
-                        yishui={yishui}
-                        selectedBuild={selectedBuild}
-                      />
-                    </div>
-                  )}
-                  {gradModalActiveTab === "rot-sim" && (
-                    <div style={{ textAlign: 'left' }}>
-                      {gradModalActiveTab === "rot-sim" && (() => {
-          const allowedWeapons = CLASS_WEAPONS[rotSimClass] || [];
-          const simulatorSkills = WWM_DATA.skills.filter(s => allowedWeapons.includes(s.weapon));
+                      {(() => {
+                        const MAX_ROLL_95: Record<string, string> = {
+                          "Max Phys Atk": "63.8", "Min Phys Atk": "63.8",
+                          "Crit Rate": "7.4%", "Crit DMG": "14.8%",
+                          "Phys Pen": "7.0%", "Affinity Rate": "3.6%",
+                          "Affinity DMG": "7.2%", "Precision": "6.6%",
+                          "Strength": "40.4", "Power": "40.4", "Agility": "40.4",
+                          "Boss DMG%": "2.6%", "All Martial Arts": "2.6%",
+                          "Phys DMG%": "2.6%",
+                          "Art of Umbrella Boost": "5.2%", "Art of Rope Dart Boost": "5.2%",
+                          "Art of Sword Boost": "5.2%", "Art of Spear Boost": "5.2%",
+                          "Art of Fan Boost": "5.2%", "Art of Dual Blades Boost": "5.2%",
+                          "Art of Mo Blade Boost": "5.2%", "Art of Heng Blade Boost": "5.2%",
+                          "Art of Gauntlets Boost": "5.2%",
+                        };
 
-          // 1. Calculate Standard Rotation Details
-          let totalSimCurrentDmg = 0;
-          const currentSimDetails = simulatorSkills.map(s => {
-            const hits = hitsState[s.name] || 0;
-            const synthRotationItem = {
-              name: s.name,
-              count: 1,
-              isDingyin: s.name.toLowerCase().includes("resonance") || s.name.toLowerCase().includes("attuned") || s.name.toLowerCase().includes("dingyin"),
-              generalBonus: 0.315,
-              yishui: 10,
-              tiaozhan: 1
-            };
-            const { perHit } = calcSkill(synthRotationItem as any, adjustedPanel, activeTier, {
-              set: adjustedPanel.set || "stars",
-              datang,
-              yishui,
-              buildKey: selectedBuild
-            });
-            const skillTotal = perHit * hits;
-            totalSimCurrentDmg += skillTotal;
-            return {
-              name: s.name,
-              weaponName: s.weapon,
-              hits,
-              perHit,
-              total: skillTotal,
-              dps: skillTotal / 60
-            };
-          });
-          const totalSimCurrentDps = totalSimCurrentDmg / 60;
+                        const TRANSMUTE_CANDIDATES = [
+                          "Max Phys Atk", "Min Phys Atk", "Crit Rate", "Crit DMG",
+                          "Phys Pen", "Affinity Rate", "Affinity DMG", "Precision",
+                          "Strength", "Power", "Agility",
+                          "Boss DMG%", "All Martial Arts", "Phys DMG%",
+                        ];
 
-          // 2. Calculate Swapped Weapon Rotation Details
-          const swappedPanel = {
-            ...adjustedPanel,
-            minOuter: swapMinAtk,
-            maxOuter: swapMaxAtk
-          };
-          let totalSimSwappedDmg = 0;
-          const scrappedSimDetails = simulatorSkills.map(s => {
-            const hits = hitsState[s.name] || 0;
-            const synthRotationItem = {
-              name: s.name,
-              count: 1,
-              isDingyin: s.name.toLowerCase().includes("resonance") || s.name.toLowerCase().includes("attuned") || s.name.toLowerCase().includes("dingyin"),
-              generalBonus: 0.315,
-              yishui: 10,
-              tiaozhan: 1
-            };
-            const { perHit } = calcSkill(synthRotationItem as any, swappedPanel, activeTier, {
-              set: swappedPanel.set || "stars",
-              datang,
-              yishui,
-              buildKey: selectedBuild
-            });
-            const skillTotal = perHit * hits;
-            totalSimSwappedDmg += skillTotal;
-          });
-          const totalSimSwappedDps = totalSimSwappedDmg / 60;
-          const swapDpsDiffPct = totalSimCurrentDps > 0 ? ((totalSimSwappedDps - totalSimCurrentDps) / totalSimCurrentDps) * 100 : 0;
+                        const gear = getActiveGear();
+                        const slotItems = gear.filter(it => it.slot === transmuteSlot);
+                        const equipped = slotItems.find(it => isItemEquipped(it, gear)) || slotItems[0] || null;
 
-          return (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                
-                {/* Left Side: Inputs, Selection & Core Config */}
-                <div className="lg:col-span-7 space-y-6">
-                  
-                  {/* Selector Block */}
-                  <div className="bg-[#2d2d35] border border-[#3d3d45] rounded-xl p-5 shadow-lg space-y-4">
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-[#3d3d45] pb-3">
-                      <div>
-                        <h3 className="text-base font-bold font-serif text-slate-100 flex items-center gap-2">
-                          🔄 Rotation Combat Simulator
-                        </h3>
-                        <p className="text-[12px] text-slate-500 mt-0.5">
-                          Set custom hits parsed in combat to calculate authentic class-specific active DPS.
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm text-slate-450 font-mono">Select Class:</span>
-                        <select
-                          value={rotSimClass}
-                          onChange={(e) => setRotSimClass(e.target.value)}
-                          className="bg-[#1a1a1d] border border-[#3d3d45]/45 text-[#ffd700] text-sm rounded-md px-3 py-1.5 focus:outline-none font-bold"
-                        >
-                          {Object.keys(WWM_DATA.classes).map(c => (
-                            <option key={c} value={c}>{classDisplayName(c)}</option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
+                        const currentStats = equipped ? getGearItemCompareStats(equipped) : null;
+                        const currentTotal = currentStats ? currentStats.totalGradDelta : 0;
 
-                    {/* Calibration Note/Banner */}
-                    <div className="bg-[#3d3d45]/30 border border-[#3d3d45] rounded-lg p-3.5 text-sm text-[#ffd700]/90 leading-relaxed space-y-1">
-                      <div className="font-bold flex items-center gap-1">
-                        <span>⚠️</span> <span>Calibration & Engine Disclaimer</span>
-                      </div>
-                      <p className="text-[13px] text-slate-350">
-                        Our engine is calibrated against actual Global Tier 91 (approx. 3% total deviation).
-                        Discrepancies can occur on Resonance/AoE skills (e.g. Flute Waves) due to stack scaling, multi-hits, and proximity.
-                        <strong> We strongly recommend entering hits parsed from actual combat.</strong>
-                      </p>
-                    </div>
-
-                    {/* Presets / Helper Buttons */}
-                    <div className="flex flex-wrap gap-2 items-center text-sm">
-                      <span className="text-slate-500 font-mono text-[12px] uppercase">Quick Presets:</span>
-                      <button
-                        onClick={() => {
-                          const updated = { ...hitsState };
-                          const HEAVY_PRESETS: Record<string, Record<string, number>> = {
-                            "Bamboocut-Dust": {
-                              "Scarlet Spin": 78,
-                              "Resonance": 75,
-                              "Burn and Bury": 4,
-                              "Soul Sweep": 3,
-                              "Soaring Spin": 6,
-                              "Piercing Dart": 7,
-                              "Cyclone Waltz": 11
-                            },
-                            "Bamboocut-Wind": { "Mortal Dart Red Blade (12345345)": 4, "Mortal Dart Red Blade (345)": 4, "Mortal Dart Q (Full Combo)": 8, "Mortal Dart Cross Slash (Heavy)": 6, "Mortal Dart White Blade Light": 10, "Twinblades Light Combo (Full)": 8, "Twinblades Q": 20, "Twinblades Charged": 4 },
-                            "Nameless": { "Nameless Sword Q": 10, "Nameless Sword Heavy": 15, "Nameless Sword Charge Lv2": 8, "Nameless Sword Mystic Charge": 5, "Nameless Spear Q": 20, "Nameless Spear Windmill (Fast)": 30, "Nameless Spear Windmill (Finisher)": 8 },
-                            "Jade": { "Inkwell Fan Q": 15, "Inkwell Fan Light Charge": 20, "Inkwell Fan Heavy": 15, "Inkwell Fan Heavy Charge Lv2 (Full)": 8, "Vernal Umbrella R": 30, "Vernal Fan Wind Wall": 8, "Vernal Fan Heavy": 10, "Vernal Fan 4x Light Charge": 4 },
-                            "Nine-Nine": { "Strategic Sword Q (5 Bleed)": 12, "Strategic Sword Heavy (4 Bleed)": 10, "Bleed Tick (5 Stack)": 60, "Blood Explosion": 8, "Heavenquaker Spear Q (Full 5)": 15, "Heavenquaker Spear Heavy": 10, "Heavenquaker Spear Charge Lv2": 5 },
-                            "Rocksplit-Might": { "Thundercry Blade Q (Deathstrike)": 10, "Thundercry Blade Stance Combo": 12, "Thundercry Blade Light Charge": 15, "Thundercry Blade Heavy Derived": 12, "Spirit Clone (Thundercry)": 20, "Stormbreaker Spear Charge": 8, "Stormbreaker Spear Heavy": 10 },
-                            "Rocksplit-Jun": { "Snowparting Blade Q (3 Charge, 2 Intent)": 8, "Snowparting Derived (2 Intent)": 8, "Phalanxbane Blade Q (Fast 3 Charge)": 5, "Phalanxbane Quick Q": 8, "Spirit Blade Clone (Lv2)": 16, "Spirit Blade Clone (Lv1)": 8 },
-                            "Pure-Healer": { "Panacea Fan Heavy Strike": 20, "Panacea Fan Q": 8, "Panacea Fan Light Charge": 15, "Soulshade Umbrella Q": 15, "Soulshade Off-Field Heal": 30, "Soulshade Light Charge": 10 },
-                            "Fire-Fist-Healer": { "Panacea Fan Heavy Strike": 15, "Panacea Fan Q": 10, "Soulshade Umbrella Q": 20, "Soulshade Off-Field Heal": 25, "Soulshade Light Charge": 12 },
-                          };
-                          const classPreset = HEAVY_PRESETS[rotSimClass] || {};
-                          simulatorSkills.forEach(s => { updated[s.name] = classPreset[s.name] ?? 0; });
-                          setHitsState(updated);
-                        }}
-                        className="px-2.5 py-1 bg-[#1a1a1d] hover:bg-[#2d2d35] border border-slate-700 rounded text-sm text-slate-350 hover:text-slate-200 transition-colors"
-                      >
-                        🔥 Heavy Attack Rotation
-                      </button>
-                      <button
-                        onClick={() => {
-                          const updated = { ...hitsState };
-                          const BALANCED_PRESETS: Record<string, Record<string, number>> = {
-                            "Bamboocut-Dust": {
-                              "Scarlet Spin": 50,
-                              "Resonance": 45,
-                              "Burn and Bury": 3,
-                              "Soul Sweep": 2,
-                              "Soaring Spin": 4,
-                              "Piercing Dart": 4,
-                              "Cyclone Waltz": 6
-                            },
-                            "Bamboocut-Wind": { "Mortal Dart Red Blade (12345345)": 3, "Mortal Dart Q (Full Combo)": 6, "Mortal Dart Cross Slash (Heavy)": 4, "Mortal Dart White Blade Light": 8, "Twinblades Light Combo (Full)": 6, "Twinblades Q": 15, "Twinblades Charged": 3 },
-                            "Nameless": { "Nameless Sword Q": 8, "Nameless Sword Heavy": 10, "Nameless Sword Charge Lv2": 5, "Nameless Spear Q": 15, "Nameless Spear Windmill (Fast)": 20, "Nameless Spear Windmill (Finisher)": 5 },
-                            "Jade": { "Inkwell Fan Q": 12, "Inkwell Fan Light Charge": 15, "Inkwell Fan Heavy": 10, "Vernal Umbrella R": 20, "Vernal Fan Wind Wall": 6, "Vernal Fan Heavy": 8 },
-                            "Nine-Nine": { "Strategic Sword Q (5 Bleed)": 8, "Strategic Sword Heavy (4 Bleed)": 8, "Bleed Tick (5 Stack)": 40, "Blood Explosion": 5, "Heavenquaker Spear Q (Full 5)": 10, "Heavenquaker Spear Heavy": 8 },
-                            "Rocksplit-Might": { "Thundercry Blade Q (Deathstrike)": 8, "Thundercry Blade Stance Combo": 8, "Thundercry Blade Light Charge": 10, "Spirit Clone (Thundercry)": 15, "Stormbreaker Spear Charge": 6, "Stormbreaker Spear Heavy": 8 },
-                            "Rocksplit-Jun": { "Snowparting Blade Q (3 Charge, 2 Intent)": 5, "Snowparting Derived (2 Intent)": 5, "Phalanxbane Blade Q (Fast 3 Charge)": 4, "Phalanxbane Quick Q": 6, "Spirit Blade Clone (Lv2)": 10 },
-                            "Pure-Healer": { "Panacea Fan Heavy Strike": 15, "Panacea Fan Q": 6, "Panacea Fan Light Charge": 10, "Soulshade Umbrella Q": 10, "Soulshade Off-Field Heal": 20, "Soulshade Light Charge": 8 },
-                            "Fire-Fist-Healer": { "Panacea Fan Heavy Strike": 10, "Panacea Fan Q": 8, "Soulshade Umbrella Q": 15, "Soulshade Off-Field Heal": 18 },
-                          };
-                          const classPreset = BALANCED_PRESETS[rotSimClass] || {};
-                          simulatorSkills.forEach(s => { updated[s.name] = classPreset[s.name] ?? 0; });
-                          setHitsState(updated);
-                        }}
-                        className="px-2.5 py-1 bg-[#1a1a1d] hover:bg-[#2d2d35] border border-slate-700 rounded text-sm text-slate-350 hover:text-slate-200 transition-colors"
-                      >
-                        ⚡ Balanced Rotation
-                      </button>
-                      <button
-                        onClick={() => {
-                          const updated = { ...hitsState };
-                          WWM_DATA.skills.forEach(s => {
-                            updated[s.name] = 0;
-                          });
-                          setHitsState(updated);
-                        }}
-                        className="px-2 py-1 bg-rose-950/20 hover:bg-rose-950/40 border border-rose-900/30 rounded text-sm text-rose-400 transition-colors font-mono"
-                      >
-                        🧹 Reset to 0 Hits
-                      </button>
-                    </div>
-
-                    {/* Interactive Skills Table */}
-                    <div className="h-[450px] overflow-y-auto pr-1 border border-[#3d3d45] bg-[#1a1a1d]/40 rounded-lg p-2">
-                      <span className="text-[12px] uppercase font-mono text-slate-500 font-semibold px-2 block mb-2">
-                        Active Skills ({simulatorSkills.length}) for {rotSimClass} Weapons:
-                      </span>
-                      <div className="space-y-2">
-                        {simulatorSkills.map((s) => {
-                          const hits = hitsState[s.name] || 0;
-                          return (
-                            <div key={s.name} className="flex items-center justify-between p-2.5 bg-[#1a1a1d]/70 rounded border border-[#3d3d45] hover:border-slate-850 transition-colors gap-4">
-                              <div className="min-w-0 flex-1">
-                                <div className="text-sm font-semibold text-slate-200 truncate">{s.name}</div>
-                                <div className="text-[12px] text-slate-500 truncate font-mono">{s.weapon}</div>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-[12px] font-mono text-slate-500">Hits/60s:</span>
-                                <input
-                                  type="number"
-                                  min="0"
-                                  max="999"
-                                  value={hits === 0 ? "" : hits}
-                                  placeholder="0"
-                                  onChange={(e) => {
-                                    const val = parseInt(e.target.value) || 0;
-                                    setHitsState(prev => ({ ...prev, [s.name]: val }));
-                                  }}
-                                  className="w-16 bg-[#1a1a1d] border border-[#3d3d45] rounded p-1 text-sm text-center text-[#ffd700] font-mono font-bold focus:outline-none focus:border-[#ffd700]/50"
-                                />
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {/* Disclaimer about non-Bamboocut-Dust path skill names */}
-                    <div className="mt-2 text-[12px] text-slate-500 italic leading-relaxed px-1 flex items-start gap-1">
-                      <span className="shrink-0 text-[#ffd700]/80">⚠️</span>
-                      <span>
-                        Skill names for non-Bamboocut-Dust paths are approximate. Enter hits from your actual damage log for accurate results.
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Right Side: Outputs & Gear Swap Simulator */}
-                <div className="lg:col-span-5 space-y-6">
-                  
-                  {/* Core Combat Output Parse Card */}
-                  <div className="bg-[#2d2d35] border border-[#3d3d45] rounded-xl p-5 shadow-lg space-y-4">
-                    <h3 className="text-base font-bold font-serif text-slate-100 flex items-center gap-2 border-b border-[#3d3d45] pb-2">
-                      ⚔ Simulated Combat Parse
-                    </h3>
-                    
-                    {/* Big Stats Indicator */}
-                    <div className="grid grid-cols-2 gap-3 bg-[#1a1a1d]/80 p-4 rounded-xl border border-[#3d3d45]">
-                      <div>
-                        <div className="text-[12px] uppercase font-mono tracking-wider text-slate-500">Total Combat Damage</div>
-                        <div className="text-xl font-bold font-serif text-[#ffd700] mt-0.5">
-                          {Math.round(totalSimCurrentDmg).toLocaleString()}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-[12px] uppercase font-mono tracking-wider text-slate-500">Effective Parse DPS</div>
-                        <div className="text-xl font-bold font-serif text-[#ffd700] mt-0.5">
-                          {totalSimCurrentDps.toLocaleString(undefined, { maximumFractionDigits: 1 })}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Skill Contributions table */}
-                    <div className="overflow-x-auto rounded-lg border border-[#3d3d45]">
-                      <table className="w-full text-left border-collapse">
-                        <thead>
-                          <tr className="bg-[#1a1a1d] border-b border-[#3d3d45] text-[11px] uppercase tracking-wider font-mono text-slate-500">
-                            <th className="py-2 px-3">Skill Spec</th>
-                            <th className="py-2 px-3 text-right">Hits</th>
-                            <th className="py-2 px-3 text-right">DMG/hit</th>
-                            <th className="py-2 px-3 text-right font-bold text-[#ffd700]/80">Total</th>
-                            <th className="py-2 px-3 text-right">%</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-950 bg-[#1a1a1d]/25 font-mono text-[13px] text-slate-300">
-                          {currentSimDetails
-                            .filter(item => item.hits > 0)
-                            .sort((a, b) => b.total - a.total)
-                            .map((item, idx) => {
-                              const percent = totalSimCurrentDmg > 0 ? ((item.total / totalSimCurrentDmg) * 100).toFixed(1) : "0.0";
-                              return (
-                                <tr key={idx} className="hover:bg-[#1a1a1d]/60 transition-colors">
-                                  <td className="py-2 px-3 font-sans font-medium text-slate-200">
-                                    {item.name}
-                                  </td>
-                                  <td className="py-2 px-3 text-right text-slate-500">{item.hits}</td>
-                                  <td className="py-2 px-3 text-right text-slate-450">{Math.round(item.perHit).toLocaleString()}</td>
-                                  <td className="py-2 px-3 text-right font-extrabold text-[#ffd700]">
-                                    {Math.round(item.total).toLocaleString()}
-                                  </td>
-                                  <td className="py-2 px-3 text-right text-slate-500">{percent}%</td>
-                                </tr>
+                        // Build replacement analysis
+                        let results: { candidateStat: string; maxRoll: string; newTotal: number; delta: number }[] = [];
+                        if (equipped && transmuteSubIndex !== null && transmuteSubIndex < equipped.subs.length) {
+                          const selectedSub = equipped.subs[transmuteSubIndex];
+                          results = TRANSMUTE_CANDIDATES
+                            .filter(candidate => {
+                              // Skip if candidate is same as selected sub
+                              if (candidate === selectedSub.type) return false;
+                              // Skip if candidate already exists on item (can't have duplicate)
+                              if (equipped.subs.some((s, i) => i !== transmuteSubIndex && s.type === candidate)) return false;
+                              return true;
+                            })
+                            .map(candidate => {
+                              const maxRoll = MAX_ROLL_95[candidate] || "0";
+                              // Create a copy of the item with the replacement
+                              const newSubs = equipped.subs.map((s, i) =>
+                                i === transmuteSubIndex ? { type: candidate, val: maxRoll, isTuned: false } : { ...s }
                               );
-                            })}
-                          {currentSimDetails.filter(x => x.hits > 0).length === 0 && (
-                            <tr>
-                              <td colSpan={5} className="py-6 text-center text-slate-500 italic text-[13px]">
-                                No skills have active Hits entered. Please type some Hits in the table to display the parse data here.
-                              </td>
-                            </tr>
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
+                              const fakeItem = { ...equipped, subs: newSubs };
+                              const newStats = getGearItemCompareStats(fakeItem);
+                              return {
+                                candidateStat: candidate,
+                                maxRoll,
+                                newTotal: newStats.totalGradDelta,
+                                delta: newStats.totalGradDelta - currentTotal,
+                              };
+                            })
+                            .sort((a, b) => b.delta - a.delta);
+                        }
 
-                  {/* Weapon Swap Simulator Card */}
-                  <div className="bg-[#2d2d35] border border-[#3d3d45] rounded-xl p-5 shadow-lg space-y-4">
-                    <div className="border-b border-[#3d3d45] pb-2">
-                      <h3 className="text-base font-bold font-serif text-slate-100 flex items-center gap-1.5">
-                        🛠 Weapon/Gear Swap Simulator
-                      </h3>
-                      <p className="text-[12px] text-slate-500 mt-0.5">
-                        Test how alternate weapons stack up by modifying the Base Physical Attack min & max attributes.
-                      </p>
-                    </div>
+                        const bestResult = results.length > 0 ? results[0] : null;
+                        const selectedSubDelta = (currentStats && transmuteSubIndex !== null && transmuteSubIndex < (currentStats.subsWithDeltas || []).length)
+                          ? currentStats.subsWithDeltas[transmuteSubIndex].delta
+                          : 0;
 
-                    <div className="space-y-3 font-mono text-sm">
-                      
-                      {/* Presets dropdown */}
-                      <div className="space-y-1">
-                        <label className="text-[12px] text-slate-500 font-sans font-bold uppercase tracking-wider block">Weapon Base Presets</label>
-                        <select
-                          value={swapWeaponId}
-                          onChange={(e) => {
-                            const wid = e.target.value;
-                            setSwapWeaponId(wid);
-                            const found = PREDEFINED_WEAPONS.find(w => w.id === wid);
-                            if (found && wid !== "custom") {
-                              setSwapMinAtk(found.min);
-                              setSwapMaxAtk(found.max);
-                            }
-                          }}
-                          className="w-full bg-[#1a1a1d] border border-[#3d3d45] rounded p-2 text-slate-200 focus:outline-none focus:border-[#ffd700]/50 block w-full"
-                        >
-                          {PREDEFINED_WEAPONS.map(w => (
-                            <option key={w.id} value={w.id}>{w.name}</option>
-                          ))}
-                        </select>
-                      </div>
-
-                      {/* Inputs min & max */}
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1">
-                          <label className="text-[12px] text-slate-500 font-sans block">New Min Base Atk</label>
-                          <input
-                            type="number"
-                            value={swapMinAtk}
-                            onChange={(e) => {
-                              setSwapMinAtk(parseInt(e.target.value) || 0);
-                              setSwapWeaponId("custom");
-                            }}
-                            className="w-full bg-[#1a1a1d] border border-[#3d3d45] rounded p-2 text-slate-100 placeholder:text-slate-705 focus:outline-none focus:border-[#ffd700]/50"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-[12px] text-slate-500 font-sans block">New Max Base Atk</label>
-                          <input
-                            type="number"
-                            value={swapMaxAtk}
-                            onChange={(e) => {
-                              setSwapMaxAtk(parseInt(e.target.value) || 0);
-                              setSwapWeaponId("custom");
-                            }}
-                            className="w-full bg-[#1a1a1d] border border-[#3d3d45] rounded p-2 text-slate-100 placeholder:text-slate-705 focus:outline-none focus:border-[#ffd700]/50"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Swap Comparison results banner */}
-                      <div className="bg-[#1a1a1d] rounded-xl p-4 border border-[#3d3d45]">
-                        <div className="text-[12px] uppercase font-bold text-slate-500 tracking-wider">Recalculated Weapon Comparison</div>
-                        
-                        <div className="mt-2.5 flex items-baseline justify-between">
-                          <div className="text-slate-500 text-sm">Simulated DPS:</div>
-                          <div className="text-lg font-bold text-[#ffd700]">
-                            {totalSimSwappedDps.toLocaleString(undefined, { maximumFractionDigits: 1 })}
-                          </div>
-                        </div>
-
-                        <div className="mt-2 flex items-center justify-between border-t border-[#3d3d45] pt-2 text-sm">
-                          <span className="text-slate-500">Total Parse Gain/Loss:</span>
-                          {swapDpsDiffPct >= 0 ? (
-                            <span className="font-extrabold text-emerald-500 text-base">
-                              +{swapDpsDiffPct.toFixed(2)}% DPS Increase
-                            </span>
-                          ) : (
-                            <span className="font-extrabold text-rose-500 text-base">
-                              {swapDpsDiffPct.toFixed(2)}% DPS Decrease
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Helpful quick guide */}
-                      <div className="text-[12px] text-slate-500 leading-normal font-sans space-y-1 pl-1">
-                        <p>💡 <strong>Note</strong>: This swap calculations assume panel scaling bonuses (such as Phys Pen, Critical multipliers, and Skill Damage attributes) remain active and apply seamlessly onto the new weapon base damage floor.</p>
-                      </div>
-
-                    </div>
-                  </div>
-
-                </div>
-
-              </div>
-            </div>
-          );
-        })()}
-                    </div>
-                  )}
-                  {gradModalActiveTab === "profiles" && (
-                    <div style={{ textAlign: 'left' }}>
-                      {gradModalActiveTab === "profiles" && (
-          <div className="space-y-6">
-            <div className="bg-[#2d2d35] border border-[#3d3d45] rounded-xl p-6 shadow-lg">
-              <h2 className="text-lg font-bold font-serif text-slate-100 flex items-center gap-2 border-b border-[#ffd700]/25 pb-4 mb-5">
-                <Database className="text-[#ffd700] w-5 h-5" /> Gear Sets Management & Comparisons Matrix
-              </h2>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Save active panel box */}
-                <div className="bg-[#1a1a1d]/60 border border-[#3d3d45] rounded-xl p-4 space-y-4 md:col-span-1">
-                  <h3 className="text-sm font-bold text-[#ffd700] uppercase tracking-widest font-mono">
-                    Save Active Panel Setup
-                  </h3>
-                  <div className="space-y-2">
-                    <label className="text-[13px] text-slate-500 block font-medium">Profile Name</label>
-                    <input
-                      type="text"
-                      placeholder="e.g., T91 Gold Set, Pen Focused..."
-                      value={newProfileName}
-                      onChange={(e) => setNewProfileName(e.target.value)}
-                      className="w-full bg-[#2d2d35] text-slate-100 border border-slate-700 text-sm px-3 py-2 rounded focus:outline-none focus:border-[#ffd700] font-medium"
-                    />
-                  </div>
-                  <button
-                    onClick={() => {
-                      if (!newProfileName.trim()) return;
-                      const updated = [
-                        {
-                          id: Date.now().toString(),
-                          name: newProfileName.trim(),
-                          timestamp: new Date().toLocaleString(),
-                          panel: { ...panel },
-                          gradRate: rotationStats.gradRate,
-                          dps: rotationStats.dps,
-                        },
-                        ...profiles,
-                      ];
-                      saveProfilesList(updated);
-                      setNewProfileName("");
-                    }}
-                    className="w-full bg-gradient-to-r from-[#e6c200] to-[#ffd700] hover:from-[#ffd700] hover:to-[#ffed4e] text-slate-950 font-bold rounded text-sm py-2 px-3 flex items-center justify-center gap-1.5 transition-colors"
-                  >
-                    Save Profile
-                  </button>
-
-                  <div className="border-t border-[#3d3d45] pt-3">
-                    <h4 className="text-[12px] uppercase tracking-wider font-extrabold text-slate-500 mb-2 font-mono">
-                      Backups & Cross-sync
-                    </h4>
-                    <div className="space-y-2 text-[12px] text-slate-500">
-                      <button
-                        onClick={() => {
-                          const str = JSON.stringify(profiles, null, 2);
-                          navigator.clipboard.writeText(str);
-                          alert("Successfully copied profile catalogs as JSON to clipboard!");
-                        }}
-                        className="text-[#ffd700]/80 hover:text-[#ffd700] block font-semibold underline text-left"
-                      >
-                        Export Profiles (Copy JSON)
-                      </button>
-                      <button
-                        onClick={() => {
-                          const txt = prompt("Paste your profiles JSON backup string here:");
-                          if (txt) {
-                            try {
-                              const parsed = JSON.parse(txt);
-                              if (Array.isArray(parsed)) {
-                                saveProfilesList(parsed);
-                                alert("Profile catalogs loaded and synchronized successfully!");
-                              } else {
-                                alert("Invalid backup structure. Verified profiles must be a valid JSON list array.");
-                              }
-                            } catch (e) {
-                              alert("An error occurred while parsing your profile JSON string.");
-                            }
+                        // Verdict logic
+                        let verdict = "";
+                        let verdictColor = "";
+                        if (bestResult) {
+                          if (bestResult.delta > 0.5) {
+                            verdict = "Worth re-rolling — significant upgrade possible";
+                            verdictColor = "text-emerald-400";
+                          } else if (bestResult.delta > 0.1) {
+                            verdict = "Marginal improvement — re-roll if resources allow";
+                            verdictColor = "text-yellow-400";
+                          } else {
+                            verdict = "Keep current substat — no meaningful upgrade available";
+                            verdictColor = "text-rose-400";
                           }
-                        }}
-                        className="text-[#ffd700]/80 hover:text-[#ffd700] block font-semibold underline text-left mt-1"
-                      >
-                        Import Profiles (Paste JSON)
-                      </button>
-                    </div>
-                  </div>
-                </div>
+                        }
 
-                {/* Profiles catalogs */}
-                <div className="md:col-span-2 space-y-4">
-                  <h3 className="text-sm font-bold text-slate-300 uppercase tracking-widest font-mono flex justify-between items-center">
-                    <span>Saved Configurations ({profiles.length})</span>
-                    {profiles.length > 0 && (
-                      <button
-                        onClick={() => {
-                          if (confirm("Are you sure you want to delete all saved configurations?")) {
-                            saveProfilesList([]);
-                          }
-                        }}
-                        className="text-rose-500 hover:text-rose-400 text-[12px] underline font-bold"
-                      >
-                        Delete All
-                      </button>
-                    )}
-                  </h3>
-
-                  {profiles.length === 0 ? (
-                    <div className="bg-[#0e0d0b] border border-[#3d3d45] rounded-xl p-8 text-center text-slate-500 text-sm">
-                      No stored configurations found. Current indicators will be lost on page reload if not saved. Record your setup using the panel on the left!
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {profiles.map((prof) => {
-                        const isComparing = compareProfileIds.includes(prof.id);
-                        const dyn = getDynamicProfileStats(prof);
                         return (
-                          <div
-                            key={prof.id}
-                            className={`border rounded-xl p-4 transition-all relative ${
-                              isComparing
-                                ? "bg-[#3d3d45]/20 border-[#ffd700]/65"
-                                : "bg-[#1a1a1d]/60 border-[#3d3d45] hover:border-slate-700"
-                            }`}
-                          >
-                            <span className="text-[11px] font-mono text-slate-500 block">
-                              {prof.timestamp}
-                            </span>
-                            <h4 className="text-base font-bold text-slate-100 font-serif mt-1 truncate">
-                              {prof.name}
-                            </h4>
-
-                            <div className="grid grid-cols-2 gap-2 mt-2.5 text-[12px] font-mono border-t border-[#3d3d45] pt-2.5">
-                              <div>
-                                <span className="text-slate-500 block">Graduation:</span>
-                                <strong className="text-[#ffd700] text-sm">
-                                  {dyn.gradRate.toFixed(1)}%
-                                </strong>
+                          <div className="space-y-6">
+                            <div className="bg-[#2d2d35] border border-[#3d3d45] rounded-xl p-6">
+                              <div className="mb-4 border-b border-[#3d3d45] pb-3">
+                                <h2 className="text-base font-extrabold text-[#ffd700] uppercase tracking-wider font-serif flex items-center gap-2">
+                                  🔄 Transmutation Advice
+                                </h2>
+                                <p className="text-[12px] text-slate-500 mt-0.5">
+                                  Select a gear slot, pick a substat to re-roll, and see which replacement would yield the best graduation improvement at T91 max rolls.
+                                </p>
                               </div>
-                              <div>
-                                <span className="text-slate-500 block">DPS Score:</span>
-                                <strong className="text-slate-200">
-                                  {Math.round(dyn.dps).toLocaleString()}/s
-                                </strong>
-                              </div>
-                            </div>
 
-                            <div className="flex gap-2 mt-4">
-                              <button
-                                onClick={() => {
-                                  setPanel(prof.panel);
-                                  alert(`Successfully restored configuration "${prof.name}" to active panel!`);
-                                }}
-                                className="flex-1 bg-[#1a1a1d] border border-[#3d3d45] hover:bg-[#2d2d35] text-slate-200 text-[13px] py-1.5 px-2 rounded text-center transition-colors font-bold cursor-pointer"
-                              >
-                                Equip Build
-                              </button>
-                              <button
-                                onClick={() => {
-                                  if (isComparing) {
-                                    setCompareProfileIds(compareProfileIds.filter((id) => id !== prof.id));
-                                  } else {
-                                    setCompareProfileIds([...compareProfileIds, prof.id]);
-                                  }
-                                }}
-                                className={`flex-1 border text-[13px] py-1.5 px-2 rounded font-bold transition-all text-center cursor-pointer ${
-                                  isComparing
-                                    ? "bg-[#ffd700] text-[#1a1a1d] border-[#ffd700] hover:bg-[#ffed4e] font-extrabold"
-                                    : "bg-[#1a1a1d] border-[#3d3d45] text-[#ffd700]/95 hover:bg-[#2d2d35]"
-                                }`}
-                              >
-                                {isComparing ? "✓ Selected" : "Compare"}
-                              </button>
-                              <button
-                                onClick={() => {
-                                  if (confirm(`Are you sure you want to delete profile "${prof.name}"?`)) {
-                                    const updated = profiles.filter((p) => p.id !== prof.id);
-                                    saveProfilesList(updated);
-                                    setCompareProfileIds(compareProfileIds.filter((id) => id !== prof.id));
-                                  }
-                                }}
-                                className="border border-[#3d3d45] hover:bg-rose-950/10 hover:border-rose-900 text-rose-500 text-sm px-2.5 rounded transition-colors cursor-pointer"
-                                title="Delete profile"
-                              >
-                                &times;
-                              </button>
+                              {/* Slot Selector Grid */}
+                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+                                {SLOTS.map((slot) => {
+                                  const itemsInSlot = gear.filter(it => it.slot === slot.name);
+                                  const hasItems = itemsInSlot.length > 0;
+                                  const isSelected = transmuteSlot === slot.name;
+                                  return (
+                                    <button
+                                      key={slot.name}
+                                      onClick={() => { setTransmuteSlot(slot.name); setTransmuteSubIndex(null); }}
+                                      className={`relative flex items-center gap-2.5 p-3 rounded-lg border transition-all text-left ${
+                                        isSelected
+                                          ? "bg-[#ffd700] text-[#1a1a1d] border-[#ffd700] font-bold"
+                                          : "bg-[#1a1a1d]/60 text-slate-500 hover:text-slate-200 border-[#3d3d45] hover:border-slate-700"
+                                      }`}
+                                    >
+                                      <span className="text-lg">{slot.icon}</span>
+                                      <div className="flex-1 min-w-0">
+                                        <div className="text-[13px] truncate uppercase tracking-wide font-semibold">{getSlotLabel(slot.name)}</div>
+                                        {hasItems && (
+                                          <div className={`text-[11px] mt-0.5 ${isSelected ? "text-slate-900 font-bold" : "text-slate-500"}`}>
+                                            {itemsInSlot.length} item{itemsInSlot.length > 1 ? "s" : ""}
+                                          </div>
+                                        )}
+                                      </div>
+                                      {hasItems && (
+                                        <span className={`absolute top-2 right-2 w-1.5 h-1.5 rounded-full ${isSelected ? "bg-[#1a1a1d]" : "bg-[#ffd700]"}`} />
+                                      )}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+
+                              {/* Equipped item display */}
+                              {!equipped ? (
+                                <div className="bg-[#1a1a1d]/40 border border-dashed border-[#3d3d45] p-8 rounded-lg text-center font-mono">
+                                  <p className="text-slate-500 text-sm">No items in this slot. Add gear via the 🛡 Gear tab.</p>
+                                </div>
+                              ) : (
+                                <div className="space-y-4">
+                                  {/* Current item card */}
+                                  <div className="bg-[#1a1a1d]/60 border border-[#3d3d45] rounded-xl p-4">
+                                    <div className="flex items-center justify-between mb-3 border-b border-[#3d3d45]/40 pb-2">
+                                      <h3 className="text-sm font-bold text-slate-100">{equipped.name}</h3>
+                                      <span className="text-sm font-mono font-extrabold text-[#ffd700]">+{currentTotal.toFixed(2)}% graduation</span>
+                                    </div>
+                                    <p className="text-[11px] text-slate-500 mb-3">Click a substat to select it for transmutation analysis:</p>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                                      {(currentStats?.subsWithDeltas || []).map((sub, sidx) => {
+                                        const isSubSelected = transmuteSubIndex === sidx;
+                                        return (
+                                          <button
+                                            key={sidx}
+                                            onClick={() => setTransmuteSubIndex(isSubSelected ? null : sidx)}
+                                            className={`p-2 rounded border font-mono text-[12px] text-left transition-all ${
+                                              isSubSelected
+                                                ? "bg-[#ffd700]/15 border-[#ffd700] ring-1 ring-[#ffd700]/50"
+                                                : "bg-[#1a1a1d]/70 border-[#3d3d45] hover:border-slate-600"
+                                            }`}
+                                          >
+                                            <div className="flex items-center justify-between">
+                                              <div className="truncate text-slate-400 flex items-center gap-1 pr-1">
+                                                <span>{sub.type}</span>
+                                                {sub.isTuned && <span className="text-[#ffd700] text-[11px]">✦</span>}
+                                              </div>
+                                              <div className="text-right shrink-0">
+                                                <div className="text-slate-300 font-semibold">{sub.val}</div>
+                                                <div className={`text-[11px] font-bold mt-0.5 ${sub.delta > 0 ? "text-emerald-400" : "text-slate-600"}`}>
+                                                  +{sub.delta.toFixed(2)}% grad
+                                                </div>
+                                              </div>
+                                            </div>
+                                            {isSubSelected && (
+                                              <div className="mt-1.5 pt-1.5 border-t border-[#ffd700]/30 text-[10px] text-[#ffd700] font-bold uppercase tracking-wider">
+                                                ▸ Selected for re-roll
+                                              </div>
+                                            )}
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+
+                                  {/* Results */}
+                                  {transmuteSubIndex !== null && equipped.subs[transmuteSubIndex] && (
+                                    <div className="bg-[#2d2d35] border border-[#3d3d45] rounded-xl p-4 space-y-4">
+                                      <div className="border-b border-[#3d3d45] pb-3">
+                                        <h3 className="text-[12px] font-mono font-bold tracking-widest text-[#ffd700] uppercase">
+                                          Transmutation Results
+                                        </h3>
+                                        <p className="text-[11px] text-slate-500 mt-0.5">
+                                          Re-rolling <span className="text-slate-300 font-semibold">{equipped.subs[transmuteSubIndex].type}</span> ({equipped.subs[transmuteSubIndex].val}) — showing max T91 roll for each candidate replacement.
+                                        </p>
+                                      </div>
+
+                                      {/* Verdict banner */}
+                                      {verdict && (
+                                        <div className={`bg-[#1a1a1d]/80 border border-[#3d3d45] rounded-lg p-3 text-center ${verdictColor}`}>
+                                          <div className="text-sm font-bold font-serif">{verdict}</div>
+                                          {bestResult && bestResult.delta > 0 && (
+                                            <div className="text-[11px] text-slate-400 mt-1">
+                                              Best option: <span className="text-slate-200 font-semibold">{bestResult.candidateStat}</span> for{" "}
+                                              <span className="text-emerald-400 font-bold">+{bestResult.delta.toFixed(2)}%</span> graduation improvement
+                                            </div>
+                                          )}
+                                        </div>
+                                      )}
+
+                                      {/* Individual results */}
+                                      <div className="space-y-2">
+                                        {results.map((r, ridx) => {
+                                          const colorClass = r.delta > 0.5 ? "text-emerald-400" : r.delta > 0.1 ? "text-yellow-400" : r.delta > 0 ? "text-slate-400" : "text-rose-400";
+                                          const bgClass = ridx === 0 && r.delta > 0.1 ? "bg-emerald-500/5 border-emerald-500/20" : "bg-[#1a1a1d]/60 border-[#3d3d45]";
+                                          return (
+                                            <div key={r.candidateStat} className={`flex items-center justify-between p-3 rounded-lg border ${bgClass}`}>
+                                              <div>
+                                                <div className="text-[13px] text-slate-200 font-semibold">{r.candidateStat}</div>
+                                                <div className="text-[11px] text-slate-500 font-mono">max roll: {r.maxRoll}</div>
+                                              </div>
+                                              <div className="text-right">
+                                                <div className={`text-sm font-mono font-bold ${colorClass}`}>
+                                                  {r.delta >= 0 ? "+" : ""}{r.delta.toFixed(2)}% grad
+                                                </div>
+                                                <div className="text-[11px] text-slate-500 font-mono">
+                                                  total: {r.newTotal.toFixed(2)}%
+                                                </div>
+                                              </div>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+
+                                      {results.length === 0 && (
+                                        <div className="text-center text-slate-500 text-sm py-4 font-mono">
+                                          No valid replacement candidates for this substat.
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           </div>
                         );
-                      })}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Side-by-side multiple comparison matrix */}
-            {compareProfileIds.length > 0 && (() => {
-              const selectedProfs = profiles.filter((p) => compareProfileIds.includes(p.id));
-              if (selectedProfs.length === 0) return null;
-
-              const keysToCompare: { label: string; key: keyof PanelStats; unit: string }[] = [
-                { label: "Max Physical Atk", key: "maxOuter", unit: "" },
-                { label: "Min Physical Atk", key: "minOuter", unit: "" },
-                { label: "Physical Penetration (Phys Pen)", key: "outerPen", unit: "%" },
-                { label: "Critical Rate (Crit Rate)", key: "crit", unit: "%" },
-                { label: "Critical Damage (Crit DMG)", key: "critDmg", unit: "%" },
-                { label: "Bamboocut Penetration (Pz Pen)", key: "pzPen", unit: "%" },
-                { label: "Bamboocut DMG Boost (Pz DMG)", key: "pzDmg", unit: "%" },
-                { label: "Max Bamboocut", key: "maxPz", unit: "" },
-                { label: "Affinity Rate", key: "aff", unit: "%" },
-              ];
-
-              return (
-                <div className="bg-[#2d2d35]/95 border-2 border-[#ffd700] rounded-xl p-5 shadow-2xl relative">
-                  <div className="flex justify-between items-center border-b border-[#3d3d45] pb-3 mb-4">
-                    <h3 className="text-base font-serif font-bold text-[#ffd700] uppercase tracking-wider">
-                      Multi Gear Sets Comparison Matrix ({selectedProfs.length} builds selected)
-                    </h3>
-                    <button
-                      onClick={() => setCompareProfileIds([])}
-                      className="text-sm text-rose-400 hover:text-rose-300 font-bold border border-rose-900/45 px-2.5 py-1 rounded bg-rose-950/20 cursor-pointer"
-                    >
-                      Clear all comparisons &times;
-                    </button>
-                  </div>
-
-                  <div className="overflow-x-auto custom-scrollbar">
-                    <table className="w-full text-left text-sm border-collapse font-sans min-w-[700px]">
-                      <thead>
-                        <tr className="border-b border-slate-700 text-slate-500 text-[12px] uppercase font-mono">
-                          <th className="py-2.5 px-3">Attribute / Substat</th>
-                          <th className="py-2.5 px-3 text-right text-[#ffd700] bg-[#ffd700]/5">Active Configuration</th>
-                          {selectedProfs.map((p) => (
-                            <th key={p.id} className="py-2.5 px-3 text-right max-w-[200px] truncate" title={p.name}>
-                              {p.name}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {keysToCompare.map((item) => {
-                          const activeVal = adjustedPanel[item.key] as number;
-                          return (
-                            <tr key={item.key} className="border-b border-[#3d3d45] text-sm font-mono hover:bg-[#2d2d35]/20">
-                              <td className="py-2.5 px-3 font-sans font-medium text-slate-300">{item.label}</td>
-                              <td className="py-2.5 px-3 text-right text-[#ffd700] font-bold bg-[#ffd700]/5">
-                                {activeVal.toFixed(item.key === "minOuter" || item.key === "maxOuter" || item.key === "maxPz" || item.key === "minPz" ? 0 : 1)}
-                                {item.unit}
-                              </td>
-                              {selectedProfs.map((p) => {
-                                const compVal = p.panel[item.key] as number;
-                                const diff = activeVal - compVal;
-                                return (
-                                  <td key={p.id} className="py-2.5 px-3 text-right">
-                                    <div className="text-slate-100 font-medium">
-                                      {compVal.toFixed(item.key === "minOuter" || item.key === "maxOuter" || item.key === "maxPz" || item.key === "minPz" ? 0 : 1)}
-                                      {item.unit}
-                                    </div>
-                                    <div className={`text-[11px] font-bold ${diff > 0 ? "text-rose-400" : diff < 0 ? "text-emerald-400" : "text-slate-500"}`}>
-                                      {diff > 0 ? "▼ -" : diff < 0 ? "▲ +" : ""}
-                                      {diff !== 0 ? Math.abs(diff).toFixed(item.key === "minOuter" || item.key === "maxOuter" || item.key === "maxPz" || item.key === "minPz" ? 0 : 1) : "equal"}
-                                      {diff !== 0 ? item.unit : ""}
-                                    </div>
-                                  </td>
-                                );
-                              })}
-                            </tr>
-                          );
-                        })}
-
-                        {/* Graduation Rate */}
-                        <tr className="border-b border-[#3d3d45] text-sm font-mono bg-[#ffd700]/5 font-bold">
-                          <td className="py-3 px-3 font-sans text-[#ffd700]">Graduation Rate</td>
-                          <td className="py-3 px-3 text-right text-[#ffd700] font-extrabold bg-[#ffd700]/10">
-                            {rotationStats.gradRate.toFixed(1)}%
-                          </td>
-                          {selectedProfs.map((p) => {
-                            const dyn = getDynamicProfileStats(p);
-                            const diff = rotationStats.gradRate - dyn.gradRate;
-                            return (
-                              <td key={p.id} className="py-3 px-3 text-right">
-                                <div className="text-slate-200 font-extrabold">{dyn.gradRate.toFixed(1)}%</div>
-                                <div className={`text-[11px] font-bold ${diff > 0 ? "text-rose-400" : diff < 0 ? "text-emerald-400" : "text-slate-500"}`}>
-                                  {diff > 0 ? "▼ -" : diff < 0 ? "▲ +" : ""}
-                                  {diff !== 0 ? Math.abs(diff).toFixed(1) : "equal"}
-                                  {diff !== 0 ? "%" : ""}
-                                </div>
-                              </td>
-                            );
-                          })}
-                        </tr>
-
-                        {/* Skill DPS */}
-                        <tr className="border-b border-[#3d3d45] text-sm font-mono bg-[#ffed4e]/5 font-bold">
-                          <td className="py-3 px-3 font-sans text-[#ffd700] font-serif">Rotation Skill DPS</td>
-                          <td className="py-3 px-3 text-right text-slate-100 font-extrabold bg-[#ffd700]/10">
-                            {Math.round(rotationStats.dps).toLocaleString()}/s
-                          </td>
-                          {selectedProfs.map((p) => {
-                            const dyn = getDynamicProfileStats(p);
-                            const diff = rotationStats.dps - dyn.dps;
-                            return (
-                              <td key={p.id} className="py-3 px-3 text-right">
-                                <div className="text-slate-200 font-extrabold">{Math.round(dyn.dps).toLocaleString()}/s</div>
-                                <div className={`text-[11px] font-bold ${diff > 0 ? "text-[#e94b29]" : diff < 0 ? "text-[#3fc05c]" : "text-slate-500"}`}>
-                                  {diff > 0 ? "▼ -" : diff < 0 ? "▲ +" : ""}
-                                  {diff !== 0 ? Math.round(Math.abs(diff)).toLocaleString() : ""}
-                                  {diff !== 0 ? "/s" : "equal"}
-                                </div>
-                              </td>
-                            );
-                          })}
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              );
-            })()}
-          </div>
-        )}
+                      })()}
                     </div>
                   )}
                 </div>
