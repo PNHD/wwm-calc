@@ -688,7 +688,7 @@ const BUILD_PROFILES = {
     priorityStats: ["maxOuter","crit","aff","outerPen","allArts"],
   },
   "bamboocut-kite": {
-    label: "Bamboocut-Kite (beta)", weapons: "Heavenstrike Gauntlets + Unfettered Rope Dart",
+    label: "Bamboocut-Kite (beta · not in Global yet)", weapons: "Heavenstrike Gauntlets + Unfettered Rope Dart",
     tier: "T0 AoE", color: "text-amber-600",
     gradTargets: { maxOuter: 2830, minOuter: 1185, outerPen: 36.5, crit: 116.9, aff: 14.7, critDmg: 54 },
     notes: "Priority: Max Phys ATK → Bamboocut ATK → Phys Pen. Gauntlets + Rope Dart.",
@@ -1003,8 +1003,6 @@ export default function App() {
   const [isBatchOcrModalOpen, setIsBatchOcrModalOpen] = useState<boolean>(false);
   const [isXinfaModalOpen, setIsXinfaModalOpen] = useState<boolean>(false);
   const [xinfaModalIndex, setXinfaModalIndex] = useState<number | null>(null);
-  const [pvpMode, setPvpMode] = useState<boolean>(false);
-  const [loanDingyin, setLoanDingyin] = useState<boolean>(false);
 
   const isItemEquipped = (item: GearItem, allGear: GearItem[]): boolean => {
     if (item.isEquipped !== undefined) {
@@ -1195,6 +1193,26 @@ export default function App() {
       }
     }
   }, [charsData.activeCharId, charsData.activeSchemeId]);
+
+  // Persist manual panel edits back into the active scheme so they survive reloads
+  // (critical for shared/public use — each browser keeps its own profiles).
+  // Skip the very first run so the initial-mount panel never clobbers a saved scheme
+  // before the load effect above has applied it.
+  const panelSaveSkip = useRef(true);
+  useEffect(() => {
+    if (panelSaveSkip.current) { panelSaveSkip.current = false; return; }
+    setCharsData(prev => {
+      const updated = {
+        ...prev,
+        chars: prev.chars.map(c => c.id === prev.activeCharId ? {
+          ...c,
+          schemes: c.schemes.map(s => s.id === prev.activeSchemeId ? { ...s, panel } : s),
+        } : c),
+      };
+      try { localStorage.setItem("wwm_chars_v3", JSON.stringify(updated)); } catch (e) { /* quota */ }
+      return updated;
+    });
+  }, [panel]);
 
   const getActiveGear = (): GearItem[] => {
     // Bow/Ring is no longer an addable gear slot (handled via the Bow attribute
@@ -2943,24 +2961,6 @@ export default function App() {
                   className="panel-checkbox-input"
                 />
                 <span>Early season bonus (caps may rise)</span>
-              </label>
-              <label className="panel-checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={pvpMode}
-                  onChange={(e) => setPvpMode(e.target.checked)}
-                  className="panel-checkbox-input"
-                />
-                <span>Boss counts as Player (PVP scaling)</span>
-              </label>
-              <label className="panel-checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={loanDingyin}
-                  onChange={(e) => setLoanDingyin(e.target.checked)}
-                  className="panel-checkbox-input"
-                />
-                <span>Loan max tuned (Dingyin) stats</span>
               </label>
             </div>
           </div>

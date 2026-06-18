@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { PanelStats, TierConstants } from "../types";
-import { calcSkill, ROTATION } from "../utils/calc";
+import { calcSkill, getRotationForBuild } from "../utils/calc";
 import { TrendingUp, RefreshCw } from "lucide-react";
 
 interface Props {
@@ -26,11 +26,40 @@ const STAT_KEYS: { key: keyof PanelStats; label: string; step: number; unit: str
   { key: "umbMartial", label: "Umb Martial Art Skill DMG Boost", step: 2, unit: "%" },
   { key: "ropeAll",    label: "Art of Rope Dart Boost", step: 2, unit: "%" },
   { key: "ropeMartial", label: "Rope Dart Martial Art Skill DMG Boost", step: 2, unit: "%" },
+  { key: "swordAll",   label: "Art of Sword Boost", step: 2, unit: "%" },
+  { key: "swordMartial", label: "Sword Martial Art Skill DMG Boost", step: 2, unit: "%" },
+  { key: "spearAll",   label: "Art of Spear Boost", step: 2, unit: "%" },
+  { key: "spearMartial", label: "Spear Martial Art Skill DMG Boost", step: 2, unit: "%" },
+  { key: "fanAll",     label: "Art of Fan Boost", step: 2, unit: "%" },
+  { key: "fanMartial", label: "Fan Martial Art Skill DMG Boost", step: 2, unit: "%" },
+  { key: "twinbladesAll", label: "Art of Dual Blades Boost", step: 2, unit: "%" },
+  { key: "twinbladesMartial", label: "Dual Blades Martial Art Skill DMG Boost", step: 2, unit: "%" },
+  { key: "modaoAll",   label: "Art of Mo Blade Boost", step: 2, unit: "%" },
+  { key: "modaoMartial", label: "Mo Blade Martial Art Skill DMG Boost", step: 2, unit: "%" },
+  { key: "hengdaoAll", label: "Art of Heng Blade Boost", step: 2, unit: "%" },
+  { key: "hengdaoMartial", label: "Heng Blade Martial Art Skill DMG Boost", step: 2, unit: "%" },
+  { key: "gauntletsAll", label: "Art of Gauntlets Boost", step: 2, unit: "%" },
+  { key: "gauntletsMartial", label: "Gauntlets Martial Art Skill DMG Boost", step: 2, unit: "%" },
   { key: "allArts",   label: "All Martial Art Skill DMG Boost", step: 2,  unit: "%" },
   { key: "bossDmg",   label: "Boss DMG",        step: 2,   unit: "%" },
   { key: "outerDmg",  label: "Phys DMG%",       step: 2,   unit: "%" },
   { key: "dcrit",     label: "Direct Crit Rate", step: 5,  unit: "%" },
 ];
+
+// Build display weapon -> panel-stat key prefix (umbAll/umbMartial/...).
+const WEAPON_NAME_TO_PREFIX: Record<string, string> = {
+  "Umbrella": "umb", "Rope Dart": "rope", "Sword": "sword", "Spear": "spear",
+  "Fan": "fan", "Dual Blades": "twinblades", "Modao": "modao", "Mo Blade": "modao",
+  "Hengdao": "hengdao", "Heng Blade": "hengdao", "Gauntlets": "gauntlets",
+};
+const BUILD_WEAPON_TYPES: Record<string, [string, string]> = {
+  "bamboocut-dust": ["Umbrella", "Rope Dart"], "bellstrike-umbra": ["Sword", "Spear"],
+  "bellstrike-splendor": ["Sword", "Spear"], "bamboocut-wind": ["Dual Blades", "Rope Dart"],
+  "stonesplit-might": ["Hengdao", "Modao"], "silkbind-jade": ["Umbrella", "Fan"],
+  "silkbind-deluge": ["Umbrella", "Fan"], "bamboocut-kite": ["Gauntlets", "Rope Dart"],
+  "stonesplit-awe": ["Modao", "Spear"], "stonesplit-pure-datang": ["Hengdao", "Modao"],
+};
+const WEAPON_STAT_KEY_RE = /^(umb|rope|sword|spear|fan|twinblades|modao|hengdao|gauntlets)(All|Martial|Special|Charged)$/;
 
 function computeTotalDmg(
   p: PanelStats,
@@ -38,7 +67,7 @@ function computeTotalDmg(
   opts: { datang?: boolean; yishui?: boolean; buildKey?: string }
 ) {
   let total = 0;
-  ROTATION.forEach(item => {
+  getRotationForBuild(opts.buildKey).forEach(item => {
     const { total: dmg } = calcSkill(item, p, tier, {
       set: p.set || "stars",
       datang: opts.datang,
@@ -53,9 +82,18 @@ function computeTotalDmg(
 export default function StatSwapSimulator({ adjustedPanel, activeTier, datang, yishui, selectedBuild }: Props) {
   const [swaps, setSwaps] = useState<Record<string, number>>({});
 
+  // Only show weapon-specific boosts for THIS build's two weapons; keep all universal stats.
+  const buildPrefixes = (BUILD_WEAPON_TYPES[selectedBuild] || [])
+    .map(n => WEAPON_NAME_TO_PREFIX[n]).filter(Boolean);
+  const statKeys = STAT_KEYS.filter(({ key }) => {
+    const m = (key as string).match(WEAPON_STAT_KEY_RE);
+    if (!m) return true;
+    return buildPrefixes.includes(m[1]);
+  });
+
   const buildSwappedPanel = (): PanelStats => {
     const p = { ...adjustedPanel };
-    STAT_KEYS.forEach(({ key, step }) => {
+    statKeys.forEach(({ key, step }) => {
       const delta = (swaps[key as string] || 0) * step;
       (p[key] as number) += delta;
     });
@@ -72,7 +110,7 @@ export default function StatSwapSimulator({ adjustedPanel, activeTier, datang, y
   const opts = { datang, yishui, buildKey: selectedBuild };
 
   // Per-stat marginal gain table (show top gains)
-  const gains = STAT_KEYS.map(({ key, label, step, unit }) => {
+  const gains = statKeys.map(({ key, label, step, unit }) => {
     const p = { ...adjustedPanel };
     (p[key] as number) += step;
     const newDmg = computeTotalDmg(p, activeTier, opts);
@@ -104,7 +142,7 @@ export default function StatSwapSimulator({ adjustedPanel, activeTier, datang, y
           </button>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-          {STAT_KEYS.map(({ key, label, step, unit }) => {
+          {statKeys.map(({ key, label, step, unit }) => {
             const val = swaps[key as string] || 0;
             return (
               <div key={key} className="bg-slate-950/60 border border-slate-800 rounded-lg p-2">
