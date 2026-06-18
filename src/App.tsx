@@ -3345,6 +3345,9 @@ export default function App() {
                   <p className="text-slate-500 text-sm mt-1">
                     Compare your current accumulated gear substats with the graduation panel targets.
                   </p>
+                  <p className="text-amber-500/70 text-[11.5px] mt-1">
+                    ⓘ Beta: targets are estimated for T91/Lv95 by scaling the CN (Lv105) graduation sheet by the verified 95下 substat-roll ratio (≈0.604). Treat as a guide, not exact caps.
+                  </p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <span className="text-sm font-mono text-slate-500">Select Class:</span>
@@ -3467,7 +3470,11 @@ export default function App() {
                     rawTarget = fallbackTarget;
                   }
 
-                  const scaledTarget = rawTarget * 0.606;
+                  // Graduation panels in WWM_DATA are at CN sheet level (Lv105,
+                  // judgeRes 1.15). Scale to T91/Lv95 gear targets by the verified
+                  // 95下/105 substat-roll ratio (e.g. Max Phys 63.8 / 105.6 ≈ 0.604).
+                  const T95_FROM_CN_SCALE = 0.604;
+                  const scaledTarget = rawTarget * T95_FROM_CN_SCALE;
 
                   return {
                     gearType,
@@ -3656,6 +3663,94 @@ export default function App() {
                   Understand exactly which gears represent the largest marginal upgrade relative to your active panel. Ranked descending by total simulation contribution.
                 </p>
               </div>
+
+              {/* Upgrade Analysis — cross-slot recommendation (T91/Lv95 formula) */}
+              {(() => {
+                const gear = getActiveGear();
+                const slotInfo = SLOTS.map(slot => {
+                  const items = gear.filter(it => it.slot === slot.name);
+                  if (items.length === 0) return null;
+                  const scored = items.map(it => ({ it, total: getGearItemCompareStats(it).totalGradDelta, equipped: isItemEquipped(it, gear) }));
+                  scored.sort((a, b) => b.total - a.total);
+                  const best = scored[0];
+                  const equipped = scored.find(s => s.equipped) || null;
+                  const equippedTotal = equipped ? equipped.total : 0;
+                  const gain = best.total - equippedTotal;
+                  return { slot: slot.name, label: getSlotLabel(slot.name), best, equipped, equippedTotal, gain };
+                }).filter(Boolean) as { slot: string; label: string; best: any; equipped: any; equippedTotal: number; gain: number }[];
+
+                const upgrades = slotInfo.filter(s => s.best && !s.best.equipped && s.gain > 0.01).sort((a, b) => b.gain - a.gain);
+                const equippedSlots = slotInfo.filter(s => s.equipped).sort((a, b) => a.equippedTotal - b.equippedTotal);
+                const totalSwapGain = upgrades.reduce((sum, u) => sum + u.gain, 0);
+
+                // Top stat priorities for this build (highest marginal gain per roll)
+                const build = BUILD_PROFILES[selectedBuild as keyof typeof BUILD_PROFILES];
+                const priorityStats = (build?.priorityStats || []).slice(0, 4);
+                const STAT_LABELS: Record<string, string> = {
+                  maxOuter: "Max Phys Atk", minOuter: "Min Phys Atk", outerPen: "Phys Pen",
+                  crit: "Crit Rate", critDmg: "Crit DMG", aff: "Affinity Rate", affDmg: "Affinity DMG",
+                  prec: "Precision", maxPz: "Bamboocut Atk", pzPen: "Bamboocut Pen", pzDmg: "Bamboocut DMG",
+                  umbMartial: "Umbrella Boost", ropeMartial: "Rope Dart Boost", allArts: "All Martial Arts", bossDmg: "Boss DMG",
+                };
+
+                return (
+                  <div className="bg-[#161310] border border-amber-500/25 rounded-xl p-4 mb-6">
+                    <h3 className="text-[13px] font-extrabold text-amber-400 uppercase tracking-wider font-serif flex items-center gap-2 mb-2">
+                      🔍 Upgrade Analysis
+                      <span className="text-[10px] font-mono text-slate-500 normal-case tracking-normal">(T91/Lv95 formula)</span>
+                    </h3>
+
+                    {upgrades.length > 0 ? (
+                      <>
+                        <p className="text-[12px] text-slate-300 mb-2.5">
+                          You have <b className="text-emerald-400">{upgrades.length}</b> swap{upgrades.length > 1 ? "s" : ""} available worth up to{" "}
+                          <b className="text-emerald-400">+{totalSwapGain.toFixed(2)}%</b> graduation. Highest-impact first:
+                        </p>
+                        <div className="space-y-1.5">
+                          {upgrades.slice(0, 5).map((u, i) => (
+                            <div key={i} className="flex items-center justify-between gap-3 bg-[#0f0d0b] border border-slate-800/60 rounded-md px-3 py-1.5">
+                              <span className="text-[12px] text-slate-300 truncate">
+                                <span className="text-amber-500 font-bold">{u.label}</span>: equip <span className="text-slate-100">{u.best.it.name}</span>
+                              </span>
+                              <span className="text-[12px] font-mono font-bold text-emerald-400 shrink-0">+{u.gain.toFixed(2)}%</span>
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    ) : (
+                      <p className="text-[12px] text-emerald-400/90 mb-1">✓ Your best available item is already equipped in every slot — no inventory swaps gain graduation right now.</p>
+                    )}
+
+                    <div className="mt-3 pt-2.5 border-t border-slate-800/60 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <div className="text-[10px] uppercase tracking-wider text-slate-500 font-mono mb-1">Stat priority (chase these)</div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {priorityStats.map((s, i) => (
+                            <span key={s} className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-amber-600/15 text-amber-400 border border-amber-700/30">
+                              {i + 1}. {STAT_LABELS[s] || s}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                      {equippedSlots.length > 0 && (
+                        <div>
+                          <div className="text-[10px] uppercase tracking-wider text-slate-500 font-mono mb-1">Weakest equipped slots</div>
+                          <div className="flex flex-wrap gap-1.5">
+                            {equippedSlots.slice(0, 3).map((s) => (
+                              <span key={s.slot} className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-slate-800/60 text-slate-400 border border-slate-700/40">
+                                {s.label} ({s.equippedTotal.toFixed(1)}%)
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-[10.5px] text-slate-600 mt-2.5 leading-snug">
+                      Gains are marginal graduation-% from this slot's substats vs your currently equipped item, using the verified T91/Lv95 (95下) damage formula. Add more items to a slot (via Gear / OCR) to compare alternatives.
+                    </p>
+                  </div>
+                );
+              })()}
 
               {/* 4x2 Grid of Slot Selection Buttons */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
