@@ -3130,7 +3130,7 @@ export default function App() {
                   {SLOTS.map(slot => {
                     const item = getActiveGear().find(it => it.slot === slot.name && isItemEquipped(it, getActiveGear()));
                     return (
-                      <div key={slot.name} className="grad-equip-item" onClick={() => { setIsGradModalOpen(false); setGearFilterSlot(slot.name); }}>
+                      <div key={slot.name} className="grad-equip-item" onClick={() => { setSelectedSlot(slot.name); setTransmuteSlot(slot.name); setTransmuteSubIndex(null); }}>
                         <div className="grad-equip-info">
                           <div className="grad-equip-name">{item ? item.name : "— Empty Slot —"}</div>
                           <div className="grad-equip-sub">{getSlotLabel(slot.name)}</div>
