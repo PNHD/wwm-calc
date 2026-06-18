@@ -466,32 +466,6 @@ export const WWM_DATA = {
         { "stat": "Max Phys Atk", "gainPct": 1.894 },
         { "stat": "All Martial Arts Bonus", "gainPct": 1.233 }
       ]
-    },
-    "Fire-Fist-Healer": {
-      "sheetLevel": "105",
-      "bossDefUsed": -559.0,
-      "graduationPanel": {
-        "Min Phys Atk": 1720.0,
-        "Max Phys Atk": 4450.0,
-        "Precision": 1.32,
-        "Crit Rate": 1.25,
-        "Direct Crit": 0.0,
-        "Crit DMG": 0.50,
-        "Affinity Rate": 0.32,
-        "Direct Affinity": 0.0,
-        "Affinity DMG": 0.35,
-        "Min Bamboocut": 410.0,
-        "Max Bamboocut": 820.0,
-        "Phys Pen": 42.0,
-        "Bamboocut Pen": 32.0,
-        "Bamboocut DMG Deepen": 0.10,
-        "Judge Resistance": 1.15
-      },
-      "marginalGains": [
-        { "stat": "Outgoing Healing", "gainPct": 4.882 },
-        { "stat": "Max Phys Atk", "gainPct": 2.012 },
-        { "stat": "All Martial Arts Bonus", "gainPct": 1.452 }
-      ]
     }
   }
 } as const;

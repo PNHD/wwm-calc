@@ -349,7 +349,6 @@ const CLASS_DISPLAY_NAME: Record<string, string> = {
   "Rocksplit-Jun": "Stonesplit-Might",      // Snowparting + Phalanxbane Blade
   "Rocksplit-Might": "Stonesplit-Awe",      // Thundercry Blade + Stormbreaker Spear
   "Bamboocut-Bird": "Bamboocut-Kite (est.)",// Heavenstrike Gauntlets + Rope Dart
-  "Fire-Fist-Healer": "Fire-Fist Healer (beta)", // gauntlet healer, no main-list equivalent
 };
 const classDisplayName = (key: string): string => CLASS_DISPLAY_NAME[key] || key;
 
@@ -368,17 +367,24 @@ const GRAD95_COUNTS: Record<string, Record<string, number>> = {
   "Pure-Healer":    { agility: 6, power: 0, strength: 8,  crit: 5, prec: 0, maxOuter: 12, minOuter: 8, aff: 0, boss: 0, ownWeapon: 1 },
 };
 
-// Max single-substat roll at 95下 (from sheet "各等级模板", 95下 column).
-const ROLL_95: Record<string, number> = {
-  maxOuter: 63.8, minOuter: 63.8, strength: 40.4, agility: 40.4, power: 40.4,
-  crit: 7.4, prec: 6.6, aff: 3.6, ownWeapon: 5.2, boss: 2.6,
-};
+// Max single-substat roll at 95下 (from sheet "各等级模板", 95下 column). Used
+// only for the five-attribute (Strength/Power/Agility) gear-progress tiles.
+const ROLL_95: Record<string, number> = { strength: 40.4, agility: 40.4, power: 40.4 };
 
-// Maps a Cultivate graduation-panel key to its 95下 substat-count category.
-const GRADKEY_TO_COUNT: Record<string, string> = {
-  "Max Phys Atk": "maxOuter", "Min Phys Atk": "minOuter", "Crit Rate": "crit",
-  "Precision": "prec", "Affinity Rate": "aff", "Strength": "strength",
-  "Agility": "agility", "Power": "power", "Boss DMG Bonus": "boss", "Own Weapon Bonus": "ownWeapon",
+// VERIFIED full graduated PANEL per path at 95下 (T91 Global), from sheet
+// 各流派历史等级毕业配置 (95级 block). These are the real "caps" — the total
+// panel a fully-graduated character reaches (e.g. Max Phys ≈ 3010, not a
+// substat sum). Decimal fields (crit/aff/prec/ownWeapon/boss/allWeapon) are
+// fractions → ×100 for %. Keyed by WWM_DATA.classes key.
+const GRAD95_PANEL: Record<string, Record<string, number>> = {
+  "Bamboocut-Dust": { minOuter: 1372.1, maxOuter: 3010.3, prec: 1.138, crit: 1.1546, aff: 0.15205, minPz: 306.6, maxPz: 549, outerPen: 41.1, pzPen: 16.8, ownWeapon: 0.052, boss: 0.052, allWeapon: 0 },
+  "Nameless":       { minOuter: 985.8,  maxOuter: 3332.4, prec: 1.006, crit: 0.4851, aff: 0.574218, minPz: 284.9, maxPz: 570.7, outerPen: 36, pzPen: 16.8, ownWeapon: 0.052, boss: 0.052, allWeapon: 0 },
+  "Jade":           { minOuter: 1218.1, maxOuter: 3119.7, prec: 1.138, crit: 0.797212, aff: 0.311866, minPz: 283.3, maxPz: 567.7, outerPen: 46.2, pzPen: 10.8, ownWeapon: 0.052, boss: 0.052, allWeapon: 0.16 },
+  "Rocksplit-Jun":  { minOuter: 1334.2, maxOuter: 2945.7, prec: 1.138, crit: 1.106324, aff: 0.15205, minPz: 284.9, maxPz: 570.7, outerPen: 36, pzPen: 16.8, ownWeapon: 0.052, boss: 0.052, allWeapon: 0 },
+  "Rocksplit-Might":{ minOuter: 1344.2, maxOuter: 3072.3, prec: 1.171, crit: 0.817804, aff: 0.215754, minPz: 286.1, maxPz: 573.1, outerPen: 36, pzPen: 16.8, ownWeapon: 0.052, boss: 0.052, allWeapon: 0.026 },
+  "Nine-Nine":      { minOuter: 993.2,  maxOuter: 3420.7, prec: 1.006, crit: 0.4521, aff: 0.544866, minPz: 286.1, maxPz: 573.1, outerPen: 36, pzPen: 16.8, ownWeapon: 0.052, boss: 0.052, allWeapon: 0 },
+  "Bamboocut-Wind": { minOuter: 1275.7, maxOuter: 3358.0, prec: 1.138, crit: 0.990212, aff: 0.273754, minPz: 196, maxPz: 320, outerPen: 36, pzPen: 16.8, ownWeapon: 0.052, boss: 0.052, allWeapon: 0 },
+  "Pure-Healer":    { minOuter: 1830.0, maxOuter: 2891.8, prec: 0.94, crit: 1.115324, aff: 0.15205, minPz: 196.2, maxPz: 320, outerPen: 41.1, pzPen: 10.8, ownWeapon: 0.052, boss: 0, allWeapon: 0 },
 };
 
 const WEAPON_ICON_MAP: Record<string, string> = {
@@ -3368,10 +3374,10 @@ export default function App() {
                     🎯 Cultivation Summary
                   </h2>
                   <p className="text-slate-500 text-sm mt-1">
-                    Compare your current accumulated gear substats with the graduation panel targets.
+                    Compare your current in-combat panel against the fully-graduated target panel.
                   </p>
                   <p className="text-amber-500/70 text-[11.5px] mt-1">
-                    ⓘ Targets use the verified 95下 (Global) graduated substat allocation = substat count × max roll. Pen / Bamboocut Atk and the Kite/Fire-Fist paths fall back to an estimate.
+                    ⓘ Caps = the verified 95下 (Global T91) graduated panel from the official sheet. Progress over 100% means you already exceed the graduated target for that stat. Five-attribute (Strength/Power/Agility) tiles track gear substats.
                   </p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
@@ -3381,7 +3387,7 @@ export default function App() {
                     onChange={(e) => setCultivateClass(e.target.value)}
                     className="bg-[#1a1a1d] border border-[#3d3d45]/30 hover:border-[#ffd700]/50 text-[#ffd700] text-sm rounded-lg px-3 py-1.5 focus:outline-none font-bold transition-all cursor-pointer"
                   >
-                    {Object.keys(WWM_DATA.classes).map((cls) => (
+                    {Object.keys(GRAD95_PANEL).map((cls) => (
                       <option key={cls} value={cls}>
                         {classDisplayName(cls)}
                       </option>
@@ -3495,19 +3501,7 @@ export default function App() {
                     rawTarget = fallbackTarget;
                   }
 
-                  // Prefer the VERIFIED 95下 graduated substat allocation: target =
-                  // (substat count at graduation) × (max 95下 roll). Falls back to
-                  // scaling the CN (Lv105) sheet by the 95下/105 roll ratio (≈0.604)
-                  // for stats/paths without a substat-count entry (pen, bamboocut
-                  // atk, all-weapon, and the Kite/Fire-Fist paths).
-                  const countKey = GRADKEY_TO_COUNT[gradKey];
-                  const counts95 = GRAD95_COUNTS[cultivateClass];
-                  let scaledTarget: number;
-                  if (countKey && counts95 && counts95[countKey] !== undefined && ROLL_95[countKey]) {
-                    scaledTarget = counts95[countKey] * ROLL_95[countKey];
-                  } else {
-                    scaledTarget = rawTarget * 0.604;
-                  }
+                  const scaledTarget = rawTarget * 0.604;
 
                   return {
                     gearType,
@@ -3530,35 +3524,57 @@ export default function App() {
                   });
                 });
 
-                // Prepare stat tiles based on marginalGains
+                // Prepare stat tiles based on marginalGains.
+                // Caps use the VERIFIED 95下 full graduated panel (GRAD95_PANEL);
+                // current uses the user's full in-combat panel (adjustedPanel) for
+                // panel stats, and gear-substat sums for the five-attribute tiles.
+                const panel95 = GRAD95_PANEL[cultivateClass];
+                // label.toLowerCase() match → [grad95 field, adjustedPanel current, isPct]
+                const cultivateMap: { test: (l: string) => boolean; field: string; cur: () => number; pct: boolean; fallbackType?: string }[] = [
+                  { test: l => l.includes("max phys"), field: "maxOuter", cur: () => adjustedPanel.maxOuter, pct: false },
+                  { test: l => l.includes("min phys"), field: "minOuter", cur: () => adjustedPanel.minOuter, pct: false },
+                  { test: l => l.includes("max bamboocut"), field: "maxPz", cur: () => adjustedPanel.maxPz, pct: false },
+                  { test: l => l.includes("min bamboocut"), field: "minPz", cur: () => adjustedPanel.minPz, pct: false },
+                  { test: l => l.includes("bamboocut pen"), field: "pzPen", cur: () => adjustedPanel.pzPen, pct: true },
+                  { test: l => l.includes("phys pen"), field: "outerPen", cur: () => adjustedPanel.outerPen, pct: true },
+                  { test: l => l.includes("crit rate"), field: "crit", cur: () => adjustedPanel.crit, pct: true },
+                  { test: l => l.includes("affinity rate"), field: "aff", cur: () => adjustedPanel.aff, pct: true },
+                  { test: l => l.includes("precision"), field: "prec", cur: () => adjustedPanel.prec, pct: true },
+                  { test: l => l.includes("boss dmg"), field: "boss", cur: () => adjustedPanel.bossDmg, pct: true },
+                  { test: l => l.includes("all weapon") || l.includes("all martial"), field: "allWeapon", cur: () => adjustedPanel.allArts, pct: true },
+                  { test: l => l.includes("own weapon"), field: "ownWeapon", pct: true, cur: () =>
+                      (["umbMartial","ropeMartial","swordMartial","spearMartial","fanMartial","twinbladesMartial","modaoMartial","hengdaoMartial","gauntletsMartial","umbAll","ropeAll","swordAll","spearAll","fanAll","twinbladesAll","modaoAll","hengdaoAll","gauntletsAll"] as (keyof PanelStats)[])
+                        .reduce((s, k) => s + ((adjustedPanel[k] as number) || 0), 0) },
+                ];
+
                 const tiles = marginalGains.map((gain: any) => {
                   const label = gain.stat;
-                  const config = getStatConfig(label, graduationPanel);
-                  
+                  const ll = label.toLowerCase();
                   let currentVal = 0;
-                  if (label.toLowerCase().includes("own weapon")) {
-                    currentVal = Object.entries(currentSubsSum)
-                      .filter(([k]) => SUB_MAP[k] && (SUB_MAP[k] as string).match(/^(umb|rope|sword|spear|fan|twinblades|modao|hengdao|gauntlets)(All|Martial|Special|Charged)$/))
-                      .reduce((sum, [, v]) => sum + (v || 0), 0);
-                  } else if (label.toLowerCase().includes("all weapon")) {
-                    currentVal = currentSubsSum["All Martial Arts"] || 0;
-                  } else if (label.toLowerCase().includes("boss dmg")) {
-                    currentVal = currentSubsSum["Boss DMG%"] || 0;
-                  } else if (label.toLowerCase().includes("bamboocut pen")) {
-                    currentVal = currentSubsSum["Attr Pen"] || 0;
-                  } else if (label.toLowerCase().includes("phys dmg")) {
-                    currentVal = currentSubsSum["Phys DMG%"] || 0;
-                  } else if (label.toLowerCase().includes("strength")) {
-                    currentVal = currentSubsSum["Strength"] || 0;
-                  } else if (label.toLowerCase().includes("power")) {
-                    currentVal = currentSubsSum["Power"] || 0;
-                  } else if (label.toLowerCase().includes("agility")) {
-                    currentVal = currentSubsSum["Agility"] || 0;
+                  let targetVal = 0;
+                  let isPercentage = false;
+
+                  const fiveAttr = ll.includes("strength") ? "strength" : ll.includes("agility") ? "agility" : ll.includes("power") ? "power" : "";
+                  const m = cultivateMap.find(x => x.test(ll));
+
+                  if (fiveAttr) {
+                    // Five-attribute (劲/敏/势): gear-substat progress vs count × roll.
+                    isPercentage = false;
+                    currentVal = currentSubsSum[fiveAttr === "strength" ? "Strength" : fiveAttr === "agility" ? "Agility" : "Power"] || 0;
+                    const counts = GRAD95_COUNTS[cultivateClass];
+                    targetVal = counts ? (counts[fiveAttr] || 0) * ROLL_95[fiveAttr] : 0;
+                  } else if (m && panel95 && panel95[m.field] !== undefined) {
+                    isPercentage = m.pct;
+                    currentVal = m.cur();
+                    // crit/aff/prec/own/boss/all are stored as fractions (×100 for %);
+                    // pen fields are already absolute display numbers (no ×100).
+                    const FRACTION_FIELDS = new Set(["crit", "aff", "prec", "ownWeapon", "boss", "allWeapon"]);
+                    targetVal = FRACTION_FIELDS.has(m.field) ? panel95[m.field] * 100 : panel95[m.field];
                   } else {
-                    currentVal = currentSubsSum[config.gearType] || 0;
+                    // No 95下 source for this stat/path — skip (don't show a wrong cap).
+                    return null;
                   }
 
-                  const targetVal = config.scaledTarget;
                   const progressPct = targetVal > 0 ? (currentVal / targetVal) * 100 : 0;
                   const progressCapped = Math.min(progressPct, 100);
 
@@ -3575,16 +3591,16 @@ export default function App() {
 
                   return {
                     label,
-                    gearType: config.gearType,
+                    gearType: label,
                     currentVal,
                     targetVal,
                     progressPct,
                     progressCapped,
                     bgCardClass,
                     progressFillColor,
-                    isPercentage: config.isPercentage
+                    isPercentage
                   };
-                });
+                }).filter(Boolean) as any[];
 
                 // Calculate total progress: Average progress capped at 100%, scaled to 40
                 const totalProgressSum = tiles.reduce((acc: number, t: any) => acc + t.progressCapped, 0);
