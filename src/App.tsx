@@ -3647,10 +3647,10 @@ export default function App() {
                     <div style={{ textAlign: 'left' }}>
                       {gradModalActiveTab === "compare" && (
           <div className="space-y-6">
-            <div className="bg-[#141210] border border-amber-500/20 rounded-xl p-6">
-              <div className="mb-4 border-b border-amber-500/20 pb-3">
-                <h2 className="text-base font-extrabold text-amber-500 uppercase tracking-wider font-serif flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4" /> Item Comparison & Graduation Deltas
+            <div className="bg-slate-900/40 border border-slate-800 rounded-xl p-6">
+              <div className="mb-4 border-b border-slate-800 pb-3">
+                <h2 className="text-base font-bold text-slate-200 uppercase tracking-wider font-serif flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-slate-400" /> Item Comparison & Graduation Deltas
                 </h2>
                 <p className="text-[12px] text-slate-500 mt-0.5">
                   Understand exactly which gears represent the largest marginal upgrade relative to your active panel. Ranked descending by total simulation contribution.
@@ -3670,7 +3670,7 @@ export default function App() {
                       onClick={() => setSelectedSlot(slot.name)}
                       className={`relative flex items-center gap-2.5 p-3 rounded-lg border transition-all text-left ${
                         isSelected
-                          ? "bg-amber-500 text-slate-950 border-amber-500 font-bold shadow-md shadow-amber-500/5"
+                          ? "bg-slate-700 text-slate-100 border-slate-600 font-bold"
                           : "bg-slate-950/60 text-slate-500 hover:text-slate-200 border-slate-800/60 hover:border-slate-700"
                       }`}
                     >
@@ -3686,7 +3686,7 @@ export default function App() {
                       
                       {/* Gold dot indicator if possesses items */}
                       {hasItems && (
-                        <span className={`absolute top-2 right-2 w-1.5 h-1.5 rounded-full ${isSelected ? "bg-slate-950" : "bg-amber-500 animate-pulse"}`} />
+                        <span className={`absolute top-2 right-2 w-1.5 h-1.5 rounded-full ${isSelected ? "bg-slate-300" : "bg-slate-500"}`} />
                       )}
                     </button>
                   );
@@ -3696,7 +3696,7 @@ export default function App() {
               {/* Comparison list section */}
               <div>
                 <h3 className="text-sm uppercase font-bold tracking-widest text-slate-500 font-mono mb-4">
-                  Graduation ranking for slot: <span className="text-amber-500 font-serif">{getSlotLabel(selectedSlot)}</span>
+                  Graduation ranking for slot: <span className="text-slate-300 font-serif">{getSlotLabel(selectedSlot)}</span>
                 </h3>
 
                 {(() => {
