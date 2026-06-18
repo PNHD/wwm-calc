@@ -13,8 +13,8 @@ Other agents have repeatedly reverted these thinking they were bugs. They are co
 
 1. **Tier = 95下 (T91 Global).** `WWM_DATA.tiers["95下"]` + the damage formula in `src/utils/calc.ts` are verified against the official Excel (`燕云调律计算器`, sheets `各等级模板`, `伤害公式`, `各流派历史等级毕业配置`). Do not alter tier constants or the pen/precision formulas.
 2. **Inner ways are IN-COMBAT buffs**, not character-menu stats. `adjustedPanel` adds the full `iwStats` (pen/crit/critDmg/aff/affDmg/outerDmg/pzPen/pzDmg) on top of `basePanel`; `generalDmg` stays in its own multiplier bucket. Do NOT go back to ignoring inner-way stats.
-3. **`computeGearPanel` IS used** via the `basePanel` memo. When "Auto Panel From Gear" is ON, the panel readout recomputes from equipped gear. Do not delete this call or call it "dead code".
-4. **"Auto Panel From Gear" defaults OFF** (manual panel). Keep it default-off.
+3. **`computeGearPanel` IS used** via the `basePanel` memo. Panel ALWAYS auto-computes from equipped gear (like spongem.com/yysls/). Do not delete this call or call it "dead code".
+4. **Panel always auto-computes from gear** (`autoGearPanel = true` always, no toggle). Equip/unequip gear → panel stats update automatically. Manual panel inputs are read-only. Do NOT re-add a manual/auto toggle.
 5. **Cultivate tab uses 条 (substat-count) units.** Targets = verified 95下 graduated substat counts (`GRAD95_COUNTS`); current = gear sum ÷ 95下 max roll. NOT value caps, NOT "count×roll value", NOT "CN Lv105 × 0.604". The Cultivate tab has 3 sections: 培养总结 / 定音词条总结 (tuned-substat upgrade ranking) / 培养建议 (greedy next-8 advice). Keep all three.
 6. **There is NO "Fire-Fist-Healer" path** (it was fake — removed). Only the 8 verified 95下 paths exist in `GRAD95_*`.
 7. **Swap Sim & Rotation Sim tabs were intentionally removed**, replaced by **Transmute Advice**. Do not re-add Swap/Rotation Sim.
