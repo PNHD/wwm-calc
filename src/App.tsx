@@ -2487,7 +2487,7 @@ export default function App() {
                   "Where Winds Meet Gear Graduation Manager\\n" +
                   "Version: 3.0.0 (T91 Global)\\n" +
                   "Last DB Update: June 15, 2026\\n" +
-                  "Author: T91 Global Team\\n" +
+                  "Author: Wonton\\n" +
                   "Adapted from spongem.com/yysls/ layout."
                 );
               }}
@@ -3075,7 +3075,7 @@ export default function App() {
                   <div className="grad-meta-text">
                     <div className="grad-meta-item">DB Last Updated: <span className="text-white">June 15, 2026</span></div>
                     <div className="grad-meta-item">Version: <span className="text-white">3.0.0 (T91 Global)</span></div>
-                    <div className="grad-meta-item">Author: <span className="text-white">T91 Global Team</span></div>
+                    <div className="grad-meta-item">Author: <span className="text-white">Wonton</span></div>
                   </div>
                 </div>
                 <div className="current-equip-list" style={{ padding: '10px' }}>
