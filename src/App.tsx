@@ -3129,8 +3129,9 @@ export default function App() {
                 <div className="current-equip-list" style={{ padding: '10px' }}>
                   {SLOTS.map(slot => {
                     const item = getActiveGear().find(it => it.slot === slot.name && isItemEquipped(it, getActiveGear()));
+                    const isActive = selectedSlot === slot.name;
                     return (
-                      <div key={slot.name} className="grad-equip-item" onClick={() => { setSelectedSlot(slot.name); setTransmuteSlot(slot.name); setTransmuteSubIndex(null); }}>
+                      <div key={slot.name} className={`grad-equip-item${isActive ? " active" : ""}`} onClick={() => { setSelectedSlot(slot.name); setTransmuteSlot(slot.name); setTransmuteSubIndex(null); }}>
                         <div className="grad-equip-info">
                           <div className="grad-equip-name">{item ? item.name : "— Empty Slot —"}</div>
                           <div className="grad-equip-sub">{getSlotLabel(slot.name)}</div>
@@ -3852,7 +3853,7 @@ export default function App() {
                   <TrendingUp className="w-4 h-4" /> Item Comparison & Graduation Deltas
                 </h2>
                 <p className="text-[12px] text-slate-500 mt-0.5">
-                  Understand exactly which gears represent the largest marginal upgrade relative to your active panel. Ranked descending by total simulation contribution.
+                  Select a slot from the left panel to compare gear items. Ranked by graduation contribution using the T91/Lv95 damage formula.
                 </p>
               </div>
 
@@ -3944,43 +3945,7 @@ export default function App() {
                 );
               })()}
 
-              {/* 4x2 Grid of Slot Selection Buttons */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-                {SLOTS.map((slot) => {
-                  const itemsInSlot = getActiveGear().filter(it => it.slot === slot.name);
-                  const hasItems = itemsInSlot.length > 0;
-                  const isSelected = selectedSlot === slot.name;
-                  
-                  return (
-                    <button
-                      key={slot.name}
-                      onClick={() => setSelectedSlot(slot.name)}
-                      className={`relative flex items-center gap-2.5 p-3 rounded-lg border transition-all text-left ${
-                        isSelected
-                          ? "bg-[#ffd700] text-[#1a1a1d] border-[#ffd700] font-bold"
-                          : "bg-[#1a1a1d]/60 text-slate-500 hover:text-slate-200 border-[#3d3d45] hover:border-slate-700"
-                      }`}
-                    >
-                      <span className="text-lg">{slot.icon}</span>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-[13px] truncate uppercase tracking-wide font-semibold">{getSlotLabel(slot.name)}</div>
-                        {hasItems && (
-                          <div className={`text-[11px] mt-0.5 ${isSelected ? "text-slate-900 font-bold" : "text-slate-500"}`}>
-                            {itemsInSlot.length} item{itemsInSlot.length > 1 ? "s" : ""}
-                          </div>
-                        )}
-                      </div>
-                      
-                      {/* Gold dot indicator if possesses items */}
-                      {hasItems && (
-                        <span className={`absolute top-2 right-2 w-1.5 h-1.5 rounded-full ${isSelected ? "bg-[#1a1a1d]" : "bg-[#ffd700]"}`} />
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Comparison list section */}
+              {/* Comparison list section — slot selected via left panel */}
               <div>
                 <h3 className="text-sm uppercase font-bold tracking-widest text-slate-500 font-mono mb-4">
                   Graduation ranking for slot: <span className="text-[#ffd700] font-serif">{getSlotLabel(selectedSlot)}</span>
@@ -4187,44 +4152,11 @@ export default function App() {
                                   🔄 Transmutation Advice
                                 </h2>
                                 <p className="text-[12px] text-slate-500 mt-0.5">
-                                  Select a gear slot, pick a substat to re-roll, and see which replacement would yield the best graduation improvement at T91 max rolls.
+                                  Pick a slot from the left panel, select a substat to re-roll, and see which replacement yields the best graduation improvement at T91 max rolls.
                                 </p>
                               </div>
 
-                              {/* Slot Selector Grid */}
-                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-                                {SLOTS.map((slot) => {
-                                  const itemsInSlot = gear.filter(it => it.slot === slot.name);
-                                  const hasItems = itemsInSlot.length > 0;
-                                  const isSelected = transmuteSlot === slot.name;
-                                  return (
-                                    <button
-                                      key={slot.name}
-                                      onClick={() => { setTransmuteSlot(slot.name); setTransmuteSubIndex(null); }}
-                                      className={`relative flex items-center gap-2.5 p-3 rounded-lg border transition-all text-left ${
-                                        isSelected
-                                          ? "bg-[#ffd700] text-[#1a1a1d] border-[#ffd700] font-bold"
-                                          : "bg-[#1a1a1d]/60 text-slate-500 hover:text-slate-200 border-[#3d3d45] hover:border-slate-700"
-                                      }`}
-                                    >
-                                      <span className="text-lg">{slot.icon}</span>
-                                      <div className="flex-1 min-w-0">
-                                        <div className="text-[13px] truncate uppercase tracking-wide font-semibold">{getSlotLabel(slot.name)}</div>
-                                        {hasItems && (
-                                          <div className={`text-[11px] mt-0.5 ${isSelected ? "text-slate-900 font-bold" : "text-slate-500"}`}>
-                                            {itemsInSlot.length} item{itemsInSlot.length > 1 ? "s" : ""}
-                                          </div>
-                                        )}
-                                      </div>
-                                      {hasItems && (
-                                        <span className={`absolute top-2 right-2 w-1.5 h-1.5 rounded-full ${isSelected ? "bg-[#1a1a1d]" : "bg-[#ffd700]"}`} />
-                                      )}
-                                    </button>
-                                  );
-                                })}
-                              </div>
-
-                              {/* Equipped item display */}
+                              {/* Equipped item display — slot selected via left panel */}
                               {!equipped ? (
                                 <div className="bg-[#1a1a1d]/40 border border-dashed border-[#3d3d45] p-8 rounded-lg text-center font-mono">
                                   <p className="text-slate-500 text-sm">No items in this slot. Add gear via the 🛡 Gear tab.</p>
