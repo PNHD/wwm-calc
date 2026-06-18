@@ -3178,7 +3178,7 @@ export default function App() {
                             <li><b>Stat Priority</b> — chỉ số nào nên cộng/bỏ để lên tốt nghiệp nhanh nhất.</li>
                             <li><b>Cultivate</b> — tổng kết词条 (条), dòng定音 (✦) nên nâng, và gợi ý 8词条 tiếp theo nên đầu tư.</li>
                             <li><b>Compare</b> — so sánh từng món gear, xem món nào nâng tốt nghiệp nhiều nhất.</li>
-                            <li><b>Swap Sim / Rotation Sim</b> — mô phỏng đổi chỉ số / vòng combo (beta).</li>
+                            <li><b>Transmute Advice</b> — gợi ý chuyển律 (转律) cho từng部位: cấu hình词条 chủ + phụ tối ưu để tăng tốt nghiệp.</li>
                           </ul>
                         </div>
                       </div>
