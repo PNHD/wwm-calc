@@ -3164,6 +3164,24 @@ export default function App() {
                   {/* Tab Panes */}
                   {gradModalActiveTab === "manual" && (
                     <div className="space-y-6" style={{ textAlign: 'left' }}>
+                      {/* Hướng dẫn sử dụng */}
+                      <div className="bg-[#1e1a12] border border-[#ffd700]/30 rounded-xl p-4">
+                        <h3 className="text-sm font-bold text-[#ffd700] mb-2 flex items-center gap-2">📖 Hướng dẫn sử dụng</h3>
+                        <ol className="text-[12.5px] text-slate-300 leading-relaxed list-decimal pl-5 space-y-1">
+                          <li><b>Nhập panel</b>: Mở <b>Combat Attributes</b> trong game (nút <b>C</b>) rồi nhập các chỉ số bên dưới. Hoặc bật <b>Auto Panel From Gear</b> để tự tính từ gear đã nhập ở màn hình chính.</li>
+                          <li><b>Xem kết quả</b>: Thanh trên cùng hiển thị <b>Graduation Rate</b> (% tốt nghiệp so với BiS T91) và <b>DPS Expectation</b> (秒伤 dự kiến).</li>
+                          <li><b>Chọn build & bow/set</b>: Ở <b>Panel Simulator</b> (bên phải màn chính) chọn đúng流派, bow诀 và套装.</li>
+                        </ol>
+                        <div className="text-[12px] text-slate-400 mt-3 pt-2 border-t border-[#3d3d45]/60 leading-relaxed">
+                          <b className="text-[#ffd700]/90">Các tab khác làm gì:</b>
+                          <ul className="list-disc pl-5 mt-1 space-y-0.5">
+                            <li><b>Stat Priority</b> — chỉ số nào nên cộng/bỏ để lên tốt nghiệp nhanh nhất.</li>
+                            <li><b>Cultivate</b> — tổng kết词条 (条), dòng定音 (✦) nên nâng, và gợi ý 8词条 tiếp theo nên đầu tư.</li>
+                            <li><b>Compare</b> — so sánh từng món gear, xem món nào nâng tốt nghiệp nhiều nhất.</li>
+                            <li><b>Swap Sim / Rotation Sim</b> — mô phỏng đổi chỉ số / vòng combo (beta).</li>
+                          </ul>
+                        </div>
+                      </div>
                       <div className="bg-[#2d2d35] border border-[#3d3d45] rounded-xl p-4 space-y-2">
                         <label className="flex items-center justify-between gap-2 cursor-pointer">
                           <span className="text-[12px] font-mono font-bold tracking-widest text-[#a19683] uppercase flex items-center gap-1.5">
@@ -3211,54 +3229,79 @@ export default function App() {
                         </select>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <h3 className="text-sm font-semibold text-[#ffd700] uppercase tracking-widest mb-3 border-b border-[#3d3d45] pb-1">Physical Attributes</h3>
-                          <div className="space-y-2">
-                            {[
+                      {(() => {
+                        const inner = innerAttrName(selectedBuild);
+                        const wPrefix = getBuildWeaponPrefixes(selectedBuild)[0] || "umb";
+                        const wMartialKey = `${wPrefix}Martial`;
+                        const GROUPS: { title: string; note?: string; fields: { label: string; key: string; step?: number }[] }[] = [
+                          {
+                            title: "Physical Attributes",
+                            fields: [
                               { label: "Min Physical Atk", key: "minOuter" },
                               { label: "Max Physical Atk", key: "maxOuter" },
-                              { label: "Physical Pen %", key: "outerPen", step: 0.1 }
-                            ].map(st => (
-                              <div key={st.key} className="flex justify-between items-center bg-[#1a1a1d]/70 p-2 rounded border border-[#3d3d45] text-sm">
-                                <span className="text-slate-500">{st.label}</span>
-                                <input
-                                  type="number"
-                                  step={st.step || 1}
-                                  value={panel[st.key as keyof PanelStats] as number}
-                                  disabled={autoGearPanel}
-                                  onChange={(e) => handleStatChange(st.key as keyof PanelStats, parseFloat(e.target.value) || 0)}
-                                  className="bg-transparent border-none text-right text-slate-100 focus:outline-none w-24 font-mono disabled:opacity-50"
-                                />
+                              { label: "Physical Pen %", key: "outerPen", step: 0.1 },
+                              { label: "Physical DMG Bonus %", key: "outerDmg", step: 0.1 },
+                            ],
+                          },
+                          {
+                            title: `${inner} (Attribute) Attributes`,
+                            fields: [
+                              { label: `Min ${inner} Atk`, key: "minPz" },
+                              { label: `Max ${inner} Atk`, key: "maxPz" },
+                              { label: `${inner} Pen %`, key: "pzPen", step: 0.1 },
+                              { label: `${inner} DMG Bonus %`, key: "pzDmg", step: 0.1 },
+                            ],
+                          },
+                          {
+                            title: "Crit / Affinity / Precision",
+                            fields: [
+                              { label: "Critical Rate %", key: "crit", step: 0.1 },
+                              { label: "Affinity Rate %", key: "aff", step: 0.1 },
+                              { label: "Precision Rate %", key: "prec", step: 0.1 },
+                              { label: "Direct Critical Rate %", key: "dcrit", step: 0.1 },
+                              { label: "Direct Affinity Rate %", key: "daff", step: 0.1 },
+                              { label: "Critical DMG Bonus %", key: "critDmg", step: 0.1 },
+                              { label: "Affinity DMG Bonus %", key: "affDmg", step: 0.1 },
+                            ],
+                          },
+                          {
+                            title: "Skill DMG Boosts",
+                            note: "Some lines only appear on certain gear/tuning — leave at 0 if your panel doesn't show them.",
+                            fields: [
+                              { label: "All Martial Art Skill DMG Boost %", key: "allArts", step: 0.1 },
+                              { label: "Specified Weapon Martial Art Boost %", key: wMartialKey, step: 0.1 },
+                              { label: "Combat Boost Against Boss Units %", key: "bossDmg", step: 0.1 },
+                              { label: "Single-Target Mystic Skill DMG Boost %", key: "singleTargetDmg", step: 0.1 },
+                              { label: "Area Mystic Skill DMG Boost %", key: "groupDmg", step: 0.1 },
+                            ],
+                          },
+                        ];
+                        return (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {GROUPS.map((grp) => (
+                              <div key={grp.title}>
+                                <h3 className="text-sm font-semibold text-[#ffd700] uppercase tracking-widest mb-1 border-b border-[#3d3d45] pb-1">{grp.title}</h3>
+                                {grp.note && <p className="text-[10.5px] text-slate-500 mb-2 leading-snug">{grp.note}</p>}
+                                <div className="space-y-2 mt-2">
+                                  {grp.fields.map((st) => (
+                                    <div key={st.key} className="flex justify-between items-center bg-[#1a1a1d]/70 p-2 rounded border border-[#3d3d45] text-sm">
+                                      <span className="text-slate-500">{st.label}</span>
+                                      <input
+                                        type="number"
+                                        step={st.step || 1}
+                                        value={panel[st.key as keyof PanelStats] as number}
+                                        disabled={autoGearPanel}
+                                        onChange={(e) => handleStatChange(st.key as keyof PanelStats, parseFloat(e.target.value) || 0)}
+                                        className="bg-transparent border-none text-right text-slate-100 focus:outline-none w-24 font-mono disabled:opacity-50"
+                                      />
+                                    </div>
+                                  ))}
+                                </div>
                               </div>
                             ))}
                           </div>
-                        </div>
-
-                        <div>
-                          <h3 className="text-sm font-semibold text-[#ffd700] uppercase tracking-widest mb-3 border-b border-[#3d3d45] pb-1">{innerAttrName(selectedBuild)} Attributes</h3>
-                          <div className="space-y-2">
-                            {[
-                              { label: `Min ${innerAttrName(selectedBuild)} Atk`, key: "minPz" },
-                              { label: `Max ${innerAttrName(selectedBuild)} Atk`, key: "maxPz" },
-                              { label: `${innerAttrName(selectedBuild)} Pen %`, key: "pzPen", step: 0.1 },
-                              { label: `${innerAttrName(selectedBuild)} DMG Bonus %`, key: "pzDmg", step: 0.1 }
-                            ].map(st => (
-                              <div key={st.key} className="flex justify-between items-center bg-[#1a1a1d]/70 p-2 rounded border border-[#3d3d45] text-sm">
-                                <span className="text-slate-500">{st.label}</span>
-                                <input
-                                  type="number"
-                                  step={st.step || 1}
-                                  value={panel[st.key as keyof PanelStats] as number}
-                                  disabled={autoGearPanel}
-                                  onChange={(e) => handleStatChange(st.key as keyof PanelStats, parseFloat(e.target.value) || 0)}
-                                  className="bg-transparent border-none text-right text-slate-100 focus:outline-none w-24 font-mono disabled:opacity-50"
-                                />
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
+                        );
+                      })()}
                     </div>
                   )}
                   {gradModalActiveTab === "priority" && (

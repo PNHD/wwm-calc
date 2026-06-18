@@ -493,6 +493,16 @@ export function calcSkill(
     setDmgBonus += 0.25;
   }
 
+  // Mystic skill DMG boost: single-target mystic skills eat singleTargetDmg,
+  // area/group mystic skills eat groupDmg (matches in-game "Single-Target / Area
+  // Mystic Skill DMG Boost"). Only mystic-type skills benefit.
+  let mysticBonus = 0;
+  if (sk.type === "mystic") {
+    mysticBonus = sk.wType === "group"
+      ? (panel.groupDmg || 0) / 100
+      : (panel.singleTargetDmg || 0) / 100;
+  }
+
   const T =
     1 +
     rot.generalBonus +
@@ -503,6 +513,7 @@ export function calcSkill(
     csBonus +
     spinBonus +
     ((panel.iwGeneralDmg || 0) / 100) +
+    mysticBonus +
     setDmgBonus;
 
   const totalOuterPen =
