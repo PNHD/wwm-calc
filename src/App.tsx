@@ -153,7 +153,7 @@ const GRAD_MARKERS = [
   { pct: 80, label: "C", color: "bg-slate-500" },
   { pct: 85, label: "B", color: "bg-lime-600" },
   { pct: 88, label: "A", color: "bg-yellow-500" },
-  { pct: 90, label: "S", color: "bg-amber-500" },
+  { pct: 90, label: "S", color: "bg-[#ffd700]" },
   { pct: 100, label: "🎓", color: "bg-emerald-500" },
 ];
 
@@ -379,7 +379,7 @@ function getWeaponIconUrlByType(weaponType: string | undefined, fallbackSlot: st
 // distinct without fabricating image URLs)
 const SET_BADGE_COLORS: Record<string, string> = {
   // Weapon / accessory sets
-  "stars":         "from-amber-500 to-yellow-700",
+  "stars":         "from-[#ffd700] to-yellow-700",
   "eaglerise":     "from-sky-500 to-blue-700",
   "jadeware":      "from-emerald-400 to-green-700",
   "ivorybloom":    "from-pink-400 to-rose-700",
@@ -391,7 +391,7 @@ const SET_BADGE_COLORS: Record<string, string> = {
   "rainwhisper":   "from-indigo-400 to-blue-800",
   // Armor sets
   "stormrain":     "from-teal-400 to-cyan-700",
-  "formbend":      "from-amber-700 to-yellow-900",
+  "formbend":      "from-[#e6c200] to-yellow-900",
   "moonflare":     "from-purple-400 to-violet-700",
   "obsidian":      "from-slate-800 to-slate-950",
   "beyondchill":   "from-blue-300 to-cyan-600",
@@ -399,7 +399,7 @@ const SET_BADGE_COLORS: Record<string, string> = {
   "calmwaters":    "from-blue-500 to-blue-800",
   "jadeembrace":   "from-emerald-700 to-teal-900",
   "agilesteps":    "from-yellow-500 to-orange-700",
-  "flawlessdef":   "from-yellow-200 to-amber-500",
+  "flawlessdef":   "from-yellow-200 to-[#ffd700]",
   "ironweave":     "from-slate-400 to-slate-700",
   // Bow/Ring sets
   "pursuing":      "from-purple-400 to-violet-700",
@@ -640,7 +640,7 @@ const computeGearPanel = (current: PanelStats, gear: GearItem[]): PanelStats => 
 const BUILD_PROFILES = {
   "bamboocut-dust": {
     label: "Bamboocut-Dust", weapons: "Everspring Umbrella + Unfettered Rope Dart",
-    tier: "T0 AoE", color: "text-amber-500",
+    tier: "T0 AoE", color: "text-[#ffd700]",
     gradTargets: { maxOuter: 3050, minOuter: 1340, outerPen: 42.0, crit: 116.9, aff: 14.7, critDmg: 54 },
     notes: "T91 Global graduation target. Priority: Max Phys ATK → Phys Pen → Bamboocut ATK. Crit ~116%+ panel to cap at 80% eff.",
     priorityStats: ["maxOuter","outerPen","crit","critDmg","maxPz","umbMartial"],
@@ -689,7 +689,7 @@ const BUILD_PROFILES = {
   },
   "bamboocut-kite": {
     label: "Bamboocut-Kite (beta · not in Global yet)", weapons: "Heavenstrike Gauntlets + Unfettered Rope Dart",
-    tier: "T0 AoE", color: "text-amber-600",
+    tier: "T0 AoE", color: "text-[#ffd700]",
     gradTargets: { maxOuter: 2830, minOuter: 1185, outerPen: 36.5, crit: 116.9, aff: 14.7, critDmg: 54 },
     notes: "Priority: Max Phys ATK → Bamboocut ATK → Phys Pen. Gauntlets + Rope Dart.",
     priorityStats: ["maxOuter","outerPen","crit","critDmg","maxPz","ropeMartial"],
@@ -1122,14 +1122,14 @@ export default function App() {
   const Section = ({ id, title, children }: { id: string; title: string; children: React.ReactNode }) => {
     const isOpen = expandedSections.has(id);
     return (
-      <div className="border-b border-slate-800/50 pb-2 mb-2">
+      <div className="border-b border-[#3d3d45]/50 pb-2 mb-2">
         <button
           onClick={() => setExpandedSections(prev => {
             const next = new Set(prev);
             if (next.has(id)) next.delete(id); else next.add(id);
             return next;
           })}
-          className="w-full flex items-center justify-between text-[11px] font-mono tracking-wider text-amber-500/80 uppercase mb-1"
+          className="w-full flex items-center justify-between text-[11px] font-mono tracking-wider text-[#ffd700]/80 uppercase mb-1"
         >
           <span>{title}</span>
           <span className="text-slate-300">{isOpen ? "▼" : "▶"}</span>
@@ -2358,7 +2358,7 @@ export default function App() {
 
     // Define increments for testing marginal gains
     const increments = [
-      { key: "maxOuter", label: "Physical Atk (Phys Atk)", value: 10, bonusLabel: "+10 Atk", color: "from-amber-600 to-amber-500" },
+      { key: "maxOuter", label: "Physical Atk (Phys Atk)", value: 10, bonusLabel: "+10 Atk", color: "from-[#e6c200] to-[#ffd700]" },
       { key: "outerPen", label: "Physical Penetration (Phys Pen %)", value: 1.0, bonusLabel: "+1.0%", color: "from-red-600 to-rose-500" },
       { key: "crit", label: "Critical Rate (Crit Rate %)", value: 1.0, bonusLabel: "+1.0%", color: "from-orange-500 to-orange-400" },
       { key: "critDmg", label: "Critical Damage (Crit DMG %)", value: 1.0, bonusLabel: "+1.0%", color: "from-yellow-600 to-yellow-500" },
@@ -2472,9 +2472,9 @@ export default function App() {
 
 
   return (
-    <div className="min-h-screen bg-[#1a1a1d] text-[#e0e0e0] font-sans antialiased selection:bg-amber-600/30 selection:text-amber-200">
+    <div className="min-h-screen bg-[#1a1a1d] text-[#e0e0e0] font-sans antialiased selection:bg-[#ffd700]/25 selection:text-[#ffd700]">
       {/* Accent line */}
-      <div className="h-0.5 w-full bg-gradient-to-r from-amber-700 via-amber-500 to-amber-700" />
+      <div className="h-0.5 w-full bg-gradient-to-r from-[#e6c200] via-[#ffd700] to-[#e6c200]" />
 
       {/* ── HEADER ── */}
       <header>
@@ -2728,12 +2728,12 @@ export default function App() {
                         {item.subs.slice(0, 4).map((sub, sidx) => (
                           <div key={sidx} className="stat-line sub-stat">
                             <span className="stat-label" style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
-                              {sub.type} {sub.isTuned && <span className="text-amber-500 font-bold">✦</span>}
+                              {sub.type} {sub.isTuned && <span className="text-[#ffd700] font-bold">✦</span>}
                             </span>
                             <span className="val">{sub.val}</span>
                           </div>
                         ))}
-                        <div className="diff-result flex justify-between pt-2 border-t border-slate-800" style={{ marginTop: '5px' }}>
+                        <div className="diff-result flex justify-between pt-2 border-t border-[#3d3d45]" style={{ marginTop: '5px' }}>
                           <span className="text-slate-500">Grad Delta:</span>
                           <span className={totalGradDelta >= 0 ? "text-green" : "text-red"}>
                             {totalGradDelta >= 0 ? "+" : ""}{totalGradDelta.toFixed(2)}%
@@ -3117,7 +3117,7 @@ export default function App() {
                   {/* Tab Panes */}
                   {gradModalActiveTab === "manual" && (
                     <div className="space-y-6" style={{ textAlign: 'left' }}>
-                      <div className="bg-[#1c1a17] border border-amber-900/20 rounded-xl p-4 space-y-2">
+                      <div className="bg-[#2d2d35] border border-[#3d3d45] rounded-xl p-4 space-y-2">
                         <label className="flex items-center justify-between gap-2 cursor-pointer">
                           <span className="text-[12px] font-mono font-bold tracking-widest text-[#a19683] uppercase flex items-center gap-1.5">
                             Auto Panel From Gear
@@ -3126,7 +3126,7 @@ export default function App() {
                             type="checkbox"
                             checked={autoGearPanel}
                             onChange={(e) => setAutoGearPanel(e.target.checked)}
-                            className="w-4 h-4 accent-amber-500"
+                            className="w-4 h-4 accent-[#ffd700]"
                           />
                         </label>
                         <p className="text-[11.5px] text-slate-500 leading-snug">
@@ -3134,26 +3134,26 @@ export default function App() {
                             ? "ON — Panel stats are computed from equipped items. Change gear to change stats."
                             : "OFF — all stats below are entered manually and will not update when you change gear."}
                         </p>
-                        <p className="text-[11.5px] text-amber-500/80 leading-snug border-t border-amber-900/20 pt-2">
+                        <p className="text-[11.5px] text-[#ffd700]/80 leading-snug border-t border-[#3d3d45] pt-2">
                           ⓘ Enter your <b>in-game Combat Attributes</b> values here (the naked character-menu panel). Inner Ways are in-combat buffs and are <b>added automatically on top</b>; do not include them here. The stat readout on the right shows the effective in-combat panel (base + Inner Ways).
                         </p>
                         <button
                           type="button"
                           onClick={() => { if (!autoGearPanel) setPanel({ ...INITIAL_PANEL, set: panel.set }); }}
                           disabled={autoGearPanel}
-                          className="text-[11px] font-mono px-3 py-1.5 rounded bg-amber-600/20 hover:bg-amber-600/30 text-amber-400 border border-amber-700/40 disabled:opacity-40 disabled:cursor-not-allowed"
+                          className="text-[11px] font-mono px-3 py-1.5 rounded bg-[#ffd700]/20 hover:bg-[#e6c200]/30 text-[#ffd700] border border-[#3d3d45]/40 disabled:opacity-40 disabled:cursor-not-allowed"
                           title="Load the game-accurate T91/Lv95 base panel (you can then tweak each value to match your own character)"
                         >
                           ↺ Load T91 game-default base
                         </button>
                       </div>
 
-                      <div className="bg-[#1c1a17] border border-amber-900/20 rounded-xl p-4 space-y-3">
+                      <div className="bg-[#2d2d35] border border-[#3d3d45] rounded-xl p-4 space-y-3">
                         <span className="text-[12px] font-mono font-bold tracking-widest text-[#a19683] uppercase">Dungeon Target</span>
                         <select
                           value={tierKey}
                           onChange={(e) => setTierKey(e.target.value)}
-                          className="bg-slate-900 font-mono text-sm text-amber-500 rounded px-2.5 py-1"
+                          className="bg-[#2d2d35] font-mono text-sm text-[#ffd700] rounded px-2.5 py-1"
                         >
                           <option value="350|0.45">Tier 91 / Lv95 (Global)</option>
                           <option value="307|0.3">Tier 86 / Lv90</option>
@@ -3166,14 +3166,14 @@ export default function App() {
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                          <h3 className="text-sm font-semibold text-amber-500 uppercase tracking-widest mb-3 border-b border-amber-500/20 pb-1">Physical Attributes</h3>
+                          <h3 className="text-sm font-semibold text-[#ffd700] uppercase tracking-widest mb-3 border-b border-[#3d3d45] pb-1">Physical Attributes</h3>
                           <div className="space-y-2">
                             {[
                               { label: "Min Physical Atk", key: "minOuter" },
                               { label: "Max Physical Atk", key: "maxOuter" },
                               { label: "Physical Pen %", key: "outerPen", step: 0.1 }
                             ].map(st => (
-                              <div key={st.key} className="flex justify-between items-center bg-slate-950/70 p-2 rounded border border-slate-800 text-sm">
+                              <div key={st.key} className="flex justify-between items-center bg-[#1a1a1d]/70 p-2 rounded border border-[#3d3d45] text-sm">
                                 <span className="text-slate-500">{st.label}</span>
                                 <input
                                   type="number"
@@ -3189,7 +3189,7 @@ export default function App() {
                         </div>
 
                         <div>
-                          <h3 className="text-sm font-semibold text-amber-500 uppercase tracking-widest mb-3 border-b border-amber-500/20 pb-1">{innerAttrName(selectedBuild)} Attributes</h3>
+                          <h3 className="text-sm font-semibold text-[#ffd700] uppercase tracking-widest mb-3 border-b border-[#3d3d45] pb-1">{innerAttrName(selectedBuild)} Attributes</h3>
                           <div className="space-y-2">
                             {[
                               { label: `Min ${innerAttrName(selectedBuild)} Atk`, key: "minPz" },
@@ -3197,7 +3197,7 @@ export default function App() {
                               { label: `${innerAttrName(selectedBuild)} Pen %`, key: "pzPen", step: 0.1 },
                               { label: `${innerAttrName(selectedBuild)} DMG Bonus %`, key: "pzDmg", step: 0.1 }
                             ].map(st => (
-                              <div key={st.key} className="flex justify-between items-center bg-slate-950/70 p-2 rounded border border-slate-800 text-sm">
+                              <div key={st.key} className="flex justify-between items-center bg-[#1a1a1d]/70 p-2 rounded border border-[#3d3d45] text-sm">
                                 <span className="text-slate-500">{st.label}</span>
                                 <input
                                   type="number"
@@ -3218,18 +3218,18 @@ export default function App() {
                     <div style={{ textAlign: 'left' }}>
                       {gradModalActiveTab === "priority" && (
           <div className="space-y-6">
-            <div className="bg-[#141210] border border-amber-500/20 rounded-xl p-6 shadow-lg">
-              <div className="border-b border-amber-500/25 pb-4 mb-5">
+            <div className="bg-[#2d2d35] border border-[#3d3d45] rounded-xl p-6 shadow-lg">
+              <div className="border-b border-[#ffd700]/25 pb-4 mb-5">
                 <h2 className="text-lg font-bold font-serif text-slate-100 flex items-center gap-2">
-                  <TrendingUp className="text-amber-500 w-5 h-5" /> Stat Priority — Graduation Impact
+                  <TrendingUp className="text-[#ffd700] w-5 h-5" /> Stat Priority — Graduation Impact
                 </h2>
                 <p className="text-slate-500 text-sm mt-1">
-                  Live ranking for <strong className="text-amber-400">{(BUILD_PROFILES as any)[selectedBuild]?.label || "your build"}</strong>, computed from your current panel ({rotationStats.gradRate.toFixed(1)}% graduation). Each row simulates adding/removing <strong>one typical substat roll</strong> on a single sub-stat and shows the resulting change in graduation %.
+                  Live ranking for <strong className="text-[#ffd700]">{(BUILD_PROFILES as any)[selectedBuild]?.label || "your build"}</strong>, computed from your current panel ({rotationStats.gradRate.toFixed(1)}% graduation). Each row simulates adding/removing <strong>one typical substat roll</strong> on a single sub-stat and shows the resulting change in graduation %.
                 </p>
               </div>
 
               {/* Two-column gain/loss ranking */}
-              <div className="bg-slate-950/60 rounded-xl p-3 border border-slate-800 text-sm text-amber-500/95 flex items-center gap-2 mb-4">
+              <div className="bg-[#1a1a1d]/60 rounded-xl p-3 border border-[#3d3d45] text-sm text-[#ffd700]/95 flex items-center gap-2 mb-4">
                 <span className="text-lg">💡</span>
                 <span>
                   Calculated against the <strong>Global Tier 91 (Lv95)</strong> boss constants (Defense 350, Judgment Resist ×1.45), using your live panel and active build's rotation.
@@ -3251,7 +3251,7 @@ export default function App() {
                           <span className="w-4 text-slate-300 font-mono text-right text-[12px]">{idx + 1}</span>
                           <span className="w-32 text-slate-300 font-medium truncate">{g.label}</span>
                           <span className="w-12 text-slate-500 font-mono text-right text-[12px]">+{g.roll}{g.unit}</span>
-                          <div className="flex-1 h-2 bg-slate-950 rounded-full overflow-hidden">
+                          <div className="flex-1 h-2 bg-[#1a1a1d] rounded-full overflow-hidden">
                             <div
                               className="h-full rounded-full bg-gradient-to-r from-emerald-700 to-emerald-400"
                               style={{ width: `${width}%` }}
@@ -3280,7 +3280,7 @@ export default function App() {
                           <span className="w-4 text-slate-300 font-mono text-right text-[12px]">{idx + 1}</span>
                           <span className="w-32 text-slate-300 font-medium truncate">{g.label}</span>
                           <span className="w-12 text-slate-500 font-mono text-right text-[12px]">-{g.roll}{g.unit}</span>
-                          <div className="flex-1 h-2 bg-slate-950 rounded-full overflow-hidden">
+                          <div className="flex-1 h-2 bg-[#1a1a1d] rounded-full overflow-hidden">
                             <div
                               className="h-full rounded-full bg-gradient-to-r from-rose-700 to-rose-400"
                               style={{ width: `${width}%` }}
@@ -3302,28 +3302,28 @@ export default function App() {
             </div>
 
             {/* General T91 Priority Rules Guide */}
-            <div className="bg-[#141210] border border-amber-500/20 rounded-xl p-6 shadow-lg">
-              <h3 className="text-sm uppercase tracking-widest font-extrabold text-amber-500 font-serif border-b border-amber-500/20 pb-2 mb-4">
+            <div className="bg-[#2d2d35] border border-[#3d3d45] rounded-xl p-6 shadow-lg">
+              <h3 className="text-sm uppercase tracking-widest font-extrabold text-[#ffd700] font-serif border-b border-[#3d3d45] pb-2 mb-4">
                 General Theorycrafting Guide · T91 Global (http://spongem.com/yysls/)
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5 text-sm text-slate-300 leading-relaxed">
                 <div className="space-y-3">
                   <p>
-                    <strong className="text-amber-400">1. Physical Penetration (Phys Pen)</strong>: The most crucial core attribute until reaching the optimal cap in dungeon content (e.g., 51.2% for T91). Every point of Phys Pen below this threshold provides massive exponential damage amplification.
+                    <strong className="text-[#ffd700]">1. Physical Penetration (Phys Pen)</strong>: The most crucial core attribute until reaching the optimal cap in dungeon content (e.g., 51.2% for T91). Every point of Phys Pen below this threshold provides massive exponential damage amplification.
                   </p>
                   <p>
-                    <strong className="text-amber-400">2. Critical Rate Cap (80%)</strong>: The absolute maximum Critical Rate in Where Winds Meet is capped at <strong className="text-orange-400">80%</strong>. If your combined character attributes and passive/active buffs push your Crit beyond 80%, the surplus is ignored. Aim for roughly 73% unbuffed so that party buffs safely top you off at the optimal 80% maximum.
+                    <strong className="text-[#ffd700]">2. Critical Rate Cap (80%)</strong>: The absolute maximum Critical Rate in Where Winds Meet is capped at <strong className="text-orange-400">80%</strong>. If your combined character attributes and passive/active buffs push your Crit beyond 80%, the surplus is ignored. Aim for roughly 73% unbuffed so that party buffs safely top you off at the optimal 80% maximum.
                   </p>
                   <p>
-                    <strong className="text-amber-400">3. Critical Damage (Crit DMG %)</strong>: Crit DMG works in direct synergy with Crit Rate. Once your critical chance is secure, augmenting critical multipliers scales your total active DPS and Everspring Umbrella execution chain jumps exponentially.
+                    <strong className="text-[#ffd700]">3. Critical Damage (Crit DMG %)</strong>: Crit DMG works in direct synergy with Crit Rate. Once your critical chance is secure, augmenting critical multipliers scales your total active DPS and Everspring Umbrella execution chain jumps exponentially.
                   </p>
                 </div>
                 <div className="space-y-3">
                   <p>
-                    <strong className="text-amber-400">4. Affinity Rate (Cap 40%) & Bamboocut</strong>: Bamboocut Dust damage scales heavily with your overall break stats. Although Affinity is restricted to an absolute <strong className="text-orange-400">40%</strong> maximum cap in-game, adding Affinity attributes on Tier 91 gears (up to 4.5% per item) remains a powerful build option to convert graze hits into full-powered breaking attacks.
+                    <strong className="text-[#ffd700]">4. Affinity Rate (Cap 40%) & Bamboocut</strong>: Bamboocut Dust damage scales heavily with your overall break stats. Although Affinity is restricted to an absolute <strong className="text-orange-400">40%</strong> maximum cap in-game, adding Affinity attributes on Tier 91 gears (up to 4.5% per item) remains a powerful build option to convert graze hits into full-powered breaking attacks.
                   </p>
                   <p>
-                    <strong className="text-amber-400">5. Substat Relaying (Inherit mechanics)</strong>: When refining Level 91 gear, always prioritize relaying/inheriting attributes that have reached diamond/gold thresholds (such as Phys Pen 9.0%, Max Atk 63.8, Crit 6.5%, etc.). A carefully put-together set can singlehandedly contribute over 40% of your graduation progression.
+                    <strong className="text-[#ffd700]">5. Substat Relaying (Inherit mechanics)</strong>: When refining Level 91 gear, always prioritize relaying/inheriting attributes that have reached diamond/gold thresholds (such as Phys Pen 9.0%, Max Atk 63.8, Crit 6.5%, etc.). A carefully put-together set can singlehandedly contribute over 40% of your graduation progression.
                   </p>
                 </div>
               </div>
@@ -3336,8 +3336,8 @@ export default function App() {
                     <div style={{ textAlign: 'left' }}>
                       {gradModalActiveTab === "cultivate" && (
           <div className="space-y-6">
-            <div className="bg-[#141210] border border-amber-500/20 rounded-xl p-6 shadow-lg">
-              <div className="border-b border-amber-500/25 pb-4 mb-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div className="bg-[#2d2d35] border border-[#3d3d45] rounded-xl p-6 shadow-lg">
+              <div className="border-b border-[#ffd700]/25 pb-4 mb-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                   <h2 className="text-lg font-bold font-serif text-slate-105 flex items-center gap-2">
                     🎯 Cultivation Summary
@@ -3351,7 +3351,7 @@ export default function App() {
                   <select
                     value={cultivateClass}
                     onChange={(e) => setCultivateClass(e.target.value)}
-                    className="bg-slate-950 border border-amber-900/30 hover:border-amber-500/50 text-amber-500 text-sm rounded-lg px-3 py-1.5 focus:outline-none font-bold transition-all cursor-pointer"
+                    className="bg-[#1a1a1d] border border-[#3d3d45]/30 hover:border-[#ffd700]/50 text-[#ffd700] text-sm rounded-lg px-3 py-1.5 focus:outline-none font-bold transition-all cursor-pointer"
                   >
                     {Object.keys(WWM_DATA.classes).map((cls) => (
                       <option key={cls} value={cls}>
@@ -3529,8 +3529,8 @@ export default function App() {
                     bgCardClass = "bg-[#141c16]/40 border-emerald-950/30 text-emerald-400";
                     progressFillColor = "bg-emerald-500";
                   } else if (progressPct >= 40) {
-                    bgCardClass = "bg-[#1e1a12]/40 border-amber-950/30 text-amber-500";
-                    progressFillColor = "bg-amber-500";
+                    bgCardClass = "bg-[#1e1a12]/40 border-[#3d3d45]/30 text-[#ffd700]";
+                    progressFillColor = "bg-[#ffd700]";
                   }
 
                   return {
@@ -3568,20 +3568,20 @@ export default function App() {
                   <div className="space-y-6">
                     {/* Header Summary Statistics */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="bg-[#181512] border border-amber-500/20 rounded-xl p-5 flex flex-col justify-center">
+                      <div className="bg-[#181512] border border-[#3d3d45] rounded-xl p-5 flex flex-col justify-center">
                         <span className="text-sm font-mono uppercase tracking-wider text-slate-500">
                           Total sub-stat progress
                         </span>
-                        <div className="text-3xl font-extrabold text-amber-500 font-serif mt-1 flex items-baseline gap-1.5">
+                        <div className="text-3xl font-extrabold text-[#ffd700] font-serif mt-1 flex items-baseline gap-1.5">
                           <span>{totalProgressVal.toFixed(1)}</span>
                           <span className="text-base font-sans font-normal text-slate-500">/ 40</span>
                         </div>
                       </div>
-                      <div className="bg-[#181512] border border-amber-500/20 rounded-xl p-5 flex flex-col justify-center">
+                      <div className="bg-[#181512] border border-[#3d3d45] rounded-xl p-5 flex flex-col justify-center">
                         <span className="text-sm font-mono uppercase tracking-wider text-slate-500">
                           Dingyin (Tuned) stats
                         </span>
-                        <div className="text-3xl font-extrabold text-amber-500 font-serif mt-1">
+                        <div className="text-3xl font-extrabold text-[#ffd700] font-serif mt-1">
                           {dingyinPct.toFixed(1)}<span className="text-lg font-sans font-normal text-slate-500">%</span>
                         </div>
                       </div>
@@ -3614,7 +3614,7 @@ export default function App() {
                             </div>
 
                             <div className="space-y-1.5 pt-1">
-                              <div className="w-full bg-slate-950/70 rounded-full h-2.5 overflow-hidden border border-slate-800">
+                              <div className="w-full bg-[#1a1a1d]/70 rounded-full h-2.5 overflow-hidden border border-[#3d3d45]">
                                 <div 
                                   className={`h-full rounded-full transition-all duration-300 ${tile.progressFillColor}`}
                                   style={{ width: `${tile.progressCapped}%` }}
@@ -3631,7 +3631,7 @@ export default function App() {
                     </div>
 
                     {/* Note at bottom */}
-                    <div className="bg-[#141210]/30 border border-slate-800/40 rounded-xl p-4 text-sm text-slate-500 leading-relaxed font-mono">
+                    <div className="bg-[#2d2d35]/30 border border-[#3d3d45]/40 rounded-xl p-4 text-sm text-slate-500 leading-relaxed font-mono">
                       Progress estimates based on Graduation Panel targets (CN Lv105).
                       Tier 91 caps are ~60% of shown values.
                     </div>
@@ -3647,10 +3647,10 @@ export default function App() {
                     <div style={{ textAlign: 'left' }}>
                       {gradModalActiveTab === "compare" && (
           <div className="space-y-6">
-            <div className="bg-slate-900/40 border border-slate-800 rounded-xl p-6">
-              <div className="mb-4 border-b border-slate-800 pb-3">
-                <h2 className="text-base font-bold text-slate-200 uppercase tracking-wider font-serif flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-slate-400" /> Item Comparison & Graduation Deltas
+            <div className="bg-[#2d2d35] border border-[#3d3d45] rounded-xl p-6">
+              <div className="mb-4 border-b border-[#3d3d45] pb-3">
+                <h2 className="text-base font-extrabold text-[#ffd700] uppercase tracking-wider font-serif flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4" /> Item Comparison & Graduation Deltas
                 </h2>
                 <p className="text-[12px] text-slate-500 mt-0.5">
                   Understand exactly which gears represent the largest marginal upgrade relative to your active panel. Ranked descending by total simulation contribution.
@@ -3670,8 +3670,8 @@ export default function App() {
                       onClick={() => setSelectedSlot(slot.name)}
                       className={`relative flex items-center gap-2.5 p-3 rounded-lg border transition-all text-left ${
                         isSelected
-                          ? "bg-slate-700 text-slate-100 border-slate-600 font-bold"
-                          : "bg-slate-950/60 text-slate-500 hover:text-slate-200 border-slate-800/60 hover:border-slate-700"
+                          ? "bg-[#ffd700] text-[#1a1a1d] border-[#ffd700] font-bold"
+                          : "bg-[#1a1a1d]/60 text-slate-500 hover:text-slate-200 border-[#3d3d45] hover:border-slate-700"
                       }`}
                     >
                       <span className="text-lg">{slot.icon}</span>
@@ -3686,7 +3686,7 @@ export default function App() {
                       
                       {/* Gold dot indicator if possesses items */}
                       {hasItems && (
-                        <span className={`absolute top-2 right-2 w-1.5 h-1.5 rounded-full ${isSelected ? "bg-slate-300" : "bg-slate-500"}`} />
+                        <span className={`absolute top-2 right-2 w-1.5 h-1.5 rounded-full ${isSelected ? "bg-[#1a1a1d]" : "bg-[#ffd700]"}`} />
                       )}
                     </button>
                   );
@@ -3696,14 +3696,14 @@ export default function App() {
               {/* Comparison list section */}
               <div>
                 <h3 className="text-sm uppercase font-bold tracking-widest text-slate-500 font-mono mb-4">
-                  Graduation ranking for slot: <span className="text-slate-300 font-serif">{getSlotLabel(selectedSlot)}</span>
+                  Graduation ranking for slot: <span className="text-[#ffd700] font-serif">{getSlotLabel(selectedSlot)}</span>
                 </h3>
 
                 {(() => {
                   const slotItems = getActiveGear().filter(it => it.slot === selectedSlot);
                   if (slotItems.length === 0) {
                     return (
-                      <div className="bg-slate-950/40 border border-dashed border-slate-800/60 p-8 rounded-lg text-center font-mono">
+                      <div className="bg-[#1a1a1d]/40 border border-dashed border-[#3d3d45] p-8 rounded-lg text-center font-mono">
                         <p className="text-slate-500 text-sm">No items in this slot to compare.</p>
                         <p className="text-[12px] text-slate-500 mt-1">Go to the "🛡 Gear" tab to add items for comparison.</p>
                       </div>
@@ -3729,19 +3729,19 @@ export default function App() {
                         const item = entry.item;
                         const isBest = rank === 1;
                         const gapToBest = isBest ? 0 : bestScore - entry.total;
-                        const qualityClass = item.quality === "gold" ? "border-amber-500/20 bg-[#1b1510]/80" : item.quality === "purple" ? "border-purple-500/20 bg-[#16121c]/80" : "border-sky-500/20 bg-[#11141a]/80";
+                        const qualityClass = item.quality === "gold" ? "border-[#3d3d45] bg-[#1b1510]/80" : item.quality === "purple" ? "border-purple-500/20 bg-[#16121c]/80" : "border-sky-500/20 bg-[#11141a]/80";
                         
                         return (
                           <div
                             key={item.id}
                             className={`p-4 rounded-xl border relative transition-all ${qualityClass}`}
                           >
-                            <div className="absolute top-4 left-4 w-7 h-7 rounded-full bg-slate-950 border border-slate-700 flex items-center justify-center font-bold text-sm text-amber-500 font-serif shadow-inner">
+                            <div className="absolute top-4 left-4 w-7 h-7 rounded-full bg-[#1a1a1d] border border-slate-700 flex items-center justify-center font-bold text-sm text-[#ffd700] font-serif shadow-inner">
                               #{rank}
                             </div>
 
                             <div className="pl-10">
-                              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/40 pb-2 mb-3">
+                              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#3d3d45]/40 pb-2 mb-3">
                                 <div>
                                   <h4 className="text-sm font-bold text-slate-100 flex items-center gap-2">
                                     <span>{item.name}</span>
@@ -3754,7 +3754,7 @@ export default function App() {
 
                                 </div>
                                 <div className="text-right flex flex-col items-end gap-1.5">
-                                  <div className="text-sm font-mono font-extrabold text-amber-400">
+                                  <div className="text-sm font-mono font-extrabold text-[#ffd700]">
                                     +{entry.total.toFixed(2)}% graduation
                                   </div>
                                   {!isBest && (
@@ -3769,7 +3769,7 @@ export default function App() {
                                       const reordered = [item, ...others];
                                       saveActiveGear(reordered);
                                     }}
-                                    className="text-[11px] px-2 py-1 rounded bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold font-mono uppercase tracking-wide transition-colors"
+                                    className="text-[11px] px-2 py-1 rounded bg-[#ffd700] hover:bg-[#ffed4e] text-slate-950 font-bold font-mono uppercase tracking-wide transition-colors"
                                   >
                                     ⚔ Equip
                                   </button>
@@ -3781,10 +3781,10 @@ export default function App() {
                                   const subDeltaString = sub.delta > 0 ? `+${sub.delta.toFixed(2)}` : "0.00";
                                   
                                   return (
-                                    <div key={sidx} className="bg-slate-950/70 p-2 rounded border border-slate-800/60 flex items-center justify-between font-mono text-[12px]">
+                                    <div key={sidx} className="bg-[#1a1a1d]/70 p-2 rounded border border-[#3d3d45] flex items-center justify-between font-mono text-[12px]">
                                       <div className="truncate text-slate-500 flex items-center gap-1 shrink md:shrink-0 pr-1">
                                         <span>{sub.type}</span>
-                                        {sub.isTuned && <span className="text-amber-500 text-[11px]">✦</span>}
+                                        {sub.isTuned && <span className="text-[#ffd700] text-[11px]">✦</span>}
                                       </div>
                                       <div className="text-right shrink-0">
                                         <div className="text-slate-300 font-semibold">{sub.val}</div>
@@ -3894,8 +3894,8 @@ export default function App() {
                 <div className="lg:col-span-7 space-y-6">
                   
                   {/* Selector Block */}
-                  <div className="bg-[#141210] border border-amber-500/20 rounded-xl p-5 shadow-lg space-y-4">
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-amber-500/20 pb-3">
+                  <div className="bg-[#2d2d35] border border-[#3d3d45] rounded-xl p-5 shadow-lg space-y-4">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-[#3d3d45] pb-3">
                       <div>
                         <h3 className="text-base font-bold font-serif text-slate-100 flex items-center gap-2">
                           🔄 Rotation Combat Simulator
@@ -3909,7 +3909,7 @@ export default function App() {
                         <select
                           value={rotSimClass}
                           onChange={(e) => setRotSimClass(e.target.value)}
-                          className="bg-slate-950 border border-amber-900/45 text-amber-500 text-sm rounded-md px-3 py-1.5 focus:outline-none font-bold"
+                          className="bg-[#1a1a1d] border border-[#3d3d45]/45 text-[#ffd700] text-sm rounded-md px-3 py-1.5 focus:outline-none font-bold"
                         >
                           {Object.keys(WWM_DATA.classes).map(c => (
                             <option key={c} value={c}>{classDisplayName(c)}</option>
@@ -3919,7 +3919,7 @@ export default function App() {
                     </div>
 
                     {/* Calibration Note/Banner */}
-                    <div className="bg-amber-950/20 border border-amber-500/20 rounded-lg p-3.5 text-sm text-amber-500/90 leading-relaxed space-y-1">
+                    <div className="bg-[#3d3d45]/30 border border-[#3d3d45] rounded-lg p-3.5 text-sm text-[#ffd700]/90 leading-relaxed space-y-1">
                       <div className="font-bold flex items-center gap-1">
                         <span>⚠️</span> <span>Calibration & Engine Disclaimer</span>
                       </div>
@@ -3959,7 +3959,7 @@ export default function App() {
                           simulatorSkills.forEach(s => { updated[s.name] = classPreset[s.name] ?? 0; });
                           setHitsState(updated);
                         }}
-                        className="px-2.5 py-1 bg-slate-950 hover:bg-slate-900 border border-slate-700 rounded text-sm text-slate-350 hover:text-slate-200 transition-colors"
+                        className="px-2.5 py-1 bg-[#1a1a1d] hover:bg-[#2d2d35] border border-slate-700 rounded text-sm text-slate-350 hover:text-slate-200 transition-colors"
                       >
                         🔥 Heavy Attack Rotation
                       </button>
@@ -3989,7 +3989,7 @@ export default function App() {
                           simulatorSkills.forEach(s => { updated[s.name] = classPreset[s.name] ?? 0; });
                           setHitsState(updated);
                         }}
-                        className="px-2.5 py-1 bg-slate-950 hover:bg-slate-900 border border-slate-700 rounded text-sm text-slate-350 hover:text-slate-200 transition-colors"
+                        className="px-2.5 py-1 bg-[#1a1a1d] hover:bg-[#2d2d35] border border-slate-700 rounded text-sm text-slate-350 hover:text-slate-200 transition-colors"
                       >
                         ⚡ Balanced Rotation
                       </button>
@@ -4008,7 +4008,7 @@ export default function App() {
                     </div>
 
                     {/* Interactive Skills Table */}
-                    <div className="h-[450px] overflow-y-auto pr-1 border border-slate-800 bg-slate-950/40 rounded-lg p-2">
+                    <div className="h-[450px] overflow-y-auto pr-1 border border-[#3d3d45] bg-[#1a1a1d]/40 rounded-lg p-2">
                       <span className="text-[12px] uppercase font-mono text-slate-500 font-semibold px-2 block mb-2">
                         Active Skills ({simulatorSkills.length}) for {rotSimClass} Weapons:
                       </span>
@@ -4016,7 +4016,7 @@ export default function App() {
                         {simulatorSkills.map((s) => {
                           const hits = hitsState[s.name] || 0;
                           return (
-                            <div key={s.name} className="flex items-center justify-between p-2.5 bg-slate-950/70 rounded border border-slate-800 hover:border-slate-850 transition-colors gap-4">
+                            <div key={s.name} className="flex items-center justify-between p-2.5 bg-[#1a1a1d]/70 rounded border border-[#3d3d45] hover:border-slate-850 transition-colors gap-4">
                               <div className="min-w-0 flex-1">
                                 <div className="text-sm font-semibold text-slate-200 truncate">{s.name}</div>
                                 <div className="text-[12px] text-slate-500 truncate font-mono">{s.weapon}</div>
@@ -4033,7 +4033,7 @@ export default function App() {
                                     const val = parseInt(e.target.value) || 0;
                                     setHitsState(prev => ({ ...prev, [s.name]: val }));
                                   }}
-                                  className="w-16 bg-slate-950 border border-slate-800 rounded p-1 text-sm text-center text-amber-500 font-mono font-bold focus:outline-none focus:border-amber-500/50"
+                                  className="w-16 bg-[#1a1a1d] border border-[#3d3d45] rounded p-1 text-sm text-center text-[#ffd700] font-mono font-bold focus:outline-none focus:border-[#ffd700]/50"
                                 />
                               </div>
                             </div>
@@ -4044,7 +4044,7 @@ export default function App() {
 
                     {/* Disclaimer about non-Bamboocut-Dust path skill names */}
                     <div className="mt-2 text-[12px] text-slate-500 italic leading-relaxed px-1 flex items-start gap-1">
-                      <span className="shrink-0 text-amber-500/80">⚠️</span>
+                      <span className="shrink-0 text-[#ffd700]/80">⚠️</span>
                       <span>
                         Skill names for non-Bamboocut-Dust paths are approximate. Enter hits from your actual damage log for accurate results.
                       </span>
@@ -4056,53 +4056,53 @@ export default function App() {
                 <div className="lg:col-span-5 space-y-6">
                   
                   {/* Core Combat Output Parse Card */}
-                  <div className="bg-[#141210] border border-amber-500/20 rounded-xl p-5 shadow-lg space-y-4">
-                    <h3 className="text-base font-bold font-serif text-slate-100 flex items-center gap-2 border-b border-amber-500/20 pb-2">
+                  <div className="bg-[#2d2d35] border border-[#3d3d45] rounded-xl p-5 shadow-lg space-y-4">
+                    <h3 className="text-base font-bold font-serif text-slate-100 flex items-center gap-2 border-b border-[#3d3d45] pb-2">
                       ⚔ Simulated Combat Parse
                     </h3>
                     
                     {/* Big Stats Indicator */}
-                    <div className="grid grid-cols-2 gap-3 bg-slate-950/80 p-4 rounded-xl border border-slate-800">
+                    <div className="grid grid-cols-2 gap-3 bg-[#1a1a1d]/80 p-4 rounded-xl border border-[#3d3d45]">
                       <div>
                         <div className="text-[12px] uppercase font-mono tracking-wider text-slate-500">Total Combat Damage</div>
-                        <div className="text-xl font-bold font-serif text-amber-500 mt-0.5">
+                        <div className="text-xl font-bold font-serif text-[#ffd700] mt-0.5">
                           {Math.round(totalSimCurrentDmg).toLocaleString()}
                         </div>
                       </div>
                       <div>
                         <div className="text-[12px] uppercase font-mono tracking-wider text-slate-500">Effective Parse DPS</div>
-                        <div className="text-xl font-bold font-serif text-amber-500 mt-0.5">
+                        <div className="text-xl font-bold font-serif text-[#ffd700] mt-0.5">
                           {totalSimCurrentDps.toLocaleString(undefined, { maximumFractionDigits: 1 })}
                         </div>
                       </div>
                     </div>
 
                     {/* Skill Contributions table */}
-                    <div className="overflow-x-auto rounded-lg border border-slate-800">
+                    <div className="overflow-x-auto rounded-lg border border-[#3d3d45]">
                       <table className="w-full text-left border-collapse">
                         <thead>
-                          <tr className="bg-slate-950 border-b border-amber-500/20 text-[11px] uppercase tracking-wider font-mono text-slate-500">
+                          <tr className="bg-[#1a1a1d] border-b border-[#3d3d45] text-[11px] uppercase tracking-wider font-mono text-slate-500">
                             <th className="py-2 px-3">Skill Spec</th>
                             <th className="py-2 px-3 text-right">Hits</th>
                             <th className="py-2 px-3 text-right">DMG/hit</th>
-                            <th className="py-2 px-3 text-right font-bold text-amber-500/80">Total</th>
+                            <th className="py-2 px-3 text-right font-bold text-[#ffd700]/80">Total</th>
                             <th className="py-2 px-3 text-right">%</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-950 bg-slate-950/25 font-mono text-[13px] text-slate-300">
+                        <tbody className="divide-y divide-slate-950 bg-[#1a1a1d]/25 font-mono text-[13px] text-slate-300">
                           {currentSimDetails
                             .filter(item => item.hits > 0)
                             .sort((a, b) => b.total - a.total)
                             .map((item, idx) => {
                               const percent = totalSimCurrentDmg > 0 ? ((item.total / totalSimCurrentDmg) * 100).toFixed(1) : "0.0";
                               return (
-                                <tr key={idx} className="hover:bg-slate-950/60 transition-colors">
+                                <tr key={idx} className="hover:bg-[#1a1a1d]/60 transition-colors">
                                   <td className="py-2 px-3 font-sans font-medium text-slate-200">
                                     {item.name}
                                   </td>
                                   <td className="py-2 px-3 text-right text-slate-500">{item.hits}</td>
                                   <td className="py-2 px-3 text-right text-slate-450">{Math.round(item.perHit).toLocaleString()}</td>
-                                  <td className="py-2 px-3 text-right font-extrabold text-amber-500">
+                                  <td className="py-2 px-3 text-right font-extrabold text-[#ffd700]">
                                     {Math.round(item.total).toLocaleString()}
                                   </td>
                                   <td className="py-2 px-3 text-right text-slate-500">{percent}%</td>
@@ -4122,8 +4122,8 @@ export default function App() {
                   </div>
 
                   {/* Weapon Swap Simulator Card */}
-                  <div className="bg-[#141210] border border-amber-500/20 rounded-xl p-5 shadow-lg space-y-4">
-                    <div className="border-b border-amber-500/20 pb-2">
+                  <div className="bg-[#2d2d35] border border-[#3d3d45] rounded-xl p-5 shadow-lg space-y-4">
+                    <div className="border-b border-[#3d3d45] pb-2">
                       <h3 className="text-base font-bold font-serif text-slate-100 flex items-center gap-1.5">
                         🛠 Weapon/Gear Swap Simulator
                       </h3>
@@ -4148,7 +4148,7 @@ export default function App() {
                               setSwapMaxAtk(found.max);
                             }
                           }}
-                          className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-200 focus:outline-none focus:border-amber-500/50 block w-full"
+                          className="w-full bg-[#1a1a1d] border border-[#3d3d45] rounded p-2 text-slate-200 focus:outline-none focus:border-[#ffd700]/50 block w-full"
                         >
                           {PREDEFINED_WEAPONS.map(w => (
                             <option key={w.id} value={w.id}>{w.name}</option>
@@ -4167,7 +4167,7 @@ export default function App() {
                               setSwapMinAtk(parseInt(e.target.value) || 0);
                               setSwapWeaponId("custom");
                             }}
-                            className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-100 placeholder:text-slate-705 focus:outline-none focus:border-amber-500/50"
+                            className="w-full bg-[#1a1a1d] border border-[#3d3d45] rounded p-2 text-slate-100 placeholder:text-slate-705 focus:outline-none focus:border-[#ffd700]/50"
                           />
                         </div>
                         <div className="space-y-1">
@@ -4179,23 +4179,23 @@ export default function App() {
                               setSwapMaxAtk(parseInt(e.target.value) || 0);
                               setSwapWeaponId("custom");
                             }}
-                            className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-100 placeholder:text-slate-705 focus:outline-none focus:border-amber-500/50"
+                            className="w-full bg-[#1a1a1d] border border-[#3d3d45] rounded p-2 text-slate-100 placeholder:text-slate-705 focus:outline-none focus:border-[#ffd700]/50"
                           />
                         </div>
                       </div>
 
                       {/* Swap Comparison results banner */}
-                      <div className="bg-slate-950 rounded-xl p-4 border border-slate-800">
+                      <div className="bg-[#1a1a1d] rounded-xl p-4 border border-[#3d3d45]">
                         <div className="text-[12px] uppercase font-bold text-slate-500 tracking-wider">Recalculated Weapon Comparison</div>
                         
                         <div className="mt-2.5 flex items-baseline justify-between">
                           <div className="text-slate-500 text-sm">Simulated DPS:</div>
-                          <div className="text-lg font-bold text-amber-500">
+                          <div className="text-lg font-bold text-[#ffd700]">
                             {totalSimSwappedDps.toLocaleString(undefined, { maximumFractionDigits: 1 })}
                           </div>
                         </div>
 
-                        <div className="mt-2 flex items-center justify-between border-t border-slate-800 pt-2 text-sm">
+                        <div className="mt-2 flex items-center justify-between border-t border-[#3d3d45] pt-2 text-sm">
                           <span className="text-slate-500">Total Parse Gain/Loss:</span>
                           {swapDpsDiffPct >= 0 ? (
                             <span className="font-extrabold text-emerald-500 text-base">
@@ -4229,15 +4229,15 @@ export default function App() {
                     <div style={{ textAlign: 'left' }}>
                       {gradModalActiveTab === "profiles" && (
           <div className="space-y-6">
-            <div className="bg-[#141210] border border-amber-500/20 rounded-xl p-6 shadow-lg">
-              <h2 className="text-lg font-bold font-serif text-slate-100 flex items-center gap-2 border-b border-amber-500/25 pb-4 mb-5">
-                <Database className="text-amber-500 w-5 h-5" /> Gear Sets Management & Comparisons Matrix
+            <div className="bg-[#2d2d35] border border-[#3d3d45] rounded-xl p-6 shadow-lg">
+              <h2 className="text-lg font-bold font-serif text-slate-100 flex items-center gap-2 border-b border-[#ffd700]/25 pb-4 mb-5">
+                <Database className="text-[#ffd700] w-5 h-5" /> Gear Sets Management & Comparisons Matrix
               </h2>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {/* Save active panel box */}
-                <div className="bg-slate-950/60 border border-slate-800 rounded-xl p-4 space-y-4 md:col-span-1">
-                  <h3 className="text-sm font-bold text-amber-500 uppercase tracking-widest font-mono">
+                <div className="bg-[#1a1a1d]/60 border border-[#3d3d45] rounded-xl p-4 space-y-4 md:col-span-1">
+                  <h3 className="text-sm font-bold text-[#ffd700] uppercase tracking-widest font-mono">
                     Save Active Panel Setup
                   </h3>
                   <div className="space-y-2">
@@ -4247,7 +4247,7 @@ export default function App() {
                       placeholder="e.g., T91 Gold Set, Pen Focused..."
                       value={newProfileName}
                       onChange={(e) => setNewProfileName(e.target.value)}
-                      className="w-full bg-slate-900 text-slate-100 border border-slate-700 text-sm px-3 py-2 rounded focus:outline-none focus:border-amber-500 font-medium"
+                      className="w-full bg-[#2d2d35] text-slate-100 border border-slate-700 text-sm px-3 py-2 rounded focus:outline-none focus:border-[#ffd700] font-medium"
                     />
                   </div>
                   <button
@@ -4267,12 +4267,12 @@ export default function App() {
                       saveProfilesList(updated);
                       setNewProfileName("");
                     }}
-                    className="w-full bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-slate-950 font-bold rounded text-sm py-2 px-3 flex items-center justify-center gap-1.5 transition-colors"
+                    className="w-full bg-gradient-to-r from-[#e6c200] to-[#ffd700] hover:from-[#ffd700] hover:to-[#ffed4e] text-slate-950 font-bold rounded text-sm py-2 px-3 flex items-center justify-center gap-1.5 transition-colors"
                   >
                     Save Profile
                   </button>
 
-                  <div className="border-t border-slate-800 pt-3">
+                  <div className="border-t border-[#3d3d45] pt-3">
                     <h4 className="text-[12px] uppercase tracking-wider font-extrabold text-slate-500 mb-2 font-mono">
                       Backups & Cross-sync
                     </h4>
@@ -4283,7 +4283,7 @@ export default function App() {
                           navigator.clipboard.writeText(str);
                           alert("Successfully copied profile catalogs as JSON to clipboard!");
                         }}
-                        className="text-amber-500/80 hover:text-amber-400 block font-semibold underline text-left"
+                        className="text-[#ffd700]/80 hover:text-[#ffd700] block font-semibold underline text-left"
                       >
                         Export Profiles (Copy JSON)
                       </button>
@@ -4304,7 +4304,7 @@ export default function App() {
                             }
                           }
                         }}
-                        className="text-amber-500/80 hover:text-amber-400 block font-semibold underline text-left mt-1"
+                        className="text-[#ffd700]/80 hover:text-[#ffd700] block font-semibold underline text-left mt-1"
                       >
                         Import Profiles (Paste JSON)
                       </button>
@@ -4331,7 +4331,7 @@ export default function App() {
                   </h3>
 
                   {profiles.length === 0 ? (
-                    <div className="bg-[#0e0d0b] border border-slate-800 rounded-xl p-8 text-center text-slate-500 text-sm">
+                    <div className="bg-[#0e0d0b] border border-[#3d3d45] rounded-xl p-8 text-center text-slate-500 text-sm">
                       No stored configurations found. Current indicators will be lost on page reload if not saved. Record your setup using the panel on the left!
                     </div>
                   ) : (
@@ -4344,8 +4344,8 @@ export default function App() {
                             key={prof.id}
                             className={`border rounded-xl p-4 transition-all relative ${
                               isComparing
-                                ? "bg-amber-950/10 border-amber-500/65"
-                                : "bg-slate-950/60 border-slate-800 hover:border-slate-700"
+                                ? "bg-[#3d3d45]/20 border-[#ffd700]/65"
+                                : "bg-[#1a1a1d]/60 border-[#3d3d45] hover:border-slate-700"
                             }`}
                           >
                             <span className="text-[11px] font-mono text-slate-500 block">
@@ -4355,10 +4355,10 @@ export default function App() {
                               {prof.name}
                             </h4>
 
-                            <div className="grid grid-cols-2 gap-2 mt-2.5 text-[12px] font-mono border-t border-slate-800 pt-2.5">
+                            <div className="grid grid-cols-2 gap-2 mt-2.5 text-[12px] font-mono border-t border-[#3d3d45] pt-2.5">
                               <div>
                                 <span className="text-slate-500 block">Graduation:</span>
-                                <strong className="text-amber-500 text-sm">
+                                <strong className="text-[#ffd700] text-sm">
                                   {dyn.gradRate.toFixed(1)}%
                                 </strong>
                               </div>
@@ -4376,7 +4376,7 @@ export default function App() {
                                   setPanel(prof.panel);
                                   alert(`Successfully restored configuration "${prof.name}" to active panel!`);
                                 }}
-                                className="flex-1 bg-slate-905 border border-slate-700 hover:bg-slate-900 text-slate-200 text-[13px] py-1.5 px-2 rounded text-center transition-colors font-bold cursor-pointer"
+                                className="flex-1 bg-[#1a1a1d] border border-[#3d3d45] hover:bg-[#2d2d35] text-slate-200 text-[13px] py-1.5 px-2 rounded text-center transition-colors font-bold cursor-pointer"
                               >
                                 Equip Build
                               </button>
@@ -4390,8 +4390,8 @@ export default function App() {
                                 }}
                                 className={`flex-1 border text-[13px] py-1.5 px-2 rounded font-bold transition-all text-center cursor-pointer ${
                                   isComparing
-                                    ? "bg-amber-500 text-slate-950 border-amber-600 hover:bg-amber-400 font-extrabold"
-                                    : "bg-slate-905 border-slate-700 text-amber-500/95 hover:bg-slate-900"
+                                    ? "bg-[#ffd700] text-[#1a1a1d] border-[#ffd700] hover:bg-[#ffed4e] font-extrabold"
+                                    : "bg-[#1a1a1d] border-[#3d3d45] text-[#ffd700]/95 hover:bg-[#2d2d35]"
                                 }`}
                               >
                                 {isComparing ? "✓ Selected" : "Compare"}
@@ -4404,7 +4404,7 @@ export default function App() {
                                     setCompareProfileIds(compareProfileIds.filter((id) => id !== prof.id));
                                   }
                                 }}
-                                className="border border-slate-800 hover:bg-rose-950/10 hover:border-rose-900 text-rose-500 text-sm px-2.5 rounded transition-colors cursor-pointer"
+                                className="border border-[#3d3d45] hover:bg-rose-950/10 hover:border-rose-900 text-rose-500 text-sm px-2.5 rounded transition-colors cursor-pointer"
                                 title="Delete profile"
                               >
                                 &times;
@@ -4437,9 +4437,9 @@ export default function App() {
               ];
 
               return (
-                <div className="bg-[#141210]/95 border-2 border-amber-500 rounded-xl p-5 shadow-2xl relative">
-                  <div className="flex justify-between items-center border-b border-amber-500/20 pb-3 mb-4">
-                    <h3 className="text-base font-serif font-bold text-amber-500 uppercase tracking-wider">
+                <div className="bg-[#2d2d35]/95 border-2 border-[#ffd700] rounded-xl p-5 shadow-2xl relative">
+                  <div className="flex justify-between items-center border-b border-[#3d3d45] pb-3 mb-4">
+                    <h3 className="text-base font-serif font-bold text-[#ffd700] uppercase tracking-wider">
                       Multi Gear Sets Comparison Matrix ({selectedProfs.length} builds selected)
                     </h3>
                     <button
@@ -4455,7 +4455,7 @@ export default function App() {
                       <thead>
                         <tr className="border-b border-slate-700 text-slate-500 text-[12px] uppercase font-mono">
                           <th className="py-2.5 px-3">Attribute / Substat</th>
-                          <th className="py-2.5 px-3 text-right text-amber-400 bg-amber-500/5">Active Configuration</th>
+                          <th className="py-2.5 px-3 text-right text-[#ffd700] bg-[#ffd700]/5">Active Configuration</th>
                           {selectedProfs.map((p) => (
                             <th key={p.id} className="py-2.5 px-3 text-right max-w-[200px] truncate" title={p.name}>
                               {p.name}
@@ -4467,9 +4467,9 @@ export default function App() {
                         {keysToCompare.map((item) => {
                           const activeVal = adjustedPanel[item.key] as number;
                           return (
-                            <tr key={item.key} className="border-b border-slate-800 text-sm font-mono hover:bg-slate-900/20">
+                            <tr key={item.key} className="border-b border-[#3d3d45] text-sm font-mono hover:bg-[#2d2d35]/20">
                               <td className="py-2.5 px-3 font-sans font-medium text-slate-300">{item.label}</td>
-                              <td className="py-2.5 px-3 text-right text-amber-400 font-bold bg-amber-500/5">
+                              <td className="py-2.5 px-3 text-right text-[#ffd700] font-bold bg-[#ffd700]/5">
                                 {activeVal.toFixed(item.key === "minOuter" || item.key === "maxOuter" || item.key === "maxPz" || item.key === "minPz" ? 0 : 1)}
                                 {item.unit}
                               </td>
@@ -4495,9 +4495,9 @@ export default function App() {
                         })}
 
                         {/* Graduation Rate */}
-                        <tr className="border-b border-slate-800 text-sm font-mono bg-amber-500/5 font-bold">
-                          <td className="py-3 px-3 font-sans text-amber-400">Graduation Rate</td>
-                          <td className="py-3 px-3 text-right text-amber-500 font-extrabold bg-amber-500/10">
+                        <tr className="border-b border-[#3d3d45] text-sm font-mono bg-[#ffd700]/5 font-bold">
+                          <td className="py-3 px-3 font-sans text-[#ffd700]">Graduation Rate</td>
+                          <td className="py-3 px-3 text-right text-[#ffd700] font-extrabold bg-[#ffd700]/10">
                             {rotationStats.gradRate.toFixed(1)}%
                           </td>
                           {selectedProfs.map((p) => {
@@ -4517,9 +4517,9 @@ export default function App() {
                         </tr>
 
                         {/* Skill DPS */}
-                        <tr className="border-b border-slate-800 text-sm font-mono bg-amber-400/5 font-bold">
-                          <td className="py-3 px-3 font-sans text-amber-400 font-serif">Rotation Skill DPS</td>
-                          <td className="py-3 px-3 text-right text-slate-100 font-extrabold bg-amber-500/10">
+                        <tr className="border-b border-[#3d3d45] text-sm font-mono bg-[#ffed4e]/5 font-bold">
+                          <td className="py-3 px-3 font-sans text-[#ffd700] font-serif">Rotation Skill DPS</td>
+                          <td className="py-3 px-3 text-right text-slate-100 font-extrabold bg-[#ffd700]/10">
                             {Math.round(rotationStats.dps).toLocaleString()}/s
                           </td>
                           {selectedProfs.map((p) => {
@@ -4767,9 +4767,9 @@ export default function App() {
                               }
                               setFormSubs(next);
                             }}
-                            className="accent-amber-500 h-3.5 w-3.5"
+                            className="accent-[#ffd700] h-3.5 w-3.5"
                           />
-                          <span className="text-amber-500 font-bold text-[10px] uppercase font-mono">Tuned ✦</span>
+                          <span className="text-[#ffd700] font-bold text-[10px] uppercase font-mono">Tuned ✦</span>
                         </label>
                       </div>
                     ))}

@@ -122,7 +122,7 @@ export default function StatSwapSimulator({ adjustedPanel, activeTier, datang, y
     <div className="max-w-4xl mx-auto p-4 space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <TrendingUp className="w-5 h-5 text-amber-500" />
+        <TrendingUp className="w-5 h-5 text-[#ffd700]" />
         <div>
           <h2 className="text-lg font-bold text-slate-100 font-serif">Stat Swap Simulator</h2>
           <p className="text-xs text-slate-400">Add or remove stat chunks to compare DPS impact</p>
@@ -130,9 +130,9 @@ export default function StatSwapSimulator({ adjustedPanel, activeTier, datang, y
       </div>
 
       {/* Swap Controls Grid */}
-      <div className="bg-[#1c1a17] border border-amber-900/20 rounded-xl p-4 shadow-md">
+      <div className="bg-[#2d2d35] border border-[#3d3d45] rounded-xl p-4 shadow-md">
         <div className="flex items-center justify-between mb-3">
-          <span className="text-xs font-semibold text-amber-500 font-mono uppercase tracking-wider">Stat Adjustments</span>
+          <span className="text-xs font-semibold text-[#ffd700] font-mono uppercase tracking-wider">Stat Adjustments</span>
           <button
             onClick={() => setSwaps({})}
             className="flex items-center gap-1 text-[10px] text-slate-400 hover:text-slate-200 transition-colors"
@@ -145,7 +145,7 @@ export default function StatSwapSimulator({ adjustedPanel, activeTier, datang, y
           {statKeys.map(({ key, label, step, unit }) => {
             const val = swaps[key as string] || 0;
             return (
-              <div key={key} className="bg-slate-950/60 border border-slate-800 rounded-lg p-2">
+              <div key={key} className="bg-[#1a1a1d]/60 border border-[#3d3d45] rounded-lg p-2">
                 <div className="text-[9px] text-slate-400 font-mono mb-1">{label}</div>
                 <div className="flex items-center gap-1">
                   <button
@@ -169,8 +169,8 @@ export default function StatSwapSimulator({ adjustedPanel, activeTier, datang, y
       </div>
 
       {/* DPS Impact Summary */}
-      <div className="bg-[#1c1a17] border border-amber-900/20 rounded-xl p-4 shadow-md">
-        <h3 className="text-xs font-semibold text-amber-500 font-mono uppercase tracking-wider mb-3">Rotation DPS Impact</h3>
+      <div className="bg-[#2d2d35] border border-[#3d3d45] rounded-xl p-4 shadow-md">
+        <h3 className="text-xs font-semibold text-[#ffd700] font-mono uppercase tracking-wider mb-3">Rotation DPS Impact</h3>
         <div className="grid grid-cols-3 gap-4">
           <div className="text-center">
             <div className="text-[9px] text-slate-500 font-mono mb-1">BASE DMG</div>
@@ -192,8 +192,8 @@ export default function StatSwapSimulator({ adjustedPanel, activeTier, datang, y
       </div>
 
       {/* Marginal Gain Rankings */}
-      <div className="bg-[#1c1a17] border border-amber-900/20 rounded-xl p-4 shadow-md">
-        <h3 className="text-xs font-semibold text-amber-500 font-mono uppercase tracking-wider mb-3">
+      <div className="bg-[#2d2d35] border border-[#3d3d45] rounded-xl p-4 shadow-md">
+        <h3 className="text-xs font-semibold text-[#ffd700] font-mono uppercase tracking-wider mb-3">
           Marginal Gain per Stat Chunk (Current Panel)
         </h3>
         <div className="space-y-1.5">
@@ -205,13 +205,13 @@ export default function StatSwapSimulator({ adjustedPanel, activeTier, datang, y
                 <span className="w-4 text-slate-600 font-mono text-right">{idx + 1}</span>
                 <span className="w-28 text-slate-300 font-medium truncate">{label}</span>
                 <span className="w-14 text-slate-500 font-mono text-right">+{step}{unit}</span>
-                <div className="flex-1 h-1.5 bg-slate-900 rounded-full overflow-hidden">
+                <div className="flex-1 h-1.5 bg-[#2d2d35] rounded-full overflow-hidden">
                   <div
-                    className={`h-full rounded-full transition-all ${idx === 0 ? "bg-amber-500" : idx <= 2 ? "bg-emerald-500" : "bg-slate-500"}`}
+                    className={`h-full rounded-full transition-all ${idx === 0 ? "bg-[#ffd700]" : idx <= 2 ? "bg-emerald-500" : "bg-slate-500"}`}
                     style={{ width: `${fillPct}%` }}
                   />
                 </div>
-                <span className={`w-12 font-mono text-right font-bold ${pct > 0 ? "text-amber-400" : "text-slate-500"}`}>
+                <span className={`w-12 font-mono text-right font-bold ${pct > 0 ? "text-[#ffd700]" : "text-slate-500"}`}>
                   +{pct.toFixed(2)}%
                 </span>
               </div>
