@@ -3074,6 +3074,12 @@ export default function App() {
                 { label: `${innerAttrName(selectedBuild)} Pen`, base: basePanel.pzPen, combat: adjustedPanel.pzPen, pct: true },
                 { label: "↳ Net (after enemy res)", combat: netPzPen, pct: true, derived: true },
                 { label: `${innerAttrName(selectedBuild)} DMG Bonus`, base: basePanel.pzDmg, combat: adjustedPanel.pzDmg, pct: true },
+                { label: "Physical DMG Bonus", base: basePanel.outerDmg, combat: adjustedPanel.outerDmg, pct: true },
+                { label: "All Martial Art Skill DMG", base: basePanel.allArts, combat: adjustedPanel.allArts, pct: true },
+                { label: `${(() => { const wp = getBuildWeaponPrefixes(selectedBuild); return wp[0] ? wp[0].charAt(0).toUpperCase() + wp[0].slice(1) : "Weapon"; })() } Martial Art Boost`, base: basePanel[`${getBuildWeaponPrefixes(selectedBuild)[0] || "umb"}Martial` as keyof PanelStats] as number, combat: adjustedPanel[`${getBuildWeaponPrefixes(selectedBuild)[0] || "umb"}Martial` as keyof PanelStats] as number, pct: true },
+                { label: "Combat Boost vs Boss", base: basePanel.bossDmg, combat: adjustedPanel.bossDmg, pct: true },
+                { label: "Single-Target Mystic DMG", base: basePanel.singleTargetDmg, combat: adjustedPanel.singleTargetDmg, pct: true },
+                { label: "Area Mystic Skill DMG", base: basePanel.groupDmg, combat: adjustedPanel.groupDmg, pct: true },
               ];
               return (
                 <>
