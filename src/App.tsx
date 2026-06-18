@@ -2179,13 +2179,25 @@ export default function App() {
     return bonus;
   }, [selectedInnerWays, innerWayTiers]);
 
-  // 2. Compute Adjusted Panel Stats (applying passive buffs dynamically)
-  const adjustedPanel = useMemo((): PanelStats => {
-    let p = { ...panel };
+  // Base ("menu") panel — what the in-game Combat Attributes screen shows:
+  //  - autoGearPanel ON  → DERIVED from equipped gear (naked base + summed
+  //    sub-stats). Equipping / unequipping / editing gear updates every stat,
+  //    not just the set bonus. (Previously gear changes never moved the readout.)
+  //  - autoGearPanel OFF → the manually-entered panel as-is.
+  const basePanel = useMemo((): PanelStats => {
+    if (autoGearPanel) {
+      const allGear = getActiveGear();
+      const equippedGear = allGear.filter((it) => isItemEquipped(it, allGear));
+      return computeGearPanel(panel, equippedGear);
+    }
+    return { ...panel };
+  }, [panel, autoGearPanel, activeScheme?.gear]);
 
-    // The user's panel stats are TOTAL values from the game screen, which already
-    // include: gear substats, five-attribute conversions, bow bonus, inner ways,
-    // and set bonuses. We only add TOGGLEABLE TEMPORARY BUFFS here.
+  // 2. Compute Adjusted Panel Stats (base panel + toggleable in-combat buffs)
+  const adjustedPanel = useMemo((): PanelStats => {
+    let p: PanelStats = { ...basePanel };
+
+    // On top of the base panel we only add TOGGLEABLE TEMPORARY BUFFS below.
 
     // Apply food buff (temporary, not in base game panel)
     if (food) {
@@ -3049,23 +3061,23 @@ export default function App() {
                 return plus ? `+${n}` : n;
               };
               const rows: { label: string; base?: number; combat?: number; pct?: boolean; plus?: boolean; derived?: boolean }[] = [
-                { label: "Min Physical Atk", base: panel.minOuter, combat: adjustedPanel.minOuter },
-                { label: "Max Physical Atk", base: panel.maxOuter, combat: adjustedPanel.maxOuter },
-                { label: "Physical Pen", base: panel.outerPen, combat: adjustedPanel.outerPen, pct: true },
+                { label: "Min Physical Atk", base: basePanel.minOuter, combat: adjustedPanel.minOuter },
+                { label: "Max Physical Atk", base: basePanel.maxOuter, combat: adjustedPanel.maxOuter },
+                { label: "Physical Pen", base: basePanel.outerPen, combat: adjustedPanel.outerPen, pct: true },
                 { label: "↳ Net (after enemy res)", combat: netPhysPen, pct: true, derived: true },
-                { label: "Crit Rate", base: panel.crit, combat: adjustedPanel.crit, pct: true },
+                { label: "Crit Rate", base: basePanel.crit, combat: adjustedPanel.crit, pct: true },
                 { label: "↳ Effective", combat: effCritRate, pct: true, derived: true },
-                { label: "Crit DMG", base: panel.critDmg, combat: adjustedPanel.critDmg, pct: true, plus: true },
-                { label: "Affinity Rate", base: panel.aff, combat: adjustedPanel.aff, pct: true },
+                { label: "Crit DMG", base: basePanel.critDmg, combat: adjustedPanel.critDmg, pct: true, plus: true },
+                { label: "Affinity Rate", base: basePanel.aff, combat: adjustedPanel.aff, pct: true },
                 { label: "↳ Effective", combat: effAffRate, pct: true, derived: true },
-                { label: "Affinity DMG", base: panel.affDmg, combat: adjustedPanel.affDmg, pct: true, plus: true },
-                { label: "Precision Rate", base: panel.prec, combat: adjustedPanel.prec, pct: true },
+                { label: "Affinity DMG", base: basePanel.affDmg, combat: adjustedPanel.affDmg, pct: true, plus: true },
+                { label: "Precision Rate", base: basePanel.prec, combat: adjustedPanel.prec, pct: true },
                 { label: "↳ Effective", combat: effPrecision, pct: true, derived: true },
-                { label: `Min ${innerAttrName(selectedBuild)} Atk`, base: panel.minPz, combat: adjustedPanel.minPz },
-                { label: `Max ${innerAttrName(selectedBuild)} Atk`, base: panel.maxPz, combat: adjustedPanel.maxPz },
-                { label: `${innerAttrName(selectedBuild)} Pen`, base: panel.pzPen, combat: adjustedPanel.pzPen, pct: true },
+                { label: `Min ${innerAttrName(selectedBuild)} Atk`, base: basePanel.minPz, combat: adjustedPanel.minPz },
+                { label: `Max ${innerAttrName(selectedBuild)} Atk`, base: basePanel.maxPz, combat: adjustedPanel.maxPz },
+                { label: `${innerAttrName(selectedBuild)} Pen`, base: basePanel.pzPen, combat: adjustedPanel.pzPen, pct: true },
                 { label: "↳ Net (after enemy res)", combat: netPzPen, pct: true, derived: true },
-                { label: `${innerAttrName(selectedBuild)} DMG Bonus`, base: panel.pzDmg, combat: adjustedPanel.pzDmg, pct: true },
+                { label: `${innerAttrName(selectedBuild)} DMG Bonus`, base: basePanel.pzDmg, combat: adjustedPanel.pzDmg, pct: true },
               ];
               return (
                 <>
