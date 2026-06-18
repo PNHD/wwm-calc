@@ -371,6 +371,21 @@ const GRAD95_COUNTS: Record<string, Record<string, number>> = {
 // only for the five-attribute (Strength/Power/Agility) gear-progress tiles.
 const ROLL_95: Record<string, number> = { strength: 40.4, agility: 40.4, power: 40.4 };
 
+// Max single-substat roll at 95下 keyed by PanelStats field. From sheet
+// 各等级模板 (95下 column). Tuned (定音) lines reach the same per-line cap.
+// Used by the Cultivate tab's 定音 summary and optimal-allocation analysis.
+const MAX_ROLL_95: Partial<Record<keyof PanelStats, number>> = {
+  maxOuter: 63.8, minOuter: 63.8,
+  crit: 7.4, aff: 3.6, prec: 6.6,
+  outerPen: 9.0, pzPen: 10.8,
+  maxPz: 36.2, minPz: 36.2,
+  strength: 40.4, agility: 40.4, power: 40.4,
+  bossDmg: 2.6, allArts: 2.6,
+  umbMartial: 5.2, ropeMartial: 5.2, swordMartial: 5.2, spearMartial: 5.2,
+  fanMartial: 5.2, twinbladesMartial: 5.2, modaoMartial: 5.2, hengdaoMartial: 5.2,
+  gauntletsMartial: 5.2,
+};
+
 // VERIFIED full graduated PANEL per path at 95下 (T91 Global), from sheet
 // 各流派历史等级毕业配置 (95级 block). These are the real "caps" — the total
 // panel a fully-graduated character reaches (e.g. Max Phys ≈ 3010, not a
@@ -3576,6 +3591,105 @@ export default function App() {
                 });
                 const dingyinPct = totalSubsCount > 0 ? (tunedSubsCount / totalSubsCount) * 100 : 0;
 
+                // ── Steps 2 & 3 helpers: graduation rate for an arbitrary panel ──
+                // Reuses the live DPS formula + authoritative T91 baseline, exactly
+                // like statPriorityList, so simulated upgrades read in real grad-%.
+                const gradForPanel = (p: PanelStats): number => {
+                  let total = 0;
+                  getRotationForBuild(selectedBuild).forEach((item) => {
+                    const { total: dmg } = calcSkill(item, p, activeTier, {
+                      set: p.set || adjustedPanel.set,
+                      datang, yishui, buildKey: selectedBuild,
+                      weaponStars: (adjustedPanel as any).weaponStars,
+                    } as any);
+                    total += dmg;
+                  });
+                  return (total / baselineScore) * 100;
+                };
+                const baseGradRate = rotationStats.gradRate;
+
+                // ── STEP 2: 定音词条总结 (Tuned/Dingyin substat summary) ──
+                // For every equipped tuned substat, simulate raising it to the 95下
+                // per-line cap and measure the resulting graduation-rate gain.
+                const equippedForCult = activeGear.filter((it) => isItemEquipped(it, activeGear));
+                let dyCurSum = 0, dyMaxSum = 0;
+                const dingyinRows = equippedForCult.flatMap((gear) =>
+                  gear.subs
+                    .map((sub, si) => ({ sub, si }))
+                    .filter(({ sub }) => sub.isTuned && SUB_MAP[sub.type] && MAX_ROLL_95[SUB_MAP[sub.type]])
+                    .map(({ sub }) => {
+                      const pKey = SUB_MAP[sub.type];
+                      const maxVal = MAX_ROLL_95[pKey] as number;
+                      const curVal = parseFloat(sub.val.replace(/[^\d.]/g, "")) || 0;
+                      dyCurSum += Math.min(curVal, maxVal);
+                      dyMaxSum += maxVal;
+                      const delta = Math.max(0, maxVal - curVal);
+                      const upPanel = { ...adjustedPanel, [pKey]: (adjustedPanel[pKey] as number) + delta } as PanelStats;
+                      const rateUpgrade = delta > 0 ? gradForPanel(upPanel) - baseGradRate : 0;
+                      const isPct = /Pen|Rate|DMG|Precision|Boost|Bonus|Arts/.test(sub.type);
+                      return { slotLabel: getSlotLabel(gear.slot), itemName: gear.name, statType: sub.type, curVal, maxVal, rateUpgrade, isPct };
+                    })
+                ).sort((a, b) => b.rateUpgrade - a.rateUpgrade);
+                const dingyinFillPct = dyMaxSum > 0 ? (dyCurSum / dyMaxSum) * 100 : 0;
+
+                // ── STEP 3: 培养建议 (Optimal allocation) — greedy next-best ──
+                // Greedily allocate the next CULT_BUDGET substat rolls onto the
+                // current panel, each time choosing the stat with the highest
+                // marginal grad-rate gain. Shows the recommended cultivation
+                // direction + total reachable grad-% for this path.
+                // NOTE: Penetration (phys/attr) is intentionally EXCLUDED here — like
+                // spongem, pen comes only from tuned (定音) lines and is handled by the
+                // 定音 summary above. Including it makes the greedy dump everything into
+                // uncapped pen. Step 3 optimises the regular (non-tuned) substat pool.
+                const CULT_BUDGET = 8;
+                const OPT_CANDIDATES_ALL: { key: keyof PanelStats; label: string; roll: number; isPct: boolean }[] = [
+                  { key: "maxOuter", label: "Max Phys Atk", roll: 63.8, isPct: false },
+                  { key: "minOuter", label: "Min Phys Atk", roll: 63.8, isPct: false },
+                  { key: "crit", label: "Crit Rate", roll: 7.4, isPct: true },
+                  { key: "aff", label: "Affinity Rate", roll: 3.6, isPct: true },
+                  { key: "prec", label: "Precision", roll: 6.6, isPct: true },
+                  { key: "maxPz", label: "Bamboocut Atk", roll: 36.2, isPct: false },
+                  { key: "bossDmg", label: "Boss DMG", roll: 2.6, isPct: true },
+                  { key: "allArts", label: "All Martial Arts", roll: 2.6, isPct: true },
+                ];
+                const OPT_CANDIDATES = OPT_CANDIDATES_ALL.filter((c) => MAX_ROLL_95[c.key] !== undefined);
+                // Per-stat headroom = graduated 条 target (GRAD95_COUNTS) − 条 already
+                // owned. Caps each stat so the greedy spreads across stats toward the
+                // path's graduated distribution instead of dumping into one linear stat.
+                const optCounts95 = GRAD95_COUNTS[cultivateClass] || GRAD95_COUNTS["Bamboocut-Dust"];
+                const ownedCountFor = (key: keyof PanelStats, roll: number): number => {
+                  const subName = Object.keys(SUB_MAP).find((k) => SUB_MAP[k] === key);
+                  const sum = subName ? (currentSubsSum[subName] || 0) : 0;
+                  return roll > 0 ? sum / roll : 0;
+                };
+                const headroom: Record<string, number> = {};
+                OPT_CANDIDATES.forEach((c) => {
+                  const target = optCounts95[c.key as string] ?? 0;
+                  headroom[c.key as string] = Math.max(0, target - ownedCountFor(c.key, c.roll));
+                });
+                const optAlloc: Record<string, { label: string; count: number; gain: number; isPct: boolean }> = {};
+                let optPanel = { ...adjustedPanel } as PanelStats;
+                let optGradRunning = baseGradRate;
+                for (let step = 0; step < CULT_BUDGET; step++) {
+                  let best: { cand: typeof OPT_CANDIDATES[number]; grad: number } | null = null;
+                  for (const cand of OPT_CANDIDATES) {
+                    if ((headroom[cand.key as string] ?? 0) < 1) continue; // graduated for this stat
+                    const trial = { ...optPanel, [cand.key]: (optPanel[cand.key] as number) + cand.roll } as PanelStats;
+                    const g = gradForPanel(trial);
+                    if (!best || g > best.grad) best = { cand, grad: g };
+                  }
+                  if (!best || best.grad - optGradRunning < 0.001) break;
+                  const c = best.cand;
+                  optPanel = { ...optPanel, [c.key]: (optPanel[c.key] as number) + c.roll } as PanelStats;
+                  headroom[c.key as string] = (headroom[c.key as string] ?? 0) - 1;
+                  const slot = (optAlloc[c.key as string] ||= { label: c.label, count: 0, gain: 0, isPct: c.isPct });
+                  slot.count += 1;
+                  slot.gain += best.grad - optGradRunning;
+                  optGradRunning = best.grad;
+                }
+                const optRows = Object.values(optAlloc).sort((a, b) => b.gain - a.gain);
+                const optTotalGain = optGradRunning - baseGradRate;
+
                 return (
                   <div className="space-y-6">
                     {/* Header Summary Statistics */}
@@ -3645,6 +3759,80 @@ export default function App() {
                     {/* Note at bottom */}
                     <div className="bg-[#2d2d35]/30 border border-[#3d3d45]/40 rounded-xl p-4 text-sm text-slate-500 leading-relaxed font-mono">
                       Counts are in 条 (substat units): current = your gear's summed value ÷ the 95下 max roll; target = the verified 95下 (Global T91) graduated substat count for this path. Penetration is tuned/attuned (定音) — tracked separately.
+                    </div>
+
+                    {/* ── STEP 2: 定音词条总结 (Tuned Substat Summary) ── */}
+                    <div className="bg-[#181512] border border-[#3d3d45] rounded-xl p-5">
+                      <div className="flex items-center justify-between mb-4 border-b border-[#3d3d45]/50 pb-3">
+                        <h3 className="text-base font-bold font-serif text-slate-100">
+                          🎵 Tuned (定音) Substat Summary
+                        </h3>
+                        <div className="text-right">
+                          <span className="text-[11px] uppercase tracking-wider text-slate-500 font-mono block">% of max</span>
+                          <span className="text-xl font-extrabold text-[#ffd700] font-mono">{dingyinFillPct.toFixed(1)}%</span>
+                        </div>
+                      </div>
+                      {dingyinRows.length === 0 ? (
+                        <p className="text-sm text-slate-500 font-mono">No tuned (定音) substats on equipped gear yet. Mark a substat as ✦ Tuned to track its upgrade potential.</p>
+                      ) : (
+                        <>
+                          <p className="text-[12px] text-slate-500 mb-3 font-mono">Tuned lines ranked by graduation-% gained if upgraded to the 95下 cap:</p>
+                          <div className="flex flex-col gap-2">
+                            {dingyinRows.map((row, idx) => (
+                              <div key={idx} className="flex items-center justify-between gap-3 p-3 bg-white/[0.03] rounded-lg border-l-[3px] border-[#ffd700]">
+                                <div className="min-w-0">
+                                  <div className="text-sm font-bold text-slate-100 truncate">{row.slotLabel}</div>
+                                  <div className="text-[12px] text-slate-500 truncate">{row.statType}</div>
+                                </div>
+                                <div className="text-right shrink-0">
+                                  <div className="text-[12px] text-slate-500 font-mono">
+                                    {row.curVal.toFixed(1)}{row.isPct ? "%" : ""} / {row.maxVal.toFixed(1)}{row.isPct ? "%" : ""}
+                                  </div>
+                                  <div className={`text-[13px] font-bold font-mono mt-0.5 ${row.rateUpgrade > 0.001 ? "text-emerald-400" : "text-slate-600"}`}>
+                                    {row.rateUpgrade > 0.001 ? `Grad +${row.rateUpgrade.toFixed(2)}%` : "Maxed"}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </div>
+
+                    {/* ── STEP 3: 培养建议 (Optimal Cultivation Direction) ── */}
+                    <div className="bg-[#141c16]/40 border border-emerald-950/40 rounded-xl p-5">
+                      <div className="flex items-center justify-between mb-4 border-b border-emerald-900/40 pb-3">
+                        <h3 className="text-base font-bold font-serif text-emerald-300">
+                          💡 Cultivation Advice — best next {CULT_BUDGET} 条
+                        </h3>
+                        <div className="text-right">
+                          <span className="text-[11px] uppercase tracking-wider text-slate-500 font-mono block">Reachable</span>
+                          <span className="text-xl font-extrabold text-emerald-400 font-mono">+{optTotalGain.toFixed(2)}%</span>
+                        </div>
+                      </div>
+                      {optRows.length === 0 ? (
+                        <p className="text-sm text-slate-500 font-mono">Your panel is already optimal — no single substat roll improves the graduation rate for this path.</p>
+                      ) : (
+                        <>
+                          <p className="text-[12px] text-slate-500 mb-3 font-mono">
+                            Greedy allocation of your next {CULT_BUDGET} substat rolls — invest in these stats (in order) to climb graduation fastest:
+                          </p>
+                          <div className="flex flex-col gap-2">
+                            {optRows.map((row, idx) => (
+                              <div key={idx} className="flex items-center justify-between gap-3 p-3 bg-white/[0.03] rounded-lg border-l-[3px] border-emerald-500">
+                                <div className="flex items-center gap-3 min-w-0">
+                                  <span className="text-emerald-400 font-extrabold font-mono text-lg shrink-0">{row.count}×</span>
+                                  <span className="text-sm font-bold text-slate-100 truncate">{row.label}</span>
+                                </div>
+                                <span className="text-[13px] font-bold font-mono text-emerald-400 shrink-0">+{row.gain.toFixed(2)}%</span>
+                              </div>
+                            ))}
+                          </div>
+                          <p className="text-[11px] text-slate-600 mt-3 font-mono">
+                            Each 条 = one max substat roll at 95下. Gains are diminishing (crit/affinity caps, pen breakpoints), so the allocation reflects real marginal value.
+                          </p>
+                        </>
+                      )}
                     </div>
                   </div>
                 );
