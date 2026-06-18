@@ -353,6 +353,34 @@ const CLASS_DISPLAY_NAME: Record<string, string> = {
 };
 const classDisplayName = (key: string): string => CLASS_DISPLAY_NAME[key] || key;
 
+// Verified T91/Lv95 (95下) graduated substat ALLOCATION per path, taken directly
+// from the official spreadsheet sheet "各流派历史等级毕业配置" (95级 block,
+// 2025.9.1). Each value = number of substats of that type a fully-graduated
+// character runs. Keyed by WWM_DATA.classes key.
+const GRAD95_COUNTS: Record<string, Record<string, number>> = {
+  "Bamboocut-Dust": { agility: 5, power: 0, strength: 10, crit: 7, prec: 3, maxOuter: 12, minOuter: 0, aff: 0, boss: 2, ownWeapon: 1 },
+  "Nameless":       { agility: 0, power: 6, strength: 10, crit: 2, prec: 0, maxOuter: 12, minOuter: 0, aff: 7, boss: 2, ownWeapon: 1 },
+  "Jade":           { agility: 3, power: 9, strength: 5,  crit: 2, prec: 4, maxOuter: 12, minOuter: 0, aff: 0, boss: 2, ownWeapon: 1 },
+  "Rocksplit-Jun":  { agility: 6, power: 0, strength: 8,  crit: 6, prec: 3, maxOuter: 12, minOuter: 0, aff: 0, boss: 2, ownWeapon: 1 },
+  "Rocksplit-Might":{ agility: 0, power: 1, strength: 10, crit: 6, prec: 2, maxOuter: 12, minOuter: 4, aff: 1, boss: 2, ownWeapon: 1 },
+  "Nine-Nine":      { agility: 0, power: 8, strength: 10, crit: 2, prec: 1, maxOuter: 12, minOuter: 0, aff: 4, boss: 2, ownWeapon: 1 },
+  "Bamboocut-Wind": { agility: 3, power: 2, strength: 10, crit: 6, prec: 3, maxOuter: 12, minOuter: 0, aff: 1, boss: 2, ownWeapon: 1 },
+  "Pure-Healer":    { agility: 6, power: 0, strength: 8,  crit: 5, prec: 0, maxOuter: 12, minOuter: 8, aff: 0, boss: 0, ownWeapon: 1 },
+};
+
+// Max single-substat roll at 95下 (from sheet "各等级模板", 95下 column).
+const ROLL_95: Record<string, number> = {
+  maxOuter: 63.8, minOuter: 63.8, strength: 40.4, agility: 40.4, power: 40.4,
+  crit: 7.4, prec: 6.6, aff: 3.6, ownWeapon: 5.2, boss: 2.6,
+};
+
+// Maps a Cultivate graduation-panel key to its 95下 substat-count category.
+const GRADKEY_TO_COUNT: Record<string, string> = {
+  "Max Phys Atk": "maxOuter", "Min Phys Atk": "minOuter", "Crit Rate": "crit",
+  "Precision": "prec", "Affinity Rate": "aff", "Strength": "strength",
+  "Agility": "agility", "Power": "power", "Boss DMG Bonus": "boss", "Own Weapon Bonus": "ownWeapon",
+};
+
 const WEAPON_ICON_MAP: Record<string, string> = {
   "Sword": "icon/icon1_1.jpg",
   "Spear": "icon/icon1_2.jpg",
@@ -2485,10 +2513,8 @@ export default function App() {
               onClick={() => {
                 alert(
                   "Where Winds Meet Gear Graduation Manager\\n" +
-                  "Version: 3.0.0 (T91 Global)\\n" +
-                  "Last DB Update: June 15, 2026\\n" +
-                  "Author: Wonton\\n" +
-                  "Adapted from spongem.com/yysls/ layout."
+                  "Edition: Global (T91 / Lv95)\\n" +
+                  "Author: Wonton"
                 );
               }}
               className="info-icon-btn"
@@ -3073,8 +3099,7 @@ export default function App() {
                 </div>
                 <div className="grad-meta-info-inline">
                   <div className="grad-meta-text">
-                    <div className="grad-meta-item">DB Last Updated: <span className="text-white">June 15, 2026</span></div>
-                    <div className="grad-meta-item">Version: <span className="text-white">3.0.0 (T91 Global)</span></div>
+                    <div className="grad-meta-item">Edition: <span className="text-white">Global (T91 / Lv95)</span></div>
                     <div className="grad-meta-item">Author: <span className="text-white">Wonton</span></div>
                   </div>
                 </div>
@@ -3346,7 +3371,7 @@ export default function App() {
                     Compare your current accumulated gear substats with the graduation panel targets.
                   </p>
                   <p className="text-amber-500/70 text-[11.5px] mt-1">
-                    ⓘ Beta: targets are estimated for T91/Lv95 by scaling the CN (Lv105) graduation sheet by the verified 95下 substat-roll ratio (≈0.604). Treat as a guide, not exact caps.
+                    ⓘ Targets use the verified 95下 (Global) graduated substat allocation = substat count × max roll. Pen / Bamboocut Atk and the Kite/Fire-Fist paths fall back to an estimate.
                   </p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
@@ -3470,11 +3495,19 @@ export default function App() {
                     rawTarget = fallbackTarget;
                   }
 
-                  // Graduation panels in WWM_DATA are at CN sheet level (Lv105,
-                  // judgeRes 1.15). Scale to T91/Lv95 gear targets by the verified
-                  // 95下/105 substat-roll ratio (e.g. Max Phys 63.8 / 105.6 ≈ 0.604).
-                  const T95_FROM_CN_SCALE = 0.604;
-                  const scaledTarget = rawTarget * T95_FROM_CN_SCALE;
+                  // Prefer the VERIFIED 95下 graduated substat allocation: target =
+                  // (substat count at graduation) × (max 95下 roll). Falls back to
+                  // scaling the CN (Lv105) sheet by the 95下/105 roll ratio (≈0.604)
+                  // for stats/paths without a substat-count entry (pen, bamboocut
+                  // atk, all-weapon, and the Kite/Fire-Fist paths).
+                  const countKey = GRADKEY_TO_COUNT[gradKey];
+                  const counts95 = GRAD95_COUNTS[cultivateClass];
+                  let scaledTarget: number;
+                  if (countKey && counts95 && counts95[countKey] !== undefined && ROLL_95[countKey]) {
+                    scaledTarget = counts95[countKey] * ROLL_95[countKey];
+                  } else {
+                    scaledTarget = rawTarget * 0.604;
+                  }
 
                   return {
                     gearType,
