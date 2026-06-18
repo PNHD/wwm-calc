@@ -1034,9 +1034,9 @@ export default function App() {
   // Auto-compute panel stats (Min/Max Phys Atk, Pen, Crit, Aff, Bamboocut Atk, etc.)
   // from the 8 equipped gear pieces, instead of manual entry.
   const [autoGearPanel, setAutoGearPanel] = useState<boolean>(() => {
-    if (typeof window === "undefined") return true;
+    if (typeof window === "undefined") return false;
     const stored = localStorage.getItem("wwm_auto_gear_panel");
-    return stored === null ? true : stored === "1";
+    return stored === null ? false : stored === "1";
   });
 
   useEffect(() => {
@@ -2950,19 +2950,23 @@ export default function App() {
                       key={slot.key}
                       className="sim-slot"
                       data-slot-key={slot.key}
+                      style={{ position: 'relative' }}
                       onClick={() => {
-                        if (item) {
-                          unequipItem(slot.name);
-                        } else {
-                          setGearFilterSlot(slot.name);
-                        }
+                        // Non-destructive: open this slot's inventory to view/swap.
+                        // (Previously a single click instantly unequipped the item.)
+                        setGearFilterSlot(slot.name);
                       }}
-                      title={item ? `Equipped: ${item.name}. Click to unequip.` : `Empty. Click to filter inventory.`}
+                      title={item ? `Equipped: ${item.name}. Click to view/swap this slot.` : `Empty. Click to filter inventory.`}
                     >
                       {item ? (
                         <>
                           <img src={slotImgSrc} alt={item.name} className="slot-image" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                           <div className="slot-name-overlay">{item.name}</div>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); unequipItem(slot.name); }}
+                            title="Unequip this slot"
+                            style={{ position: 'absolute', top: 2, right: 2, zIndex: 3, width: 16, height: 16, lineHeight: '14px', padding: 0, borderRadius: '50%', background: 'rgba(0,0,0,0.65)', color: '#fca5a5', border: '1px solid rgba(255,255,255,0.15)', fontSize: 11, cursor: 'pointer' }}
+                          >×</button>
                         </>
                       ) : (
                         <>
