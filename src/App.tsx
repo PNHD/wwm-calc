@@ -2346,6 +2346,95 @@ export default function App() {
     };
   }, [adjustedPanel, activeTier, datang, yishui, selectedBuild, baselineScore]);
 
+  // ── Best Build search ──────────────────────────────────────────────────────
+  // Scans the whole gear pool (all items, equipped or not) for this scheme,
+  // groups by slot, and finds the gear combination with the highest graduation
+  // rate. Mirrors the live grad-rate pipeline so its numbers match the panel.
+  const gradRateForGearCombo = (combo: GearItem[]): number => {
+    // 1. base character-menu panel from this gear combo
+    let p = computeGearPanel(panel, combo);
+    // 2. apply the same in-combat buffs as `adjustedPanel`
+    if (food) { p.minOuter += activeTier.foodMin; p.maxOuter += activeTier.foodMax; }
+    if (bowSelect === "crit") p.crit += 3.7; else if (bowSelect === "prec") p.prec += 3.3; else if (bowSelect === "aff") p.aff += 1.8;
+    if (script50) p.dcrit += 15.0;
+    if (earlySeason) { p.minOuter += 4.4; p.maxOuter += 27.2; }
+    // active 4pc set from the combo
+    const setCounts: Record<string, number> = {};
+    combo.forEach(it => { if (it.set && it.set !== "none") setCounts[it.set] = (setCounts[it.set] || 0) + 1; });
+    let active4pc = "none";
+    Object.entries(setCounts).forEach(([k, c]) => { if (c >= 4) active4pc = k; });
+    p.set = active4pc;
+    (p as any).weaponStars = (setCounts["stars"] || 0) >= 4 || active4pc === "stars";
+    // inner ways on top
+    p.outerPen += iwStats.outerPen; p.pzPen += iwStats.pzPen; p.crit += iwStats.crit; p.aff += iwStats.aff;
+    p.dcrit += iwStats.dcrit; p.critDmg += iwStats.critDmg; p.affDmg += iwStats.affDmg;
+    p.outerDmg += iwStats.outerDmg; p.pzDmg += iwStats.pzDmg; p.iwGeneralDmg = iwStats.generalDmg;
+    // 3. rotation → grad rate
+    let totalDmg = 0;
+    getRotationForBuild(selectedBuild).forEach(item => {
+      const { total } = calcSkill(item, p, activeTier, { set: p.set, datang, yishui, buildKey: selectedBuild, weaponStars: (p as any).weaponStars } as any);
+      totalDmg += total;
+    });
+    return (totalDmg / baselineScore) * 100;
+  };
+
+  const [bestBuildResult, setBestBuildResult] = useState<{ rate: number; gear: GearItem[] }[] | null>(null);
+  const [bestBuildRunning, setBestBuildRunning] = useState(false);
+  const [bestBuildProgress, setBestBuildProgress] = useState(0);
+
+  const runBestBuild = async () => {
+    setBestBuildRunning(true);
+    setBestBuildResult(null);
+    setBestBuildProgress(0);
+    await new Promise(r => setTimeout(r, 30)); // let UI paint the spinner
+
+    const pool = getActiveGear();
+    const SLOT_ORDER = ["Umbrella", "Rope Dart", "Disc", "Pendant", "Helmet", "Chest", "Bracers", "Greaves"];
+    const bySlot: Record<string, GearItem[]> = {};
+    SLOT_ORDER.forEach(s => { bySlot[s] = pool.filter(it => it.slot === s); });
+
+    // Cap combinations to keep it responsive: if a slot has many items, keep the
+    // top ~6 by individual grad delta. ponytail: linear pre-prune, exhaustive
+    // search within the pruned set; raise the cap if users need deeper search.
+    const MAX_PER_SLOT = 6;
+    SLOT_ORDER.forEach(s => {
+      if (bySlot[s].length > MAX_PER_SLOT) {
+        bySlot[s] = [...bySlot[s]]
+          .map(it => ({ it, d: getGearItemCompareStats(it).totalGradDelta }))
+          .sort((a, b) => b.d - a.d)
+          .slice(0, MAX_PER_SLOT)
+          .map(x => x.it);
+      }
+    });
+
+    const totalCombos = SLOT_ORDER.reduce((n, s) => n * Math.max(1, bySlot[s].length), 1);
+    let checked = 0;
+    const top: { rate: number; gear: GearItem[] }[] = [];
+
+    const recurse = async (idx: number, acc: GearItem[]) => {
+      if (idx === SLOT_ORDER.length) {
+        const rate = gradRateForGearCombo(acc);
+        top.push({ rate, gear: [...acc] });
+        top.sort((a, b) => b.rate - a.rate);
+        if (top.length > 10) top.length = 10;
+        checked++;
+        if (checked % 200 === 0) {
+          setBestBuildProgress(Math.round((checked / Math.max(1, totalCombos)) * 100));
+          await new Promise(r => setTimeout(r, 0)); // yield to keep UI alive
+        }
+        return;
+      }
+      const opts = bySlot[SLOT_ORDER[idx]];
+      if (opts.length === 0) { await recurse(idx + 1, acc); return; }
+      for (const it of opts) { acc.push(it); await recurse(idx + 1, acc); acc.pop(); }
+    };
+
+    await recurse(0, []);
+    setBestBuildProgress(100);
+    setBestBuildResult(top);
+    setBestBuildRunning(false);
+  };
+
   // 5. Live Stat Priority: % graduation gain/loss per substat roll, computed against the CURRENT panel
   const statPriorityList = useMemo(() => {
     const ALL_STAT_ROLLS: { key: keyof PanelStats; label: string; roll: number; unit: string }[] = [
@@ -3243,6 +3332,7 @@ export default function App() {
                     { key: "cultivate", label: "Cultivate (beta)" },
                     { key: "compare", label: "Compare" },
                     { key: "transmute", label: "Transmute Advice" },
+                    { key: "best-build", label: "Best Build" },
                   ].map(tab => (
                     <div
                       key={tab.key}
@@ -4382,6 +4472,79 @@ export default function App() {
                           </div>
                         );
                       })()}
+                    </div>
+                  )}
+                  {gradModalActiveTab === "best-build" && (
+                    <div style={{ textAlign: 'left' }}>
+                      <div className="bg-[#2d2d35] border border-[#3d3d45] rounded-xl p-6">
+                        <div className="mb-4 border-b border-[#3d3d45] pb-3">
+                          <h2 className="text-base font-extrabold text-[#ffd700] uppercase tracking-wider font-serif flex items-center gap-2">🏆 Best Build</h2>
+                          <p className="text-[12px] text-slate-500 mt-0.5">
+                            Scans every gear piece in this scheme's pool (equipped or not), grouped by slot, and finds the combination with the highest graduation rate for the current build, set, ring and Inner Ways.
+                          </p>
+                        </div>
+                        {!bestBuildRunning && (
+                          <button onClick={runBestBuild} className="primary-btn" style={{ marginBottom: 12 }}>
+                            {bestBuildResult ? "Re-run search" : "Find best build"}
+                          </button>
+                        )}
+                        {bestBuildRunning && (
+                          <div style={{ marginBottom: 12 }}>
+                            <div className="text-[12px] text-slate-300 mb-1">Searching combinations… {bestBuildProgress}%</div>
+                            <div className="progress-bar-container" style={{ height: 8, background: '#1a1a1d', borderRadius: 4, overflow: 'hidden' }}>
+                              <div style={{ width: `${bestBuildProgress}%`, height: '100%', background: '#4caf50', transition: 'width 0.2s' }} />
+                            </div>
+                          </div>
+                        )}
+                        {bestBuildResult && bestBuildResult.length > 0 && (() => {
+                          const best = bestBuildResult[0];
+                          const slotLabels: Record<string, string> = { Umbrella: "Weapon 1", "Rope Dart": "Weapon 2", Disc: "Disc", Pendant: "Pendant", Helmet: "Helmet", Chest: "Chest", Bracers: "Hands", Greaves: "Legs" };
+                          return (
+                            <div className="space-y-4">
+                              <div className="bg-[#1a1a1d]/60 border border-[#3d3d45] rounded-xl p-4">
+                                <div className="flex items-center justify-between mb-3 border-b border-[#3d3d45]/40 pb-2">
+                                  <h3 className="text-sm font-bold text-slate-100">Best combination</h3>
+                                  <span className="text-sm font-mono font-extrabold text-[#ffd700]">{best.rate.toFixed(2)}% graduation</span>
+                                </div>
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                  {best.gear.map((g, i) => (
+                                    <div key={i} className="bg-[#15161a] border border-[#3d3d45] rounded p-2">
+                                      <div className="text-[10px] text-[#ffd700] uppercase tracking-wide">{slotLabels[g.slot] || g.slot}</div>
+                                      <div className="text-[11.5px] text-slate-200 truncate" title={g.name}>{g.name}</div>
+                                    </div>
+                                  ))}
+                                </div>
+                                <button
+                                  onClick={() => {
+                                    const pool = getActiveGear();
+                                    const bestIds = new Set(best.gear.map(g => g.id));
+                                    saveActiveGear(pool.map(it => ({ ...it, isEquipped: bestIds.has(it.id) })));
+                                  }}
+                                  className="primary-btn"
+                                  style={{ marginTop: 12 }}
+                                >Equip this build</button>
+                              </div>
+                              {bestBuildResult.length > 1 && (
+                                <div>
+                                  <h4 className="text-[12px] font-bold text-slate-400 uppercase tracking-wide mb-2">Top alternatives</h4>
+                                  <div className="space-y-1">
+                                    {bestBuildResult.slice(1, 6).map((r, idx) => (
+                                      <div key={idx} className="flex items-center justify-between bg-[#1a1a1d]/40 border border-[#3d3d45] rounded px-3 py-1.5 text-[11.5px]">
+                                        <span className="text-slate-400">#{idx + 2}</span>
+                                        <span className="text-slate-300 truncate flex-1 px-2" title={r.gear.map(g => g.name).join(", ")}>{r.gear.map(g => g.name).join(" · ")}</span>
+                                        <span className="font-mono font-bold text-[#ffd700]">{r.rate.toFixed(2)}%</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
+                        {bestBuildResult && bestBuildResult.length === 0 && (
+                          <div className="text-slate-500 text-sm">No gear in the pool to search. Add gear via the 🛡 Gear tab.</div>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
