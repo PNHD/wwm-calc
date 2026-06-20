@@ -601,6 +601,13 @@ const COMPAT_ALIASES = [
   "Gauntlets Special","Gauntlets Charged",
 ];
 
+// Inner-Way-only combat stats: they exist on the panel (fed by Inner Way
+// Breakthrough) but are NOT rollable gear substats, so they must not appear in
+// the gear sub-stat picker. Per in-game Combat Attributes: Crit DMG Bonus,
+// Affinity DMG Bonus, Direct Crit Rate, Direct Affinity Rate all read
+// "How to Obtain: Inner Way Breakthrough".
+const INNER_WAY_ONLY_SUBS = ["Crit DMG", "Affinity DMG", "Direct Crit", "Direct Affinity"];
+
 function buildSubStatOptions(): { value: string; label: string; group?: string }[] {
   const weaponGroups: Record<string, string> = {
     "Art of Umbrella": "Umbrella", "Art of Rope Dart": "Rope Dart",
@@ -613,6 +620,7 @@ function buildSubStatOptions(): { value: string; label: string; group?: string }
   ];
   for (const k of Object.keys(SUB_MAP)) {
     if (COMPAT_ALIASES.includes(k)) continue;
+    if (INNER_WAY_ONLY_SUBS.includes(k)) continue;
     let group: string | undefined;
     for (const [prefix, gName] of Object.entries(weaponGroups)) {
       if (k.startsWith(prefix)) { group = gName; break; }
@@ -4089,11 +4097,14 @@ export default function App() {
                   {gradModalActiveTab === "transmute" && (
                     <div style={{ textAlign: 'left' }}>
                       {(() => {
+                        // 95下 max single-roll per gear substat. Crit DMG / Affinity
+                        // DMG are NOT gear substats — they only exist on Inner Ways —
+                        // so they are intentionally excluded as transmute targets.
                         const MAX_ROLL_95: Record<string, string> = {
                           "Max Phys Atk": "63.8", "Min Phys Atk": "63.8",
-                          "Crit Rate": "7.4%", "Crit DMG": "14.8%",
+                          "Crit Rate": "7.4%",
                           "Phys Pen": "7.0%", "Affinity Rate": "3.6%",
-                          "Affinity DMG": "7.2%", "Precision": "6.6%",
+                          "Precision": "6.6%",
                           "Strength": "40.4", "Power": "40.4", "Agility": "40.4",
                           "Boss DMG%": "2.6%", "All Martial Arts": "2.6%",
                           "Phys DMG%": "2.6%",
@@ -4105,8 +4116,8 @@ export default function App() {
                         };
 
                         const TRANSMUTE_CANDIDATES = [
-                          "Max Phys Atk", "Min Phys Atk", "Crit Rate", "Crit DMG",
-                          "Phys Pen", "Affinity Rate", "Affinity DMG", "Precision",
+                          "Max Phys Atk", "Min Phys Atk", "Crit Rate",
+                          "Phys Pen", "Affinity Rate", "Precision",
                           "Strength", "Power", "Agility",
                           "Boss DMG%", "All Martial Arts", "Phys DMG%",
                         ];
