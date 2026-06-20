@@ -2865,71 +2865,59 @@ export default function App() {
                   const slotIcon = slotObj?.icon || "🛡";
                   const { totalGradDelta } = getGearItemCompareStats(item);
 
-                  let borderClass = "";
-                  if (isEquipped) {
-                    borderClass = "equip-card-equipped";
-                  }
+                  // Letter grade from grad delta (per-slot a single piece tops out ~8%).
+                  const grade = totalGradDelta >= 7 ? "S" : totalGradDelta >= 5.5 ? "A" : totalGradDelta >= 4 ? "B" : totalGradDelta >= 2 ? "C" : "D";
+                  const rarityClass = isGold ? "ga-rarity5" : isPurple ? "ga-rarity4" : "ga-rarity3";
+                  const stars = isGold ? "★★★★★" : isPurple ? "★★★★" : "★★★";
+                  const hasRelay = !!item.isRelay;
+                  const hasTuned = item.subs.some(s => s.isTuned);
 
                   return (
                     <div
                       key={item.id}
                       onClick={() => toggleEquip(item)}
-                      className={`equip-card ${borderClass}`}
+                      className={`equip-card ga-card ga-card--${rarityClass} ${isEquipped ? "equip-card-equipped" : ""}`}
                       style={{ cursor: 'pointer', position: 'relative' }}
                     >
-                      {isEquipped && (
-                        <span className="equipped-badge">Equipped</span>
-                      )}
-                      <div className="card-header" style={{ position: 'relative', paddingRight: '35px' }}>
-                        <div className="equip-icon-wrap" style={{ width: '50px', height: '50px', borderRadius: '4px', border: '1px solid #555', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#1a1a1d' }}>
-                          <img src={(item.slot === "Umbrella" || item.slot === "Rope Dart") ? getWeaponIconUrlByType(item.weaponType, item.slot, selectedBuild) : SLOT_IMAGES[item.slot]} alt={item.slot} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                      {isEquipped && <span className="equipped-badge">Equipped</span>}
+                      <button
+                        className="edit-btn ga-card__edit"
+                        onClick={(e) => { e.stopPropagation(); openEditModal(item); }}
+                        title="Edit Gear"
+                      >✎</button>
+
+                      <div className="ga-card__top">
+                        <div className="equip-icon-wrap ga-card__icon">
+                          <img src={(item.slot === "Umbrella" || item.slot === "Rope Dart") ? getWeaponIconUrlByType(item.weaponType, item.slot, selectedBuild) : SLOT_IMAGES[item.slot]} alt={item.slot} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                         </div>
-                        <div className="card-title" style={{ flex: 1, minWidth: 0 }}>
-                          <h3 style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.name}</h3>
-                          <span style={{ fontSize: '0.8rem', color: 'var(--text-sub)' }}>
-                            {getSlotLabel(item.slot)}{item.weaponType ? ` (${item.weaponType})` : ""}
-                          </span>
+                        <div className="ga-card__id">
+                          <div className={`ga-card__stars ga-card__stars--${isGold ? 5 : isPurple ? 4 : 3}`}>{stars}</div>
+                          <h3 className="ga-card__name">{item.name}</h3>
+                          <span className="ga-card__slot">{getSlotLabel(item.slot)}{item.weaponType ? ` · ${item.weaponType}` : ""}</span>
                         </div>
-                        <button
-                          className="edit-btn"
-                          style={{
-                            position: 'absolute',
-                            right: '0px',
-                            top: '50%',
-                            transform: 'translateY(-50%)',
-                            background: 'transparent',
-                            border: 'none',
-                            color: '#d48c2a',
-                            fontSize: '18px',
-                            cursor: 'pointer',
-                            padding: '4px 8px',
-                            borderRadius: '4px',
-                            zIndex: 10
-                          }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openEditModal(item);
-                          }}
-                          title="Edit Gear"
-                        >
-                          ✎
-                        </button>
+                        <div className={`ga-card__score ga-card__score--${grade}`}>
+                          <span className="ga-card__score-grade">{grade}</span>
+                          <span className="ga-card__score-val">{totalGradDelta.toFixed(1)}</span>
+                        </div>
                       </div>
-                      <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '10px' }}>
+
+                      <div className="ga-card__subs">
                         {item.subs.slice(0, 4).map((sub, sidx) => (
-                          <div key={sidx} className="stat-line sub-stat">
-                            <span className="stat-label" style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
-                              {sub.type} {sub.isTuned && <span className="text-[#ffd700] font-bold">✦</span>}
-                            </span>
-                            <span className="val">{sub.val}</span>
+                          <div key={sidx} className="ga-card__sub">
+                            <span className="ga-card__sub-name">{sub.type} {sub.isTuned && <span className="ga-card__tuned">✦</span>}</span>
+                            <span className="ga-card__sub-val">{sub.val}</span>
                           </div>
                         ))}
-                        <div className="diff-result flex justify-between pt-2 border-t border-[#3d3d45]" style={{ marginTop: '5px' }}>
-                          <span className="text-slate-500">Grad Delta:</span>
-                          <span className={totalGradDelta >= 0 ? "text-green" : "text-red"}>
-                            {totalGradDelta >= 0 ? "+" : ""}{totalGradDelta.toFixed(2)}%
-                          </span>
+                      </div>
+
+                      <div className="ga-card__foot">
+                        <div className="ga-card__badges">
+                          {hasTuned && <span className="ga-card__badge ga-card__badge--tuned">Tuned</span>}
+                          {hasRelay && <span className="ga-card__badge ga-card__badge--relay">Relay</span>}
                         </div>
+                        <span className={`ga-card__delta ${totalGradDelta >= 0 ? "is-up" : "is-down"}`}>
+                          {totalGradDelta >= 0 ? "+" : ""}{totalGradDelta.toFixed(2)}%
+                        </span>
                       </div>
                     </div>
                   );
