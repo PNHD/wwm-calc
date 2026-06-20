@@ -1093,6 +1093,7 @@ export default function App() {
     saveActiveGear(updated);
   };
   const [analysisMenuOpen, setAnalysisMenuOpen] = useState(false);
+  const [slotPopover, setSlotPopover] = useState<string | null>(null); // slot name whose quick-swap popover is open
   const [rotationTab, setRotationTab] = useState<"list" | "top">("list");
 
   const [rotSimClass, setRotSimClass] = useState<string>("Bamboocut-Dust");
@@ -1126,6 +1127,16 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem("wwm_relay_cooldowns", JSON.stringify(tuneCooldowns));
   }, [tuneCooldowns]);
+
+  // Close the slot quick-swap popover when clicking outside any sim-slot.
+  useEffect(() => {
+    if (!slotPopover) return;
+    const onDocClick = (e: MouseEvent) => {
+      if (!(e.target as HTMLElement).closest(".sim-slot")) setSlotPopover(null);
+    };
+    document.addEventListener("click", onDocClick);
+    return () => document.removeEventListener("click", onDocClick);
+  }, [slotPopover]);
 
   const [hitsState, setHitsState] = useState<Record<string, number>>(() => {
     const initialHits: Record<string, number> = {};
@@ -2976,21 +2987,17 @@ export default function App() {
                       data-slot-key={slot.key}
                       style={{ position: 'relative' }}
                       onClick={() => {
-                        // Non-destructive: open this slot's inventory to view/swap.
-                        // (Previously a single click instantly unequipped the item.)
+                        // Non-destructive (locked #11): open an inline quick-swap
+                        // popover for this slot instead of instantly unequipping.
+                        setSlotPopover(prev => prev === slot.name ? null : slot.name);
                         setGearFilterSlot(slot.name);
                       }}
-                      title={item ? `Equipped: ${item.name}. Click to view/swap this slot.` : `Empty. Click to filter inventory.`}
+                      title={item ? `Equipped: ${item.name}. Click to swap/unequip.` : `Empty. Click to pick gear.`}
                     >
                       {item ? (
                         <>
                           <img src={slotImgSrc} alt={item.name} className="slot-image" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                           <div className="slot-name-overlay">{item.name}</div>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); unequipItem(slot.name); }}
-                            title="Unequip this slot"
-                            style={{ position: 'absolute', top: 2, right: 2, zIndex: 3, width: 16, height: 16, lineHeight: '14px', padding: 0, borderRadius: '50%', background: 'rgba(0,0,0,0.65)', color: '#fca5a5', border: '1px solid rgba(255,255,255,0.15)', fontSize: 11, cursor: 'pointer' }}
-                          >×</button>
                         </>
                       ) : (
                         <>
@@ -2998,6 +3005,43 @@ export default function App() {
                           <div className="slot-placeholder">{slot.label}</div>
                         </>
                       )}
+                      {slotPopover === slot.name && (() => {
+                        const slotGear = getActiveGear().filter(it => it.slot === slot.name);
+                        return (
+                          <div
+                            className="slot-swap-popover"
+                            onClick={(e) => e.stopPropagation()}
+                            style={{ position: 'absolute', top: '102%', left: 0, zIndex: 50, minWidth: 180, maxWidth: 240, maxHeight: 260, overflowY: 'auto', background: '#15161a', border: '1px solid rgba(245,180,0,0.35)', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.6)', padding: 6 }}
+                          >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '2px 4px 6px', borderBottom: '1px solid rgba(255,255,255,0.08)', marginBottom: 4 }}>
+                              <span style={{ fontSize: 11, fontWeight: 700, color: '#f0b400', textTransform: 'uppercase', letterSpacing: 0.4 }}>{slot.label}</span>
+                              <span onClick={() => setSlotPopover(null)} style={{ cursor: 'pointer', color: '#8b949e', fontSize: 14, lineHeight: 1 }}>×</span>
+                            </div>
+                            {item && (
+                              <button
+                                onClick={() => { unequipItem(slot.name); setSlotPopover(null); }}
+                                style={{ width: '100%', textAlign: 'left', padding: '5px 8px', marginBottom: 4, background: 'rgba(252,165,165,0.08)', border: '1px solid rgba(252,165,165,0.25)', borderRadius: 5, color: '#fca5a5', fontSize: 11.5, cursor: 'pointer' }}
+                              >✕ Unequip current</button>
+                            )}
+                            {slotGear.length === 0 ? (
+                              <div style={{ padding: '6px 8px', fontSize: 11, color: '#6b7280' }}>No gear for this slot. Use + Add Gear.</div>
+                            ) : slotGear.map(g => {
+                              const equipped = isItemEquipped(g, getActiveGear());
+                              return (
+                                <button
+                                  key={g.id}
+                                  onClick={() => { toggleEquip(g); setSlotPopover(null); }}
+                                  title={equipped ? "Currently equipped" : "Equip this"}
+                                  style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', textAlign: 'left', padding: '5px 8px', marginBottom: 2, background: equipped ? 'rgba(126,231,135,0.12)' : 'transparent', border: equipped ? '1px solid rgba(126,231,135,0.4)' : '1px solid transparent', borderRadius: 5, color: equipped ? '#7ee787' : '#c9d1d9', fontSize: 11.5, cursor: 'pointer' }}
+                                >
+                                  {equipped && <span style={{ fontSize: 10 }}>✓</span>}
+                                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{g.name}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        );
+                      })()}
                     </div>
                   );
                 });
