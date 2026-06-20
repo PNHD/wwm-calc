@@ -27,6 +27,7 @@ Other agents have repeatedly reverted these thinking they were bugs. They are co
 - `npm run build` = `vite build` only (esbuild strips types — TS errors don't block the build). `npx tsc --noEmit` is the lint check and should stay clean.
 - Verify behaviour in the dev server before pushing; deploy = commit + push `main`.
 - If the live site shows old UI, the Cloudflare Pages build is stale — check the project is connected to `PNHD/wwm-calc` @ `main` and the last deployment succeeded.
+- **Canonical live URL = `wonton-wwm.pages.dev` (Cloudflare Pages).** There is ALSO a stray `wonton-wwm` **Worker** (`wonton-wwm.phamnhathaidang.workers.dev`) pointing at the same repo — it can drift to a different bundle and cause confusion. Prefer Pages; delete/ignore the Worker. Pages deploys cannot be triggered via the Cloudflare MCP (Workers-only) — use the dashboard.
 
 ## Before changing calc/data, re-read the source
 The numbers come from the Excel sheet, not guesses. If a value "looks wrong", check it against the Excel 95下 columns first.
