@@ -184,7 +184,7 @@ const INITIAL_PANEL: PanelStats = {
   prec: 119.1,
   crit: 115.6,
   aff: 17.0,
-  dcrit: 4.6,
+  dcrit: 0,
   daff: 0,
   critDmg: 54,
   affDmg: 35,

@@ -122,7 +122,9 @@ header h1 {
   border-radius: 10px !important;
 }
 .graduation-banner:hover { border-color: rgba(212,148,58,0.55) !important; box-shadow: 0 4px 18px var(--ga-accent-glow) !important; }
-.banner-value { font-family: var(--font-display) !important; background: linear-gradient(180deg, #ffe7a8, var(--accent)) !important; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+/* Keep the original (working) gradient text; only swap the font. Overriding the
+   full background broke background-clip:text on some engines → invisible number. */
+.banner-value { font-family: var(--font-display) !important; }
 .banner-arrow { color: var(--accent) !important; }
 
 /* ---- Stat readout ---- */
@@ -132,7 +134,7 @@ header h1 {
 
 /* ---- Graduation Analysis modal: left rail + tabs ---- */
 .grad-left-panel { background: var(--ga-bg-secondary) !important; border-right: 1px solid var(--border) !important; }
-.current-rate-box .value { font-family: var(--font-display); background: linear-gradient(180deg, #ffe7a8, var(--accent)) !important; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+.current-rate-box .value { font-family: var(--font-display); }
 .grad-equip-item { background: var(--ga-bg-tertiary); border: 1px solid var(--border); border-radius: 8px; }
 .grad-equip-item:hover { border-color: var(--accent); }
 .grad-equip-item.active { border-color: var(--accent); background: rgba(212,148,58,0.1); }
