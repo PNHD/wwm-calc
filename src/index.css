@@ -20,3 +20,138 @@ html{overflow-x:hidden;max-width:100vw}body{font-family:var(--font-body),'Segoe 
   border-color: gold !important;
   box-shadow: 0 0 10px rgba(255, 215, 0, 0.5) !important;
 }
+
+/* ============================================================
+   REDESIGN POLISH — adapted from the redesign brief's design
+   language onto the app's existing class system. Append-only;
+   these rules override the minified base above. No JSX changes.
+   ============================================================ */
+
+/* ---- Header ---- */
+header {
+  background: linear-gradient(180deg, rgba(13,15,22,0.98), rgba(13,15,22,0.92)) !important;
+  border-bottom: 1px solid var(--border) !important;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.5) !important;
+}
+header h1 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  background: linear-gradient(90deg, var(--text-main) 0%, var(--accent) 120%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.account-select-group label { font-weight: 600; letter-spacing: 0.3px; }
+#account-select {
+  background: var(--ga-surface); border: 1px solid var(--border);
+  border-radius: 8px; transition: border-color 0.15s;
+}
+#account-select:focus { border-color: var(--accent); }
+
+/* ---- Buttons (secondary/danger/primary) ---- */
+.secondary-btn {
+  border-radius: 8px; transition: all 0.2s ease;
+  background: var(--ga-surface); border-color: var(--border); color: var(--accent);
+}
+.secondary-btn:hover {
+  background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+  border-color: var(--accent); color: #fff;
+  box-shadow: 0 0 16px var(--ga-accent-glow);
+}
+.primary-btn {
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--accent), #a06e25);
+  box-shadow: 0 0 14px var(--ga-accent-glow);
+}
+.primary-btn:hover { background: linear-gradient(135deg, var(--accent-hover), var(--accent)); }
+.danger-btn { border-radius: 8px; }
+
+/* ---- Filter capsule ---- */
+#filter-bar { background-color: var(--ga-bg-secondary) !important; }
+.filter-capsule {
+  background: var(--ga-bg-tertiary); border: 1px solid var(--border);
+  border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+.filter-btn { font-family: var(--font-display); border-radius: 8px; transition: all 0.18s; }
+.filter-btn:hover { background: var(--ga-surface); color: var(--text-main); }
+.filter-btn.active {
+  background: linear-gradient(135deg, var(--accent), #a06e25);
+  box-shadow: 0 0 14px var(--ga-accent-glow);
+}
+
+/* ---- Gear cards ---- */
+.layout-left { background-color: var(--bg-color) !important; }
+.equip-card {
+  background: var(--card-bg); border: 1px solid var(--border);
+  border-radius: 12px; transition: all 0.25s ease;
+}
+.equip-card:hover {
+  border-color: var(--ga-border-light);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.45);
+}
+.equip-card-equipped {
+  border: 1px solid var(--accent) !important;
+  background: linear-gradient(135deg, rgba(212,148,58,0.06), rgba(212,148,58,0.02)) !important;
+  box-shadow: 0 0 14px var(--ga-accent-glow) !important;
+}
+.card-title h3 { font-family: var(--font-display); font-weight: 600; }
+/* Fix: equipped badge no longer overlaps the gear name */
+.equip-card-equipped .card-title { padding-top: 14px; }
+.equipped-badge {
+  background: linear-gradient(135deg, var(--accent), var(--accent-hover)) !important;
+  color: var(--ga-bg-deep) !important;
+  border-radius: 6px !important;
+}
+.main-stat .val, .card-title h3 { color: var(--text-main); }
+.stat-val, .val { font-family: var(--font-display); }
+
+/* ---- Simulator panel ---- */
+#simulator-panel { background-color: var(--ga-bg-secondary) !important; border-left: 1px solid var(--border) !important; }
+.sim-header h2 { font-family: var(--font-display); font-weight: 700; letter-spacing: 0.4px; color: var(--accent); }
+.sim-slot { border-radius: 8px; border: 1px solid var(--border) !important; background: var(--ga-bg-tertiary) !important; transition: all 0.2s; }
+.sim-slot:hover { border-color: var(--accent) !important; }
+.mini-select { background: var(--ga-bg-tertiary); border: 1px solid var(--border); border-radius: 6px; }
+.mini-select:focus { border-color: var(--accent); }
+
+/* ---- Graduation banner ---- */
+.graduation-banner {
+  background: linear-gradient(135deg, rgba(212,148,58,0.07), rgba(56,201,164,0.04)) !important;
+  border: 1px solid rgba(212,148,58,0.25) !important;
+  border-radius: 10px !important;
+}
+.graduation-banner:hover { border-color: rgba(212,148,58,0.55) !important; box-shadow: 0 4px 18px var(--ga-accent-glow) !important; }
+.banner-value { font-family: var(--font-display) !important; background: linear-gradient(180deg, #ffe7a8, var(--accent)) !important; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+.banner-arrow { color: var(--accent) !important; }
+
+/* ---- Stat readout ---- */
+.stats-panel { background: var(--ga-bg-secondary); border-radius: 8px; }
+.stat-row-display { border-bottom: 1px solid var(--border); }
+.stat-row-display .stat-val { font-family: var(--font-display); }
+
+/* ---- Graduation Analysis modal: left rail + tabs ---- */
+.grad-left-panel { background: var(--ga-bg-secondary) !important; border-right: 1px solid var(--border) !important; }
+.current-rate-box .value { font-family: var(--font-display); background: linear-gradient(180deg, #ffe7a8, var(--accent)) !important; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+.grad-equip-item { background: var(--ga-bg-tertiary); border: 1px solid var(--border); border-radius: 8px; }
+.grad-equip-item:hover { border-color: var(--accent); }
+.grad-equip-item.active { border-color: var(--accent); background: rgba(212,148,58,0.1); }
+.grad-equip-name { font-family: var(--font-display); }
+.grad-tabs { background: var(--ga-bg-deep) !important; }
+.grad-tab { font-family: var(--font-display); font-weight: 600; border-right: 1px solid var(--border); transition: all 0.2s; }
+.grad-tab:hover { background: var(--ga-surface); color: var(--text-main); }
+.grad-tab.active { color: var(--accent) !important; border-bottom: 2px solid var(--accent) !important; background: rgba(212,148,58,0.05) !important; }
+
+/* ---- Modal ---- */
+.modal-content { background: var(--ga-bg-secondary) !important; border: 1px solid var(--border) !important; border-radius: 16px !important; }
+.modal-header, .modal-footer { background: var(--ga-bg-secondary) !important; border-color: var(--border) !important; }
+.modal-header h2 { font-family: var(--font-display); font-weight: 700; }
+.save-btn { background: linear-gradient(135deg, var(--accent), #a06e25); border-radius: 8px; }
+.save-btn:hover { background: linear-gradient(135deg, var(--accent-hover), var(--accent)); }
+input, select { background: var(--ga-bg-tertiary); border: 1px solid var(--border); border-radius: 8px; }
+input:focus, select:focus { outline: none !important; border-color: var(--accent) !important; box-shadow: 0 0 0 2px var(--ga-accent-glow); }
+
+/* ---- Compare / Transmute cards ---- */
+.compare-card, .transmute-target-card, .transmute-result-card, .transmute-bestbuild-card { border-radius: 10px; }
+.transmute-sub-btn { border-radius: 8px; }
+.transmute-sub-btn.selected { border-color: var(--accent); background: rgba(212,148,58,0.15); box-shadow: 0 0 8px var(--ga-accent-glow); }
