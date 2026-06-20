@@ -101,7 +101,6 @@ const CLASS_WEAPONS: Record<string, string[]> = {
   "Nine-Nine": ["Strategic Sword", "Heavenquaker Spear"],
   "Rocksplit-Jun": ["Snowparting Blade", "Phalanxbane Blade"],
   "Pure-Healer": ["Panacea Fan", "Soulshade Umbrella"],
-  "Fire-Fist-Healer": ["Panacea Fan", "Soulshade Umbrella"],
   "Bamboocut-Bird": ["Heavenstrike Gauntlets", "Unfettered Rope Dart"],
 };
 
