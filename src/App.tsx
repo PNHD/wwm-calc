@@ -242,6 +242,8 @@ export interface GearItem {
   mastery?: number;
   isEquipped?: boolean;
   weaponType?: string;
+  isRelay?: boolean; // Relayed (truyền thừa) gear: main stat = standard, but the
+                     // 6 substats only roll to 95% of their normal 95下 cap.
 }
 
 export interface Scheme {
@@ -1409,6 +1411,24 @@ export default function App() {
   const [formSubs, setFormSubs] = useState<{type: string; val: string; isTuned?: boolean}[]>(
     Array(6).fill(null).map(() => ({ type: "Max Phys Atk", val: "", isTuned: false }))
   );
+  const [formRelay, setFormRelay] = useState(false);
+
+  // Relay (truyền thừa) gear caps each substat at 95% of its normal 95下 max
+  // roll. Returns the clamped numeric string for a given sub type, or the
+  // input unchanged when relay is off / the type has no known cap.
+  const clampToRelayCap = (subType: string, raw: string): string => {
+    if (!formRelay) return raw;
+    const pKey = SUB_MAP[subType];
+    const cap = pKey ? MAX_ROLL_95[pKey] : undefined;
+    if (cap === undefined) return raw;
+    const m = raw.match(/-?\d+(\.\d+)?/);
+    if (!m) return raw;
+    const relayCap = +(cap * 0.95).toFixed(1);
+    const num = parseFloat(m[0]);
+    if (num <= relayCap) return raw;
+    const pct = raw.includes("%");
+    return relayCap + (pct ? "%" : "");
+  };
 
   const [isModalOcrProcessing, setIsModalOcrProcessing] = useState(false);
   const modalFileInputRef = useRef<HTMLInputElement>(null);
@@ -1686,6 +1706,7 @@ export default function App() {
       setFormSet("stormrain"); // default armor set
     }
     setFormMastery("");
+    setFormRelay(false);
     const defaultTypes = BUILD_WEAPON_TYPES[selectedBuild] || ["Umbrella", "Rope Dart"];
     setFormWeaponType(selectedSlot === "Umbrella" ? defaultTypes[0] : selectedSlot === "Rope Dart" ? defaultTypes[1] : "Sword");
     setFormSubs(Array(6).fill(null).map(() => ({ type: "Max Phys Atk", val: "", isTuned: false })));
@@ -1698,6 +1719,7 @@ export default function App() {
     setFormQuality(item.quality);
     setFormSet(item.set);
     setFormMastery(item.mastery !== undefined ? item.mastery.toString() : "");
+    setFormRelay(!!item.isRelay);
     setSelectedSlot(item.slot);
     const defaultTypes = BUILD_WEAPON_TYPES[selectedBuild] || ["Umbrella", "Rope Dart"];
     setFormWeaponType(item.weaponType || (item.slot === "Umbrella" ? defaultTypes[0] : item.slot === "Rope Dart" ? defaultTypes[1] : "Sword"));
@@ -1736,7 +1758,8 @@ export default function App() {
             set: formSet,
             mastery: masteryVal,
             subs: savedSubs,
-            weaponType: isWeapon ? formWeaponType : undefined
+            weaponType: isWeapon ? formWeaponType : undefined,
+            isRelay: formRelay
           };
         }
         return it;
@@ -1751,7 +1774,8 @@ export default function App() {
         set: formSet,
         mastery: masteryVal,
         subs: savedSubs,
-        weaponType: isWeapon ? formWeaponType : undefined
+        weaponType: isWeapon ? formWeaponType : undefined,
+        isRelay: formRelay
       };
       updatedGear = [...activeGear, newItem];
     }
@@ -2692,6 +2716,7 @@ export default function App() {
                 const defaultTypes = BUILD_WEAPON_TYPES[selectedBuild] || ["Umbrella", "Rope Dart"];
                 setFormWeaponType(initialSlot === "Umbrella" ? defaultTypes[0] : initialSlot === "Rope Dart" ? defaultTypes[1] : "Sword");
                 setFormMastery("");
+                setFormRelay(false);
                 setFormSubs([
                   { type: "Other", val: "" },
                   { type: "Other", val: "" },
@@ -4420,6 +4445,38 @@ export default function App() {
                       placeholder="e.g. 832"
                     />
                   </div>
+                <div className="form-group">
+                  <label>Relayed (truyền thừa)</label>
+                  <label
+                    className="flex items-center gap-2 cursor-pointer select-none"
+                    style={{ height: '38px' }}
+                    title="Relayed gear: main stat stays standard, but its 6 substats only roll to 95% of the normal 95下 cap. Substat inputs are clamped to that lower cap."
+                  >
+                    <input
+                      type="checkbox"
+                      checked={formRelay}
+                      onChange={e => {
+                        const on = e.target.checked;
+                        setFormRelay(on);
+                        if (on) {
+                          // Re-clamp existing values to the relay cap immediately.
+                          setFormSubs(prev => prev.map(s => {
+                            const pKey = SUB_MAP[s.type];
+                            const cap = pKey ? MAX_ROLL_95[pKey] : undefined;
+                            if (cap === undefined || !s.val.trim()) return s;
+                            const m = s.val.match(/-?\d+(\.\d+)?/);
+                            if (!m) return s;
+                            const relayCap = +(cap * 0.95).toFixed(1);
+                            if (parseFloat(m[0]) <= relayCap) return s;
+                            return { ...s, val: relayCap + (s.val.includes("%") ? "%" : "") };
+                          }));
+                        }
+                      }}
+                      className="accent-[#ffd700] h-4 w-4"
+                    />
+                    <span className="text-[11px] text-slate-300">Substats capped at 95% roll</span>
+                  </label>
+                  </div>
                 </div>
 
                 {/* In-Modal Gear Quick OCR Zone */}
@@ -4501,7 +4558,7 @@ export default function App() {
                           value={sub.val}
                           onChange={e => {
                             const next = [...formSubs];
-                            next[sidx].val = e.target.value;
+                            next[sidx].val = clampToRelayCap(next[sidx].type, e.target.value);
                             setFormSubs(next);
                           }}
                           placeholder="e.g. 59.2 or 7.4%"
