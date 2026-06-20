@@ -335,6 +335,22 @@ const INNER_ATTR_BY_BUILD: Record<string, string> = {
 };
 const innerAttrName = (buildKey: string): string => INNER_ATTR_BY_BUILD[buildKey] || "Bamboocut";
 
+// Short label for an inner-way tier's main stat (shown on the slot). Picks the
+// most DPS-relevant field; flat stats (pen/atk) get no %, rates/bonuses do.
+const IW_STAT_LABEL: Record<string, [string, boolean]> = {
+  dcrit: ["D.Crit", true], daff: ["D.Aff", true], critDmg: ["Crit DMG", true],
+  affDmg: ["Aff DMG", true], outerPen: ["Phys Pen", false], pzPen: ["Attr Pen", false],
+  outerDmg: ["Phys DMG", true], pzDmg: ["Attr DMG", true], crit: ["Crit", true],
+  aff: ["Aff", true], generalDmg: ["DMG", true],
+};
+const formatIwStat = (stat: Record<string, number>): string => {
+  const order = ["dcrit", "daff", "critDmg", "affDmg", "outerPen", "pzPen", "pzDmg", "outerDmg", "crit", "aff", "generalDmg"];
+  const key = order.find(k => stat[k]);
+  if (!key) return "";
+  const [label, isPct] = IW_STAT_LABEL[key];
+  return `+${stat[key]}${isPct ? "%" : ""} ${label}`;
+};
+
 // Builds whose T91 graduation DPS is estimated (no dedicated Lv95 source row yet).
 const ESTIMATED_BUILDS = new Set(["bamboocut-kite", "stonesplit-pure-datang"]);
 
@@ -3030,6 +3046,9 @@ export default function App() {
                 const iwId = selectedInnerWays[index];
                 const iw = iwId ? INNER_WAYS.find(item => item.id === iwId) : null;
                 const imageUrl = iw ? INNER_WAY_IMAGES[iw.name] : null;
+                const tierNum = iwId ? (innerWayTiers[iwId] ?? 6) : 6;
+                const tierStat = iw?.tiers.find(t => t.tier === tierNum)?.stat || {};
+                const statSummary = formatIwStat(tierStat);
                 return (
                   <div
                     key={index}
@@ -3041,7 +3060,9 @@ export default function App() {
                   >
                     {iw ? (
                       <>
-                        <img src={imageUrl || ""} alt={iw.name} onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                        {imageUrl && <img src={imageUrl} alt={iw.name} onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />}
+                        <span className="xinfa-tier-badge">T{tierNum}</span>
+                        {statSummary && <span className="xinfa-stat-badge">{statSummary}</span>}
                         <div className="xinfa-name">{iw.name}</div>
                       </>
                     ) : (
@@ -5042,7 +5063,7 @@ export default function App() {
                       }}
                     >
                       <div className="xinfa-img-wrapper" style={{ position: 'relative' }}>
-                        <img src={imageUrl || ""} alt={iw.name} onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                        {imageUrl && <img src={imageUrl} alt={iw.name} onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />}
                         {isSelected && (
                           <div style={{
                             position: 'absolute',
@@ -5066,6 +5087,17 @@ export default function App() {
                         )}
                       </div>
                       <div className="xinfa-select-name">{iw.name}</div>
+                      {isSelected && (
+                        <select
+                          className="xinfa-tier-select"
+                          value={innerWayTiers[iw.id] ?? 6}
+                          onClick={e => e.stopPropagation()}
+                          onChange={e => { e.stopPropagation(); setInnerWayTiers({ ...innerWayTiers, [iw.id]: Number(e.target.value) }); }}
+                          title="Breakthrough tier (changes the granted stat)"
+                        >
+                          {[1, 2, 3, 4, 5, 6].map(t => <option key={t} value={t}>Tier {t}</option>)}
+                        </select>
+                      )}
                       {(() => {
                         const trig = iw.trigger || "utility";
                         const meta: Record<string, { label: string; color: string; bg: string }> = {
@@ -5075,7 +5107,8 @@ export default function App() {
                           utility:     { label: "Utility (no stat)", color: "#8b949e", bg: "rgba(110,118,129,0.12)" },
                         };
                         const m = meta[trig];
-                        const maxStat = iw.tiers[iw.tiers.length - 1]?.stat || {};
+                        const shownTier = isSelected ? (innerWayTiers[iw.id] ?? 6) : 6;
+                        const maxStat = (iw.tiers.find(t => t.tier === shownTier) || iw.tiers[iw.tiers.length - 1])?.stat || {};
                         const labels: Record<string, string> = {
                           outerPen: "Pen", pzPen: "Attr Pen", crit: "Crit", aff: "Aff", dcrit: "D.Crit",
                           critDmg: "Crit DMG%", affDmg: "Aff DMG%", outerDmg: "Phys DMG%", pzDmg: "Attr DMG%", generalDmg: "DMG%",

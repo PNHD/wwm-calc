@@ -179,10 +179,30 @@ header h1 {
   font-family: var(--font-display); font-weight: 600;
   background: linear-gradient(to top, rgba(0,0,0,0.92), rgba(0,0,0,0)) !important;
 }
+.xinfa-tier-badge {
+  position: absolute; top: 3px; left: 3px; z-index: 3;
+  font-family: var(--font-display); font-weight: 700; font-size: 0.62rem;
+  color: var(--ga-bg-deep); background: var(--accent);
+  padding: 0 4px; border-radius: 4px; line-height: 1.4;
+}
+.xinfa-stat-badge {
+  position: absolute; top: 3px; right: 3px; z-index: 3;
+  font-family: var(--font-display); font-weight: 600; font-size: 0.56rem;
+  color: var(--accent-bright, #e8a94a); background: rgba(0,0,0,0.75);
+  padding: 0 4px; border-radius: 4px; line-height: 1.5; max-width: 70%;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
 /* Inner-way picker modal items */
 .xinfa-select-item { background: var(--ga-bg-tertiary) !important; border: 1px solid var(--border) !important; border-radius: 8px !important; transition: all 0.2s; }
 .xinfa-select-item:hover { border-color: var(--accent) !important; transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.4); }
 .xinfa-select-name { font-family: var(--font-display); background: var(--ga-surface) !important; border-top: 1px solid var(--border) !important; }
+.xinfa-tier-select {
+  width: calc(100% - 8px); margin: 4px auto 0; display: block;
+  font-family: var(--font-display); font-size: 0.7rem; font-weight: 600;
+  padding: 2px 4px; border-radius: 5px;
+  background: var(--ga-bg-tertiary); border: 1px solid var(--accent); color: var(--accent-bright, #e8a94a);
+  cursor: pointer;
+}
 .xinfa-select-item.selected-innerway { border-color: var(--accent) !important; box-shadow: 0 0 14px var(--ga-accent-glow) !important; }
 
 /* ---- Graduation banner ---- */
