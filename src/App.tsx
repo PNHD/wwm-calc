@@ -3049,18 +3049,18 @@ export default function App() {
             </div>
             <div className="sim-side-panel">
               <div className="sim-slot bow-slot">
-                <img id="bow-icon" src="icon/icon3.jpg" alt="Bow" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                <img id="bow-icon" src="icon/icon3.jpg" alt="Ring" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
               </div>
               <div className="sim-controls">
                 <select
                   value={bowSelect}
                   onChange={(e) => setBowSelect(e.target.value as any)}
                   className="mini-select"
-                  title="Select bow attribute"
+                  title="Select ring attribute"
                 >
-                  <option value="crit">Crit Bow (+3.7%)</option>
-                  <option value="prec">Precision Bow (+3.3%)</option>
-                  <option value="aff">Affinity Bow (+1.8%)</option>
+                  <option value="crit">Crit Ring (+3.7%)</option>
+                  <option value="prec">Precision Ring (+3.3%)</option>
+                  <option value="aff">Affinity Ring (+1.8%)</option>
                 </select>
               </div>
             </div>
