@@ -564,6 +564,60 @@ export const INNER_WAYS: InnerWay[] = [
       {tier:6,effect:"Shield absorbs 30% Max HP 4s + reflect 15% absorbed DMG to attacker",stat:{}},
     ]
   },
+
+  // ── STONESPLIT-STRENGTH ──
+  {
+    id:"frost_clad_night", name:"Frost-Clad Night", cat:"STONESPLIT-STRENGTH",
+    desc:"In Iron Guards stance, hitting with Snowbreak Spring summons a Heng Blade Anxi Soldier for extra attacks. Snowbreak Spring spends Inner Passion stacks to boost HP damage vs non-players.",
+    recommended:true, note:"Core Stonesplit-Strength DPS inner way. T5 grants Direct Crit.",
+    tiers:[
+      {tier:1,effect:"Iron Guards: Snowbreak Spring summons a Heng Blade Anxi Soldier",stat:{}},
+      {tier:2,effect:"Increases Min Physical Attack based on Solo Mode Level",stat:{}},
+      {tier:3,effect:"Full Grave Frost + Dual-Weapon Skill triggers Finding Spring; hitting it restores 0.5 Blade Momentum",stat:{}},
+      {tier:4,effect:"Inner Passion max stacks → 4; Snowbreak Spring spends 1 stack for +40% HP damage vs non-players",stat:{}},
+      {tier:5,effect:"Breakthrough: Direct Critical Rate +4.6%",stat:{dcrit:4.6}},
+      {tier:6,effect:"Snowbreak Spring +10% DMG + Forgetfulness (charge-less Grave Frost 3s) + Direct Crit +4.6%",stat:{dcrit:4.6}},
+    ]
+  },
+  {
+    id:"steadfast_devotion", name:"Steadfast Devotion", cat:"STONESPLIT-STRENGTH",
+    desc:"In Inner Passion, the Mo Blade Anxi Soldier applies Mountain Splitter on hit: +10% Crit DMG to Burning Heart and Anxi Army Assist, guaranteed Crit if Crit Rate ≥70%.",
+    recommended:true, note:"Stonesplit-Strength Crit DMG breakthrough at T5.",
+    tiers:[
+      {tier:1,effect:"Legion Summoner cooldown → 1s",stat:{}},
+      {tier:2,effect:"Increases Critical Rate based on Solo Mode Level",stat:{}},
+      {tier:3,effect:"Inner Passion: Mo Blade Anxi Soldier applies Mountain Splitter 10s (+10% Crit DMG; guaranteed Crit at ≥70% Crit Rate)",stat:{critDmg:10}},
+      {tier:4,effect:"Inner Passion: Phalanxbane Charged Skill free of Blade Momentum; Burning Heart +32% DMG vs non-players",stat:{critDmg:10}},
+      {tier:5,effect:"Breakthrough: Critical DMG Bonus +4.0%. (Base Mountain Splitter +10% Crit DMG)",stat:{critDmg:14}},
+      {tier:6,effect:"Burning Heart on Exhausted: Mountain Splitter + Charge Enhancement (full Inner Passion bonus, ≤3/30s)",stat:{critDmg:14}},
+    ]
+  },
+  {
+    id:"throat_piercing_art", name:"Throat-Piercing Art", cat:"STONESPLIT-STRENGTH",
+    desc:"Throat-Pierced enhances Varied Combos: ignores Physical Resistance and adds Crit DMG. Stacks build via combos; a successful parry grants a full set of stacks.",
+    recommended:false, note:"Stonesplit-Strength penetration breakthrough at T5.",
+    tiers:[
+      {tier:1,effect:"Throat-Pierced duration → 15s",stat:{}},
+      {tier:2,effect:"Increases Stonesplit Attack based on Solo Mode Level",stat:{}},
+      {tier:3,effect:"Throat-Pierced: Light/Heavy Varied Combo ignores 3 Physical Resistance and +3% Crit DMG",stat:{critDmg:3}},
+      {tier:4,effect:"Throat-Pierced max stacks → 5",stat:{critDmg:3}},
+      {tier:5,effect:"Breakthrough: Stonesplit Penetration +6",stat:{critDmg:3,pzPen:6}},
+      {tier:6,effect:"Successful parry grants 5 Throat-Pierced stacks (20s CD); Assist skills also apply it",stat:{critDmg:3,pzPen:6}},
+    ]
+  },
+  {
+    id:"wildfire_surge", name:"Wildfire Surge", cat:"STONESPLIT-STRENGTH",
+    desc:"Tenacity grants bonus damage and damage reduction scaling with nearby enemies, plus HP Drain. Range and scaling improve with tier.",
+    recommended:false, note:"Stonesplit-Strength AoE sustain; Phys DMG breakthrough at T5.",
+    tiers:[
+      {tier:1,effect:"Bonus-damage range 3m → 5m",stat:{}},
+      {tier:2,effect:"Increases Physical Attack based on Solo Mode Level",stat:{}},
+      {tier:3,effect:"Tenacity: +4% DMG Reduction, +1% per nearby enemy in 5m (max +3%)",stat:{}},
+      {tier:4,effect:"Tenacity: +3% HP Drain (capped 2% Max HP/s)",stat:{}},
+      {tier:5,effect:"Breakthrough: Physical Damage Bonus +2.5%",stat:{outerDmg:2.5}},
+      {tier:6,effect:"Bonus damage/reduction per nearby enemy 1% → 1.5% (max +4.5%) + Phys DMG +2.5%",stat:{outerDmg:2.5}},
+    ]
+  },
 ];
 
 // Trigger classification for each inner way (verified against game8.co/564726).
@@ -593,6 +647,7 @@ const INNER_WAY_TRIGGERS: Record<string, InnerWayTrigger> = {
   blossom_barrage: "conditional", star_reacher: "conditional", thunderous_bloom: "conditional", flying_gourds: "utility",
   // STONESPLIT-MIGHT (tank utility)
   exquisite_scenery: "utility", rock_solid: "utility", art_of_resistance: "utility", trapped_beast: "utility",
+  frost_clad_night: "conditional", steadfast_devotion: "conditional", throat_piercing_art: "conditional", wildfire_surge: "conditional",
 };
 
 INNER_WAYS.forEach(iw => {
