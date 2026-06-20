@@ -589,8 +589,10 @@ const SUB_MAP: Record<string, keyof PanelStats> = {
   "Phys Resist": "physResGear",
   "Phys DMG Reduction": "physDmgReduction",
   "Direct Crit": "dcrit",
-  "Group Anomaly DMG": "groupDmg",
-  "Single Target DMG": "singleTargetDmg",
+  "Area Mystic Skill DMG": "groupDmg",
+  "Single-Target Mystic DMG": "singleTargetDmg",
+  "Group Anomaly DMG": "groupDmg",       // compat alias (old name)
+  "Single Target DMG": "singleTargetDmg", // compat alias (old name)
 };
 
 const COMPAT_ALIASES = [
@@ -603,6 +605,7 @@ const COMPAT_ALIASES = [
   "Fan Special","Fan Charged","Twinblades Special","Twinblades Charged",
   "Modao Special","Modao Charged","Hengdao Special","Hengdao Charged",
   "Gauntlets Special","Gauntlets Charged",
+  "Group Anomaly DMG","Single Target DMG",
 ];
 
 // Inner-Way-only combat stats: they exist on the panel (fed by Inner Way
