@@ -2205,7 +2205,7 @@ export default function App() {
     selectedInnerWays.forEach((id) => {
       const iw = INNER_WAYS.find((item) => item.id === id);
       if (iw) {
-        const tierNum = innerWayTiers[id] ?? 5;
+        const tierNum = innerWayTiers[id] ?? 6;
         const activeTierObj = iw.tiers.find(t => t.tier === tierNum);
         if (activeTierObj && activeTierObj.stat) {
           const s = activeTierObj.stat;
