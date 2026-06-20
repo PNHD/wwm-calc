@@ -197,6 +197,7 @@ export function calcBaseline(tier: TierConstants): number {
     affDmg:       35,
     outerDmg:     2.8,
     bossDmg:      7.6,
+    playerDmg:    0,
     umbAll: 0, umbMartial: 7.4, umbSpecial: 0, umbCharged: 0,
     ropeAll: 0, ropeMartial: 0, ropeSpecial: 0, ropeCharged: 0,
     swordAll: 0, swordMartial: 0, swordSpecial: 0, swordCharged: 0,

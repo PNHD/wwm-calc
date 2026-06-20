@@ -15,6 +15,7 @@ export interface PanelStats {
   affDmg: number;
   outerDmg: number;
   bossDmg: number;
+  playerDmg: number; // Combat Boost on Players (对玩家单位增效) — PvP, 0 for PvE/boss builds
   umbAll: number;
   umbMartial: number;
   umbSpecial: number;
