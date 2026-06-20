@@ -2634,11 +2634,14 @@ export default function App() {
   }, [adjustedPanel, judgmentFactor]);
 
   const effCritRate = useMemo(() => {
-    return Math.min(80, (adjustedPanel.crit / 100 / judgmentFactor + adjustedPanel.dcrit / 100) * 100);
+    // Direct Crit is NOT limited by the 80% Crit cap (game: "not limited by
+    // Critical Rate cap"). Cap the base crit at 80, then add Direct Crit on top.
+    // Matches calc.ts: min(critEff, 0.8) + dirCrit.
+    return Math.min(80, (adjustedPanel.crit / 100 / judgmentFactor) * 100) + adjustedPanel.dcrit;
   }, [adjustedPanel, judgmentFactor]);
 
   const effAffRate = useMemo(() => {
-    return Math.min(40, (adjustedPanel.aff / 100 / judgmentFactor + adjustedPanel.daff / 100) * 100);
+    return Math.min(40, (adjustedPanel.aff / 100 / judgmentFactor) * 100) + adjustedPanel.daff;
   }, [adjustedPanel, judgmentFactor]);
 
   const effectivePrecision = useMemo(() => {
