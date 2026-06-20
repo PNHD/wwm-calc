@@ -160,6 +160,31 @@ header h1 {
 .mini-select { background: var(--ga-bg-tertiary); border: 1px solid var(--border); border-radius: 6px; }
 .mini-select:focus { border-color: var(--accent); }
 
+/* ---- Inner Ways selector (tidier, consistent with the new card aesthetic) ---- */
+.xinfa-section { margin-top: 14px !important; }
+.xinfa-grid { gap: 8px !important; }
+.xinfa-slot {
+  aspect-ratio: 3/4 !important;            /* shorter, less gangly than 117/203 */
+  border-radius: 8px !important;
+  border: 1px solid var(--border) !important;
+  background: var(--ga-bg-tertiary) !important;
+  transition: all 0.2s;
+}
+.xinfa-slot:hover { border-color: var(--accent) !important; box-shadow: 0 0 12px var(--ga-accent-glow); }
+.xinfa-slot .slot-placeholder {
+  font-family: var(--font-display); font-weight: 600;
+  color: var(--text-sub) !important; letter-spacing: 0.3px;
+}
+.xinfa-name {
+  font-family: var(--font-display); font-weight: 600;
+  background: linear-gradient(to top, rgba(0,0,0,0.92), rgba(0,0,0,0)) !important;
+}
+/* Inner-way picker modal items */
+.xinfa-select-item { background: var(--ga-bg-tertiary) !important; border: 1px solid var(--border) !important; border-radius: 8px !important; transition: all 0.2s; }
+.xinfa-select-item:hover { border-color: var(--accent) !important; transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.4); }
+.xinfa-select-name { font-family: var(--font-display); background: var(--ga-surface) !important; border-top: 1px solid var(--border) !important; }
+.xinfa-select-item.selected-innerway { border-color: var(--accent) !important; box-shadow: 0 0 14px var(--ga-accent-glow) !important; }
+
 /* ---- Graduation banner ---- */
 .graduation-banner {
   background: linear-gradient(135deg, rgba(212,148,58,0.07), rgba(56,201,164,0.04)) !important;
@@ -188,6 +213,16 @@ header h1 {
 .grad-tab { font-family: var(--font-display); font-weight: 600; border-right: 1px solid var(--border); transition: all 0.2s; }
 .grad-tab:hover { background: var(--ga-surface); color: var(--text-main); }
 .grad-tab.active { color: var(--accent) !important; border-bottom: 2px solid var(--accent) !important; background: rgba(212,148,58,0.05) !important; }
+.grad-tab-content { background: var(--ga-bg-secondary) !important; }
+/* Retheme tab-pane boxes that use the old hardcoded colors via inline styles.
+   Attribute selectors match the legacy hex values and remap them to the palette. */
+.grad-tab-content [style*="#2d2d35"], .grad-tab-content [style*="#2d2d3a"] { background-color: var(--card-bg) !important; }
+.grad-tab-content [style*="#1a1a1d"], .grad-tab-content [style*="#1a1a1a"] { background-color: var(--ga-bg-tertiary) !important; }
+.grad-tab-content [style*="#232328"] { background-color: var(--ga-bg-secondary) !important; }
+.grad-tab-content [style*="#3d3d45"] { border-color: var(--border) !important; }
+.grad-tab-content [style*="#2a2a30"] { background-color: var(--ga-surface) !important; }
+/* Priority/cultivate/transmute item rows + buttons inside panes */
+.ga-priority-item, .transmute-item, .compare-card { background: var(--ga-bg-tertiary) !important; border-color: var(--border) !important; border-radius: 8px; }
 
 /* ---- Modal ---- */
 .modal-content { background: var(--ga-bg-secondary) !important; border: 1px solid var(--border) !important; border-radius: 16px !important; }
