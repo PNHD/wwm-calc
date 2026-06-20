@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WWM Calc — Redesign Spec & Current-State Mockup</title>
+<style>
+  :root{
+    /* CURRENT theme tokens (from src/index.css :root) — keep or evolve, your call */
+    --bg-color:#1a1a1d; --card-bg:#2d2d35; --text-main:#e0e0e0; --text-sub:#a0a0a0;
+    --accent:#4caf50; --accent-hover:#45a049; --border:#3d3d45; --gold:#ffd700; --purple:#dfa8ff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Segoe UI',Tahoma,sans-serif;background:#0e0e10;color:var(--text-main);line-height:1.5}
+  .doc{max-width:1100px;margin:0 auto;padding:32px 24px 80px}
+  h1{font-size:1.6rem;margin:0 0 4px} h2{color:var(--gold);border-bottom:1px solid var(--border);padding-bottom:6px;margin-top:40px}
+  h3{color:var(--accent);margin-top:24px} code{background:#23232a;padding:1px 5px;border-radius:3px;color:#ffd479;font-size:.9em}
+  .note{background:#1b2230;border-left:3px solid #4a9eff;padding:10px 14px;border-radius:4px;margin:12px 0}
+  .warn{background:#2a1c12;border-left:3px solid #f0a500;padding:10px 14px;border-radius:4px;margin:12px 0}
+  .lock{background:#2a1216;border-left:3px solid #f04a5a;padding:10px 14px;border-radius:4px;margin:12px 0}
+  table{border-collapse:collapse;width:100%;margin:12px 0;font-size:.9rem}
+  th,td{border:1px solid var(--border);padding:6px 10px;text-align:left;vertical-align:top}
+  th{background:#23232a;color:var(--gold)}
+  ul{margin:8px 0}
+  .mock{border:1px solid var(--border);border-radius:8px;overflow:hidden;margin:16px 0;background:var(--bg-color)}
+  .mk-header{background:#232328;padding:12px 18px;border-bottom:1px solid #333;display:flex;justify-content:space-between;align-items:center}
+  .mk-header h4{margin:0;font-size:1rem}
+  .mk-ctrl{display:flex;gap:10px;align-items:center;font-size:.8rem;color:var(--text-sub)}
+  .mk-pill{background:#2d2d35;border:1px solid var(--border);border-radius:4px;padding:4px 8px;font-size:.75rem}
+  .mk-body{display:grid;grid-template-columns:1fr 340px;gap:0}
+  .mk-left{padding:14px;border-right:1px solid var(--border)}
+  .mk-right{padding:14px;background:#202024}
+  .mk-filterbar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+  .mk-filter{background:#2d2d35;border:1px solid var(--border);border-radius:4px;padding:4px 10px;font-size:.75rem;color:var(--text-sub)}
+  .mk-filter.active{border-color:var(--gold);color:var(--gold)}
+  .mk-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+  .mk-card{background:var(--card-bg);border:1px solid var(--border);border-radius:6px;padding:10px;font-size:.72rem}
+  .mk-card .nm{font-weight:700;color:#fff;font-size:.8rem}
+  .mk-card .slot{color:var(--text-sub);font-size:.68rem}
+  .mk-card .sub{color:var(--text-sub);margin-top:3px}
+  .mk-card .delta{color:var(--accent);font-weight:700;margin-top:4px}
+  .mk-banner{background:linear-gradient(90deg,#1e1a12,#2d2d35);border:1px solid var(--gold);border-radius:6px;padding:12px;text-align:center;margin-bottom:12px;cursor:pointer}
+  .mk-banner .lbl{font-size:.7rem;color:var(--text-sub);text-transform:uppercase}
+  .mk-banner .val{font-size:1.6rem;font-weight:800;color:#ffd700}
+  .mk-banner .foot{font-size:.72rem;color:var(--text-sub);margin-top:4px}
+  .mk-slots{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px}
+  .mk-slot{aspect-ratio:1;background:#15161a;border:1px solid var(--border);border-radius:6px;display:flex;align-items:end;justify-content:center;font-size:.6rem;color:var(--text-sub);padding:4px}
+  .mk-statrow{display:flex;justify-content:space-between;font-size:.74rem;padding:2px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+  .mk-statrow .c{color:#7ee787}
+</style>
+</head>
+<body>
+<div class="doc">
+
+<h1>Where Winds Meet — Gear Graduation Calculator</h1>
+<p style="color:var(--text-sub)">Redesign brief + faithful mockup of the <b>current</b> UI. Single-page React (Vite + TS). Live: <code>wonton-wwm.pages.dev</code>. In-app author label: <b>Wonton</b>. Edition label: <b>Global (T91 / Lv95)</b>.</p>
+
+<div class="warn"><b>Goal:</b> redesign the visual layer (layout, spacing, typography, color, component styling) for a more polished, less "default dashboard" look. <b>Keep the information architecture and every feature.</b> Strong restyle, NOT a feature change. Reference feel: the Chinese tool <code>spongem.com/yysls</code> (dense, game-styled, dark).</div>
+
+<div class="lock"><b>HARD CONSTRAINTS — do not remove/restructure:</b>
+<ul>
+<li>All <b>tabs, panels, stats, and data fields</b> below must remain present. Restyle freely; don't delete.</li>
+<li>Deliver <b>clean semantic HTML + CSS</b> (Tailwind v4 utility classes welcome). It is a visual reference only — no JS logic needed.</li>
+<li>Theme tokens now: bg <code>#1a1a1d</code>, card <code>#2d2d35</code>, accent green <code>#4caf50</code>, gold <code>#ffd700</code>, border <code>#3d3d45</code>, purple <code>#dfa8ff</code>, text <code>#e0e0e0</code>/<code>#a0a0a0</code>. You may evolve the palette but keep a dark, gold-accented, game-ish feel.</li>
+<li>In-game number style: percentages and penetration to <b>1 decimal</b> (7.4%, 37.0); raw ATK as integers (1418).</li>
+<li>Stay responsive down to ~375px. Header is sticky.</li>
+</ul></div>
+
+<h2>1. Page structure (top to bottom)</h2>
+<table>
+<tr><th>Region</th><th>What it is</th></tr>
+<tr><td><b>Header</b> (sticky)</td><td>Title "Where Winds Meet Gear Graduation Manager" · About (info icon) · <b>Current Role</b> dropdown (multi-character) · "+ New Role" · "Export/Import Data" · "Batch OCR"</td></tr>
+<tr><td><b>Filter bar</b></td><td>Slot filter chips: All Slots · Weapon 1 · Weapon 2 · Helmet · Chest · Hands · Legs · Disc · Pendant · then "+ Add Gear"</td></tr>
+<tr><td><b>Main (2-col)</b></td><td><b>Left:</b> gear inventory cards grid. <b>Right (Panel Simulator, ~340px):</b> build/scheme selectors then equip-slots grid then Ring/buff controls then Graduation banner then stat readout.</td></tr>
+</table>
+
+<h2>2. Current-state mockup (faithful — restyle this)</h2>
+<div class="mock">
+  <div class="mk-header">
+    <h4>Where Winds Meet Gear Graduation Manager</h4>
+    <div class="mk-ctrl"><span class="mk-pill">Role: Main Hero</span><span class="mk-pill">+ New Role</span><span class="mk-pill">Export/Import</span><span class="mk-pill">Batch OCR</span></div>
+  </div>
+  <div style="padding:8px 14px;border-bottom:1px solid var(--border)">
+    <div class="mk-filterbar">
+      <span class="mk-filter active">All Slots</span><span class="mk-filter">Weapon 1</span><span class="mk-filter">Weapon 2</span>
+      <span class="mk-filter">Helmet</span><span class="mk-filter">Chest</span><span class="mk-filter">Hands</span><span class="mk-filter">Legs</span>
+      <span class="mk-filter">Disc</span><span class="mk-filter">Pendant</span><span class="mk-filter" style="border-color:var(--accent);color:var(--accent)">+ Add Gear</span>
+    </div>
+  </div>
+  <div class="mk-body">
+    <div class="mk-left">
+      <div class="mk-cards">
+        <div class="mk-card"><div class="nm">Swiftwing Cloud Umbrella</div><div class="slot">Weapon 1 · tuned</div><div class="sub">Max Phys 59.2 · Max Phys 63.8 · Umbrella Bonus 5.1% · Min Phys 62.9</div><div class="delta">Grad Delta: +8.00%</div></div>
+        <div class="mk-card"><div class="nm">Nightfarer Armor</div><div class="slot">Chest</div><div class="sub">Precision 6.3% · Max Bamboocut 34.8 · Crit 7.4%</div><div class="delta">Grad Delta: +4.39%</div></div>
+        <div class="mk-card"><div class="nm">Swiftwing Disc</div><div class="slot">Disc</div><div class="sub">Min Phys 56.2 · Max Phys 59.9 · Crit 6.8%</div><div class="delta">Grad Delta: +7.41%</div></div>
+        <div class="mk-card" style="opacity:.6"><div class="nm">(more gear cards)</div><div class="slot">each card: icon, name, slot, quality %, substats, grad delta, edit / delete</div></div>
+      </div>
+    </div>
+    <div class="mk-right">
+      <div style="display:flex;gap:6px;margin-bottom:10px"><span class="mk-pill">Build: Bamboocut-Dust</span><span class="mk-pill">Scheme 1</span></div>
+      <div class="mk-slots">
+        <div class="mk-slot">Weapon1</div><div class="mk-slot">Weapon2</div><div class="mk-slot">Disc</div><div class="mk-slot">Pendant</div>
+        <div class="mk-slot">Helmet</div><div class="mk-slot">Chest</div><div class="mk-slot">Hands</div><div class="mk-slot">Legs</div>
+      </div>
+      <div style="display:flex;gap:6px;margin-bottom:10px;align-items:center"><span class="mk-pill">Ring: Crit Ring (+3.7%)</span></div>
+      <div style="font-size:.72rem;color:var(--text-sub);margin-bottom:10px">[x] Food buff &nbsp; [ ] Script under 50% HP &nbsp; [ ] Early season</div>
+      <div class="mk-banner"><div class="lbl">Graduation Rate</div><div class="val">104.24%</div><div class="foot">DPS Expectation: 40,777</div></div>
+      <div style="font-size:.65rem;color:var(--text-sub);display:flex;justify-content:space-between;margin-bottom:4px"><span>STAT</span><span>MENU &nbsp; COMBAT</span></div>
+      <div class="mk-statrow"><span>Min Physical Atk</span><span>1418 &nbsp; 1508</span></div>
+      <div class="mk-statrow"><span>Max Physical Atk</span><span>2311 &nbsp; <span class="c">2491</span></span></div>
+      <div class="mk-statrow"><span>Physical Pen</span><span>28.7% &nbsp; 28.7%</span></div>
+      <div class="mk-statrow"><span>Crit Rate</span><span>115.6% &nbsp; <span class="c">119.3%</span></span></div>
+      <div class="mk-statrow"><span>Effective</span><span>— &nbsp; 80.0%</span></div>
+      <div class="mk-statrow"><span>Direct Crit Rate</span><span>4.6% &nbsp; 4.6%</span></div>
+      <div class="mk-statrow"><span>(full list in section 4)</span><span></span></div>
+    </div>
+  </div>
+</div>
+<div class="note">MENU column = value shown in the in-game Combat Attributes screen (no Inner Ways). COMBAT column = effective in-fight value (Inner Ways at max + active buffs). <b>Green</b> = boosted by Inner Ways/buffs. The "Effective / Net" sub-rows are derived (show "—" in MENU).</div>
+
+<h2>3. Graduation Analysis modal (opens when the banner is clicked)</h2>
+<p>A large modal with a <b>left rail</b> (current grad rate, edition/author meta, the 8 equipped gear pieces) and a <b>right area</b> with a horizontal tab bar. Tabs (keep all, in this order):</p>
+<table>
+<tr><th>Tab</th><th>Purpose / content</th></tr>
+<tr><td><b>Manual Sheet</b></td><td>Editable panel inputs grouped Physical / Attribute (Bamboocut) attributes; "How to use" help; Dungeon Target = Tier 91 / Lv95 (Global).</td></tr>
+<tr><td><b>Stat Priority</b></td><td>Two ranked lists (gain / loss): per stat, the grad-% change from adding/removing one typical substat roll. Live vs the current panel.</td></tr>
+<tr><td><b>Cultivate (beta)</b></td><td>Three sections: substat-count (条) progress tiles vs graduated targets; tuned-substat upgrade ranking; greedy next-8 substat advice.</td></tr>
+<tr><td><b>Compare</b></td><td>Per-slot: compare each gear piece, show which raises graduation most.</td></tr>
+<tr><td><b>Transmute Advice</b></td><td>Pick a slot and a substat to re-roll, then shows which replacement substat (at max T91 roll) yields the best graduation gain + a verdict.</td></tr>
+<tr><td><b>Best Build</b></td><td>Scans the whole gear pool, finds the highest-graduation 8-piece combination; shows top combo + alternatives + "Equip this build".</td></tr>
+</table>
+<div class="note">(A <b>Transmute Cooldown</b> tab — 7-day CD countdown per transmuted item — exists in the CN reference and may be added later; leave room for one more tab.)</div>
+
+<h2>4. Full stat readout list (right panel, in order)</h2>
+<p>Each row has MENU + COMBAT columns. Pen/percent to 1 decimal; ATK integer. Indented rows are derived sub-rows.</p>
+<ul style="columns:2;font-size:.85rem">
+<li>Min Physical Atk</li><li>Max Physical Atk</li><li>Physical Pen / Net (after enemy res)</li>
+<li>Crit Rate / Effective</li><li>Direct Crit Rate</li><li>Crit DMG</li>
+<li>Affinity Rate / Effective</li><li>Direct Affinity Rate</li><li>Affinity DMG</li>
+<li>Precision Rate / Effective</li>
+<li>Min Bamboocut Atk</li><li>Max Bamboocut Atk</li><li>Bamboocut Pen / Net</li><li>Bamboocut DMG Bonus</li>
+<li>Physical DMG Bonus</li><li>All Martial Art Skill DMG</li><li>(Weapon) Martial Art Boost</li>
+<li>Combat Boost vs Boss</li><li>Combat Boost on Players</li><li>Single-Target Mystic DMG</li><li>Area Mystic Skill DMG</li>
+</ul>
+<div class="note">"Bamboocut" is build-dependent — it is the build's own attribute element (Bamboocut / Bellstrike / Stonesplit / Silkbind), so that word changes per build.</div>
+
+<h2>5. Add/Edit Gear modal</h2>
+<p>Fields: Slot, Quality (Gold/Purple/Blue), Name, Weapon Type (weapons only), Set, Mastery, <b>Relayed (truyền thừa)</b> checkbox (caps substats at 95% roll), Quick-OCR drop zone, then up to 6 Sub Stat rows (each: searchable stat select, value, <b>Tuned</b> checkbox). Footer: Delete / Cancel / Save.</p>
+
+<h2>6. What to deliver</h2>
+<ul>
+<li>A single static HTML file (Tailwind utility classes welcome) showing the <b>redesigned</b>: header, filter bar, main 2-column layout (inventory + Panel Simulator), and the Graduation Analysis modal with its tab bar and at least the Manual + Stat Priority + Best Build tab bodies mocked.</li>
+<li>Keep every label/field above. Make it denser, more game-styled, with better hierarchy and spacing. Dark + gold.</li>
+<li>The React dev will adapt your HTML/CSS back into the existing component — favor reusable utility classes / clear class names over inline one-offs.</li>
+</ul>
+
+</div>
+</body>
+</html>
