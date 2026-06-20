@@ -1438,7 +1438,8 @@ export default function App() {
     const num = parseFloat(m[0]);
     if (num <= relayCap) return raw;
     const pct = raw.includes("%");
-    return relayCap + (pct ? "%" : "");
+    // Keep one decimal to match the in-game display (e.g. "7.0%", not "7%").
+    return relayCap.toFixed(1) + (pct ? "%" : "");
   };
 
   const [isModalOcrProcessing, setIsModalOcrProcessing] = useState(false);
@@ -4514,7 +4515,7 @@ export default function App() {
                             if (!m) return s;
                             const relayCap = +(cap * 0.95).toFixed(1);
                             if (parseFloat(m[0]) <= relayCap) return s;
-                            return { ...s, val: relayCap + (s.val.includes("%") ? "%" : "") };
+                            return { ...s, val: relayCap.toFixed(1) + (s.val.includes("%") ? "%" : "") };
                           }));
                         }
                       }}
