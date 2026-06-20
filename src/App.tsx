@@ -693,6 +693,12 @@ const computeGearPanel = (current: PanelStats, gear: GearItem[]): PanelStats => 
   (Object.values(SUB_MAP) as (keyof PanelStats)[]).forEach(key => {
     (next[key] as number) = (BASE_PANEL_NO_GEAR[key] as number) + (gearSum[key] || 0);
   });
+  // Direct Crit/Affinity are NOT character-menu/gear stats — they come only from
+  // Inner Ways (added later via iwStats) or the <50% HP script buff. Force them
+  // to 0 in the gear base so any stale value baked into a saved panel can't leak
+  // a phantom "+4.6%" when no inner way is equipped.
+  next.dcrit = 0;
+  next.daff = 0;
   return next;
 };
 // ---------------------------------------------------------------------------
@@ -2104,7 +2110,7 @@ export default function App() {
             prec: 100,
             crit: 74.0,
             aff: 8.5,
-            dcrit: 4.6,
+            dcrit: 0,
             daff: 0,
             critDmg: 50,
             affDmg: 30,
@@ -2145,7 +2151,7 @@ export default function App() {
             prec: 102,
             crit: 79.5,
             aff: 12.5,
-            dcrit: 4.6,
+            dcrit: 0,
             daff: 0,
             critDmg: 54,
             affDmg: 35,
