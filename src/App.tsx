@@ -3039,9 +3039,6 @@ export default function App() {
             </div>
             <div className="banner-footer banner-footer-content">
               <span className="banner-footer-text">
-                Excel Sheet: <span className="text-bbb">{(rotationStats.gradRate / 0.94).toFixed(2)}%</span>
-              </span>
-              <span className="banner-footer-text">
                 DPS Expectation: <span className="text-white font-bold">{Math.round(rotationStats.dps).toLocaleString()}</span>
               </span>
             </div>
@@ -3131,9 +3128,6 @@ export default function App() {
                   <div className="label">Graduation Rate</div>
                   <div className="value">{rotationStats.gradRate.toFixed(2)}%</div>
                 </div>
-                <div className="grad-excel-rate-box">
-                  <div className="grad-excel-rate-text">Excel Sheet: <span className="text-bbb font-bold">{(rotationStats.gradRate / 0.94).toFixed(2)}%</span></div>
-                </div>
                 <div className="grad-meta-info-inline">
                   <div className="grad-meta-text">
                     <div className="grad-meta-item">Edition: <span className="text-white">Global (T91 / Lv95)</span></div>
@@ -3178,21 +3172,21 @@ export default function App() {
                   {/* Tab Panes */}
                   {gradModalActiveTab === "manual" && (
                     <div className="space-y-6" style={{ textAlign: 'left' }}>
-                      {/* Hướng dẫn sử dụng */}
+                      {/* How to use */}
                       <div className="bg-[#1e1a12] border border-[#ffd700]/30 rounded-xl p-4">
-                        <h3 className="text-sm font-bold text-[#ffd700] mb-2 flex items-center gap-2">📖 Hướng dẫn sử dụng</h3>
+                        <h3 className="text-sm font-bold text-[#ffd700] mb-2 flex items-center gap-2">📖 How to use</h3>
                         <ol className="text-[12.5px] text-slate-300 leading-relaxed list-decimal pl-5 space-y-1">
-                          <li><b>Nhập panel</b>: Mở <b>Combat Attributes</b> trong game (nút <b>C</b>) rồi nhập các chỉ số bên dưới. Hoặc bật <b>Auto Panel From Gear</b> để tự tính từ gear đã nhập ở màn hình chính.</li>
-                          <li><b>Xem kết quả</b>: Thanh trên cùng hiển thị <b>Graduation Rate</b> (% tốt nghiệp so với BiS T91) và <b>DPS Expectation</b> (秒伤 dự kiến).</li>
-                          <li><b>Chọn build & bow/set</b>: Ở <b>Panel Simulator</b> (bên phải màn chính) chọn đúng流派, bow诀 và套装.</li>
+                          <li><b>Enter panel</b>: Open <b>Combat Attributes</b> in-game (the <b>C</b> key) and type the stats below. Or the panel auto-computes from the gear you entered on the main screen.</li>
+                          <li><b>Read results</b>: The top bar shows <b>Graduation Rate</b> (% vs the BiS T91 build) and <b>DPS Expectation</b>.</li>
+                          <li><b>Pick build & bow/set</b>: In the <b>Panel Simulator</b> (right of the main screen) choose the right path, bow attribute, and gear set.</li>
                         </ol>
                         <div className="text-[12px] text-slate-400 mt-3 pt-2 border-t border-[#3d3d45]/60 leading-relaxed">
-                          <b className="text-[#ffd700]/90">Các tab khác làm gì:</b>
+                          <b className="text-[#ffd700]/90">What the other tabs do:</b>
                           <ul className="list-disc pl-5 mt-1 space-y-0.5">
-                            <li><b>Stat Priority</b> — chỉ số nào nên cộng/bỏ để lên tốt nghiệp nhanh nhất.</li>
-                            <li><b>Cultivate</b> — tổng kết词条 (条), dòng定音 (✦) nên nâng, và gợi ý 8词条 tiếp theo nên đầu tư.</li>
-                            <li><b>Compare</b> — so sánh từng món gear, xem món nào nâng tốt nghiệp nhiều nhất.</li>
-                            <li><b>Transmute Advice</b> — gợi ý chuyển律 (转律) cho từng部位: cấu hình词条 chủ + phụ tối ưu để tăng tốt nghiệp.</li>
+                            <li><b>Stat Priority</b> — which stats to add/drop to graduate fastest.</li>
+                            <li><b>Cultivate</b> — substat (条) summary, which tuned (✦) lines to upgrade, and the next 8 substats worth investing in.</li>
+                            <li><b>Compare</b> — compare each gear piece to see which raises graduation the most.</li>
+                            <li><b>Transmute Advice</b> — per-slot transmute (转律) suggestions: the optimal main + sub substat config to raise graduation.</li>
                           </ul>
                         </div>
                       </div>
