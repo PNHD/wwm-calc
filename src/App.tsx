@@ -2240,6 +2240,31 @@ export default function App() {
     return { ...panel };
   }, [panel, autoGearPanel, activeScheme?.gear]);
 
+  // Keep the persisted scheme `panel` in sync with the live gear-derived
+  // basePanel (auto mode). Without this, equipping gear updated the readout
+  // (which reads basePanel) but left scheme.panel stale — so saves/exports
+  // showed old numbers that didn't match the in-game panel. Skip if unchanged.
+  useEffect(() => {
+    if (!autoGearPanel || !activeScheme) return;
+    const cur = activeScheme.panel;
+    let same = true;
+    for (const k of Object.keys(basePanel) as (keyof PanelStats)[]) {
+      if (cur[k] !== basePanel[k]) { same = false; break; }
+    }
+    if (same) return;
+    setCharsData(prev => {
+      const updated = {
+        ...prev,
+        chars: prev.chars.map(c => c.id === prev.activeCharId ? {
+          ...c,
+          schemes: c.schemes.map(s => s.id === prev.activeSchemeId ? { ...s, panel: basePanel } : s),
+        } : c),
+      };
+      localStorage.setItem("wwm_chars_v3", JSON.stringify(updated));
+      return updated;
+    });
+  }, [basePanel, autoGearPanel, activeScheme?.id]);
+
   // 2. Compute Adjusted Panel Stats (base panel + toggleable in-combat buffs)
   const adjustedPanel = useMemo((): PanelStats => {
     let p: PanelStats = { ...basePanel };
