@@ -2864,6 +2864,13 @@ export default function App() {
                     const mB = b.mastery !== undefined ? parseInt(b.mastery.toString()) : 0;
                     return mB - mA;
                   }
+                  // Equipped first, then by grade (grad delta) high → low.
+                  const eqA = isItemEquipped(a, getActiveGear()) ? 1 : 0;
+                  const eqB = isItemEquipped(b, getActiveGear()) ? 1 : 0;
+                  if (eqA !== eqB) return eqB - eqA;
+                  const dB = getGearItemCompareStats(b).totalGradDelta;
+                  const dA = getGearItemCompareStats(a).totalGradDelta;
+                  if (dB !== dA) return dB - dA;
                   return a.name.localeCompare(b.name);
                 })
                 .map(item => {
