@@ -622,6 +622,11 @@ const COMPAT_ALIASES = [
   "Modao Special","Modao Charged","Hengdao Special","Hengdao Charged",
   "Gauntlets Special","Gauntlets Charged",
   "Group Anomaly DMG","Single Target DMG",
+  // Formless Penetration is the single canonical pen substat (patch 4.30).
+  // Old element-pen names + "Attr Pen"/"Formless Pen" stay as hidden aliases
+  // so saved gear still maps, but only "Formless Penetration" shows in the picker.
+  "Formless Pen","Attr Pen",
+  "Bamboocut Pen","Silkbind Pen","Bellstrike Pen","Stonesplit Pen",
 ];
 
 // Inner-Way-only combat stats: they exist on the panel (fed by Inner Way
