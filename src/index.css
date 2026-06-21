@@ -193,7 +193,11 @@ header h1 {
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 /* Inner-way picker modal items */
-.xinfa-select-item { background: var(--ga-bg-tertiary) !important; border: 1px solid var(--border) !important; border-radius: 8px !important; transition: all 0.2s; }
+.xinfa-select-grid { align-items: start !important; grid-auto-rows: min-content !important; }
+.xinfa-select-item { background: var(--ga-bg-tertiary) !important; border: 1px solid var(--border) !important; border-radius: 8px !important; transition: all 0.2s; display: flex !important; flex-direction: column !important; height: auto !important; min-height: 120px; }
+.xinfa-select-item .xinfa-img-wrapper { aspect-ratio: auto !important; height: 80px !important; flex: 0 0 80px; }
+.xinfa-select-item .xinfa-img-wrapper img { width: 100%; height: 100%; object-fit: contain !important; }
+.xinfa-select-item .xinfa-select-name { flex: 0 0 auto; padding: 4px 2px !important; line-height: 1.2; }
 .xinfa-select-item:hover { border-color: var(--accent) !important; transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.4); }
 .xinfa-select-name { font-family: var(--font-display); background: var(--ga-surface) !important; border-top: 1px solid var(--border) !important; }
 .xinfa-tier-select {
