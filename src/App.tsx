@@ -717,6 +717,23 @@ const computeGearPanel = (current: PanelStats, gear: GearItem[]): PanelStats => 
   (Object.values(SUB_MAP) as (keyof PanelStats)[]).forEach(key => {
     (next[key] as number) = (BASE_PANEL_NO_GEAR[key] as number) + (gearSum[key] || 0);
   });
+  // Five-attribute (五维) conversion — official Excel 伤害公式 B45 / 各种机制 B54:
+  //   1 Agility (敏)  = +0.076% Crit Rate, +0.9 Min Phys Atk
+  //   1 Momentum (势) = +0.038% Affinity Rate, +0.9 Max Phys Atk
+  //   1 Power (劲)    = +0.225 Min Phys Atk, +1.36 Max Phys Atk
+  // INITIAL_PANEL is a real in-game panel (attributes already baked into its
+  // crit/aff/min/maxOuter), so we add only the DELTA between this gear's attribute
+  // totals and INITIAL's. The calibrated reference build is unchanged (delta 0);
+  // builds with different attributes become attribute-aware. (Strength is unused
+  // by the formula and stays 0; element/pz attack is NOT five-attribute-derived.)
+  const aCrit = (ag: number) => ag * 0.076;
+  const aAff = (mo: number) => mo * 0.038;
+  const aMin = (ag: number, po: number) => ag * 0.9 + po * 0.225;
+  const aMax = (mo: number, po: number) => mo * 0.9 + po * 1.36;
+  next.crit     += aCrit(next.agility)  - aCrit(INITIAL_PANEL.agility);
+  next.aff      += aAff(next.momentum)  - aAff(INITIAL_PANEL.momentum);
+  next.minOuter += aMin(next.agility, next.power)  - aMin(INITIAL_PANEL.agility, INITIAL_PANEL.power);
+  next.maxOuter += aMax(next.momentum, next.power) - aMax(INITIAL_PANEL.momentum, INITIAL_PANEL.power);
   // Direct Crit/Affinity are NOT character-menu/gear stats — they come only from
   // Inner Ways (added later via iwStats) or the <50% HP script buff. Force them
   // to 0 in the gear base so any stale value baked into a saved panel can't leak
