@@ -2407,7 +2407,17 @@ export default function App() {
       const { total } = calcSkill(item, p, activeTier, { set: p.set, datang, yishui, buildKey: selectedBuild, weaponStars: (p as any).weaponStars } as any);
       totalDmg += total;
     });
-    return (totalDmg / baselineScore) * 100;
+    let rate = (totalDmg / baselineScore) * 100;
+    // ponytail: crit above the effective cap (80% × judgmentFactor) adds zero
+    // DPS, so calcSkill scores two combos identically whether one wastes 10%
+    // crit or not. Subtract a tiny penalty per overcap point so the search
+    // breaks those ties toward the combo that wastes less — letting you re-roll
+    // the dead crit into pen/crit-DMG. Penalty is ~0.001%/pt: it only ever
+    // decides between otherwise-equal builds, never overrides a real DPS gain.
+    const critCap = 80 * judgmentFactor;
+    const overCrit = Math.max(0, p.crit - critCap);
+    rate -= overCrit * 0.001;
+    return rate;
   };
 
   const [bestBuildResult, setBestBuildResult] = useState<{ rate: number; gear: GearItem[] }[] | null>(null);
