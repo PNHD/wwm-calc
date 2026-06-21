@@ -3188,9 +3188,7 @@ export default function App() {
               })()}
             </div>
             <div className="sim-side-panel">
-              <div className="sim-slot bow-slot">
-                <img id="bow-icon" src="http://spongem.com/yysls/icon/icon9_2.jpg" alt="Ring" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-              </div>
+              <div className="sim-slot bow-slot" title="Weapon / Ring slot" />
               <div className="sim-controls">
                 <select
                   value={bowSelect}
@@ -5055,7 +5053,8 @@ export default function App() {
                       }}
                     >
                       <div className="xinfa-img-wrapper" style={{ position: 'relative' }}>
-                        {imageUrl && <img src={imageUrl} alt={iw.name} onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />}
+                        <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 30, fontWeight: 800, color: '#56657a', userSelect: 'none' }}>{iw.name[0]}</span>
+                        {imageUrl && <img src={imageUrl} alt={iw.name} style={{ position: 'relative', zIndex: 1, backgroundColor: '#000' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />}
                         {isSelected && (
                           <div style={{
                             position: 'absolute',

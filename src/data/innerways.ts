@@ -630,11 +630,11 @@ export const INNER_WAYS: InnerWay[] = [
 // conditional this assumes full uptime (max stacks / condition met).
 const INNER_WAY_TRIGGERS: Record<string, InnerWayTrigger> = {
   // BAMBOOCUT-DUST
-  phantom_rally: "conditional", song_of_tang: "ramp", light_anew: "conditional", towline_sweep: "utility",
+  phantom_rally: "conditional", song_of_tang: "ramp", light_anew: "conditional", towline_sweep: "passive",
   // BAMBOOCUT-WIND
-  echoes_of_oblivion: "conditional", riptide_reflex: "utility", breaking_point: "conditional", vendetta: "utility",
+  echoes_of_oblivion: "conditional", riptide_reflex: "passive", breaking_point: "conditional", vendetta: "passive",
   // BELLSTRIKE-SPLENDOR
-  sword_morph: "conditional", battle_anthem: "conditional", wildfire_spark: "utility", mountains_might: "utility", sandswirl_tail: "utility",
+  sword_morph: "conditional", battle_anthem: "conditional", wildfire_spark: "passive", mountains_might: "passive", sandswirl_tail: "utility",
   // BELLSTRIKE-UMBRA
   sword_horizon: "conditional", adaptive_steel: "conditional", insightful_strike: "conditional", wolfchasers_art: "utility",
   // GENERAL
