@@ -9,6 +9,9 @@ coverage/
 .env*
 !.env.example
 
+# MCP server config holds API tokens — keep local, commit the .example instead
+.mcp.json
+
 
 # wrangler files
 .wrangler

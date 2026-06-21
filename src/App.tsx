@@ -3186,7 +3186,7 @@ export default function App() {
             </div>
             <div className="sim-side-panel">
               <div className="sim-slot bow-slot">
-                <img id="bow-icon" src="icon/icon3.jpg" alt="Ring" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                <img id="bow-icon" src="http://spongem.com/yysls/icon/icon9_2.jpg" alt="Ring" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
               </div>
               <div className="sim-controls">
                 <select
