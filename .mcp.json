@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "civitai": {
+      "type": "url",
+      "url": "https://mcp.civitai.com/mcp",
+      "headers": {
+        "Authorization": "Bearer 58e95a70adfd3a37260cf8ec74331d79"
+      }
+    }
+  }
+}

@@ -147,7 +147,6 @@ header h1 {
 .ga-card__badges { display: flex; gap: 4px; }
 .ga-card__badge { font-size: 0.62rem; font-weight: 600; padding: 1px 6px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
 .ga-card__badge--tuned { background: rgba(56,201,164,0.15); color: var(--ga-accent2); }
-.ga-card__badge--relay { background: rgba(212,148,58,0.15); color: var(--accent); }
 .ga-card__delta { font-family: var(--font-display); font-weight: 700; font-size: 0.85rem; }
 .ga-card__delta.is-up { color: var(--success, #38c960); }
 .ga-card__delta.is-down { color: var(--danger, #d44a4a); }

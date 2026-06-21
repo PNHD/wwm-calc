@@ -117,13 +117,6 @@ export interface RotationItem {
   tiaozhan: number;
 }
 
-export interface RelayedGear {
-  slotName: string;
-  baseStats: { [key: string]: number };
-  substats: { name: string; value: number }[];
-  relayedSubstat?: { name: string; value: number };
-}
-
 export interface InnerWayTier {
   tier: number;
   effect: string;

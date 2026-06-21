@@ -243,8 +243,6 @@ export interface GearItem {
   mastery?: number;
   isEquipped?: boolean;
   weaponType?: string;
-  isRelay?: boolean; // Relayed (truyền thừa) gear: main stat = standard, but the
-                     // 6 substats only roll to 95% of their normal 95下 cap.
 }
 
 export interface Scheme {
@@ -339,7 +337,7 @@ const innerAttrName = (buildKey: string): string => INNER_ATTR_BY_BUILD[buildKey
 // most DPS-relevant field; flat stats (pen/atk) get no %, rates/bonuses do.
 const IW_STAT_LABEL: Record<string, [string, boolean]> = {
   dcrit: ["D.Crit", true], daff: ["D.Aff", true], critDmg: ["Crit DMG", true],
-  affDmg: ["Aff DMG", true], outerPen: ["Phys Pen", false], pzPen: ["Attr Pen", false],
+  affDmg: ["Aff DMG", true], outerPen: ["Phys Pen", false], pzPen: ["Formless Pen", false],
   outerDmg: ["Phys DMG", true], pzDmg: ["Attr DMG", true], crit: ["Crit", true],
   aff: ["Aff", true], generalDmg: ["DMG", true],
 };
@@ -399,9 +397,9 @@ const MAX_ROLL_95: Partial<Record<keyof PanelStats, number>> = {
   maxPz: 36.2, minPz: 36.2,
   strength: 40.4, agility: 40.4, power: 40.4,
   bossDmg: 2.6, allArts: 2.6,
-  umbMartial: 5.2, ropeMartial: 5.2, swordMartial: 5.2, spearMartial: 5.2,
-  fanMartial: 5.2, twinbladesMartial: 5.2, modaoMartial: 5.2, hengdaoMartial: 5.2,
-  gauntletsMartial: 5.2,
+  umbMartial: 5.0, ropeMartial: 5.0, swordMartial: 5.0, spearMartial: 5.0,
+  fanMartial: 5.0, twinbladesMartial: 5.0, modaoMartial: 5.0, hengdaoMartial: 5.0,
+  gauntletsMartial: 5.0,
 };
 
 // VERIFIED full graduated PANEL per path at 95下 (T91 Global), from sheet
@@ -505,6 +503,8 @@ const SUB_MAP: Record<string, keyof PanelStats> = {
   "Precision": "prec",
   "Max Bamboocut Atk": "maxPz",
   "Min Bamboocut Atk": "minPz",
+  "Formless Penetration": "pzPen",
+  "Formless Pen": "pzPen",
   "Attr Pen": "pzPen",
   "Bamboocut DMG%": "pzDmg",
   "Art of Umbrella Boost": "umbAll",
@@ -1449,25 +1449,6 @@ export default function App() {
   const [formSubs, setFormSubs] = useState<{type: string; val: string; isTuned?: boolean}[]>(
     Array(6).fill(null).map(() => ({ type: "Max Phys Atk", val: "", isTuned: false }))
   );
-  const [formRelay, setFormRelay] = useState(false);
-
-  // Relay (truyền thừa) gear caps each substat at 95% of its normal 95下 max
-  // roll. Returns the clamped numeric string for a given sub type, or the
-  // input unchanged when relay is off / the type has no known cap.
-  const clampToRelayCap = (subType: string, raw: string): string => {
-    if (!formRelay) return raw;
-    const pKey = SUB_MAP[subType];
-    const cap = pKey ? MAX_ROLL_95[pKey] : undefined;
-    if (cap === undefined) return raw;
-    const m = raw.match(/-?\d+(\.\d+)?/);
-    if (!m) return raw;
-    const relayCap = +(cap * 0.95).toFixed(1);
-    const num = parseFloat(m[0]);
-    if (num <= relayCap) return raw;
-    const pct = raw.includes("%");
-    // Keep one decimal to match the in-game display (e.g. "7.0%", not "7%").
-    return relayCap.toFixed(1) + (pct ? "%" : "");
-  };
 
   const [isModalOcrProcessing, setIsModalOcrProcessing] = useState(false);
   const modalFileInputRef = useRef<HTMLInputElement>(null);
@@ -1745,7 +1726,6 @@ export default function App() {
       setFormSet("stormrain"); // default armor set
     }
     setFormMastery("");
-    setFormRelay(false);
     const defaultTypes = BUILD_WEAPON_TYPES[selectedBuild] || ["Umbrella", "Rope Dart"];
     setFormWeaponType(selectedSlot === "Umbrella" ? defaultTypes[0] : selectedSlot === "Rope Dart" ? defaultTypes[1] : "Sword");
     setFormSubs(Array(6).fill(null).map(() => ({ type: "Max Phys Atk", val: "", isTuned: false })));
@@ -1758,7 +1738,6 @@ export default function App() {
     setFormQuality(item.quality);
     setFormSet(item.set);
     setFormMastery(item.mastery !== undefined ? item.mastery.toString() : "");
-    setFormRelay(!!item.isRelay);
     setSelectedSlot(item.slot);
     const defaultTypes = BUILD_WEAPON_TYPES[selectedBuild] || ["Umbrella", "Rope Dart"];
     setFormWeaponType(item.weaponType || (item.slot === "Umbrella" ? defaultTypes[0] : item.slot === "Rope Dart" ? defaultTypes[1] : "Sword"));
@@ -1798,7 +1777,6 @@ export default function App() {
             mastery: masteryVal,
             subs: savedSubs,
             weaponType: isWeapon ? formWeaponType : undefined,
-            isRelay: formRelay
           };
         }
         return it;
@@ -1814,7 +1792,6 @@ export default function App() {
         mastery: masteryVal,
         subs: savedSubs,
         weaponType: isWeapon ? formWeaponType : undefined,
-        isRelay: formRelay
       };
       updatedGear = [...activeGear, newItem];
     }
@@ -2472,27 +2449,27 @@ export default function App() {
       { key: "affDmg", label: "Affinity DMG", roll: 5.0, unit: "%" },
       { key: "prec", label: "Precision", roll: 6.6, unit: "%" },
       { key: "maxPz", label: "Max Bamboocut ATK", roll: 36.2, unit: "" },
-      { key: "pzPen", label: "Bamboocut Pen", roll: 9.0, unit: "%" },
+      { key: "pzPen", label: "Formless Pen", roll: 9.0, unit: "%" },
       { key: "dcrit", label: "Direct Crit Rate", roll: 4.6, unit: "%" },
       { key: "umbAll", label: "Art of Umbrella Boost", roll: 2.6, unit: "%" },
-      { key: "umbMartial", label: "Umb Martial Art Skill DMG Boost", roll: 5.2, unit: "%" },
+      { key: "umbMartial", label: "Umb Martial Art Skill DMG Boost", roll: 5.0, unit: "%" },
       { key: "ropeAll", label: "Art of Rope Dart Boost", roll: 2.6, unit: "%" },
-      { key: "ropeMartial", label: "Rope Dart Martial Art Skill DMG Boost", roll: 5.2, unit: "%" },
+      { key: "ropeMartial", label: "Rope Dart Martial Art Skill DMG Boost", roll: 5.0, unit: "%" },
       { key: "swordAll", label: "Art of Sword Boost", roll: 2.6, unit: "%" },
-      { key: "swordMartial", label: "Sword Martial Art Skill DMG Boost", roll: 5.2, unit: "%" },
+      { key: "swordMartial", label: "Sword Martial Art Skill DMG Boost", roll: 5.0, unit: "%" },
       { key: "spearAll", label: "Art of Spear Boost", roll: 2.6, unit: "%" },
-      { key: "spearMartial", label: "Spear Martial Art Skill DMG Boost", roll: 5.2, unit: "%" },
+      { key: "spearMartial", label: "Spear Martial Art Skill DMG Boost", roll: 5.0, unit: "%" },
       { key: "fanAll", label: "Art of Fan Boost", roll: 2.6, unit: "%" },
-      { key: "fanMartial", label: "Fan Martial Art Skill DMG Boost", roll: 5.2, unit: "%" },
+      { key: "fanMartial", label: "Fan Martial Art Skill DMG Boost", roll: 5.0, unit: "%" },
       { key: "twinbladesAll", label: "Art of Dual Blades Boost", roll: 2.6, unit: "%" },
-      { key: "twinbladesMartial", label: "Dual Blades Martial Art Skill DMG Boost", roll: 5.2, unit: "%" },
+      { key: "twinbladesMartial", label: "Dual Blades Martial Art Skill DMG Boost", roll: 5.0, unit: "%" },
       { key: "modaoAll", label: "Art of Mo Blade Boost", roll: 2.6, unit: "%" },
-      { key: "modaoMartial", label: "Mo Blade Martial Art Skill DMG Boost", roll: 5.2, unit: "%" },
+      { key: "modaoMartial", label: "Mo Blade Martial Art Skill DMG Boost", roll: 5.0, unit: "%" },
       { key: "hengdaoAll", label: "Art of Heng Blade Boost", roll: 2.6, unit: "%" },
-      { key: "hengdaoMartial", label: "Heng Blade Martial Art Skill DMG Boost", roll: 5.2, unit: "%" },
+      { key: "hengdaoMartial", label: "Heng Blade Martial Art Skill DMG Boost", roll: 5.0, unit: "%" },
       { key: "gauntletsAll", label: "Art of Gauntlets Boost", roll: 2.6, unit: "%" },
-      { key: "gauntletsMartial", label: "Gauntlets Martial Art Skill DMG Boost", roll: 5.2, unit: "%" },
-      { key: "allArts", label: "All Martial Art Skill DMG Boost", roll: 5.2, unit: "%" },
+      { key: "gauntletsMartial", label: "Gauntlets Martial Art Skill DMG Boost", roll: 5.0, unit: "%" },
+      { key: "allArts", label: "All Martial Art Skill DMG Boost", roll: 5.0, unit: "%" },
       { key: "bossDmg", label: "Boss DMG", roll: 2.0, unit: "%" },
       { key: "outerDmg", label: "Phys DMG", roll: 2.0, unit: "%" },
     ];
@@ -2850,7 +2827,6 @@ export default function App() {
                 const defaultTypes = BUILD_WEAPON_TYPES[selectedBuild] || ["Umbrella", "Rope Dart"];
                 setFormWeaponType(initialSlot === "Umbrella" ? defaultTypes[0] : initialSlot === "Rope Dart" ? defaultTypes[1] : "Sword");
                 setFormMastery("");
-                setFormRelay(false);
                 setFormSubs([
                   { type: "Other", val: "" },
                   { type: "Other", val: "" },
@@ -2897,7 +2873,6 @@ export default function App() {
                   const grade = totalGradDelta >= 7 ? "S" : totalGradDelta >= 5.5 ? "A" : totalGradDelta >= 4 ? "B" : totalGradDelta >= 2 ? "C" : "D";
                   const rarityClass = isGold ? "ga-rarity5" : isPurple ? "ga-rarity4" : "ga-rarity3";
                   const stars = isGold ? "★★★★★" : isPurple ? "★★★★" : "★★★";
-                  const hasRelay = !!item.isRelay;
                   const hasTuned = item.subs.some(s => s.isTuned);
 
                   return (
@@ -2941,7 +2916,6 @@ export default function App() {
                       <div className="ga-card__foot">
                         <div className="ga-card__badges">
                           {hasTuned && <span className="ga-card__badge ga-card__badge--tuned">Tuned</span>}
-                          {hasRelay && <span className="ga-card__badge ga-card__badge--relay">Relay</span>}
                         </div>
                         <span className={`ga-card__delta ${totalGradDelta >= 0 ? "is-up" : "is-down"}`}>
                           {totalGradDelta >= 0 ? "+" : ""}{totalGradDelta.toFixed(2)}%
@@ -3262,7 +3236,7 @@ export default function App() {
                 { label: "↳ Effective", combat: effPrecision, pct: true, derived: true },
                 { label: `Min ${innerAttrName(selectedBuild)} Atk`, base: basePanel.minPz, combat: adjustedPanel.minPz },
                 { label: `Max ${innerAttrName(selectedBuild)} Atk`, base: basePanel.maxPz, combat: adjustedPanel.maxPz },
-                { label: `${innerAttrName(selectedBuild)} Pen`, base: basePanel.pzPen, combat: adjustedPanel.pzPen, pct: true },
+                { label: `Formless Pen`, base: basePanel.pzPen, combat: adjustedPanel.pzPen, pct: true },
                 { label: "↳ Net (after enemy res)", combat: netPzPen, pct: true, derived: true },
                 { label: `${innerAttrName(selectedBuild)} DMG Bonus`, base: basePanel.pzDmg, combat: adjustedPanel.pzDmg, pct: true },
                 { label: "Physical DMG Bonus", base: basePanel.outerDmg, combat: adjustedPanel.outerDmg, pct: true },
@@ -3688,8 +3662,8 @@ export default function App() {
                     gearType = "Min Bamboocut Atk";
                     gradKey = "Min Bamboocut";
                     isPercentage = false;
-                  } else if (nameLower.includes("bamboocut pen")) {
-                    gearType = "Attr Pen";
+                  } else if (nameLower.includes("formless pen") || nameLower.includes("bamboocut pen")) {
+                    gearType = "Formless Pen";
                     gradKey = "Bamboocut Pen";
                     isPercentage = true;
                   } else if (nameLower.includes("own weapon bonus") || nameLower.includes("own weapon martial")) {
@@ -4104,7 +4078,7 @@ export default function App() {
                 const STAT_LABELS: Record<string, string> = {
                   maxOuter: "Max Phys Atk", minOuter: "Min Phys Atk", outerPen: "Phys Pen",
                   crit: "Crit Rate", critDmg: "Crit DMG", aff: "Affinity Rate", affDmg: "Affinity DMG",
-                  prec: "Precision", maxPz: "Bamboocut Atk", pzPen: "Bamboocut Pen", pzDmg: "Bamboocut DMG",
+                  prec: "Precision", maxPz: "Bamboocut Atk", pzPen: "Formless Pen", pzDmg: "Bamboocut DMG",
                   umbMartial: "Umbrella Boost", ropeMartial: "Rope Dart Boost", allArts: "All Martial Arts", bossDmg: "Boss DMG",
                 };
 
@@ -4682,38 +4656,6 @@ export default function App() {
                       placeholder="e.g. 832"
                     />
                   </div>
-                <div className="form-group">
-                  <label>Relayed (truyền thừa)</label>
-                  <label
-                    className="flex items-center gap-2 cursor-pointer select-none"
-                    style={{ height: '38px' }}
-                    title="Relayed gear: main stat stays standard, but its 6 substats only roll to 95% of the normal 95下 cap. Substat inputs are clamped to that lower cap."
-                  >
-                    <input
-                      type="checkbox"
-                      checked={formRelay}
-                      onChange={e => {
-                        const on = e.target.checked;
-                        setFormRelay(on);
-                        if (on) {
-                          // Re-clamp existing values to the relay cap immediately.
-                          setFormSubs(prev => prev.map(s => {
-                            const pKey = SUB_MAP[s.type];
-                            const cap = pKey ? MAX_ROLL_95[pKey] : undefined;
-                            if (cap === undefined || !s.val.trim()) return s;
-                            const m = s.val.match(/-?\d+(\.\d+)?/);
-                            if (!m) return s;
-                            const relayCap = +(cap * 0.95).toFixed(1);
-                            if (parseFloat(m[0]) <= relayCap) return s;
-                            return { ...s, val: relayCap.toFixed(1) + (s.val.includes("%") ? "%" : "") };
-                          }));
-                        }
-                      }}
-                      className="accent-[#ffd700] h-4 w-4"
-                    />
-                    <span className="text-[11px] text-slate-300">Substats capped at 95% roll</span>
-                  </label>
-                  </div>
                 </div>
 
                 {/* In-Modal Gear Quick OCR Zone */}
@@ -4795,7 +4737,7 @@ export default function App() {
                           value={sub.val}
                           onChange={e => {
                             const next = [...formSubs];
-                            next[sidx].val = clampToRelayCap(next[sidx].type, e.target.value);
+                            next[sidx].val = e.target.value;
                             setFormSubs(next);
                           }}
                           placeholder="e.g. 59.2 or 7.4%"
@@ -5110,7 +5052,7 @@ export default function App() {
                         const shownTier = isSelected ? (innerWayTiers[iw.id] ?? 6) : 6;
                         const maxStat = (iw.tiers.find(t => t.tier === shownTier) || iw.tiers[iw.tiers.length - 1])?.stat || {};
                         const labels: Record<string, string> = {
-                          outerPen: "Pen", pzPen: "Attr Pen", crit: "Crit", aff: "Aff", dcrit: "D.Crit",
+                          outerPen: "Pen", pzPen: "Formless Pen", crit: "Crit", aff: "Aff", dcrit: "D.Crit",
                           critDmg: "Crit DMG%", affDmg: "Aff DMG%", outerDmg: "Phys DMG%", pzDmg: "Attr DMG%", generalDmg: "DMG%",
                         };
                         const parts = Object.entries(maxStat)

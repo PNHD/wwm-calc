@@ -1,0 +1,14 @@
+{
+  "workflowId": "2804955-20260619005713778",
+  "submittedAt": "2026-06-19T00:57:13.441Z",
+  "type": "image",
+  "steps": [
+    {
+      "index": 0,
+      "name": "step_0",
+      "label": null,
+      "prompt": "a beautiful young vietnamese woman in a pink off-shoulder sweater with a black pleated skirt, standing in a vintage record store with vinyl records on wooden shelves, warm ambient lighting, full body shot, raw photo, natural skin texture, skin pores, sharp focus, shot on canon eos r5 85mm f1.4"
+    }
+  ],
+  "totalMedia": 2
+}

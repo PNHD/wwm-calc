@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "civitai-gen": {
+      "source": "civitai/civitai-gen-skill",
+      "sourceType": "github",
+      "skillPath": "civitai-gen/SKILL.md",
+      "computedHash": "0e4800dd6a89c38e97fe97d0c7658fcfcf23c269c78041ea06434eef8aada1d9"
+    }
+  }
+}
