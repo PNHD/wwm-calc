@@ -39,8 +39,8 @@ export const INNER_WAYS: InnerWay[] = [
       {tier:2,effect:"Each stack: +1.2% damage taken (max +6%)",stat:{generalDmg:6}},
       {tier:3,effect:"Each stack: +1.5% damage taken (max +7.5%)",stat:{generalDmg:7.5}},
       {tier:4,effect:"Each stack: +1.8% damage taken (max +9%)",stat:{generalDmg:9}},
-      {tier:5,effect:"Each stack: +2.0% damage taken by enemies (max 5 stacks = +10%)",stat:{generalDmg:10}},
-      {tier:6,effect:"Each stack: +2.0% damage taken (max +10%) + enemy ATK -3% per stack",stat:{generalDmg:10}},
+      {tier:5,effect:"Each stack: +2% damage-taken (max +10%) + Bamboocut Penetration +6.0 (v1.7 breakthrough, swapped from Towline Sweep)",stat:{generalDmg:10,pzPen:6}},
+      {tier:6,effect:"Each stack: +2% damage-taken (max +10%) + Bamboocut Pen +6.0; 5-stack Candlelight immobilizes 2s (non-boss)",stat:{generalDmg:10,pzPen:6}},
     ]
   },
   {
@@ -52,8 +52,8 @@ export const INNER_WAYS: InnerWay[] = [
       {tier:2,effect:"Gain 20 Tokens of Gratitude after Soul Sweep",stat:{}},
       {tier:3,effect:"Gain 30 Tokens, Piercing Dart sweeping combo applies 1 Soulbreak per hit",stat:{}},
       {tier:4,effect:"Gain 40 Tokens, Piercing Dart applies 2 Soulbreak per hit",stat:{}},
-      {tier:5,effect:"Gain 50 Tokens of Gratitude after Soul Sweep. Soulbound: Piercing Dart applies 2 Soulbreak per hit, first hit pulls enemies",stat:{}},
-      {tier:6,effect:"Gain 50 Tokens. Pull range +50% + Bamboocut Pen +6 (T5 breakthrough)",stat:{pzPen:6}},
+      {tier:5,effect:"Physical Penetration +5.1 (v1.7 breakthrough, swapped from Light Anew)",stat:{outerPen:5.1}},
+      {tier:6,effect:"Phys Pen +5.1; Piercing Dart applies Soul Loss, Soulbreak/Soul Return last 21s",stat:{outerPen:5.1}},
     ]
   },
 
@@ -106,23 +106,23 @@ export const INNER_WAYS: InnerWay[] = [
       {tier:2,effect:"Token +2s, +8 Gratitude",stat:{}},
       {tier:3,effect:"Token +3s, +12 Gratitude",stat:{}},
       {tier:4,effect:"Token +4s, +16 Gratitude",stat:{}},
-      {tier:5,effect:"Token +5s duration, +20 Tokens of Gratitude",stat:{}},
-      {tier:6,effect:"Token +5s, +20 Gratitude + Phys Pen +5.1 (T5 breakthrough)",stat:{outerPen:5.1}},
+      {tier:5,effect:"Physical Penetration +5.1 (breakthrough)",stat:{outerPen:5.1}},
+      {tier:6,effect:"Phys Pen +5.1; rodents on Vendetta-Mark target +30% DMG, -50% target healing",stat:{outerPen:5.1}},
     ]
   },
 
   // ── BELLSTRIKE-SPLENDOR ──
   {
     id:"sword_morph", name:"Sword Morph", cat:"BELLSTRIKE-SPLENDOR",
-    desc:"When Nameless Sword's Charged Skill (Vagrant Sword) is charged while Qi shield is present, it unleashes multiple additional sword energy attacks at 2nd stage. Each Endurance consumed increases sword energy damage by 1%, up to 20%.",
+    desc:"When Nameless Sword's Charged Skill (Vagrant Sword) is charged while Qi shield is present, it unleashes multiple additional sword energy attacks at 2nd stage. Each Endurance consumed increases sword energy damage by 1.5%, up to 30% (v1.7).",
     recommended:false, note:"Bellstrike-Splendor core. Requires Qi shield active.",
     tiers:[
       {tier:1,effect:"Extra sword energies enabled at T2 charge stage. Max +8% DMG",stat:{generalDmg:8}},
       {tier:2,effect:"Max +10% DMG from Endurance spending",stat:{generalDmg:10}},
       {tier:3,effect:"Max +12% DMG, extra energy hits harder",stat:{generalDmg:12}},
       {tier:4,effect:"Max +15% DMG",stat:{generalDmg:15}},
-      {tier:5,effect:"Max +20% DMG from Endurance. Each Endurance = +1% up to 20%",stat:{generalDmg:20}},
-      {tier:6,effect:"Max +20% DMG + Direct Affinity Rate +2.3% (T5 breakthrough)",stat:{generalDmg:20,daff:2.3}},
+      {tier:5,effect:"Max +30% DMG from Endurance. Each Endurance = +1.5% up to 30% (v1.7)",stat:{generalDmg:30}},
+      {tier:6,effect:"Max +30% DMG + Direct Affinity Rate +2.3% (T5 breakthrough)",stat:{generalDmg:30,daff:2.3}},
     ]
   },
   {
@@ -130,12 +130,12 @@ export const INNER_WAYS: InnerWay[] = [
     desc:"Increases Charged Skills' damage against all bosses by 10%.",
     recommended:false, note:"Pure boss DPS for charge-heavy Bellstrike rotations.",
     tiers:[
-      {tier:1,effect:"Charged Skills +2% DMG vs bosses",stat:{generalDmg:2}},
-      {tier:2,effect:"Charged Skills +4% DMG vs bosses",stat:{generalDmg:4}},
-      {tier:3,effect:"Charged Skills +6% DMG vs bosses",stat:{generalDmg:6}},
-      {tier:4,effect:"Charged Skills +8% DMG vs bosses",stat:{generalDmg:8}},
-      {tier:5,effect:"Charged Skills +10% DMG against all bosses",stat:{generalDmg:10}},
-      {tier:6,effect:"Charged Skills +10% DMG vs bosses + Affinity DMG Bonus +5.2% (T5 breakthrough)",stat:{generalDmg:10,affDmg:5.2}},
+      {tier:1,effect:"Charged Skills +10% DMG vs all enemies (base: +10% vs bosses)",stat:{generalDmg:10}},
+      {tier:2,effect:"Increases Affinity Rate based on Solo Mode Level",stat:{generalDmg:10}},
+      {tier:3,effect:"Charged Crit/Affinity: drain 10 Endurance (player) / restore 10 (boss), 12s CD",stat:{generalDmg:10}},
+      {tier:4,effect:"Charged Skills +15% DMG vs all enemies, +10% their Endurance cost",stat:{generalDmg:15}},
+      {tier:5,effect:"Affinity DMG Bonus +5.2% (breakthrough)",stat:{generalDmg:15,affDmg:5.2}},
+      {tier:6,effect:"Charged Skill: +2% DMG per 10 Endurance diff/consumed up to +10% (on top of +15%) + Affinity DMG +5.2%",stat:{generalDmg:15,affDmg:5.2}},
     ]
   },
   {
@@ -207,15 +207,15 @@ export const INNER_WAYS: InnerWay[] = [
   },
   {
     id:"insightful_strike", name:"Insightful Strike", cat:"BELLSTRIKE-UMBRA",
-    desc:"Dealing Affinity DMG generates Focus. When Focus is full, enter Concentration for 10s: +10% Affinity DMG. On hit: 5% chance to reduce damage taken by 40%.",
-    recommended:false, note:"Only useful for Affinity/Bellstrike builds with high Affinity DMG.",
+    desc:"Dealing Affinity DMG generates Focus. When Focus is full, enter Concentration: +1.5% Direct Affinity Rate, faster Focus, and +10% DoT/empowered-DoT (T6). Breakthrough grants Physical Penetration.",
+    recommended:false, note:"Phys-Pen + Direct-Affinity breakthrough for DoT/bleed Bellstrike-Umbra. Verified vs official v1.7 (5.28) patch notes.",
     tiers:[
-      {tier:1,effect:"Concentration: +3% Affinity DMG, 2% chance -40% DMG taken",stat:{affDmg:3}},
-      {tier:2,effect:"Concentration: +5% Affinity DMG, 3% chance -40% DMG taken",stat:{affDmg:5}},
-      {tier:3,effect:"Concentration: +7% Affinity DMG, 3% chance",stat:{affDmg:7}},
-      {tier:4,effect:"Concentration: +9% Affinity DMG, 4% chance",stat:{affDmg:9}},
-      {tier:5,effect:"Concentration: +10% Affinity DMG, 5% chance -40% DMG taken",stat:{affDmg:10}},
-      {tier:6,effect:"Concentration: +10% Affinity DMG 12s + Phys Pen +5.1 (T5 breakthrough)",stat:{affDmg:10,outerPen:5.1}},
+      {tier:1,effect:"Concentration: low HP heals from DMG; high HP grants +1.5% DMG Boost",stat:{}},
+      {tier:2,effect:"Increases Physical Attack based on Solo Mode Level",stat:{}},
+      {tier:3,effect:"Concentration: +1.5% Direct Affinity Rate (+1.5% more if your HP% > target)",stat:{daff:1.5}},
+      {tier:4,effect:"Focus builds 50% faster",stat:{daff:1.5}},
+      {tier:5,effect:"Physical Penetration +5.1 (v1.7 breakthrough)",stat:{daff:1.5,outerPen:5.1}},
+      {tier:6,effect:"Concentration: DoT & empowered-DoT +10%; +1.5% Direct Affinity, Phys Pen +5.1",stat:{daff:1.5,outerPen:5.1}},
     ]
   },
   {
@@ -541,14 +541,14 @@ export const INNER_WAYS: InnerWay[] = [
   {
     id:"art_of_resistance", name:"Art of Resistance", cat:"STONESPLIT-MIGHT",
     desc:"Increases duration of your own HP shield and bonus effects of its source skill by 4 seconds.",
-    recommended:false, note:"Shield duration extension for Stonesplit-Might tank builds.",
+    recommended:false, note:"Shield duration + DMG/Healing boost while a shield is up (Stonesplit-Might). v1.7: T3 +5%, T6 +10% DMG.",
     tiers:[
       {tier:1,effect:"HP shield duration +1s",stat:{}},
       {tier:2,effect:"HP shield duration +2s",stat:{}},
-      {tier:3,effect:"HP shield duration +3s, absorb +2%",stat:{}},
-      {tier:4,effect:"HP shield duration +3.5s, absorb +3%",stat:{}},
-      {tier:5,effect:"HP shield duration +4s",stat:{}},
-      {tier:6,effect:"HP shield duration +4s + absorb value +5%",stat:{}},
+      {tier:3,effect:"HP shield duration +3s; DMG/Healing boost +5% (v1.7)",stat:{generalDmg:5}},
+      {tier:4,effect:"HP shield duration +3.5s; DMG/Healing boost +6%",stat:{generalDmg:6}},
+      {tier:5,effect:"HP shield duration +4s; DMG/Healing boost +8%",stat:{generalDmg:8}},
+      {tier:6,effect:"HP shield duration +4s; DMG/Healing boost +10%, broken shield grants +10% more (v1.7)",stat:{generalDmg:10}},
     ]
   },
   {
@@ -646,7 +646,7 @@ const INNER_WAY_TRIGGERS: Record<string, InnerWayTrigger> = {
   // SILKBIND-JADE
   blossom_barrage: "conditional", star_reacher: "conditional", thunderous_bloom: "conditional", flying_gourds: "utility",
   // STONESPLIT-MIGHT (tank utility)
-  exquisite_scenery: "utility", rock_solid: "utility", art_of_resistance: "utility", trapped_beast: "utility",
+  exquisite_scenery: "utility", rock_solid: "utility", art_of_resistance: "conditional", trapped_beast: "utility",
   frost_clad_night: "conditional", steadfast_devotion: "conditional", throat_piercing_art: "conditional", wildfire_surge: "conditional",
 };
 

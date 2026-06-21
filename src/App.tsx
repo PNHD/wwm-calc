@@ -2202,6 +2202,7 @@ export default function App() {
       crit: 0,
       aff: 0,
       dcrit: 0,
+      daff: 0,
     };
     selectedInnerWays.forEach((id) => {
       const iw = INNER_WAYS.find((item) => item.id === id);
@@ -2220,6 +2221,7 @@ export default function App() {
           if (s.crit) bonus.crit += s.crit;
           if (s.aff) bonus.aff += s.aff;
           if (s.dcrit) bonus.dcrit += s.dcrit;
+          if (s.daff) bonus.daff += s.daff;
         }
       }
     });
@@ -2329,6 +2331,7 @@ export default function App() {
     p.crit += iwStats.crit;
     p.aff += iwStats.aff;
     p.dcrit += iwStats.dcrit;
+    p.daff += iwStats.daff;
     p.critDmg += iwStats.critDmg;
     p.affDmg += iwStats.affDmg;
     p.outerDmg += iwStats.outerDmg;
