@@ -431,7 +431,7 @@ export function calcSkill(
     }
   }
 
-  if (!sk) return { perHit: 0, total: 0 };
+  if (!sk) return { perHit: 0, total: 0, breakdown: { crit: 0, aff: 0, normal: 0, abrasion: 0 } };
 
   const set = opts.set;
   const judgeRes = tier.judgeRes;
@@ -571,12 +571,28 @@ export function calcSkill(
 
   let perHit = dmgOuter + dmgFixed + dmgPz;
 
+  // Per-hit-outcome split (matches in-game "Damage Composition"): each hit is
+  // crit / affinity(会心) / normal / abrasion(擦伤=graze). The four sum to perHit.
+  let critPart = pCrit * (dC_O + dC_F + dC_PZ);
+  let affPart = pAff * (dA_O + dA_F + dA_PZ);
+  let normPart = pWhite * (dN_O + dN_F + dN_PZ);
+  let abrPart = pGraze * (dGl_O + dN_F + dN_PZ);
+
+  let attMul = 1;
   if (rot.isDingyin && (panel.attunedBonus || 0) > 0) {
-    perHit *= 1 + panel.attunedBonus / 100;
+    attMul = 1 + panel.attunedBonus / 100;
+    perHit *= attMul;
   }
 
+  const scale = rot.count * (rot.tiaozhan || 1) * attMul;
   const total = perHit * rot.count * (rot.tiaozhan || 1);
-  return { perHit, total };
+  const breakdown = {
+    crit: critPart * scale,
+    aff: affPart * scale,
+    normal: normPart * scale,
+    abrasion: abrPart * scale,
+  };
+  return { perHit, total, breakdown };
 }
 
 // T91 Global graduated DPS per build, extracted DIRECTLY from the source spreadsheet

@@ -1155,6 +1155,7 @@ export default function App() {
   // ── NEW STATES & HELPERS FOR REDESIGNED LAYOUT ──
   const [isGradModalOpen, setIsGradModalOpen] = useState<boolean>(false);
   const [gradModalActiveTab, setGradModalActiveTab] = useState<string>("manual");
+  const [isDmgStatsOpen, setIsDmgStatsOpen] = useState<boolean>(false);
   const [isExportImportModalOpen, setIsExportImportModalOpen] = useState<boolean>(false);
   const [isBatchOcrModalOpen, setIsBatchOcrModalOpen] = useState<boolean>(false);
   const [isXinfaModalOpen, setIsXinfaModalOpen] = useState<boolean>(false);
@@ -2494,8 +2495,9 @@ export default function App() {
   // 4. Compute Rotation list damage
   const rotationStats = useMemo(() => {
     let totalDmg = 0;
+    const comp = { crit: 0, aff: 0, normal: 0, abrasion: 0 };
     const items = getRotationForBuild(selectedBuild).map((item) => {
-      const { perHit, total } = calcSkill(item, adjustedPanel, activeTier, {
+      const { perHit, total, breakdown } = calcSkill(item, adjustedPanel, activeTier, {
         set: adjustedPanel.set,
         datang,
         yishui,
@@ -2503,6 +2505,10 @@ export default function App() {
         weaponStars: (adjustedPanel as any).weaponStars,
       } as any);
       totalDmg += total;
+      comp.crit += breakdown.crit;
+      comp.aff += breakdown.aff;
+      comp.normal += breakdown.normal;
+      comp.abrasion += breakdown.abrasion;
       return {
         ...item,
         perHit,
@@ -2513,42 +2519,99 @@ export default function App() {
     const dps = totalDmg / getRotationTimeForBuild(selectedBuild);
     const gradRate = (totalDmg / baselineScore) * 100;
 
+    // % of total per hit-outcome for the in-game "Damage Composition" donut.
+    const cTot = comp.crit + comp.aff + comp.normal + comp.abrasion || 1;
+    const compPct = {
+      crit: (comp.crit / cTot) * 100,
+      aff: (comp.aff / cTot) * 100,
+      normal: (comp.normal / cTot) * 100,
+      abrasion: (comp.abrasion / cTot) * 100,
+    };
+
     return {
       items,
       totalDmg,
       dps,
       gradRate,
+      composition: comp,
+      compositionPct: compPct,
     };
   }, [adjustedPanel, activeTier, datang, yishui, selectedBuild, baselineScore]);
+
+  // ── Inner Ways: DPS loss if removed ─────────────────────────────────────────
+  // Per equipped inner way, recompute the rotation with that way's stats removed
+  // from the in-combat panel. The drop = how much DPS that way is contributing.
+  const innerWayContrib = useMemo(() => {
+    if (selectedInnerWays.length === 0) return [];
+    const rotate = (panel: PanelStats) => {
+      let t = 0;
+      getRotationForBuild(selectedBuild).forEach(item => {
+        t += calcSkill(item, panel, activeTier, {
+          set: (panel as any).set, datang, yishui, buildKey: selectedBuild,
+          weaponStars: (panel as any).weaponStars,
+        } as any).total;
+      });
+      return t;
+    };
+    const baseTotal = rotationStats.totalDmg;
+    const rotTime = getRotationTimeForBuild(selectedBuild);
+    const list = selectedInnerWays.map(id => {
+      const iw = INNER_WAYS.find(it => it.id === id);
+      const tierNum = innerWayTiers[id] ?? 6;
+      const s = iw?.tiers.find(t => t.tier === tierNum)?.stat;
+      if (!iw || !s) return null;
+      const p: any = { ...adjustedPanel };
+      p.outerPen -= s.outerPen || 0;
+      p.pzPen -= s.pzPen || 0;
+      p.crit -= s.crit || 0;
+      p.aff -= s.aff || 0;
+      p.dcrit -= s.dcrit || 0;
+      p.daff -= s.daff || 0;
+      p.critDmg -= s.critDmg || 0;
+      p.affDmg -= s.affDmg || 0;
+      p.outerDmg -= s.outerDmg || 0;
+      p.pzDmg -= s.pzDmg || 0;
+      p.iwGeneralDmg = (p.iwGeneralDmg || 0) - (s.generalDmg || 0);
+      const reduced = rotate(p);
+      const lossDps = (baseTotal - reduced) / rotTime;
+      const lossPct = baseTotal > 0 ? ((baseTotal - reduced) / baseTotal) * 100 : 0;
+      return { id, name: iw.name, tier: tierNum, lossDps, lossPct };
+    }).filter(Boolean) as { id: string; name: string; tier: number; lossDps: number; lossPct: number }[];
+    list.sort((a, b) => b.lossDps - a.lossDps);
+    return list;
+  }, [selectedInnerWays, innerWayTiers, adjustedPanel, activeTier, datang, yishui, selectedBuild, rotationStats.totalDmg]);
 
   // ── Best Build search ──────────────────────────────────────────────────────
   // Scans the whole gear pool (all items, equipped or not) for this scheme,
   // groups by slot, and finds the gear combination with the highest graduation
   // rate. Mirrors the live grad-rate pipeline so its numbers match the panel.
-  const gradRateForGearCombo = (combo: GearItem[]): number => {
-    // 1. base character-menu panel from this gear combo
+  // ponytail: single source for "gear combo → in-combat panel → rotation total".
+  // Mirrors adjustedPanel's buff pipeline; reused by Best Build, gear contribution,
+  // and the set/bow comparison tables.
+  const comboInCombat = (combo: GearItem[]): { total: number; crit: number } => {
     let p = computeGearPanel(panel, combo, activeScheme?.baseOverride, innerAttrName(selectedBuild));
-    // 2. apply the same in-combat buffs as `adjustedPanel`
     if (food) { p.minOuter += activeTier.foodMin; p.maxOuter += activeTier.foodMax; }
     if (bowSelect === "crit") p.crit += 3.7; else if (bowSelect === "prec") p.prec += 3.3; else if (bowSelect === "aff") p.aff += 1.8;
     if (script50) p.dcrit += 15.0;
-    // active 4pc set from the combo
     const setCounts: Record<string, number> = {};
     combo.forEach(it => { if (it.set && it.set !== "none") setCounts[it.set] = (setCounts[it.set] || 0) + 1; });
     let active4pc = "none";
     Object.entries(setCounts).forEach(([k, c]) => { if (c >= 4) active4pc = k; });
     p.set = active4pc;
     (p as any).weaponStars = (setCounts["stars"] || 0) >= 4 || active4pc === "stars";
-    // inner ways on top
     p.outerPen += iwStats.outerPen; p.pzPen += iwStats.pzPen; p.crit += iwStats.crit; p.aff += iwStats.aff;
     p.dcrit += iwStats.dcrit; p.critDmg += iwStats.critDmg; p.affDmg += iwStats.affDmg;
     p.outerDmg += iwStats.outerDmg; p.pzDmg += iwStats.pzDmg; p.iwGeneralDmg = iwStats.generalDmg;
-    // 3. rotation → grad rate
     let totalDmg = 0;
     getRotationForBuild(selectedBuild).forEach(item => {
       const { total } = calcSkill(item, p, activeTier, { set: p.set, datang, yishui, buildKey: selectedBuild, weaponStars: (p as any).weaponStars } as any);
       totalDmg += total;
     });
+    return { total: totalDmg, crit: p.crit };
+  };
+
+  const gradRateForGearCombo = (combo: GearItem[]): number => {
+    const { total: totalDmg, crit } = comboInCombat(combo);
     let rate = (totalDmg / baselineScore) * 100;
     // ponytail: crit above the effective cap (80% × judgmentFactor) adds zero
     // DPS, so calcSkill scores two combos identically whether one wastes 10%
@@ -2557,10 +2620,67 @@ export default function App() {
     // the dead crit into pen/crit-DMG. Penalty is ~0.001%/pt: it only ever
     // decides between otherwise-equal builds, never overrides a real DPS gain.
     const critCap = 80 * judgmentFactor;
-    const overCrit = Math.max(0, p.crit - critCap);
+    const overCrit = Math.max(0, crit - critCap);
     rate -= overCrit * 0.001;
     return rate;
   };
+
+  // ── Per-slot DPS contribution ("DPS Breakdown by Gear") ─────────────────────
+  // For each equipped piece, recompute the rotation with that slot removed; the
+  // drop = the DPS that piece's stats (+ any set bonus it enables) are adding.
+  const gearContrib = useMemo(() => {
+    const all = getActiveGear();
+    const equipped = all.filter(it => isItemEquipped(it, all));
+    if (equipped.length === 0) return [] as { slot: string; name: string; lossDps: number; lossPct: number }[];
+    const baseTotal = comboInCombat(equipped).total;
+    const rotTime = getRotationTimeForBuild(selectedBuild);
+    const rows = equipped.map(it => {
+      const without = equipped.filter(x => x !== it);
+      const reduced = comboInCombat(without).total;
+      const lossDps = (baseTotal - reduced) / rotTime;
+      const lossPct = baseTotal > 0 ? ((baseTotal - reduced) / baseTotal) * 100 : 0;
+      return { slot: it.slot, name: it.name, lossDps, lossPct };
+    });
+    rows.sort((a, b) => b.lossDps - a.lossDps);
+    return rows;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeScheme?.gear, panel, food, bowSelect, script50, iwStats, activeTier, datang, yishui, selectedBuild, baselineScore]);
+
+  // ── Bow set comparison (crit / precision / affinity / none) ─────────────────
+  const bowCompare = useMemo(() => {
+    const all = getActiveGear();
+    const equipped = all.filter(it => isItemEquipped(it, all));
+    const rotTime = getRotationTimeForBuild(selectedBuild);
+    const opts: { key: string; label: string }[] = [
+      { key: "crit", label: "Crit +3.7%" },
+      { key: "aff", label: "Affinity +1.8%" },
+      { key: "prec", label: "Precision +3.3%" },
+      { key: "none", label: "None" },
+    ];
+    // Recompute each option by temporarily overriding the bow stat on the panel.
+    const dpsFor = (bow: string) => {
+      let p = computeGearPanel(panel, equipped, activeScheme?.baseOverride, innerAttrName(selectedBuild));
+      if (food) { p.minOuter += activeTier.foodMin; p.maxOuter += activeTier.foodMax; }
+      if (bow === "crit") p.crit += 3.7; else if (bow === "prec") p.prec += 3.3; else if (bow === "aff") p.aff += 1.8;
+      if (script50) p.dcrit += 15.0;
+      const setCounts: Record<string, number> = {};
+      equipped.forEach(it => { if (it.set && it.set !== "none") setCounts[it.set] = (setCounts[it.set] || 0) + 1; });
+      let active4pc = "none"; Object.entries(setCounts).forEach(([k, c]) => { if (c >= 4) active4pc = k; });
+      p.set = active4pc; (p as any).weaponStars = (setCounts["stars"] || 0) >= 4 || active4pc === "stars";
+      p.outerPen += iwStats.outerPen; p.pzPen += iwStats.pzPen; p.crit += iwStats.crit; p.aff += iwStats.aff;
+      p.dcrit += iwStats.dcrit; p.critDmg += iwStats.critDmg; p.affDmg += iwStats.affDmg;
+      p.outerDmg += iwStats.outerDmg; p.pzDmg += iwStats.pzDmg; p.iwGeneralDmg = iwStats.generalDmg;
+      let t = 0;
+      getRotationForBuild(selectedBuild).forEach(item => { t += calcSkill(item, p, activeTier, { set: p.set, datang, yishui, buildKey: selectedBuild, weaponStars: (p as any).weaponStars } as any).total; });
+      return t / rotTime;
+    };
+    const curDps = dpsFor(bowSelect);
+    return opts.map(o => {
+      const dps = dpsFor(o.key);
+      return { ...o, dps, delta: dps - curDps, active: o.key === bowSelect };
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeScheme?.gear, panel, food, bowSelect, script50, iwStats, activeTier, datang, yishui, selectedBuild]);
 
   const [bestBuildResult, setBestBuildResult] = useState<{ rate: number; gear: GearItem[] }[] | null>(null);
   const [bestBuildRunning, setBestBuildRunning] = useState(false);
@@ -2665,7 +2785,7 @@ export default function App() {
       return buildPrefixes.includes(m[1]);
     });
 
-    const gradFor = (p: PanelStats) => {
+    const totalFor = (p: PanelStats) => {
       let total = 0;
       getRotationForBuild(selectedBuild).forEach((item) => {
         const { total: dmg } = calcSkill(item, p, activeTier, {
@@ -2676,20 +2796,25 @@ export default function App() {
         });
         total += dmg;
       });
-      return (total / baselineScore) * 100;
+      return total;
     };
+    const gradFor = (p: PanelStats) => (totalFor(p) / baselineScore) * 100;
 
     const baseGrad = rotationStats.gradRate;
+    const baseTotal = rotationStats.totalDmg;
+    const rotTime = getRotationTimeForBuild(selectedBuild);
 
     const rows = STAT_ROLLS.map(({ key, label, roll, unit }) => {
       const cur = adjustedPanel[key] as number;
       const pUp = { ...adjustedPanel, [key]: cur + roll };
-      const gain = gradFor(pUp) - baseGrad;
+      const upTotal = totalFor(pUp);
+      const gain = (upTotal / baselineScore) * 100 - baseGrad;
+      const gainDps = (upTotal - baseTotal) / rotTime; // DPS added by one more roll
 
       const pDown = { ...adjustedPanel, [key]: Math.max(0, cur - roll) };
       const loss = gradFor(pDown) - baseGrad; // negative or ~zero
 
-      return { key, label, roll, unit, gain, loss };
+      return { key, label, roll, unit, gain, gainDps, loss };
     });
 
     return {
@@ -2697,7 +2822,7 @@ export default function App() {
       gains: [...rows].sort((a, b) => b.gain - a.gain),
       losses: [...rows].sort((a, b) => a.loss - b.loss),
     };
-  }, [adjustedPanel, activeTier, datang, yishui, selectedBuild, baselineScore, rotationStats.gradRate]);
+  }, [adjustedPanel, activeTier, datang, yishui, selectedBuild, baselineScore, rotationStats.gradRate, rotationStats.totalDmg]);
 
   // Helper to dynamically calculate stats for any stored profile
   const getDynamicProfileStats = (prof: typeof profiles[0]) => {
@@ -3309,6 +3434,25 @@ export default function App() {
             </div>
           </div>
 
+          {/* Inner Ways — DPS loss if removed */}
+          {innerWayContrib.length > 0 && (
+            <div style={{ marginTop: 10, border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, overflow: "hidden" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 10px", background: "rgba(255,255,255,0.03)" }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: "#f0b400", textTransform: "uppercase", letterSpacing: 0.4 }}>Inner Way Contribution</span>
+                <span style={{ fontSize: 10, color: "#6e7681" }} title="DPS lost if this inner way were removed at its current tier. Bigger loss = more important to keep leveled.">DPS loss if removed ⓘ</span>
+              </div>
+              {innerWayContrib.map(c => (
+                <div key={c.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "5px 10px", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+                  <span style={{ fontSize: 12, color: "#c9d1d9" }}>{c.name} <span style={{ color: "#6e7681", fontSize: 10 }}>T{c.tier}</span></span>
+                  <span style={{ display: "flex", gap: 10, alignItems: "baseline" }}>
+                    <span style={{ fontSize: 12.5, fontWeight: 700, color: "#ff7b72" }}>−{Math.round(c.lossDps).toLocaleString()}</span>
+                    <span style={{ fontSize: 11, color: "#8b949e", width: 52, textAlign: "right" }}>−{c.lossPct.toFixed(2)}%</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+
           {/* Equipped Slots Grid */}
           <div className="sim-layout-container" style={{ marginTop: '15px' }}>
             <div className="sim-slots-grid">
@@ -3415,6 +3559,44 @@ export default function App() {
             </div>
           </div>
 
+          {/* Gear Contribution — DPS loss if each equipped piece were removed */}
+          {gearContrib.length > 0 && (
+            <div style={{ marginTop: 12, border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, overflow: "hidden" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 10px", background: "rgba(255,255,255,0.03)" }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: "#f0b400", textTransform: "uppercase", letterSpacing: 0.4 }}>DPS Breakdown by Gear</span>
+                <span style={{ fontSize: 10, color: "#6e7681" }} title="DPS lost if this piece were unequipped (its sub-stats and any set bonus it completes). Bigger loss = bigger contributor.">DPS loss if removed ⓘ</span>
+              </div>
+              {gearContrib.map(c => (
+                <div key={c.slot + c.name} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "5px 10px", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+                  <span style={{ fontSize: 12, color: "#c9d1d9", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 160 }}>{c.name} <span style={{ color: "#6e7681", fontSize: 10 }}>{c.slot}</span></span>
+                  <span style={{ display: "flex", gap: 10, alignItems: "baseline" }}>
+                    <span style={{ fontSize: 12.5, fontWeight: 700, color: "#ff7b72" }}>−{Math.round(c.lossDps).toLocaleString()}</span>
+                    <span style={{ fontSize: 11, color: "#8b949e", width: 52, textAlign: "right" }}>−{c.lossPct.toFixed(2)}%</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Ring (bow) attribute comparison */}
+          {bowCompare.length > 0 && (
+            <div style={{ marginTop: 12, border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, overflow: "hidden" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 10px", background: "rgba(255,255,255,0.03)" }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: "#f0b400", textTransform: "uppercase", letterSpacing: 0.4 }}>Ring Attribute</span>
+                <span style={{ fontSize: 10, color: "#6e7681" }} title="DPS for each ring choice vs your current pick. Switch in the Ring selector above.">DPS · vs current ⓘ</span>
+              </div>
+              {bowCompare.map(o => (
+                <div key={o.key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "5px 10px", borderTop: "1px solid rgba(255,255,255,0.05)", background: o.active ? "rgba(245,180,0,0.08)" : undefined }}>
+                  <span style={{ fontSize: 12, color: o.active ? "#f0b400" : "#c9d1d9", fontWeight: o.active ? 700 : 400 }}>{o.label}{o.active ? " ✓" : ""}</span>
+                  <span style={{ display: "flex", gap: 10, alignItems: "baseline" }}>
+                    <span style={{ fontSize: 12.5, fontWeight: 700, color: "#c9d1d9" }}>{Math.round(o.dps).toLocaleString()}</span>
+                    <span style={{ fontSize: 11, width: 56, textAlign: "right", color: o.delta > 0.5 ? "#7ee787" : o.delta < -0.5 ? "#ff7b72" : "#6e7681" }}>{o.active ? "—" : `${o.delta >= 0 ? "+" : ""}${Math.round(o.delta).toLocaleString()}`}</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+
           <div className="panel-checkbox-container">
             <div className="panel-checkbox-wrapper">
               <label className="panel-checkbox-label">
@@ -3456,7 +3638,17 @@ export default function App() {
             <div className="banner-footer banner-footer-content">
               <span className="banner-footer-text">
                 DPS Expectation: <span className="text-white font-bold">{Math.round(rotationStats.dps).toLocaleString()}</span>
+                <span className="text-[#8b949e]"> · Total DMG: </span>
+                <span className="text-white font-bold">{Math.round(rotationStats.totalDmg).toLocaleString()}</span>
               </span>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); setIsDmgStatsOpen(true); }}
+                title="Open the in-game-style Damage Statistics panel (damage split by hit type)"
+                style={{ marginLeft: 10, padding: "2px 8px", fontSize: 11, fontWeight: 700, borderRadius: 6, border: "1px solid rgba(245,180,0,0.4)", background: "rgba(245,180,0,0.12)", color: "#f0b400", cursor: "pointer" }}
+              >
+                📊 Damage Statistics
+              </button>
             </div>
             <div className="banner-arrow">›</div>
           </div>
@@ -3531,6 +3723,84 @@ export default function App() {
           </div>
         </aside>
       </div>
+
+      {/* ── DAMAGE STATISTICS MODAL (in-game style) ── */}
+      {isDmgStatsOpen && (() => {
+        const pct = rotationStats.compositionPct;
+        const c1 = pct.crit, c2 = c1 + pct.aff, c3 = c2 + pct.normal;
+        const donutBg = `conic-gradient(#f0b400 0% ${c1}%, #ff8c42 ${c1}% ${c2}%, #8b949e ${c2}% ${c3}%, #ff5c5c ${c3}% 100%)`;
+        const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+        const setName = (adjustedPanel.set && adjustedPanel.set !== "none") ? cap(adjustedPanel.set) : null;
+        const buffChips = [
+          datang && "大唐 Datang",
+          yishui && "一水 Yishui",
+          (adjustedPanel as any).weaponStars && "Stars Align",
+          food && "Food Buff",
+          script50 && "Script <50% HP",
+          setName && `Set: ${setName}`,
+        ].filter(Boolean) as string[];
+        const legend = [
+          { label: "Critical DMG", color: "#f0b400", v: pct.crit },
+          { label: "Affinity Damage", color: "#ff8c42", v: pct.aff },
+          { label: "Normal Damage", color: "#8b949e", v: pct.normal },
+          { label: "Abrasion Damage", color: "#ff5c5c", v: pct.abrasion },
+        ];
+        return (
+          <div className="modal" onClick={() => setIsDmgStatsOpen(false)}>
+            <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 560 }}>
+              <div className="modal-header">
+                <h2>📊 Damage Statistics</h2>
+                <span className="close-btn" onClick={() => setIsDmgStatsOpen(false)}>&times;</span>
+              </div>
+              <div className="modal-body" style={{ padding: 20 }}>
+                <div style={{ display: "flex", alignItems: "baseline", gap: 16, marginBottom: 4 }}>
+                  <span style={{ fontSize: 30, fontWeight: 800, color: "#fff", lineHeight: 1 }}>{Math.round(rotationStats.totalDmg).toLocaleString()}</span>
+                  <span style={{ fontSize: 12, color: "#8b949e", textTransform: "uppercase", letterSpacing: 0.5 }}>Total DMG</span>
+                </div>
+                <div style={{ fontSize: 16, color: "#7ee787", fontWeight: 700, marginBottom: 18 }}>
+                  {Math.round(rotationStats.dps).toLocaleString()}<span style={{ fontSize: 12, color: "#8b949e", fontWeight: 400 }}> /s</span>
+                </div>
+
+                <div style={{ display: "flex", gap: 22, alignItems: "center", flexWrap: "wrap" }}>
+                  <div style={{ position: "relative", width: 150, height: 150, flexShrink: 0 }}>
+                    <div style={{ width: 150, height: 150, borderRadius: "50%", background: donutBg }} />
+                    <div style={{ position: "absolute", top: 27, left: 27, width: 96, height: 96, borderRadius: "50%", background: "var(--bg, #0d1117)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+                      <span style={{ fontSize: 22, fontWeight: 800, color: "#f0b400" }}>{pct.crit.toFixed(0)}%</span>
+                      <span style={{ fontSize: 9, color: "#8b949e", textTransform: "uppercase" }}>Critical</span>
+                    </div>
+                  </div>
+                  <div style={{ flex: 1, minWidth: 200 }}>
+                    {legend.map(l => (
+                      <div key={l.label} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 0", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+                        <span style={{ width: 11, height: 11, borderRadius: 3, background: l.color, flexShrink: 0 }} />
+                        <span style={{ fontSize: 13, color: "#c9d1d9", flex: 1 }}>{l.label}</span>
+                        <span style={{ fontSize: 14, fontWeight: 700, color: l.color }}>{l.v.toFixed(1)}%</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{ marginTop: 18 }}>
+                  <div style={{ fontSize: 11, color: "#8b949e", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>Buff Effect</div>
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                    {buffChips.length === 0
+                      ? <span style={{ fontSize: 12, color: "#6e7681" }}>No buffs active</span>
+                      : buffChips.map(b => (
+                        <span key={b} style={{ fontSize: 11, fontWeight: 600, padding: "3px 9px", borderRadius: 999, background: "rgba(126,231,135,0.12)", border: "1px solid rgba(126,231,135,0.3)", color: "#7ee787" }}>{b}</span>
+                      ))}
+                  </div>
+                </div>
+
+                <p style={{ marginTop: 16, fontSize: 11.5, color: "#6e7681", lineHeight: 1.5 }}>
+                  Expected damage split over one rotation by hit outcome. <b style={{ color: "#8b949e" }}>Critical</b> = crit hits,
+                  <b style={{ color: "#8b949e" }}> Affinity</b> = 会心 hits, <b style={{ color: "#8b949e" }}>Normal</b> = ordinary hits,
+                  <b style={{ color: "#8b949e" }}> Abrasion</b> = graze (擦伤) hits. Chips show the buffs this calculation assumes active.
+                </p>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ── GRADUATION ANALYSIS MODAL ── */}
       {isGradModalOpen && (
@@ -3735,6 +4005,12 @@ export default function App() {
                   <h3 className="text-[13px] uppercase tracking-wider font-bold text-emerald-400 mb-2 flex items-center gap-1.5">
                     <TrendingUp className="w-3.5 h-3.5" /> Adding +1 substat roll
                   </h3>
+                  <div className="flex items-center gap-2 text-[10px] uppercase tracking-wider text-slate-500 font-mono mb-1">
+                    <span className="w-4" /><span className="w-32">Stat</span><span className="w-12 text-right">Roll</span>
+                    <div className="flex-1" />
+                    <span className="w-16 text-right text-sky-300">DPS gain</span>
+                    <span className="w-16 text-right text-emerald-400">% gain</span>
+                  </div>
                   <div className="space-y-1.5">
                     {statPriorityList.gains.map((g, idx) => {
                       const maxGain = statPriorityList.gains[0].gain || 1;
@@ -3750,6 +4026,9 @@ export default function App() {
                               style={{ width: `${width}%` }}
                             />
                           </div>
+                          <span className="w-16 font-mono text-right text-sky-300 text-[12px]" title="DPS added by one more max roll of this stat">
+                            +{Math.round(g.gainDps).toLocaleString()}
+                          </span>
                           <span className="w-16 font-mono text-right font-bold text-emerald-400">
                             +{g.gain.toFixed(3)}%
                           </span>
@@ -5072,6 +5351,13 @@ export default function App() {
               <span className="close-btn" onClick={() => setIsExportImportModalOpen(false)}>&times;</span>
             </div>
             <div className="modal-body export-import-body" style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+              <div style={{ marginBottom: 10, padding: "8px 12px", background: "rgba(88,166,255,0.08)", border: "1px solid rgba(88,166,255,0.25)", borderRadius: 8, fontSize: 12, color: "#adbac7", lineHeight: 1.55 }}>
+                <b style={{ color: "#58a6ff" }}>How to share your build</b><br />
+                1. Click <b>Export Data</b> — your full build (gear, stats, inner ways) is copied to the clipboard as text.<br />
+                2. Send that text to a friend (Discord, paste-bin, etc.).<br />
+                3. They open this same window, paste it into the box below, and click <b>Import</b>.<br />
+                <span style={{ color: "#6e7681" }}>This is a text copy, not a website link — nothing is uploaded. Prefer a file? Use <b>Download to File</b>.</span>
+              </div>
               <div className="export-import-buttons" style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
                 <button
                   onClick={() => {
