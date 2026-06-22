@@ -4908,7 +4908,11 @@ export default function App() {
                   </div>
                   <div className="flex-column-gap8">
                     {formSubs.map((sub, sidx) => (
-                      <div key={sidx} className="flex-row" style={{ gap: '8px', alignItems: 'center' }}>
+                      <React.Fragment key={sidx}>
+                        {sidx === 0 && <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Main Substat · 主词条</div>}
+                        {sidx === 1 && <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 6 }}>Sub Substats · 副词条</div>}
+                        {sidx === 5 && <div style={{ fontSize: 11, fontWeight: 700, color: '#ffd700', textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 6 }}>Tuned Substat · 定音 (tick ✦ on the tuned line)</div>}
+                      <div className="flex-row" style={{ gap: '8px', alignItems: 'center' }}>
                         <SearchableSelect
                           value={sub.type}
                           onChange={val => {
@@ -4954,6 +4958,7 @@ export default function App() {
                           <span className="text-[#ffd700] font-bold text-[10px] uppercase font-mono">Tuned ✦</span>
                         </label>
                       </div>
+                      </React.Fragment>
                     ))}
                   </div>
                 </div>
