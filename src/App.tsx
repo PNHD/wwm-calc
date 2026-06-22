@@ -786,15 +786,15 @@ const computeGearPanel = (current: PanelStats, gear: GearItem[], baseOverride?: 
   return next;
 };
 
-// Load/import guard: a calibration baseOverride poisoned by a Min>Max typo
+// Load/import guard: a calibration baseOverride poisoned by an extra-digit typo
 // (e.g. 1362 entered as 13622) silently inflates DPS/graduation to absurd values.
-// Drop the bad override so the panel auto-recomputes from gear instead of showing
-// garbage. Healthy gearless bases always keep min <= max.
+// Drop the bad override so the panel auto-recomputes from gear. A small Min > Max
+// is a legit (rare) in-game state, so only treat Min > 2×Max as corruption.
 const sanitizeChars = <T,>(data: T): T => {
   (data as { chars?: { schemes?: { baseOverride?: Partial<PanelStats> }[] }[] })?.chars?.forEach(c =>
     c?.schemes?.forEach(s => {
       const b = s?.baseOverride;
-      if (b && ((b.minOuter ?? 0) > (b.maxOuter ?? 0) || (b.minPz ?? 0) > (b.maxPz ?? 0))) delete s.baseOverride;
+      if (b && ((b.minOuter ?? 0) > (b.maxOuter ?? 0) * 2 || (b.minPz ?? 0) > (b.maxPz ?? 0) * 2)) delete s.baseOverride;
     }),
   );
   return data;
@@ -2344,12 +2344,15 @@ export default function App() {
   // Stored per-scheme; computeGearPanel then reproduces the in-game panel exactly
   // for the current gear (and adjusts for gear changes via the sub-stat deltas).
   const applyCalibration = () => {
-    // Typo guard: Physical/Attribute Min must be <= Max. A stray extra digit
-    // (e.g. 1362 -> 13622) poisons the gearless base and inflates DPS hugely.
+    // Typo guard: Min slightly above Max is a real (rare) in-game state — the game
+    // then deals fixed damage at Min, and the calc handles it. Only block the
+    // clearly-impossible case where Min is more than DOUBLE Max, which only happens
+    // from a stray extra digit (e.g. 1362 -> 13622) that poisons the base and
+    // inflates DPS hugely.
     const minO = parseFloat(calibInputs["minOuter"]), maxO = parseFloat(calibInputs["maxOuter"]);
     const minP = parseFloat(calibInputs["minPz"]), maxP = parseFloat(calibInputs["maxPz"]);
-    if ((!isNaN(minO) && !isNaN(maxO) && minO > maxO) || (!isNaN(minP) && !isNaN(maxP) && minP > maxP)) {
-      alert("Min Atk is greater than Max Atk — that's almost always a typo (check for an extra digit). Calibration not saved.");
+    if ((!isNaN(minO) && !isNaN(maxO) && minO > maxO * 2) || (!isNaN(minP) && !isNaN(maxP) && minP > maxP * 2)) {
+      alert("Min Atk is more than double Max Atk — almost certainly a typo (an extra digit). Calibration not saved. (A small Min > Max is fine and is allowed.)");
       return;
     }
     const allGear = getActiveGear();
@@ -2468,7 +2471,12 @@ export default function App() {
     p.iwPzDmg = iwStats.pzDmg;
 
     return p;
-  }, [panel, bowSelect, food, script50, activeTier, iwStats, autoGearPanel, activeScheme?.gear]);
+    // basePanel MUST be a dep: it carries the calibrated base (baseOverride) and
+    // the gear-derived stats. Without it, calibrating (which changes basePanel but
+    // not panel/gear) left adjustedPanel — and thus the COMBAT column + graduation
+    // + DPS — stale, so COMBAT could read lower than MENU and Calibrate appeared
+    // to do nothing.
+  }, [basePanel, bowSelect, food, script50, activeTier, iwStats, autoGearPanel, activeScheme?.gear]);
 
   // 3. Baseline = authoritative "fully graduated" T91/Lv95 DPS per build (from the
   //    源 spreadsheet, converted to rotation-window total). See calcBaseline / T91_GRAD_DPS.
