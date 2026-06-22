@@ -549,14 +549,24 @@ export function calcSkill(
   const Fpz = totalPzPen >= 0 ? totalPzPen / 200 : totalPzPen / 100;
 
   const pzMult = set === "formbend" ? 1.05 : 1.0;
-  const minPz_e = Math.max(0, ((panel.minPz || 0) + (panel.wuxiangMin || 0)) * pzMult - tier.def);
-  const maxPz_e = Math.max(0, ((panel.maxPz || 0) + (panel.wuxiangMax || 0)) * pzMult - tier.def);
-  const avgPz_e = (minPz_e + maxPz_e) / 2;
+  const minPzTot = (panel.minPz || 0) + (panel.wuxiangMin || 0);
+  const maxPzTot = (panel.maxPz || 0) + (panel.wuxiangMax || 0);
+  const minPz_e = Math.max(0, minPzTot * pzMult - tier.def);
+  const maxPz_e = Math.max(0, maxPzTot * pzMult - tier.def);
+
+  // Off-element (外系) attribute attack uses the PHYSICAL ratio (Excel 伤害公式
+  // B6: 外系元素倍率 = 外攻倍率), NOT the own-element ×1.5 ratio. panel.offPz*
+  // is the off-element share of minPz/maxPz; blend the ratio by that fraction.
+  const offMinFrac = minPzTot > 0 ? Math.min(1, (panel.offPzMin || 0) / minPzTot) : 0;
+  const offMaxFrac = maxPzTot > 0 ? Math.min(1, (panel.offPzMax || 0) / maxPzTot) : 0;
+  const eleRatioMin = sk.eleRatio * (1 - offMinFrac) + sk.outerRatio * offMinFrac;
+  const eleRatioMax = sk.eleRatio * (1 - offMaxFrac) + sk.outerRatio * offMaxFrac;
 
   const pzDmgBonus = (panel.pzDmg || 0) / 100;
-  const dN_PZ = avgPz_e * sk.eleRatio * (1 + Fpz) * T * (1 + pzDmgBonus);
-  const dC_PZ = avgPz_e * sk.eleRatio * (1 + Fpz) * T * (1 + pzDmgBonus) * critMult;
-  const dA_PZ = maxPz_e * sk.eleRatio * (1 + Fpz) * T * (1 + pzDmgBonus) * affMult;
+  const pzAvgTerm = (minPz_e * eleRatioMin + maxPz_e * eleRatioMax) / 2;
+  const dN_PZ = pzAvgTerm * (1 + Fpz) * T * (1 + pzDmgBonus);
+  const dC_PZ = pzAvgTerm * (1 + Fpz) * T * (1 + pzDmgBonus) * critMult;
+  const dA_PZ = maxPz_e * eleRatioMax * (1 + Fpz) * T * (1 + pzDmgBonus) * affMult;
   const dmgPz = (pGraze + pWhite) * dN_PZ + pCrit * dC_PZ + pAff * dA_PZ;
 
   let perHit = dmgOuter + dmgFixed + dmgPz;

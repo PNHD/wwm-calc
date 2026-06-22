@@ -56,6 +56,12 @@ export interface PanelStats {
   attunedBonus: number; // Attuned Damage Bonus % (定音增伤)
   wuxiangMin: number;
   wuxiangMax: number;
+  // Off-element (外系) portion of minPz/maxPz: attribute-attack sub-stats whose
+  // element differs from the build's own element (e.g. Silkbind/Bellstrike Atk on
+  // a Bamboocut build). The damage calc applies the physical ratio to this part
+  // (外系元素倍率 = 外攻倍率), not the own-element ×1.5 ratio. Gear-derived only.
+  offPzMin?: number;
+  offPzMax?: number;
   set: string;
   iwGeneralDmg?: number;
   iwOuterPen?: number;

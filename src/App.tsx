@@ -736,7 +736,7 @@ const BASE_PANEL_NO_GEAR: PanelStats = (() => {
 // of all sub-stats across the 8 equipped items, mapped via SUB_MAP. Fields not
 // covered by SUB_MAP (set, attunedBonus, dcrit, daff, wuxiang*, bossDmg, etc.)
 // are carried over from `current` unchanged.
-const computeGearPanel = (current: PanelStats, gear: GearItem[], baseOverride?: Partial<PanelStats> | null): PanelStats => {
+const computeGearPanel = (current: PanelStats, gear: GearItem[], baseOverride?: Partial<PanelStats> | null, ownElement?: string): PanelStats => {
   const gearSum = sumGearSubs(gear);
   const next = { ...current };
   (Object.values(SUB_MAP) as (keyof PanelStats)[]).forEach(key => {
@@ -768,6 +768,21 @@ const computeGearPanel = (current: PanelStats, gear: GearItem[], baseOverride?: 
   // a phantom "+4.6%" when no inner way is equipped.
   next.dcrit = 0;
   next.daff = 0;
+  // Off-element (外系) attribute-attack sub-stats: those whose element differs
+  // from the build's own element. Tracked so the calc can apply the physical
+  // ratio to them (Excel 伤害公式 B6: 外系元素倍率 = 外攻倍率) instead of the
+  // own-element ×1.5 ratio. Pure gear sum — no character base.
+  const ownEl = ownElement || "Bamboocut";
+  let offMin = 0, offMax = 0;
+  gear.forEach(it => it.subs.forEach(s => {
+    const m = s.type.match(/^(Min|Max) (Bamboocut|Silkbind|Bellstrike|Stonesplit) Atk$/);
+    if (m && m[2] !== ownEl) {
+      const v = parseSubValue(s.val);
+      if (m[1] === "Min") offMin += v; else offMax += v;
+    }
+  }));
+  next.offPzMin = offMin;
+  next.offPzMax = offMax;
   return next;
 };
 
@@ -2295,10 +2310,10 @@ export default function App() {
     if (autoGearPanel) {
       const allGear = getActiveGear();
       const equippedGear = allGear.filter((it) => isItemEquipped(it, allGear));
-      return computeGearPanel(panel, equippedGear, activeScheme?.baseOverride);
+      return computeGearPanel(panel, equippedGear, activeScheme?.baseOverride, innerAttrName(selectedBuild));
     }
     return { ...panel };
-  }, [panel, autoGearPanel, activeScheme?.gear, activeScheme?.baseOverride]);
+  }, [panel, autoGearPanel, activeScheme?.gear, activeScheme?.baseOverride, selectedBuild]);
 
   // Keep the persisted scheme `panel` in sync with the live gear-derived
   // basePanel (auto mode). Without this, equipping gear updated the readout
@@ -2497,7 +2512,7 @@ export default function App() {
   // rate. Mirrors the live grad-rate pipeline so its numbers match the panel.
   const gradRateForGearCombo = (combo: GearItem[]): number => {
     // 1. base character-menu panel from this gear combo
-    let p = computeGearPanel(panel, combo, activeScheme?.baseOverride);
+    let p = computeGearPanel(panel, combo, activeScheme?.baseOverride, innerAttrName(selectedBuild));
     // 2. apply the same in-combat buffs as `adjustedPanel`
     if (food) { p.minOuter += activeTier.foodMin; p.maxOuter += activeTier.foodMax; }
     if (bowSelect === "crit") p.crit += 3.7; else if (bowSelect === "prec") p.prec += 3.3; else if (bowSelect === "aff") p.aff += 1.8;
