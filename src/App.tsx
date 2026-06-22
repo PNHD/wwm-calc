@@ -747,6 +747,18 @@ const computeGearPanel = (current: PanelStats, gear: GearItem[], baseOverride?: 
       : (BASE_PANEL_NO_GEAR[key] as number);
     (next[key] as number) = base + (gearSum[key] || 0);
   });
+  // Weapon-skill and situational DMG boosts come ONLY from gear sub-stats — they
+  // have no character/level base — so their gearless base MUST be 0. Otherwise a
+  // build with fewer of those sub-stats than the reference build gets a wrong,
+  // often NEGATIVE value (Best Build picking gear with less "Umb Martial Art
+  // Boost" produced umbMartial = -9.3%, tanking DPS). Recompute as the pure gear
+  // sum so they're always correct for any gear combo.
+  const isGearOnlyBoost = (k: string) =>
+    /(?:All|Martial|Special|Charged)$/.test(k) ||
+    ["allArts", "bossDmg", "playerDmg", "singleTargetDmg", "groupDmg", "physResGear", "physDmgReduction"].includes(k);
+  (Object.keys(next) as (keyof PanelStats)[]).forEach(key => {
+    if (isGearOnlyBoost(key as string)) (next[key] as number) = (gearSum[key] || 0);
+  });
   // (Five-attribute 五维 → crit/aff/atk conversion was removed: it ran on the
   // gear-summed attribute totals, which double-count vs the in-game panel because
   // INITIAL_PANEL is an in-game TOTAL used as the gearless base. Proper handling
