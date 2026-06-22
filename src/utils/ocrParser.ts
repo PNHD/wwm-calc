@@ -69,7 +69,7 @@ const STAT_PATTERNS: { type: string; patterns: string[][]; exclude?: string[][] 
   // ── General stats ──
   {
     type: "Phys Pen",
-    patterns: [["penetration"], ["破防"], ["破甲"], ["xuyên"], ["phá giáp"], ["pen", "phys"], ["pen", "attack"]],
+    patterns: [["penetration"], ["破防"], ["破甲"], ["外功", "穿透"], ["xuyên"], ["phá giáp"], ["pen", "phys"], ["pen", "attack"]],
     exclude: [["破竹"], ["bamboo"], ["phá trúc"], ["silkbind"], ["bellstrike"], ["stonesplit"], ["tâm pháp"]]
   },
   {
@@ -84,15 +84,15 @@ const STAT_PATTERNS: { type: string; patterns: string[][]; exclude?: string[][] 
   },
   {
     type: "Max Silkbind Atk",
-    patterns: [["max", "silkbind"], ["silkbind", "max"], ["turn", "silkbind"], ["maximum", "silkbind"]],
+    patterns: [["max", "silkbind"], ["silkbind", "max"], ["turn", "silkbind"], ["maximum", "silkbind"], ["最大", "牵丝"]],
   },
   {
     type: "Min Silkbind Atk",
-    patterns: [["min", "silkbind"], ["silkbind", "min"], ["silkbind", "attack"]],
+    patterns: [["min", "silkbind"], ["silkbind", "min"], ["silkbind", "attack"], ["最小", "牵丝"]],
   },
   {
     type: "Silkbind Pen",
-    patterns: [["silkbind", "pen"]],
+    patterns: [["silkbind", "pen"], ["牵丝", "穿透"]],
   },
   {
     type: "Crit Rate",
@@ -114,7 +114,7 @@ const STAT_PATTERNS: { type: string; patterns: string[][]; exclude?: string[][] 
   },
   {
     type: "Bamboocut Pen",
-    patterns: [["bamboo", "pen"], ["破竹", "破防"], ["phá trúc", "xuyên"]]
+    patterns: [["bamboo", "pen"], ["破竹", "破防"], ["破竹", "穿透"], ["phá trúc", "xuyên"]]
   },
   {
     type: "Bamboocut DMG%",
@@ -122,7 +122,7 @@ const STAT_PATTERNS: { type: string; patterns: string[][]; exclude?: string[][] 
   },
   {
     type: "Precision",
-    patterns: [["precision"], ["chính xác"], ["精准"]]
+    patterns: [["precision"], ["chính xác"], ["精准"], ["业准"]]
   },
   {
     type: "Agility",
@@ -183,23 +183,23 @@ const STAT_PATTERNS: { type: string; patterns: string[][]; exclude?: string[][] 
   },
   {
     type: "Min Bamboocut Atk",
-    patterns: [["min", "bamboo"], ["bamboo", "min"]],
+    patterns: [["min", "bamboo"], ["bamboo", "min"], ["最小", "破竹"]],
   },
   {
     type: "Max Bamboocut Atk",
-    patterns: [["max", "bamboo"], ["bamboo", "max"], ["maximum", "bamboo"]],
+    patterns: [["max", "bamboo"], ["bamboo", "max"], ["maximum", "bamboo"], ["最大", "破竹"]],
   },
   {
     type: "Max Bellstrike Atk",
-    patterns: [["max", "bellstrike"], ["bellstrike", "max"], ["maximum", "bellstrike"]],
+    patterns: [["max", "bellstrike"], ["bellstrike", "max"], ["maximum", "bellstrike"], ["最大", "鸣金"]],
   },
   {
     type: "Min Bellstrike Atk",
-    patterns: [["min", "bellstrike"], ["bellstrike", "min"]],
+    patterns: [["min", "bellstrike"], ["bellstrike", "min"], ["最小", "鸣金"]],
   },
   {
     type: "Bellstrike Pen",
-    patterns: [["bellstrike", "pen"]],
+    patterns: [["bellstrike", "pen"], ["鸣金", "穿透"]],
   },
   {
     type: "Bellstrike DMG%",
@@ -207,15 +207,15 @@ const STAT_PATTERNS: { type: string; patterns: string[][]; exclude?: string[][] 
   },
   {
     type: "Max Stonesplit Atk",
-    patterns: [["max", "stonesplit"], ["stonesplit", "max"], ["maximum", "stonesplit"]],
+    patterns: [["max", "stonesplit"], ["stonesplit", "max"], ["maximum", "stonesplit"], ["最大", "裂石"]],
   },
   {
     type: "Min Stonesplit Atk",
-    patterns: [["min", "stonesplit"], ["stonesplit", "min"]],
+    patterns: [["min", "stonesplit"], ["stonesplit", "min"], ["最小", "裂石"]],
   },
   {
     type: "Stonesplit Pen",
-    patterns: [["stonesplit", "pen"]],
+    patterns: [["stonesplit", "pen"], ["裂石", "穿透"]],
   },
   {
     type: "Stonesplit DMG%",
@@ -224,6 +224,13 @@ const STAT_PATTERNS: { type: string; patterns: string[][]; exclude?: string[][] 
   {
     type: "Silkbind DMG%",
     patterns: [["silkbind", "dmg"], ["silkbind", "damage"]],
+  },
+  // Unified attribute/formless penetration (patch 4.30: 无相穿透). Maps to pzPen
+  // via SUB_MAP. CN-only tokens so it doesn't collide with Phys Pen's English
+  // "penetration" match; element pens above are matched first by element name.
+  {
+    type: "Formless Penetration",
+    patterns: [["无相", "穿透"], ["属性", "穿透"]],
   },
 ];
 
