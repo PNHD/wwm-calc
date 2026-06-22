@@ -67,7 +67,10 @@ export const INNER_WAY_IMAGES: Record<string, string> = {
   "Exquisite Scenery":    "https://img.game8.co/4334805/fd675ade5a2e9aa4b03406328dc46f0a.png/show",
   "Rock Solid":           "https://img.game8.co/4334822/00f83f28bb07efc3743de5e511034948.png/show",
   "Art of Resistance":    "https://img.game8.co/4334821/1c73eab11c29fb921551efb4b46316ad.png/show",
-  "Trapped Beast":        "https://img.game8.co/4334814/533460ff7e7e68e9d4f56aa85e8ff9e6.png/show",
+  "Trapped Beast":        "https://img.game8.co/4334814/533460fff3320ad4745613867b42504a.png/show",
+  "Frost-Clad Night":     "https://img.game8.co/4454449/24f7d8975c992203c3f4e88f90005f00.png/show",
+  "Steadfast Devotion":   "https://img.game8.co/4454451/f842c9cfd70b6211e84f952b99fca05a.png/show",
+  "Wildfire Surge":       "https://img.game8.co/4454513/21c78e1cc25ccdd564974bd0c8cb93d9.png/show",
 };
 
 // Armor set icons — keyed by ARMOR_SETS key used in App.tsx
