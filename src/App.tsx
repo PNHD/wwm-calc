@@ -4737,6 +4737,10 @@ export default function App() {
                         {bestBuildResult && bestBuildResult.length > 0 && (() => {
                           const best = bestBuildResult[0];
                           const slotLabels: Record<string, string> = { Umbrella: "Weapon 1", "Rope Dart": "Weapon 2", Disc: "Disc", Pendant: "Pendant", Helmet: "Helmet", Chest: "Chest", Bracers: "Hands", Greaves: "Legs" };
+                          const equipCombo = (g: GearItem[]) => {
+                            const ids = new Set(g.map(x => x.id));
+                            saveActiveGear(getActiveGear().map(it => ({ ...it, isEquipped: ids.has(it.id) })));
+                          };
                           return (
                             <div className="space-y-4">
                               <div className="bg-[#1a1a1d]/60 border border-[#3d3d45] rounded-xl p-4">
@@ -4753,11 +4757,7 @@ export default function App() {
                                   ))}
                                 </div>
                                 <button
-                                  onClick={() => {
-                                    const pool = getActiveGear();
-                                    const bestIds = new Set(best.gear.map(g => g.id));
-                                    saveActiveGear(pool.map(it => ({ ...it, isEquipped: bestIds.has(it.id) })));
-                                  }}
+                                  onClick={() => equipCombo(best.gear)}
                                   className="primary-btn"
                                   style={{ marginTop: 12 }}
                                 >Equip this build</button>
@@ -4770,7 +4770,12 @@ export default function App() {
                                       <div key={idx} className="flex items-center justify-between bg-[#1a1a1d]/40 border border-[#3d3d45] rounded px-3 py-1.5 text-[11.5px]">
                                         <span className="text-slate-400">#{idx + 2}</span>
                                         <span className="text-slate-300 truncate flex-1 px-2" title={r.gear.map(g => g.name).join(", ")}>{r.gear.map(g => g.name).join(" · ")}</span>
-                                        <span className="font-mono font-bold text-[#ffd700]">{r.rate.toFixed(2)}%</span>
+                                        <span className="font-mono font-bold text-[#ffd700] mr-2">{r.rate.toFixed(2)}%</span>
+                                        <button
+                                          onClick={() => equipCombo(r.gear)}
+                                          className="text-[10px] uppercase tracking-wide px-2 py-1 rounded border border-[#4caf50]/60 text-[#4caf50] hover:bg-[#4caf50]/15 whitespace-nowrap"
+                                          title="Equip this combination to test it"
+                                        >Equip</button>
                                       </div>
                                     ))}
                                   </div>
