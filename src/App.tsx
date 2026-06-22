@@ -1488,6 +1488,7 @@ export default function App() {
   const [calibInputs, setCalibInputs] = useState<Record<string, string>>(
     () => Object.fromEntries(CALIB_FIELDS.map(f => [f.key as string, String(f.prefill)]))
   );
+  const [setAllValue, setSetAllValue] = useState("stars");
   const [formMastery, setFormMastery] = useState<string>("");
   const [formWeaponType, setFormWeaponType] = useState<string>("Sword");
   const [formSubs, setFormSubs] = useState<{type: string; val: string; isTuned?: boolean}[]>(
@@ -2319,6 +2320,18 @@ export default function App() {
     });
     setCalibOpen(false);
   };
+  // Apply one set type to every gear item in the active scheme (quick bulk edit).
+  const applySetToAll = () => {
+    setCharsData(prev => {
+      const updated = { ...prev, chars: prev.chars.map(c => c.id === prev.activeCharId ? {
+        ...c, schemes: c.schemes.map(s => s.id === prev.activeSchemeId ? {
+          ...s, gear: s.gear.map(g => ({ ...g, set: setAllValue })),
+        } : s),
+      } : c) };
+      localStorage.setItem("wwm_chars_v3", JSON.stringify(updated));
+      return updated;
+    });
+  };
   const clearCalibration = () => {
     setCharsData(prev => {
       const updated = { ...prev, chars: prev.chars.map(c => c.id === prev.activeCharId ? {
@@ -2912,6 +2925,24 @@ export default function App() {
                 </button>
               ))}
             </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <select
+                value={setAllValue}
+                onChange={e => setSetAllValue(e.target.value)}
+                title="Set type to apply to every gear item"
+                style={{ width: 'auto', minWidth: 110, padding: '6px 8px', fontSize: 13 }}
+              >
+                {["stars", "stormrain", "formbend", "moonflare", "obsidian", "beyondchill", "whirlsnow", "calmwaters", "jadeembrace", "agilesteps", "flawlessdef", "ironweave", "pursuing", "none"].map(k => (
+                  <option key={k} value={k}>{getSetName(k)}</option>
+                ))}
+              </select>
+              <button
+                className="secondary-btn"
+                onClick={applySetToAll}
+                title="Apply the selected set to every gear item in this scheme"
+                style={{ whiteSpace: 'nowrap' }}
+              >Set all</button>
+            </div>
             <button
               onClick={() => {
                 setEditingItem(null);
@@ -3293,8 +3324,8 @@ export default function App() {
               })()}
             </div>
             <div className="sim-side-panel">
-              <div className="sim-slot bow-slot" title="Bow attribute (pick below)" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#9a8a6a" strokeWidth="2.2"><circle cx="12" cy="13" r="6.5" /><path d="M9 5.5l3-2.5 3 2.5" /></svg>
+              <div className="sim-slot bow-slot" title="Bow attribute (pick below)">
+                <img src="/bow-icon.jpg" alt="Bow/Ring" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
               </div>
               <div className="sim-controls">
                 <select
