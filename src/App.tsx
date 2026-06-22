@@ -224,8 +224,8 @@ const INITIAL_PANEL: PanelStats = {
 const CALIB_FIELDS: { key: keyof PanelStats; label: string; prefill: number }[] = [
   { key: "minOuter", label: "Min Physical Atk", prefill: 1549 },
   { key: "maxOuter", label: "Max Physical Atk", prefill: 2264 },
-  { key: "minPz",    label: "Min Attribute Atk", prefill: 343 },
-  { key: "maxPz",    label: "Max Attribute Atk", prefill: 725 },
+  { key: "minPz",    label: "Min Attribute Atk (total, all elements)", prefill: 343 },
+  { key: "maxPz",    label: "Max Attribute Atk (total, all elements)", prefill: 725 },
   { key: "outerPen", label: "Physical Pen", prefill: 37.0 },
   { key: "pzPen",    label: "Attr / Formless Pen", prefill: 18.0 },
   { key: "crit",     label: "Critical Rate %", prefill: 122.6 },
@@ -235,7 +235,6 @@ const CALIB_FIELDS: { key: keyof PanelStats; label: string; prefill: number }[] 
   { key: "affDmg",   label: "Affinity DMG Bonus %", prefill: 35 },
   { key: "outerDmg", label: "Physical DMG Bonus %", prefill: 2.8 },
   { key: "pzDmg",    label: "Attr Attack DMG Bonus %", prefill: 9.0 },
-  { key: "bossDmg",  label: "Combat Boost vs Boss %", prefill: 2.6 },
 ];
 
 export interface SavedProfile {
