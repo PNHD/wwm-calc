@@ -1488,7 +1488,8 @@ export default function App() {
   const [calibInputs, setCalibInputs] = useState<Record<string, string>>(
     () => Object.fromEntries(CALIB_FIELDS.map(f => [f.key as string, String(f.prefill)]))
   );
-  const [setAllValue, setSetAllValue] = useState("stars");
+  const [setAllWeapon, setSetAllWeapon] = useState("stars");
+  const [setAllArmor, setSetAllArmor] = useState("stormrain");
   const [formMastery, setFormMastery] = useState<string>("");
   const [formWeaponType, setFormWeaponType] = useState<string>("Sword");
   const [formSubs, setFormSubs] = useState<{type: string; val: string; isTuned?: boolean}[]>(
@@ -2320,12 +2321,15 @@ export default function App() {
     });
     setCalibOpen(false);
   };
-  // Apply one set type to every gear item in the active scheme (quick bulk edit).
+  // Bulk-set gear sets: weapon/accessory set → Weapon 1·2 / Disc / Pendant;
+  // armor 4pc set → Helmet / Chest / Bracers / Greaves. (Weapons and armor use
+  // different set pools, so they're applied separately.)
   const applySetToAll = () => {
+    const ARMOR_SLOTS = ["Helmet", "Chest", "Bracers", "Greaves"];
     setCharsData(prev => {
       const updated = { ...prev, chars: prev.chars.map(c => c.id === prev.activeCharId ? {
         ...c, schemes: c.schemes.map(s => s.id === prev.activeSchemeId ? {
-          ...s, gear: s.gear.map(g => ({ ...g, set: setAllValue })),
+          ...s, gear: s.gear.map(g => ({ ...g, set: ARMOR_SLOTS.includes(g.slot) ? setAllArmor : setAllWeapon })),
         } : s),
       } : c) };
       localStorage.setItem("wwm_chars_v3", JSON.stringify(updated));
@@ -2925,21 +2929,27 @@ export default function App() {
                 </button>
               ))}
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }} title="Weapons/Disc/Pendant and armor use different set pools — set each, then Set all">
               <select
-                value={setAllValue}
-                onChange={e => setSetAllValue(e.target.value)}
-                title="Set type to apply to every gear item"
-                style={{ width: 'auto', minWidth: 110, padding: '6px 8px', fontSize: 13 }}
+                value={setAllWeapon}
+                onChange={e => setSetAllWeapon(e.target.value)}
+                title="Weapon / accessory set (Weapon 1·2, Disc, Pendant)"
+                style={{ width: 'auto', minWidth: 88, padding: '6px', fontSize: 12 }}
               >
-                {["stars", "stormrain", "formbend", "moonflare", "obsidian", "beyondchill", "whirlsnow", "calmwaters", "jadeembrace", "agilesteps", "flawlessdef", "ironweave", "pursuing", "none"].map(k => (
-                  <option key={k} value={k}>{getSetName(k)}</option>
-                ))}
+                {WEAPON_SET_KEYS.map(k => <option key={k} value={k}>{getSetName(k)}</option>)}
+              </select>
+              <select
+                value={setAllArmor}
+                onChange={e => setSetAllArmor(e.target.value)}
+                title="Armor 4pc set (Helmet, Chest, Hands, Legs)"
+                style={{ width: 'auto', minWidth: 88, padding: '6px', fontSize: 12 }}
+              >
+                {ARMOR_SET_KEYS.map(k => <option key={k} value={k}>{getSetName(k)}</option>)}
               </select>
               <button
                 className="secondary-btn"
                 onClick={applySetToAll}
-                title="Apply the selected set to every gear item in this scheme"
+                title="Weapon set → Weapon/Disc/Pendant · Armor set → armor pieces"
                 style={{ whiteSpace: 'nowrap' }}
               >Set all</button>
             </div>
@@ -3086,16 +3096,16 @@ export default function App() {
                   <option key={key} value={key}>{b.label}{ESTIMATED_BUILDS.has(key) ? " (est.)" : ""}</option>
                 ))}
               </select>
-              <button
-                onClick={() => setCalibOpen(true)}
-                className="secondary-btn"
-                title="Match the panel to your in-game Combat Attributes (per character)"
-                style={{ whiteSpace: 'nowrap', borderColor: activeScheme?.baseOverride ? '#4caf50' : undefined, color: activeScheme?.baseOverride ? '#4caf50' : undefined }}
-              >
-                {activeScheme?.baseOverride ? "✓ Calibrated" : "Calibrate"}
-              </button>
             </div>
           </div>
+          <button
+            onClick={() => setCalibOpen(true)}
+            className="secondary-btn"
+            title="Match the panel to your in-game Combat Attributes (per character)"
+            style={{ width: '100%', marginBottom: 12, whiteSpace: 'nowrap', borderColor: activeScheme?.baseOverride ? '#4caf50' : undefined, color: activeScheme?.baseOverride ? '#4caf50' : undefined }}
+          >
+            {activeScheme?.baseOverride ? "✓ Calibrated — matches in-game" : "⚙ Calibrate panel to in-game"}
+          </button>
           {calibOpen && (
             <div className="modal" onClick={() => setCalibOpen(false)}>
               <div className="modal-content modal-content-medium" onClick={e => e.stopPropagation()}>
