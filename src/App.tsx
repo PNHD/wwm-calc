@@ -770,6 +770,20 @@ const computeGearPanel = (current: PanelStats, gear: GearItem[], baseOverride?: 
   next.daff = 0;
   return next;
 };
+
+// Load/import guard: a calibration baseOverride poisoned by a Min>Max typo
+// (e.g. 1362 entered as 13622) silently inflates DPS/graduation to absurd values.
+// Drop the bad override so the panel auto-recomputes from gear instead of showing
+// garbage. Healthy gearless bases always keep min <= max.
+const sanitizeChars = <T,>(data: T): T => {
+  (data as { chars?: { schemes?: { baseOverride?: Partial<PanelStats> }[] }[] })?.chars?.forEach(c =>
+    c?.schemes?.forEach(s => {
+      const b = s?.baseOverride;
+      if (b && ((b.minOuter ?? 0) > (b.maxOuter ?? 0) || (b.minPz ?? 0) > (b.maxPz ?? 0))) delete s.baseOverride;
+    }),
+  );
+  return data;
+};
 // ---------------------------------------------------------------------------
 
 const BUILD_PROFILES = {
@@ -1286,7 +1300,7 @@ export default function App() {
         try {
           const parsed = JSON.parse(stored);
           if (parsed.chars && Array.isArray(parsed.chars)) {
-            return parsed;
+            return sanitizeChars(parsed);
           }
         } catch (e) {
           console.error(e);
@@ -2315,6 +2329,14 @@ export default function App() {
   // Stored per-scheme; computeGearPanel then reproduces the in-game panel exactly
   // for the current gear (and adjusts for gear changes via the sub-stat deltas).
   const applyCalibration = () => {
+    // Typo guard: Physical/Attribute Min must be <= Max. A stray extra digit
+    // (e.g. 1362 -> 13622) poisons the gearless base and inflates DPS hugely.
+    const minO = parseFloat(calibInputs["minOuter"]), maxO = parseFloat(calibInputs["maxOuter"]);
+    const minP = parseFloat(calibInputs["minPz"]), maxP = parseFloat(calibInputs["maxPz"]);
+    if ((!isNaN(minO) && !isNaN(maxO) && minO > maxO) || (!isNaN(minP) && !isNaN(maxP) && minP > maxP)) {
+      alert("Min Atk is greater than Max Atk — that's almost always a typo (check for an extra digit). Calibration not saved.");
+      return;
+    }
     const allGear = getActiveGear();
     const equipped = allGear.filter(it => isItemEquipped(it, allGear));
     const gearSum = sumGearSubs(equipped);
@@ -5052,7 +5074,7 @@ export default function App() {
                       const reader = new FileReader();
                       reader.onload = (ev) => {
                         try {
-                          const parsed = JSON.parse(ev.target?.result as string);
+                          const parsed = sanitizeChars(JSON.parse(ev.target?.result as string));
                           if (parsed.chars && Array.isArray(parsed.chars)) {
                             setCharsData(parsed);
                             localStorage.setItem("wwm_chars_v3", JSON.stringify(parsed));
@@ -5074,7 +5096,7 @@ export default function App() {
                     const textarea = document.getElementById("export-import-textarea") as HTMLTextAreaElement;
                     if (textarea && textarea.value.trim()) {
                       try {
-                        const parsed = JSON.parse(textarea.value.trim());
+                        const parsed = sanitizeChars(JSON.parse(textarea.value.trim()));
                         if (parsed.chars && Array.isArray(parsed.chars)) {
                           setCharsData(parsed);
                           localStorage.setItem("wwm_chars_v3", JSON.stringify(parsed));
