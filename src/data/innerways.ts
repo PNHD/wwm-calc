@@ -413,8 +413,8 @@ export const INNER_WAYS: InnerWay[] = [
       {tier:2,effect:"Healing +4%, +1.5 Dew per tick",stat:{}},
       {tier:3,effect:"Healing +6%, +2 Dew per tick",stat:{}},
       {tier:4,effect:"Healing +8%, +2.5 Dew per tick, +1 Essence per tick",stat:{}},
-      {tier:5,effect:"Healing +10%, +3 Dew per tick, +2 Essence per tick",stat:{}},
-      {tier:6,effect:"Healing +10%, +3 Dew, +2 Essence per tick + Water Clone area +15%",stat:{}},
+      {tier:5,effect:"Healing +10%, +3 Dew/+2 Essence per tick + Direct Crit +4.6% (breakthrough)",stat:{dcrit:4.6}},
+      {tier:6,effect:"Healing +10%, +3 Dew/+2 Essence + Water Clone area +15%; Direct Crit +4.6%",stat:{dcrit:4.6}},
     ]
   },
   {
@@ -506,8 +506,8 @@ export const INNER_WAYS: InnerWay[] = [
       {tier:2,effect:"+1 charge. CD +2s",stat:{}},
       {tier:3,effect:"+2 charges. CD +2.5s",stat:{}},
       {tier:4,effect:"+2 charges. CD +2.8s",stat:{}},
-      {tier:5,effect:"+2 charges. CD +3s",stat:{}},
-      {tier:6,effect:"+2 charges. CD +3s. Each charge hit reduces next charge CD by 0.5s",stat:{}},
+      {tier:5,effect:"+2 charges, CD +3s + Silkbind Penetration +6 (breakthrough)",stat:{pzPen:6}},
+      {tier:6,effect:"+2 charges, CD +3s; each charge hit -0.5s next CD; Silkbind Pen +6",stat:{pzPen:6}},
     ]
   },
 
@@ -521,8 +521,8 @@ export const INNER_WAYS: InnerWay[] = [
       {tier:2,effect:"Free Tier 2 Charged Heavy Attack (13s CD)",stat:{}},
       {tier:3,effect:"Free Tier 2, chains into follow-up (11s CD)",stat:{}},
       {tier:4,effect:"Free Tier 3, chains into follow-up (10s CD)",stat:{}},
-      {tier:5,effect:"Free Tier 3 Charged Heavy Attack, chains into follow-up (10s CD)",stat:{}},
-      {tier:6,effect:"Free Tier 3, chains, counter DMG +15% (10s CD)",stat:{}},
+      {tier:5,effect:"Free T3 Charged Heavy Attack, chains into follow-up (10s CD) + Crit DMG +4.4% (breakthrough)",stat:{critDmg:4.4}},
+      {tier:6,effect:"Free T3, chains, counter DMG +15% (10s CD); Crit DMG +4.4%",stat:{critDmg:4.4}},
     ]
   },
   {
@@ -642,11 +642,11 @@ const INNER_WAY_TRIGGERS: Record<string, InnerWayTrigger> = {
   bitter_seasons: "conditional", evasive_charge: "utility", fury_harvest: "utility", divine_roulette: "conditional",
   evening_snow: "utility", fivefold_bleed: "conditional", shadow_assault: "conditional", steadfast_stance: "utility", wind_beneath_wings: "utility",
   // SILKBIND-DELUGE (healer utility)
-  royal_remedy: "utility", restoring_blossom: "utility", esoteric_revival: "utility", mending_loom: "utility",
+  royal_remedy: "passive", restoring_blossom: "utility", esoteric_revival: "utility", mending_loom: "utility",
   // SILKBIND-JADE
-  blossom_barrage: "conditional", star_reacher: "conditional", thunderous_bloom: "conditional", flying_gourds: "utility",
+  blossom_barrage: "conditional", star_reacher: "conditional", thunderous_bloom: "conditional", flying_gourds: "passive",
   // STONESPLIT-MIGHT (tank utility)
-  exquisite_scenery: "utility", rock_solid: "utility", art_of_resistance: "conditional", trapped_beast: "utility",
+  exquisite_scenery: "passive", rock_solid: "utility", art_of_resistance: "conditional", trapped_beast: "utility",
   frost_clad_night: "conditional", steadfast_devotion: "conditional", throat_piercing_art: "conditional", wildfire_surge: "conditional",
 };
 
