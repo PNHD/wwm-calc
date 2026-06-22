@@ -2358,10 +2358,17 @@ export default function App() {
     const allGear = getActiveGear();
     const equipped = allGear.filter(it => isItemEquipped(it, allGear));
     const gearSum = sumGearSubs(equipped);
+    // The in-game Combat Attributes screen ALREADY includes inner-way (心法)
+    // bonuses, but adjustedPanel adds iwStats on top of the base (LOCKED #2). So
+    // the calibrated base must subtract BOTH gear sub-stats AND inner-way stats —
+    // otherwise inner-way pen/crit-dmg/etc. get counted twice and DPS inflates
+    // (~+30%). After this, adjustedPanel = base + gear + iwStats reproduces the
+    // exact in-game combat panel. Requires the same inner ways selected as in-game.
+    const iw = iwStats as Record<string, number>;
     const override: Partial<PanelStats> = {};
     CALIB_FIELDS.forEach(f => {
       const v = parseFloat(calibInputs[f.key as string]);
-      if (!isNaN(v)) (override[f.key] as number) = v - (gearSum[f.key] || 0);
+      if (!isNaN(v)) (override[f.key] as number) = v - (gearSum[f.key] || 0) - (iw[f.key as string] || 0);
     });
     setCharsData(prev => {
       const updated = { ...prev, chars: prev.chars.map(c => c.id === prev.activeCharId ? {
@@ -3171,7 +3178,7 @@ export default function App() {
                 </div>
                 <div className="modal-body">
                   <p style={{ fontSize: 12.5, color: 'var(--text-sub)', lineHeight: 1.5, marginTop: 0 }}>
-                    Type the numbers from your in-game <b>Combat Attributes</b> screen (current gear + inner ways equipped). The app subtracts your equipped gear's sub-stats to learn this character's true base, so the panel matches the game. Re-calibrate if you change gear a lot.
+                    Type the numbers from your in-game <b>Combat Attributes</b> screen. First make sure the <b>same Inner Ways are selected here as in-game</b> — the app subtracts your gear sub-stats <i>and</i> inner-way stats to learn this character's true base, so the in-combat panel matches the game exactly (no double-counting). Re-calibrate if you change gear or inner ways.
                   </p>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 14px' }}>
                     {CALIB_FIELDS.map(f => (
