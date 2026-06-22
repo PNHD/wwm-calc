@@ -217,6 +217,27 @@ const INITIAL_PANEL: PanelStats = {
   strength: 0,
 };
 
+// Base-calibration: the stats a player reads off the in-game Combat Attributes
+// screen. applyCalibration stores (these − equipped-gear sub-stats) as the
+// per-character gearless base, so the panel matches their real in-game numbers.
+// Prefill = the owner's current Bamboocut-Dust in-game panel.
+const CALIB_FIELDS: { key: keyof PanelStats; label: string; prefill: number }[] = [
+  { key: "minOuter", label: "Min Physical Atk", prefill: 1549 },
+  { key: "maxOuter", label: "Max Physical Atk", prefill: 2264 },
+  { key: "minPz",    label: "Min Attribute Atk", prefill: 343 },
+  { key: "maxPz",    label: "Max Attribute Atk", prefill: 725 },
+  { key: "outerPen", label: "Physical Pen", prefill: 37.0 },
+  { key: "pzPen",    label: "Attr / Formless Pen", prefill: 18.0 },
+  { key: "crit",     label: "Critical Rate %", prefill: 122.6 },
+  { key: "aff",      label: "Affinity Rate %", prefill: 20.4 },
+  { key: "prec",     label: "Precision Rate %", prefill: 112.9 },
+  { key: "critDmg",  label: "Crit DMG Bonus %", prefill: 54 },
+  { key: "affDmg",   label: "Affinity DMG Bonus %", prefill: 35 },
+  { key: "outerDmg", label: "Physical DMG Bonus %", prefill: 2.8 },
+  { key: "pzDmg",    label: "Attr Attack DMG Bonus %", prefill: 9.0 },
+  { key: "bossDmg",  label: "Combat Boost vs Boss %", prefill: 2.6 },
+];
+
 export interface SavedProfile {
   id: string;
   name: string;
@@ -250,6 +271,11 @@ export interface Scheme {
   name: string;
   panel: PanelStats;
   gear: GearItem[];
+  // Optional per-character calibrated gearless base (= in-game panel − equipped
+  // gear sub-stats). When present, computeGearPanel uses it instead of the fixed
+  // reference BASE_PANEL_NO_GEAR, so the panel matches the player's real in-game
+  // Combat Attributes (their level/breakthrough/talent base differs from the ref).
+  baseOverride?: Partial<PanelStats>;
 }
 
 export interface Character {
@@ -711,11 +737,15 @@ const BASE_PANEL_NO_GEAR: PanelStats = (() => {
 // of all sub-stats across the 8 equipped items, mapped via SUB_MAP. Fields not
 // covered by SUB_MAP (set, attunedBonus, dcrit, daff, wuxiang*, bossDmg, etc.)
 // are carried over from `current` unchanged.
-const computeGearPanel = (current: PanelStats, gear: GearItem[]): PanelStats => {
+const computeGearPanel = (current: PanelStats, gear: GearItem[], baseOverride?: Partial<PanelStats> | null): PanelStats => {
   const gearSum = sumGearSubs(gear);
   const next = { ...current };
   (Object.values(SUB_MAP) as (keyof PanelStats)[]).forEach(key => {
-    (next[key] as number) = (BASE_PANEL_NO_GEAR[key] as number) + (gearSum[key] || 0);
+    // Use the player's calibrated gearless base when available, else the fixed ref.
+    const base = (baseOverride && baseOverride[key] !== undefined)
+      ? (baseOverride[key] as number)
+      : (BASE_PANEL_NO_GEAR[key] as number);
+    (next[key] as number) = base + (gearSum[key] || 0);
   });
   // (Five-attribute 五维 → crit/aff/atk conversion was removed: it ran on the
   // gear-summed attribute totals, which double-count vs the in-game panel because
@@ -1453,6 +1483,11 @@ export default function App() {
   const [formQuality, setFormQuality] = useState<"gold" | "purple" | "blue">("gold");
   // formMain removed — items no longer store a separate main stat text
   const [formSet, setFormSet] = useState("stars");
+  // ── Base-calibration modal ──
+  const [calibOpen, setCalibOpen] = useState(false);
+  const [calibInputs, setCalibInputs] = useState<Record<string, string>>(
+    () => Object.fromEntries(CALIB_FIELDS.map(f => [f.key as string, String(f.prefill)]))
+  );
   const [formMastery, setFormMastery] = useState<string>("");
   const [formWeaponType, setFormWeaponType] = useState<string>("Sword");
   const [formSubs, setFormSubs] = useState<{type: string; val: string; isTuned?: boolean}[]>(
@@ -2233,10 +2268,10 @@ export default function App() {
     if (autoGearPanel) {
       const allGear = getActiveGear();
       const equippedGear = allGear.filter((it) => isItemEquipped(it, allGear));
-      return computeGearPanel(panel, equippedGear);
+      return computeGearPanel(panel, equippedGear, activeScheme?.baseOverride);
     }
     return { ...panel };
-  }, [panel, autoGearPanel, activeScheme?.gear]);
+  }, [panel, autoGearPanel, activeScheme?.gear, activeScheme?.baseOverride]);
 
   // Keep the persisted scheme `panel` in sync with the live gear-derived
   // basePanel (auto mode). Without this, equipping gear updated the readout
@@ -2262,6 +2297,41 @@ export default function App() {
       return updated;
     });
   }, [basePanel, autoGearPanel, activeScheme?.id]);
+
+  // Base-calibration: gearlessBase[stat] = in-game panel − equipped-gear sub-stats.
+  // Stored per-scheme; computeGearPanel then reproduces the in-game panel exactly
+  // for the current gear (and adjusts for gear changes via the sub-stat deltas).
+  const applyCalibration = () => {
+    const allGear = getActiveGear();
+    const equipped = allGear.filter(it => isItemEquipped(it, allGear));
+    const gearSum = sumGearSubs(equipped);
+    const override: Partial<PanelStats> = {};
+    CALIB_FIELDS.forEach(f => {
+      const v = parseFloat(calibInputs[f.key as string]);
+      if (!isNaN(v)) (override[f.key] as number) = v - (gearSum[f.key] || 0);
+    });
+    setCharsData(prev => {
+      const updated = { ...prev, chars: prev.chars.map(c => c.id === prev.activeCharId ? {
+        ...c, schemes: c.schemes.map(s => s.id === prev.activeSchemeId ? { ...s, baseOverride: override } : s),
+      } : c) };
+      localStorage.setItem("wwm_chars_v3", JSON.stringify(updated));
+      return updated;
+    });
+    setCalibOpen(false);
+  };
+  const clearCalibration = () => {
+    setCharsData(prev => {
+      const updated = { ...prev, chars: prev.chars.map(c => c.id === prev.activeCharId ? {
+        ...c, schemes: c.schemes.map(s => {
+          if (s.id !== prev.activeSchemeId) return s;
+          const { baseOverride, ...rest } = s; return rest as Scheme;
+        }),
+      } : c) };
+      localStorage.setItem("wwm_chars_v3", JSON.stringify(updated));
+      return updated;
+    });
+    setCalibOpen(false);
+  };
 
   // 2. Compute Adjusted Panel Stats (base panel + toggleable in-combat buffs)
   const adjustedPanel = useMemo((): PanelStats => {
@@ -2377,7 +2447,7 @@ export default function App() {
   // rate. Mirrors the live grad-rate pipeline so its numbers match the panel.
   const gradRateForGearCombo = (combo: GearItem[]): number => {
     // 1. base character-menu panel from this gear combo
-    let p = computeGearPanel(panel, combo);
+    let p = computeGearPanel(panel, combo, activeScheme?.baseOverride);
     // 2. apply the same in-combat buffs as `adjustedPanel`
     if (food) { p.minOuter += activeTier.foodMin; p.maxOuter += activeTier.foodMax; }
     if (bowSelect === "crit") p.crit += 3.7; else if (bowSelect === "prec") p.prec += 3.3; else if (bowSelect === "aff") p.aff += 1.8;
@@ -2985,8 +3055,51 @@ export default function App() {
                   <option key={key} value={key}>{b.label}{ESTIMATED_BUILDS.has(key) ? " (est.)" : ""}</option>
                 ))}
               </select>
+              <button
+                onClick={() => setCalibOpen(true)}
+                className="secondary-btn"
+                title="Match the panel to your in-game Combat Attributes (per character)"
+                style={{ whiteSpace: 'nowrap', borderColor: activeScheme?.baseOverride ? '#4caf50' : undefined, color: activeScheme?.baseOverride ? '#4caf50' : undefined }}
+              >
+                {activeScheme?.baseOverride ? "✓ Calibrated" : "Calibrate"}
+              </button>
             </div>
           </div>
+          {calibOpen && (
+            <div className="modal" onClick={() => setCalibOpen(false)}>
+              <div className="modal-content modal-content-medium" onClick={e => e.stopPropagation()}>
+                <div className="modal-header">
+                  <h2 className="modal-title-no-margin">Calibrate panel from in-game</h2>
+                  <span className="close-btn" onClick={() => setCalibOpen(false)}>×</span>
+                </div>
+                <div className="modal-body">
+                  <p style={{ fontSize: 12.5, color: 'var(--text-sub)', lineHeight: 1.5, marginTop: 0 }}>
+                    Type the numbers from your in-game <b>Combat Attributes</b> screen (current gear + inner ways equipped). The app subtracts your equipped gear's sub-stats to learn this character's true base, so the panel matches the game. Re-calibrate if you change gear a lot.
+                  </p>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 14px' }}>
+                    {CALIB_FIELDS.map(f => (
+                      <label key={f.key as string} style={{ display: 'flex', flexDirection: 'column', gap: 3, fontSize: 11.5, color: 'var(--text-sub)' }}>
+                        {f.label}
+                        <input
+                          type="number"
+                          value={calibInputs[f.key as string] ?? ''}
+                          onChange={e => setCalibInputs({ ...calibInputs, [f.key as string]: e.target.value })}
+                          style={{ padding: '6px 8px' }}
+                        />
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <div className="modal-footer modal-footer-between">
+                  <button className="danger-btn" onClick={clearCalibration} disabled={!activeScheme?.baseOverride}>Clear calibration</button>
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    <button className="cancel-btn" onClick={() => setCalibOpen(false)}>Cancel</button>
+                    <button className="save-btn" onClick={applyCalibration}>Compute &amp; Save</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="scheme-controls">
             <label className="sim-label" style={{ margin: 0 }}>Scheme:</label>
