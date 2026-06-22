@@ -881,11 +881,11 @@ const getSlotLabel = (slotName: string): string => {
 
 // Sets available per slot category (from in-game Switch Set screens)
 const WEAPON_SET_KEYS = [
-  "stars","eaglerise","jadeware","ivorybloom","shakenhill",
+  "stars","jadeware","ivorybloom","shakenhill",
   "swallowreturn","swiftgale","swallowcall","mistwillow","stormrain","none"
 ];
 const ARMOR_SET_KEYS = [
-  "stormrain","formbend","moonflare","obsidian","beyondchill",
+  "stormrain","eaglerise","formbend","moonflare","obsidian","beyondchill",
   "whirlsnow","calmwaters","jadeembrace","agilesteps","flawlessdef","ironweave","none"
 ];
 

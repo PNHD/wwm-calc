@@ -510,6 +510,19 @@ export const INNER_WAYS: InnerWay[] = [
       {tier:6,effect:"+2 charges, CD +3s; each charge hit -0.5s next CD; Silkbind Pen +6",stat:{pzPen:6}},
     ]
   },
+  {
+    id:"light_and_shadow", name:"Light and Shadow Alike", cat:"SILKBIND-JADE",
+    desc:"Gain Relentless Combat: reduce direct damage taken and increase healing, scaling with HP lost. Under Righteous Return (low HP) gain Light/Darkness stacks that amplify both.",
+    recommended:false, note:"Silkbind-Jade hybrid. Counted contribution = T5 Phys Pen breakthrough; the +5% direct DMG (T6) needs HP-loss (Righteous Return), so not counted as always-on.",
+    tiers:[
+      {tier:1,effect:"Relentless Combat: -3% direct DMG taken, +3% healing (+ up to 2% by HP lost)",stat:{}},
+      {tier:2,effect:"Increases Physical Attack based on Solo Mode Level",stat:{}},
+      {tier:3,effect:"HP-loss threshold for Righteous Return/Relentless Combat 20% → 15%",stat:{}},
+      {tier:4,effect:"Righteous Return: gain Light/Darkness (max 5) — +10%/stack to Return/Relentless",stat:{}},
+      {tier:5,effect:"Physical Penetration +5.1 (breakthrough)",stat:{outerPen:5.1}},
+      {tier:6,effect:"Righteous Return/Relentless enhanced: +5% direct DMG (+1%/15% HP lost, max 4%) + Phys Pen +5.1",stat:{outerPen:5.1}},
+    ]
+  },
 
   // ── STONESPLIT-MIGHT ──
   {
@@ -644,7 +657,7 @@ const INNER_WAY_TRIGGERS: Record<string, InnerWayTrigger> = {
   // SILKBIND-DELUGE (healer utility)
   royal_remedy: "passive", restoring_blossom: "utility", esoteric_revival: "utility", mending_loom: "utility",
   // SILKBIND-JADE
-  blossom_barrage: "conditional", star_reacher: "conditional", thunderous_bloom: "conditional", flying_gourds: "passive",
+  blossom_barrage: "conditional", star_reacher: "conditional", thunderous_bloom: "conditional", flying_gourds: "passive", light_and_shadow: "passive",
   // STONESPLIT-MIGHT (tank utility)
   exquisite_scenery: "passive", rock_solid: "utility", art_of_resistance: "conditional", trapped_beast: "utility",
   frost_clad_night: "conditional", steadfast_devotion: "conditional", throat_piercing_art: "conditional", wildfire_surge: "conditional",
