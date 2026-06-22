@@ -1911,10 +1911,6 @@ export default function App() {
     const config = getCustomConfig();
     return config?.script50 ?? false;
   });
-  const [earlySeason, setEarlySeason] = useState<boolean>(() => {
-    const config = getCustomConfig();
-    return config?.earlySeason ?? false;
-  });
   const [bowSelect, setBowSelect] = useState<string>(() => {
     const config = getCustomConfig();
     return config?.bowSelect ?? "crit";
@@ -1940,7 +1936,6 @@ export default function App() {
       yishuiPen,
       qianying,
       script50,
-      earlySeason,
       customDef,
       customRes
     };
@@ -1971,7 +1966,6 @@ export default function App() {
           if (config.yishuiPen !== undefined) setYishuiPen(config.yishuiPen);
           if (config.qianying !== undefined) setQianying(config.qianying);
           if (config.script50 !== undefined) setScript50(config.script50);
-          if (config.earlySeason !== undefined) setEarlySeason(config.earlySeason);
           if (config.customDef !== undefined) setCustomDef(config.customDef);
           if (config.customRes !== undefined) setCustomRes(config.customRes);
           return;
@@ -1990,7 +1984,6 @@ export default function App() {
       setYishuiPen(true);
       setQianying(true);
       setScript50(false);
-      setEarlySeason(false);
       setCustomDef(350);
       setCustomRes(0.45);
     }
@@ -2010,7 +2003,6 @@ export default function App() {
       setYishuiPen(true);
       setQianying(true);
       setScript50(false);
-      setEarlySeason(false);
       setCustomDef(350);
       setCustomRes(0.45);
       alert("Custom defaults successfully wiped. Baseline factory settings restored.");
@@ -2308,12 +2300,6 @@ export default function App() {
       p.dcrit += 15.0;
     }
 
-    // Season early bonus (temporary seasonal buff)
-    if (earlySeason) {
-      p.minOuter += 4.4;
-      p.maxOuter += 27.2;
-    }
-
     // Determine active set from equipped gear for the DPS formula
     const gear = getActiveGear();
     const setCounts: Record<string, number> = {};
@@ -2360,7 +2346,7 @@ export default function App() {
     p.iwPzDmg = iwStats.pzDmg;
 
     return p;
-  }, [panel, bowSelect, food, script50, earlySeason, activeTier, iwStats, autoGearPanel, activeScheme?.gear]);
+  }, [panel, bowSelect, food, script50, activeTier, iwStats, autoGearPanel, activeScheme?.gear]);
 
   // 3. Baseline = authoritative "fully graduated" T91/Lv95 DPS per build (from the
   //    源 spreadsheet, converted to rotation-window total). See calcBaseline / T91_GRAD_DPS.
@@ -2409,7 +2395,6 @@ export default function App() {
     if (food) { p.minOuter += activeTier.foodMin; p.maxOuter += activeTier.foodMax; }
     if (bowSelect === "crit") p.crit += 3.7; else if (bowSelect === "prec") p.prec += 3.3; else if (bowSelect === "aff") p.aff += 1.8;
     if (script50) p.dcrit += 15.0;
-    if (earlySeason) { p.minOuter += 4.4; p.maxOuter += 27.2; }
     // active 4pc set from the combo
     const setCounts: Record<string, number> = {};
     combo.forEach(it => { if (it.set && it.set !== "none") setCounts[it.set] = (setCounts[it.set] || 0) + 1; });
@@ -3205,7 +3190,9 @@ export default function App() {
               })()}
             </div>
             <div className="sim-side-panel">
-              <div className="sim-slot bow-slot" title="Weapon / Ring slot" />
+              <div className="sim-slot bow-slot" title="Bow attribute (pick below)" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#9a8a6a" strokeWidth="2.2"><circle cx="12" cy="13" r="6.5" /><path d="M9 5.5l3-2.5 3 2.5" /></svg>
+              </div>
               <div className="sim-controls">
                 <select
                   value={bowSelect}
@@ -3240,15 +3227,6 @@ export default function App() {
                   className="panel-checkbox-input"
                 />
                 <span>Script &lt;50% HP (+15% Direct Crit)</span>
-              </label>
-              <label className="panel-checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={earlySeason}
-                  onChange={(e) => setEarlySeason(e.target.checked)}
-                  className="panel-checkbox-input"
-                />
-                <span>Early season bonus (caps may rise)</span>
               </label>
             </div>
           </div>
