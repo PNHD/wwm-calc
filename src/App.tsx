@@ -1156,6 +1156,9 @@ export default function App() {
   const [isGradModalOpen, setIsGradModalOpen] = useState<boolean>(false);
   const [gradModalActiveTab, setGradModalActiveTab] = useState<string>("manual");
   const [isDmgStatsOpen, setIsDmgStatsOpen] = useState<boolean>(false);
+  const [isSimOpen, setIsSimOpen] = useState<boolean>(false);
+  const [simRuns, setSimRuns] = useState<number>(100);
+  const [simResult, setSimResult] = useState<any>(null);
   const [isExportImportModalOpen, setIsExportImportModalOpen] = useState<boolean>(false);
   const [isBatchOcrModalOpen, setIsBatchOcrModalOpen] = useState<boolean>(false);
   const [isXinfaModalOpen, setIsXinfaModalOpen] = useState<boolean>(false);
@@ -2538,6 +2541,17 @@ export default function App() {
     };
   }, [adjustedPanel, activeTier, datang, yishui, selectedBuild, baselineScore]);
 
+  // ── Skill Damage Preview (read-only): per-cast damage by outcome ────────────
+  const skillPreview = useMemo(() => {
+    return getRotationForBuild(selectedBuild).map(item => {
+      const { sim } = calcSkill(item, adjustedPanel, activeTier, {
+        set: adjustedPanel.set, datang, yishui, buildKey: selectedBuild,
+        weaponStars: (adjustedPanel as any).weaponStars,
+      } as any);
+      return { name: item.name, count: item.count, crit: sim.critHit, aff: sim.affHit, normal: sim.normHit, abrasion: sim.grazeHit };
+    });
+  }, [adjustedPanel, activeTier, datang, yishui, selectedBuild]);
+
   // ── Inner Ways: DPS loss if removed ─────────────────────────────────────────
   // Per equipped inner way, recompute the rotation with that way's stats removed
   // from the in-combat panel. The drop = how much DPS that way is contributing.
@@ -2681,6 +2695,60 @@ export default function App() {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeScheme?.gear, panel, food, bowSelect, script50, iwStats, activeTier, datang, yishui, selectedBuild]);
+
+  // ── Monte Carlo Damage Simulation ───────────────────────────────────────────
+  // Rolls each cast's outcome (crit/aff/normal/abrasion) instead of using the
+  // probability-weighted average. Verifies the main calc + shows parse variance.
+  const runSimulation = () => {
+    const runs = Math.max(1, Math.min(2000, Math.round(simRuns) || 100));
+    const rotTime = getRotationTimeForBuild(selectedBuild);
+    const skills = getRotationForBuild(selectedBuild).map(item =>
+      calcSkill(item, adjustedPanel, activeTier, {
+        set: adjustedPanel.set, datang, yishui, buildKey: selectedBuild,
+        weaponStars: (adjustedPanel as any).weaponStars,
+      } as any).sim
+    );
+    const totals: number[] = [];
+    let hCrit = 0, hAff = 0, hNorm = 0, hAbr = 0;
+    let dCrit = 0, dAff = 0, dNorm = 0, dAbr = 0;
+    let totalHits = 0, totalDmgAll = 0;
+    for (let r = 0; r < runs; r++) {
+      let runTotal = 0;
+      for (const s of skills) {
+        for (let c = 0; c < s.casts; c++) {
+          const x = Math.random();
+          let v: number;
+          if (x < s.pCrit) { v = s.critHit; hCrit++; dCrit += v; }
+          else if (x < s.pCrit + s.pAff) { v = s.affHit; hAff++; dAff += v; }
+          else if (x < s.pCrit + s.pAff + s.pGraze) { v = s.grazeHit; hAbr++; dAbr += v; }
+          else { v = s.normHit; hNorm++; dNorm += v; }
+          runTotal += v; totalHits++; totalDmgAll += v;
+        }
+      }
+      totals.push(runTotal);
+    }
+    totals.sort((a, b) => a - b);
+    const pick = (p: number) => totals[Math.min(totals.length - 1, Math.floor(p * totals.length))];
+    const mean = totals.reduce((a, b) => a + b, 0) / runs;
+    const expected = rotationStats.totalDmg || 1;
+    const pctOf = (n: number, d: number) => d > 0 ? (n / d) * 100 : 0;
+    setSimResult({
+      runs, hitsPerRun: Math.round(totalHits / runs), duration: rotTime,
+      expectedDps: expected / rotTime,
+      avgDps: mean / rotTime,
+      bestDps: totals[totals.length - 1] / rotTime,
+      worstDps: totals[0] / rotTime,
+      p25: pick(0.25) / rotTime, p50: pick(0.5) / rotTime, p75: pick(0.75) / rotTime,
+      diffPct: ((mean - expected) / expected) * 100,
+      rangePct: pctOf((totals[totals.length - 1] - totals[0]) / 2, mean),
+      dist: {
+        crit: { hit: pctOf(hCrit, totalHits), dmg: pctOf(dCrit, totalDmgAll) },
+        aff: { hit: pctOf(hAff, totalHits), dmg: pctOf(dAff, totalDmgAll) },
+        normal: { hit: pctOf(hNorm, totalHits), dmg: pctOf(dNorm, totalDmgAll) },
+        abrasion: { hit: pctOf(hAbr, totalHits), dmg: pctOf(dAbr, totalDmgAll) },
+      },
+    });
+  };
 
   const [bestBuildResult, setBestBuildResult] = useState<{ rate: number; gear: GearItem[] }[] | null>(null);
   const [bestBuildRunning, setBestBuildRunning] = useState(false);
@@ -3649,6 +3717,14 @@ export default function App() {
               >
                 📊 Damage Statistics
               </button>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); setIsSimOpen(true); }}
+                title="Monte Carlo simulation: roll each hit to see DPS variance and best/worst parses"
+                style={{ marginLeft: 6, padding: "2px 8px", fontSize: 11, fontWeight: 700, borderRadius: 6, border: "1px solid rgba(126,231,135,0.4)", background: "rgba(126,231,135,0.12)", color: "#7ee787", cursor: "pointer" }}
+              >
+                🎲 Simulate
+              </button>
             </div>
             <div className="banner-arrow">›</div>
           </div>
@@ -3796,11 +3872,134 @@ export default function App() {
                   <b style={{ color: "#8b949e" }}> Affinity</b> = 会心 hits, <b style={{ color: "#8b949e" }}>Normal</b> = ordinary hits,
                   <b style={{ color: "#8b949e" }}> Abrasion</b> = graze (擦伤) hits. Chips show the buffs this calculation assumes active.
                 </p>
+
+                <details style={{ marginTop: 14 }}>
+                  <summary style={{ cursor: "pointer", fontSize: 11, color: "#8b949e", textTransform: "uppercase", letterSpacing: 0.5 }}>Per-skill damage (per hit) ▾</summary>
+                  <div style={{ marginTop: 8, maxHeight: 220, overflowY: "auto", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8 }}>
+                    <div style={{ display: "flex", padding: "4px 10px", position: "sticky", top: 0, background: "#15161a", fontSize: 9.5, color: "#8b949e", textTransform: "uppercase" }}>
+                      <span style={{ flex: 1 }}>Skill</span>
+                      <span style={{ width: 58, textAlign: "right", color: "#ff5c5c" }}>Abrasion</span>
+                      <span style={{ width: 58, textAlign: "right", color: "#8b949e" }}>Normal</span>
+                      <span style={{ width: 58, textAlign: "right", color: "#f0b400" }}>Crit</span>
+                      <span style={{ width: 58, textAlign: "right", color: "#ff8c42" }}>Affinity</span>
+                    </div>
+                    {skillPreview.map((s, i) => (
+                      <div key={s.name + i} style={{ display: "flex", padding: "4px 10px", borderTop: "1px solid rgba(255,255,255,0.05)", fontSize: 11.5 }}>
+                        <span style={{ flex: 1, color: "#c9d1d9", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={s.name}>{s.name} <span style={{ color: "#6e7681" }}>×{s.count}</span></span>
+                        <span style={{ width: 58, textAlign: "right", color: "#c9d1d9", fontFamily: "monospace" }}>{Math.round(s.abrasion).toLocaleString()}</span>
+                        <span style={{ width: 58, textAlign: "right", color: "#c9d1d9", fontFamily: "monospace" }}>{Math.round(s.normal).toLocaleString()}</span>
+                        <span style={{ width: 58, textAlign: "right", color: "#f0b400", fontFamily: "monospace" }}>{Math.round(s.crit).toLocaleString()}</span>
+                        <span style={{ width: 58, textAlign: "right", color: "#ff8c42", fontFamily: "monospace" }}>{Math.round(s.aff).toLocaleString()}</span>
+                      </div>
+                    ))}
+                  </div>
+                </details>
               </div>
             </div>
           </div>
         );
       })()}
+
+      {/* ── DAMAGE SIMULATION MODAL (Monte Carlo) ── */}
+      {isSimOpen && (
+        <div className="modal" onClick={() => setIsSimOpen(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 620 }}>
+            <div className="modal-header">
+              <h2>🎲 Damage Simulation</h2>
+              <span className="close-btn" onClick={() => setIsSimOpen(false)}>&times;</span>
+            </div>
+            <div className="modal-body" style={{ padding: 20 }}>
+              <p style={{ fontSize: 12, color: "#8b949e", lineHeight: 1.5, marginBottom: 14 }}>
+                Monte Carlo of your rotation: instead of the average, each cast rolls a random
+                crit / affinity / normal / abrasion outcome. The simulated average should match the
+                main calc — that verifies the math — and the spread shows real parse-to-parse variance.
+              </p>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
+                <label style={{ fontSize: 12, color: "#c9d1d9" }}>Simulations:&nbsp;
+                  <input type="number" min={1} max={2000} value={simRuns}
+                    onChange={e => setSimRuns(Math.max(1, Math.min(2000, Number(e.target.value) || 1)))}
+                    style={{ width: 70, padding: "3px 6px", background: "#15161a", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 5, color: "#fff", fontSize: 12 }} />
+                </label>
+                <button type="button" onClick={runSimulation}
+                  style={{ padding: "5px 14px", fontSize: 12, fontWeight: 700, borderRadius: 6, border: "1px solid rgba(126,231,135,0.5)", background: "rgba(126,231,135,0.15)", color: "#7ee787", cursor: "pointer" }}>
+                  ▶ Run Simulation
+                </button>
+              </div>
+
+              {!simResult ? (
+                <div style={{ fontSize: 12, color: "#6e7681", padding: "10px 0" }}>Set a count and click Run.</div>
+              ) : (() => {
+                const sr = simResult;
+                const matched = Math.abs(sr.diffPct) <= 1;
+                const card = (label: string, val: string, color?: string) => (
+                  <div style={{ flex: 1, minWidth: 120, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, padding: "8px 10px" }}>
+                    <div style={{ fontSize: 9.5, color: "#8b949e", textTransform: "uppercase", letterSpacing: 0.4 }}>{label}</div>
+                    <div style={{ fontSize: 17, fontWeight: 800, color: color || "#fff" }}>{val}</div>
+                  </div>
+                );
+                const r0 = (n: number) => Math.round(n).toLocaleString();
+                const rows = [
+                  { k: "Best", dps: sr.bestDps, c: "#7ee787" },
+                  { k: "P75", dps: sr.p75 },
+                  { k: "Median (P50)", dps: sr.p50, c: "#f0b400" },
+                  { k: "P25", dps: sr.p25 },
+                  { k: "Worst", dps: sr.worstDps, c: "#ff7b72" },
+                ];
+                const dist = [
+                  { label: "Crit", color: "#f0b400", d: sr.dist.crit },
+                  { label: "Affinity", color: "#ff8c42", d: sr.dist.aff },
+                  { label: "Normal", color: "#8b949e", d: sr.dist.normal },
+                  { label: "Abrasion", color: "#ff5c5c", d: sr.dist.abrasion },
+                ];
+                return (
+                  <>
+                    <div style={{ padding: "8px 12px", borderRadius: 8, marginBottom: 12, fontSize: 12, fontWeight: 600,
+                      background: matched ? "rgba(126,231,135,0.1)" : "rgba(245,180,0,0.1)",
+                      border: `1px solid ${matched ? "rgba(126,231,135,0.3)" : "rgba(245,180,0,0.3)"}`,
+                      color: matched ? "#7ee787" : "#f0b400" }}>
+                      {matched ? "✓ " : "⚠ "}Simulated avg {r0(sr.avgDps)} vs expected {r0(sr.expectedDps)} DPS ({sr.diffPct >= 0 ? "+" : ""}{sr.diffPct.toFixed(2)}%)
+                      {matched ? " — calculation verified." : " — outside 1%, try more runs."}
+                    </div>
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
+                      {card("Average DPS", r0(sr.avgDps))}
+                      {card("DPS Range", `±${sr.rangePct.toFixed(1)}%`)}
+                      {card("Best Parse", r0(sr.bestDps), "#7ee787")}
+                      {card("Worst Parse", r0(sr.worstDps), "#ff7b72")}
+                    </div>
+
+                    <div style={{ fontSize: 11, color: "#8b949e", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>Percentiles</div>
+                    <div style={{ border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, overflow: "hidden", marginBottom: 16 }}>
+                      {rows.map(r => (
+                        <div key={r.k} style={{ display: "flex", justifyContent: "space-between", padding: "5px 10px", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+                          <span style={{ fontSize: 12, color: r.c || "#c9d1d9", fontWeight: r.c ? 700 : 400 }}>{r.k}</span>
+                          <span style={{ fontSize: 12.5, fontWeight: 700, color: r.c || "#c9d1d9", fontFamily: "monospace" }}>{r0(r.dps)}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div style={{ fontSize: 11, color: "#8b949e", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>Hit Distribution (avg)</div>
+                    <div style={{ border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, overflow: "hidden" }}>
+                      <div style={{ display: "flex", padding: "4px 10px", background: "rgba(255,255,255,0.03)", fontSize: 9.5, color: "#8b949e", textTransform: "uppercase" }}>
+                        <span style={{ flex: 1 }}>Type</span><span style={{ width: 70, textAlign: "right" }}>Hit %</span><span style={{ width: 80, textAlign: "right" }}>Damage %</span>
+                      </div>
+                      {dist.map(d => (
+                        <div key={d.label} style={{ display: "flex", alignItems: "center", padding: "5px 10px", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+                          <span style={{ flex: 1, display: "flex", alignItems: "center", gap: 7, fontSize: 12.5, color: "#c9d1d9" }}>
+                            <span style={{ width: 10, height: 10, borderRadius: 3, background: d.color }} />{d.label}
+                          </span>
+                          <span style={{ width: 70, textAlign: "right", fontSize: 12, color: "#8b949e", fontFamily: "monospace" }}>{d.d.hit.toFixed(1)}%</span>
+                          <span style={{ width: 80, textAlign: "right", fontSize: 12, fontWeight: 700, color: d.color, fontFamily: "monospace" }}>{d.d.dmg.toFixed(1)}%</span>
+                        </div>
+                      ))}
+                    </div>
+                    <p style={{ marginTop: 12, fontSize: 11, color: "#6e7681" }}>{sr.runs} runs · ~{sr.hitsPerRun} hits/run · {sr.duration.toFixed(1)}s rotation. Hit % = share of hits; Damage % = share of total damage.</p>
+                  </>
+                );
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── GRADUATION ANALYSIS MODAL ── */}
       {isGradModalOpen && (

@@ -431,7 +431,7 @@ export function calcSkill(
     }
   }
 
-  if (!sk) return { perHit: 0, total: 0, breakdown: { crit: 0, aff: 0, normal: 0, abrasion: 0 } };
+  if (!sk) return { perHit: 0, total: 0, breakdown: { crit: 0, aff: 0, normal: 0, abrasion: 0 }, sim: { pCrit: 0, pAff: 0, pWhite: 0, pGraze: 0, critHit: 0, affHit: 0, normHit: 0, grazeHit: 0, casts: 0 } };
 
   const set = opts.set;
   const judgeRes = tier.judgeRes;
@@ -592,7 +592,17 @@ export function calcSkill(
     normal: normPart * scale,
     abrasion: abrPart * scale,
   };
-  return { perHit, total, breakdown };
+  // Per-cast outcome probabilities + the damage of one cast IF it lands as that
+  // outcome (incl. attuned multiplier). Lets a Monte Carlo roll each cast.
+  const sim = {
+    pCrit, pAff, pWhite, pGraze,
+    critHit: (dC_O + dC_F + dC_PZ) * attMul,
+    affHit: (dA_O + dA_F + dA_PZ) * attMul,
+    normHit: (dN_O + dN_F + dN_PZ) * attMul,
+    grazeHit: (dGl_O + dN_F + dN_PZ) * attMul,
+    casts: rot.count * (rot.tiaozhan || 1),
+  };
+  return { perHit, total, breakdown, sim };
 }
 
 // T91 Global graduated DPS per build, extracted DIRECTLY from the source spreadsheet
