@@ -24,12 +24,20 @@ mechanic của tất cả Inner Ways** để nhập vào `src/data/innerways.ts`
    Direct Crit 4.1-4.6% — dùng làm mốc đối chiếu.
 5. **Tier 1-6 breakthrough gains** (mỗi tier 1 dòng) + **đánh dấu tier nào mở dòng Attribute Buff nào**.
 
-## Cách crawl (gợi ý)
-- Mở site bằng Playwright, để JS render. Tìm route list inner-ways (thử `/inner-way`, `/innerways`,
-  `/心法`, hoặc xem network tab có API JSON `/api/...` trả data không — ưu tiên API hơn scrape DOM).
-- Nếu có API JSON: dump raw JSON, đó là nguồn sạch nhất.
-- Nếu chỉ có DOM: scrape mỗi inner-way page lấy 5 mục trên.
-- Output: 1 file JSON `{ id, nameEn, path, basicBuff, attributeBuff: {stat:value...}, tiers:[...] }[]`.
+## ✅ ĐÃ CRAWL XONG (round 1) — API tìm ra
+gRPC-web: `POST /api/wwm.v1.WwmService/InnerWays` (list), `/InnerWay {id}` (detail). 88 attack IW.
+Cấu trúc: `item.upranks[]` theo worldLevel WL4→WL10. **WL8 = tầng Global T91/95下 app dùng**
+(cross-check khớp 7/7 với verify tay). File: `wwmdb_innerways_extracted.json`.
+
+## 🔴 ROUND 2 — CẦN DUMP THÊM `dynamicAttributes` (dòng substat thứ 2 bị thiếu)
+Round 1 chỉ in `fixedAttributes` = **1 dòng substat/IW** (vd Bitter Seasons "Phys DMG 2.5%").
+Nhưng tooltip game cho thấy mỗi IW có **2 dòng Attribute Buff**: dòng "fixed" (đã có) + dòng
+**"based on Solo Mode Level"** (Precision/Min-Max Phys...) nằm trong **`dynamicAttributes`** — round 1
+BỎ SÓT. vd Bitter Seasons thật = Precision 6.5% (dynamic) + Phys DMG 2.5% (fixed).
+**Cần:** với mỗi IW, dump `upranks[WL8].dynamicAttributes` (name + value tại WL8/level 95). In ra
+bảng `{IW, fixedAttr, dynamicAttr(name:value @WL8)}` cho TẤT CẢ 88 IW. Đó là dòng còn thiếu để app đủ.
+- Lưu ý value "dynamic" scale theo level → lấy đúng entry **worldLevel=8** (hoặc =95 nếu key là level).
+- Mốc đối chiếu @91/95: Precision 6.5% · Direct Crit 4.1-4.6% · Min Phys 63.8 · Min hệ 36.2 · Min/Max 23.6/47.2.
 
 ## Mapping về app (để agent nhập sau biết đường)
 Field substat → key trong `innerways.ts` `stat:{}`:
