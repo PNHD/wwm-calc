@@ -475,6 +475,7 @@ export function calcSkill(
   let affMult = 1 + (panel.affDmg || 0) / 100;
   if (set === "stormrain") critMult += 0.1;
   if (set === "ivorybloom") critMult += 0.15; // Ivorybloom 4pc: +15% Crit DMG at max HP
+  if (set === "rainwhisper") critMult += 0.10; // Rainwhisper 4pc: +10% Crit DMG (+15% w/ shield)
   if (set === "jadeware") affMult += 0.10;     // Jadeware 4pc: +10% Affinity DMG vs qi-imbalance (boss)
   if (opts.datang && sk.wType === "umb" && sk.type === "weapon") critMult += 0.15;
 
@@ -528,7 +529,8 @@ export function calcSkill(
   const F = totalOuterPen >= 0 ? totalOuterPen / 200 : totalOuterPen / 100;
 
   // Panel min/maxOuter already include five-attribute contributions from the game.
-  let atkMult = set === "ironweave" ? 1.05 : 1.0;
+  // Hawkwing (key "eaglerise") 4pc: +2% Phys ATK/stack ×5 = +10% Phys ATK (weapon set).
+  let atkMult = set === "eaglerise" ? 1.10 : set === "ironweave" ? 1.05 : 1.0;
   let minO = (panel.minOuter || 0) * atkMult;
   let maxO = (panel.maxOuter || 0) * atkMult;
   if (maxO < minO) maxO = minO;

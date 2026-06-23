@@ -1041,9 +1041,9 @@ const ARMOR_SETS = {
   },
   "rainwhisper": {
     name: "Rainwhisper",
-    stat2pc: {},
-    desc2pc: "2/4: +Max HP",
-    desc4pc: "4/4: +10% Crit DMG & Heal. Bonus rises to +15% if HP shield is active.",
+    stat2pc: { prec: 6.6 },              // ✅ weapon set, game-verified
+    desc2pc: "2/4: +6.6% Precision Rate",
+    desc4pc: "4/4: +10% Crit DMG (+15% while an HP shield is active).",
     recommended: [],
   },
   "formbend": {
@@ -2832,11 +2832,11 @@ export default function App() {
   const armorSetCompare = useMemo(() => {
     const cur = (adjustedPanel.set as string) || "none";
     const rotTime = getRotationTimeForBuild(selectedBuild);
-    // DPS-relevant sets only: weapon sets with a stat2pc + Hawkwing (the one DPS armour set).
-    const SETS = ["stars", "jadeware", "ivorybloom", "mistwillow", "swallowreturn", "shakenhill", "eaglerise", "none"];
-    // 4pc DPS effects now modeled in calc (game-verified). Hawkwing(armor)/Mistwillow
-    // still 2pc-only (armor + build-specific — pending).
-    const modeled4pc = new Set(["stars", "ivorybloom", "jadeware", "swallowreturn", "shakenhill"]);
+    // DPS weapon sets (game-verified). Hawkwing = key "eaglerise" (weapon, not armour).
+    const SETS = ["stars", "jadeware", "ivorybloom", "rainwhisper", "eaglerise", "swallowreturn", "shakenhill", "mistwillow", "none"];
+    // 4pc DPS effects now modeled in calc (game-verified). Mistwillow still 2pc-only
+    // (build-specific light/heavy alternation — pending).
+    const modeled4pc = new Set(["stars", "ivorybloom", "jadeware", "rainwhisper", "eaglerise", "swallowreturn", "shakenhill"]);
     const dpsFor = (key: string) => {
       const p: any = { ...adjustedPanel };
       const rm = (ARMOR_SETS as any)[cur]?.stat2pc as Record<string, number> | undefined;
@@ -2855,7 +2855,6 @@ export default function App() {
       return {
         key,
         name: (ARMOR_SETS as any)[key]?.name || key,
-        type: key === "none" ? "" : WEAPON_SET_KEYS.includes(key) ? "W" : ARMOR_SET_KEYS.includes(key) ? "A" : "",
         dps,
         delta: dps - curDps,
         active: key === cur,
@@ -3865,15 +3864,14 @@ export default function App() {
           {armorSetCompare.length > 0 && (
             <div style={{ marginTop: 12, border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, overflow: "hidden" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 10px", background: "rgba(255,255,255,0.03)" }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: "#f0b400", textTransform: "uppercase", letterSpacing: 0.4 }}>Set Bonus (DPS)</span>
-                <span style={{ fontSize: 10, color: "#6e7681" }} title="DPS per set vs your current set. [W] = weapon set, [A] = armour set. 2pc stats are T91-verified; (2pc) = the 4pc effect isn't modeled in the calc yet, so only the 2pc stat is compared.">DPS · vs current ⓘ</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: "#f0b400", textTransform: "uppercase", letterSpacing: 0.4 }}>Weapon Set</span>
+                <span style={{ fontSize: 10, color: "#6e7681" }} title="DPS per weapon set vs your current set. 2pc stats + verified 4pc effects modeled; (2pc) = 4pc not modeled yet (build-specific). Eaglerise (armour) is defensive — excluded.">DPS · vs current ⓘ</span>
               </div>
               {armorSetCompare.map(o => (
                 <div key={o.key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "5px 10px", borderTop: "1px solid rgba(255,255,255,0.05)", background: o.active ? "rgba(245,180,0,0.08)" : undefined }}>
                   <span style={{ fontSize: 12, color: o.active ? "#f0b400" : "#c9d1d9", fontWeight: o.active ? 700 : 400, display: "flex", alignItems: "center", gap: 5 }}>
-                    {o.type && <span style={{ fontSize: 9, fontWeight: 700, padding: "1px 4px", borderRadius: 3, color: o.type === "W" ? "#f0b400" : "#7aa2ff", background: o.type === "W" ? "rgba(240,180,0,0.12)" : "rgba(122,162,255,0.12)" }} title={o.type === "W" ? "Weapon set" : "Armour set"}>{o.type}</span>}
                     {o.name}{o.active ? " ✓" : ""}
-                    {!o.modeled && <span style={{ color: "#6e7681", fontSize: 10 }} title="4pc effect not modeled in the calc yet — compares 2pc stat only"> (2pc)</span>}
+                    {!o.modeled && <span style={{ color: "#6e7681", fontSize: 10 }} title="4pc effect not modeled yet (build-specific) — compares 2pc stat only"> (2pc)</span>}
                   </span>
                   <span style={{ display: "flex", gap: 10, alignItems: "baseline" }}>
                     <span style={{ fontSize: 12.5, fontWeight: 700, color: "#c9d1d9" }}>{Math.round(o.dps).toLocaleString()}</span>
@@ -3882,7 +3880,7 @@ export default function App() {
                 </div>
               ))}
               <div style={{ padding: "5px 10px", fontSize: 10, color: "#6e7681", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
-                <b style={{ color: "#f0b400" }}>[W]</b> weapon · <b style={{ color: "#7aa2ff" }}>[A]</b> armour. 2pc stats T91-verified. <b>(2pc)</b> = 4pc DPS effect not modeled yet (most sets) — only the 2pc stat is compared.
+2pc stats + verified 4pc effects modeled (Stars/Jadeware/Ivorybloom/Rainwhisper/Hawkwing/Swaying/Shattered). <b>(2pc)</b> = 4pc still build-specific, not modeled. Eaglerise (armour) is defensive — not shown.
               </div>
             </div>
           )}
