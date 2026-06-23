@@ -2824,13 +2824,16 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeScheme?.gear, panel, food, bowSelect, script50, iwStats, activeTier, datang, yishui, selectedBuild]);
 
-  // ── Armor set comparison (swap 2pc stat + 4pc that the calc models) ─────────
-  // 2pc stats are T91-verified; 4pc is only modeled in calc for stars/ivorybloom
-  // (others compare 2pc only — flagged with `modeled`). Needs the Excel for full 4pc.
+  // ── Set bonus comparison (DPS sets, weapon [W] + armor [A]) ─────────────────
+  // Swaps the candidate set's T91-verified 2pc stat onto the panel + the 4pc the calc
+  // models (only stars/ivorybloom, and partially). MOST sets' 4pc DPS effect is NOT
+  // modelled yet → flagged "(2pc)". W = weapon set, A = armour set (per the in-game
+  // split). Defensive armour sets (empty 2pc, no DPS 4pc) are omitted.
   const armorSetCompare = useMemo(() => {
     const cur = (adjustedPanel.set as string) || "none";
     const rotTime = getRotationTimeForBuild(selectedBuild);
-    const SETS = ["stars", "ivorybloom", "eaglerise", "jadeware", "swallowreturn", "mistwillow", "none"];
+    // DPS-relevant sets only: weapon sets with a stat2pc + Hawkwing (the one DPS armour set).
+    const SETS = ["stars", "jadeware", "ivorybloom", "mistwillow", "swallowreturn", "shakenhill", "eaglerise", "none"];
     const modeled4pc = new Set(["stars", "ivorybloom"]);
     const dpsFor = (key: string) => {
       const p: any = { ...adjustedPanel };
@@ -2850,6 +2853,7 @@ export default function App() {
       return {
         key,
         name: (ARMOR_SETS as any)[key]?.name || key,
+        type: key === "none" ? "" : WEAPON_SET_KEYS.includes(key) ? "W" : ARMOR_SET_KEYS.includes(key) ? "A" : "",
         dps,
         delta: dps - curDps,
         active: key === cur,
@@ -3855,16 +3859,17 @@ export default function App() {
             </div>
           )}
 
-          {/* Armor set comparison (2pc verified; 4pc modeled only where ✓) */}
+          {/* Set bonus comparison — W = weapon set, A = armour set (2pc verified; most 4pc not modeled) */}
           {armorSetCompare.length > 0 && (
             <div style={{ marginTop: 12, border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, overflow: "hidden" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 10px", background: "rgba(255,255,255,0.03)" }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: "#f0b400", textTransform: "uppercase", letterSpacing: 0.4 }}>Armor Set</span>
-                <span style={{ fontSize: 10, color: "#6e7681" }} title="DPS for each 4-piece armor set vs your current set. 2pc stats are T91-verified; ✓ = 4pc effect modeled in the calc, others compare the 2pc stat only.">DPS · vs current ⓘ</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: "#f0b400", textTransform: "uppercase", letterSpacing: 0.4 }}>Set Bonus (DPS)</span>
+                <span style={{ fontSize: 10, color: "#6e7681" }} title="DPS per set vs your current set. [W] = weapon set, [A] = armour set. 2pc stats are T91-verified; (2pc) = the 4pc effect isn't modeled in the calc yet, so only the 2pc stat is compared.">DPS · vs current ⓘ</span>
               </div>
               {armorSetCompare.map(o => (
                 <div key={o.key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "5px 10px", borderTop: "1px solid rgba(255,255,255,0.05)", background: o.active ? "rgba(245,180,0,0.08)" : undefined }}>
-                  <span style={{ fontSize: 12, color: o.active ? "#f0b400" : "#c9d1d9", fontWeight: o.active ? 700 : 400 }}>
+                  <span style={{ fontSize: 12, color: o.active ? "#f0b400" : "#c9d1d9", fontWeight: o.active ? 700 : 400, display: "flex", alignItems: "center", gap: 5 }}>
+                    {o.type && <span style={{ fontSize: 9, fontWeight: 700, padding: "1px 4px", borderRadius: 3, color: o.type === "W" ? "#f0b400" : "#7aa2ff", background: o.type === "W" ? "rgba(240,180,0,0.12)" : "rgba(122,162,255,0.12)" }} title={o.type === "W" ? "Weapon set" : "Armour set"}>{o.type}</span>}
                     {o.name}{o.active ? " ✓" : ""}
                     {!o.modeled && <span style={{ color: "#6e7681", fontSize: 10 }} title="4pc effect not modeled in the calc yet — compares 2pc stat only"> (2pc)</span>}
                   </span>
@@ -3875,7 +3880,7 @@ export default function App() {
                 </div>
               ))}
               <div style={{ padding: "5px 10px", fontSize: 10, color: "#6e7681", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
-                2pc stats are T91-verified. <b>(2pc)</b> rows compare the 2-piece stat only — their 4pc effect isn't modeled yet (needs the Excel source).
+                <b style={{ color: "#f0b400" }}>[W]</b> weapon · <b style={{ color: "#7aa2ff" }}>[A]</b> armour. 2pc stats T91-verified. <b>(2pc)</b> = 4pc DPS effect not modeled yet (most sets) — only the 2pc stat is compared.
               </div>
             </div>
           )}
