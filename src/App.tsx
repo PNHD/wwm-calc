@@ -412,6 +412,28 @@ const GRAD95_COUNTS: Record<string, Record<string, number>> = {
   "Pure-Healer":    { agility: 6, power: 0, strength: 8,  crit: 5, prec: 0, maxOuter: 12, minOuter: 8, aff: 0, boss: 0, ownWeapon: 1 },
 };
 
+// Main-stat (first affix) recommendation per slot, from the community stat guide:
+// weapon + accessories want Max Phys Atk; Helmet/Chest want Crit (Aff for aff-builds);
+// Greaves/Bracers want Power. Keyed by the app's SLOTS names.
+const SLOT_MAIN_STAT: Record<string, string> = {
+  "Umbrella":  "maxOuter",
+  "Rope Dart": "maxOuter",
+  "Disc":      "maxOuter",
+  "Pendant":   "maxOuter",
+  "Helmet":    "crit",
+  "Chest":     "crit",
+  "Greaves":   "power",
+  "Bracers":   "power",
+};
+
+// Human labels for the substat keys used by BiS Gear (GRAD95_COUNTS keys + main-stats).
+const BIS_STAT_LABELS: Record<string, string> = {
+  maxOuter: "Max Phys Atk", minOuter: "Min Phys Atk",
+  crit: "Crit Rate", aff: "Affinity Rate", prec: "Precision",
+  strength: "Strength", agility: "Agility", power: "Power",
+  boss: "Boss DMG", ownWeapon: "Weapon Skill DMG",
+};
+
 // Max single-substat roll at 95下 (from sheet "各等级模板", 95下 column). Used
 // only for the five-attribute (Strength/Power/Agility) gear-progress tiles.
 const ROLL_95: Record<string, number> = { strength: 40.4, agility: 40.4, power: 40.4 };
@@ -2875,6 +2897,23 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [adjustedPanel, activeTier, datang, yishui, selectedBuild]);
 
+  // BiS gear recommendation per slot: static main-stat + top-4 priority substats
+  // (from the build's graduated 条 counts). Set rec is read live from armorSetCompare
+  // in the JSX. Pure derivation — no state.
+  const bisGear = useMemo(() => {
+    const counts = GRAD95_COUNTS[cultivateClass] || GRAD95_COUNTS["Bamboocut-Dust"];
+    const subPriority = Object.entries(counts)
+      .filter(([, n]) => n > 0)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 4)
+      .map(([k]) => BIS_STAT_LABELS[k] || k);
+    return SLOTS.map(slot => ({
+      slot: slot.name,
+      mainStat: BIS_STAT_LABELS[SLOT_MAIN_STAT[slot.name]] || SLOT_MAIN_STAT[slot.name],
+      subPriority,
+    }));
+  }, [cultivateClass]);
+
   // ── Monte Carlo Damage Simulation ───────────────────────────────────────────
   // Rolls each cast's outcome (crit/aff/normal/abrasion) instead of using the
   // probability-weighted average. Verifies the main calc + shows parse variance.
@@ -4380,6 +4419,7 @@ export default function App() {
                     { key: "cultivate", label: "Cultivate (beta)" },
                     { key: "compare", label: "Compare" },
                     { key: "transmute", label: "Transmute Advice" },
+                    { key: "bis", label: "BiS Gear" },
                     { key: "best-build", label: "Best Build" },
                     { key: "rotations", label: "Rotations" },
                     { key: "skill-editor", label: "Skill Editor" },
@@ -4645,10 +4685,15 @@ export default function App() {
                         <div className="text-[12px] text-slate-400 mt-3 pt-2 border-t border-[#23262c]/60 leading-relaxed">
                           <b className="text-[#f0b400]/90">What the other tabs do:</b>
                           <ul className="list-disc pl-5 mt-1 space-y-0.5">
-                            <li><b>Stat Priority</b> — which stats to add/drop to graduate fastest.</li>
+                            <li><b>Stat Priority</b> — which stats to add/drop to graduate fastest (shows DPS gained per stat).</li>
                             <li><b>Cultivate</b> — substat (条) summary, which tuned (✦) lines to upgrade, and the next 8 substats worth investing in.</li>
                             <li><b>Compare</b> — compare each gear piece to see which raises graduation the most.</li>
                             <li><b>Transmute Advice</b> — per-slot transmute (转律) suggestions: the optimal main + sub substat config to raise graduation.</li>
+                            <li><b>BiS Gear</b> — per-slot ideal config for the selected build: recommended weapon set (updates live with your panel), main-stat, and the top substats to prioritise.</li>
+                            <li><b>Best Build</b> — ranks all paths by graduated DPS so you can see where this character fits.</li>
+                            <li><b>Rotations</b> — edit per-skill cast counts and recompute DPS through the timeline engine (verified formula, only the cast mix changes).</li>
+                            <li><b>Skill Editor</b> — tweak a skill's coefficients and preview its per-hit damage (calculator only — does not change rotation DPS).</li>
+                            <li><b>Team</b> — compare saved builds side by side.</li>
                           </ul>
                         </div>
                       </div>
@@ -5768,6 +5813,47 @@ export default function App() {
                           </div>
                         );
                       })()}
+                    </div>
+                  )}
+                  {gradModalActiveTab === "bis" && (
+                    <div style={{ padding: '4px 0', textAlign: 'left' }}>
+                      <div className="text-[13px] text-[#8b949e] mb-3">
+                        Ideal gear per slot for <b className="text-[#f0b400]">{cultivateClass}</b>.
+                        Set is the current top DPS weapon set (updates with your panel); main-stat and
+                        substat priority come from the verified 95下 graduated build.
+                      </div>
+                      <table className="w-full text-[13px]" style={{ borderCollapse: 'collapse' }}>
+                        <thead>
+                          <tr className="text-[#8b949e] text-left">
+                            <th className="py-2 pr-3">Slot</th>
+                            <th className="py-2 pr-3">Set</th>
+                            <th className="py-2 pr-3">Main-stat</th>
+                            <th className="py-2">Substat priority</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {bisGear.map((row, i) => {
+                            const isWeaponSide = i < 4;
+                            const topSet = armorSetCompare[0];
+                            return (
+                              <tr key={row.slot} style={{ borderTop: '1px solid #21262d' }}>
+                                <td className="py-2 pr-3 text-white">{row.slot}</td>
+                                <td className="py-2 pr-3">
+                                  {isWeaponSide && topSet
+                                    ? <span className="text-[#7ee787]">{topSet.name}</span>
+                                    : <span className="text-[#8b949e]">—</span>}
+                                </td>
+                                <td className="py-2 pr-3 text-slate-200">{row.mainStat}</td>
+                                <td className="py-2 text-slate-300">{row.subPriority.join(" · ")}</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                      <div className="text-[12px] text-[#8b949e] mt-3">
+                        Armour slots (Helmet/Chest/Greaves/Bracers) use defensive armour sets — the
+                        DPS-relevant set choice is the weapon set shown on the weapon-side rows.
+                      </div>
                     </div>
                   )}
                   {gradModalActiveTab === "best-build" && (
