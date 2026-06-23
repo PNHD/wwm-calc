@@ -1944,7 +1944,7 @@ export default function App() {
   // (perfect rotation + full buff uptime). A real parse loses ~10-20% to rotation
   // downtime / buff ramp / execution. realistic DPS = theoretical × dpsEff. The
   // user tunes it to match their in-game parse. Graduation % stays on theoretical.
-  const [dpsEff, setDpsEff] = useState<number>(() => getCustomConfig()?.dpsEff ?? 0.85);
+  const [dpsEff, setDpsEff] = useState<number>(() => getCustomConfig()?.dpsEff ?? 1.0);
   const [profiles, setProfiles] = useState<SavedProfile[]>([]);
   const [newProfileName, setNewProfileName] = useState<string>("");
   const [compareProfileIds, setCompareProfileIds] = useState<string[]>([]);
@@ -3785,8 +3785,6 @@ export default function App() {
             <div className="banner-footer banner-footer-content">
               <span className="banner-footer-text">
                 DPS Expectation: <span className="text-white font-bold">{Math.round(rotationStats.dps).toLocaleString()}</span>
-                <span className="text-[#8b949e]" title="Realistic sustained DPS ≈ theoretical × rotation efficiency. Matches a real parse better than the theoretical ceiling."> · Realistic ≈ </span>
-                <span className="font-bold" style={{ color: '#7ee787' }}>{Math.round(rotationStats.dps * dpsEff).toLocaleString()}</span>
                 <span className="text-[#8b949e]"> · Total DMG: </span>
                 <span className="text-white font-bold">{Math.round(rotationStats.totalDmg).toLocaleString()}</span>
               </span>
@@ -3806,6 +3804,12 @@ export default function App() {
               >
                 🎲 Simulate
               </button>
+            </div>
+            <div className="banner-footer" style={{ marginTop: 2 }}>
+              <span className="banner-footer-text" title="Realistic sustained DPS ≈ theoretical × rotation efficiency (slider above). For a calibrated build this defaults to 1.0 (= theoretical); lower the slider to model your own rotation downtime / execution and match your in-game parse.">
+                Realistic DPS ≈ <span className="font-bold" style={{ color: '#7ee787' }}>{Math.round(rotationStats.dps * dpsEff).toLocaleString()}</span>
+                <span className="text-[#8b949e]"> ({Math.round(dpsEff * 100)}% efficiency)</span>
+              </span>
             </div>
             <div className="banner-arrow">›</div>
           </div>
