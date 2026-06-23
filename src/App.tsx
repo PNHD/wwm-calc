@@ -1814,7 +1814,9 @@ export default function App() {
     setEditingItem(null);
     const slotLabel = getSlotLabel(selectedSlot);
     const existingCount = getActiveGear().filter(it => it.slot === selectedSlot).length;
-    setFormName(`${slotLabel} ${existingCount + 1}`);
+    // First piece in a slot = bare label ("Weapon 1"); extras get "#2/#3" so the
+    // counter doesn't fuse with the slot's own number ("Weapon 1 2" → "Weapon 1 #2").
+    setFormName(existingCount === 0 ? slotLabel : `${slotLabel} #${existingCount + 1}`);
     setFormQuality("gold");
     if (selectedSlot === "Umbrella" || selectedSlot === "Rope Dart" || selectedSlot === "Pendant" || selectedSlot === "Disc") {
       setFormSet("stars"); // default weapon set
@@ -5783,7 +5785,7 @@ export default function App() {
                       // Auto-name: generate a default name based on slot
                       const slotLabel = getSlotLabel(newSlot);
                       const existingCount = getActiveGear().filter(it => it.slot === newSlot).length;
-                      const autoName = `${slotLabel} ${existingCount + 1}`;
+                      const autoName = existingCount === 0 ? slotLabel : `${slotLabel} #${existingCount + 1}`;
                       const isAutoNamed = !formName || SLOTS.some(s => formName.startsWith(getSlotLabel(s.name)));
                       if (isAutoNamed) setFormName(autoName);
                     }}
