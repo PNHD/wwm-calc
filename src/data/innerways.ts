@@ -68,7 +68,7 @@ export const INNER_WAYS: InnerWay[] = [
       {tier:3,effect:"Ignore 6% Phys Def and 6% BC Res",stat:{outerPen:6,pzPen:6}},
       {tier:4,effect:"Ignore 8% Phys Def and 8% BC Res",stat:{outerPen:8,pzPen:8}},
       {tier:5,effect:"Ignore 10% Phys Def and 10% BC Res",stat:{outerPen:10,pzPen:10}},
-      {tier:6,effect:"Ignore 10% Phys Def & 10% BC Res + Crit DMG Bonus +4.4% (T5 breakthrough)",stat:{outerPen:10,pzPen:10,critDmg:4.4}},
+      {tier:6,effect:"Ignore 10% Phys Def & 10% BC Res + Crit DMG Bonus +4.4% + Crit Rate +8.2% (Attr Buff)",stat:{outerPen:10,pzPen:10,critDmg:4.4,crit:8.2}},
     ]
   },
   {
@@ -81,7 +81,7 @@ export const INNER_WAYS: InnerWay[] = [
       {tier:3,effect:"MA Skill CD -0.8s (10s trigger CD)",stat:{}},
       {tier:4,effect:"MA Skill CD -1.0s (10s trigger CD)",stat:{}},
       {tier:5,effect:"MA Skill CD -1.0s (10s trigger CD), affects more Control Skill types",stat:{}},
-      {tier:6,effect:"MA Skill CD -1.0s (10s CD). Exhausted: -0.5s + Bamboocut Pen +6 (T5 breakthrough)",stat:{pzPen:6}},
+      {tier:6,effect:"MA Skill CD -1.0s (10s CD). Exhausted: -0.5s + Bamboocut Pen +6 + Min Bamboocut Atk +36.2 (Attr Buff)",stat:{pzPen:6,minPz:36.2}},
     ]
   },
   {
@@ -107,7 +107,7 @@ export const INNER_WAYS: InnerWay[] = [
       {tier:3,effect:"Token +3s, +12 Gratitude",stat:{}},
       {tier:4,effect:"Token +4s, +16 Gratitude",stat:{}},
       {tier:5,effect:"Physical Penetration +5.1 (breakthrough)",stat:{outerPen:5.1}},
-      {tier:6,effect:"Phys Pen +5.1; rodents on Vendetta-Mark target +30% DMG, -50% target healing",stat:{outerPen:5.1}},
+      {tier:6,effect:"Phys Pen +5.1 + Min Phys Atk +63.9 (Attr Buff); rodents on Vendetta-Mark target +30% DMG, -50% target healing",stat:{outerPen:5.1,minOuter:63.9}},
     ]
   },
 
@@ -122,7 +122,7 @@ export const INNER_WAYS: InnerWay[] = [
       {tier:3,effect:"Max +12% DMG, extra energy hits harder",stat:{generalDmg:12}},
       {tier:4,effect:"Max +15% DMG",stat:{generalDmg:15}},
       {tier:5,effect:"Max +30% DMG from Endurance. Each Endurance = +1.5% up to 30% (v1.7)",stat:{generalDmg:30}},
-      {tier:6,effect:"Max +30% DMG + Direct Affinity Rate +2.3% (T5 breakthrough)",stat:{generalDmg:30,daff:2.3}},
+      {tier:6,effect:"Max +30% DMG + Direct Affinity Rate +2.3% + Max Phys Atk +70.8 (Attr Buff)",stat:{generalDmg:30,daff:2.3,maxOuter:70.8}},
     ]
   },
   {
@@ -135,7 +135,7 @@ export const INNER_WAYS: InnerWay[] = [
       {tier:3,effect:"Charged Crit/Affinity: drain 10 Endurance (player) / restore 10 (boss), 12s CD",stat:{generalDmg:10}},
       {tier:4,effect:"Charged Skills +15% DMG vs all enemies, +10% their Endurance cost",stat:{generalDmg:15}},
       {tier:5,effect:"Affinity DMG Bonus +5.2% (breakthrough)",stat:{generalDmg:15,affDmg:5.2}},
-      {tier:6,effect:"Charged Skill: +2% DMG per 10 Endurance diff/consumed up to +10% (on top of +15%) + Affinity DMG +5.2%",stat:{generalDmg:15,affDmg:5.2}},
+      {tier:6,effect:"Charged Skill: +2% DMG per 10 Endurance diff/consumed up to +10% (on top of +15%) + Affinity DMG +5.2% + Affinity Rate +3.8% (Attr Buff)",stat:{generalDmg:15,affDmg:5.2,aff:3.8}},
     ]
   },
   {
@@ -161,7 +161,7 @@ export const INNER_WAYS: InnerWay[] = [
       {tier:3,effect:"Endless Gale: -11% Endurance cost for 4s",stat:{}},
       {tier:4,effect:"Endless Gale: -15% Endurance cost for 4.5s",stat:{}},
       {tier:5,effect:"Endless Gale: -18% Endurance cost for 5s",stat:{}},
-      {tier:6,effect:"Endless Gale: -20% Endurance cost 5s + Bellstrike Pen +6 (T5 breakthrough). NOTE: Attribute Buff also has 'Max Bellstrike Atk based on Solo Mode Level' (icon in Details tab) — value pending wwmdb crawl, add as maxPz when known",stat:{pzPen:6}},
+      {tier:6,effect:"Endless Gale: -20% Endurance cost 5s + Bellstrike Pen +6 + Min/Max Bellstrike Atk +11.9/+24.1 (Attr Buff)",stat:{pzPen:6,minPz:11.9,maxPz:24.1}},
     ]
   },
   {
@@ -189,7 +189,7 @@ export const INNER_WAYS: InnerWay[] = [
       {tier:3,effect:"Bleed burst: 160% ATK",stat:{generalDmg:5}},
       {tier:4,effect:"Bleed burst: 200% ATK, AoE splash at 5-stack burst",stat:{generalDmg:6}},
       {tier:5,effect:"Follow-up DMG +20%. Bleed burst 200% ATK + AoE splash on 5-stack",stat:{generalDmg:7}},
-      {tier:6,effect:"Follow-up +20%, Bleed burst AoE splash + Direct Affinity Rate +2.3% (T5)",stat:{generalDmg:8,daff:2.3}},
+      {tier:6,effect:"Follow-up +20%, Bleed burst AoE splash + Direct Affinity Rate +2.3% + Max Phys Atk +70.8 (Attr Buff)",stat:{generalDmg:8,daff:2.3,maxOuter:70.8}},
     ]
   },
   {
@@ -202,7 +202,7 @@ export const INNER_WAYS: InnerWay[] = [
       {tier:3,effect:"Sword: +8% | Dual Blades: +7% | Heng: +10%",stat:{generalDmg:5}},
       {tier:4,effect:"Sword: +11% ATK 4s | Dual Blades: +9% | Heng: +14% 6s",stat:{generalDmg:6}},
       {tier:5,effect:"Sword: +13% ATK 5s | Dual Blades: +11% | Heng: +16% 7s",stat:{generalDmg:7}},
-      {tier:6,effect:"Sword: +15% ATK | Dual: +13% | Heng: +18% + Bellstrike DMG Bonus +3% (T5)",stat:{generalDmg:8,pzDmg:3}},
+      {tier:6,effect:"Sword: +15% ATK | Dual: +13% | Heng: +18% + Bellstrike DMG Bonus +3% + Max Bellstrike Atk +36.2 (Attr Buff)",stat:{generalDmg:8,pzDmg:3,maxPz:36.2}},
     ]
   },
   {
@@ -215,7 +215,7 @@ export const INNER_WAYS: InnerWay[] = [
       {tier:3,effect:"Concentration: +1.5% Direct Affinity Rate (+1.5% more if your HP% > target)",stat:{daff:1.5}},
       {tier:4,effect:"Focus builds 50% faster",stat:{daff:1.5}},
       {tier:5,effect:"Physical Penetration +5.1 (v1.7 breakthrough)",stat:{daff:1.5,outerPen:5.1}},
-      {tier:6,effect:"Concentration: DoT & empowered-DoT +10%; +1.5% Direct Affinity, Phys Pen +5.1",stat:{daff:1.5,outerPen:5.1}},
+      {tier:6,effect:"Concentration: DoT & empowered-DoT +10%; +1.5% Direct Affinity, Phys Pen +5.1 + Min/Max Phys Atk +21.2/+42.5 (Attr Buff)",stat:{daff:1.5,outerPen:5.1,minOuter:21.2,maxOuter:42.5}},
     ]
   },
   {
@@ -334,7 +334,7 @@ export const INNER_WAYS: InnerWay[] = [
       {tier:3,effect:"One random buff (30s CD): ~+2.5% avg DMG",stat:{generalDmg:2.5}},
       {tier:4,effect:"One random buff (30s CD): ~+3% avg DMG (better buff pool)",stat:{generalDmg:3}},
       {tier:5,effect:"One random buff (30s CD), 10s duration: ~+3.5% avg DMG",stat:{generalDmg:3.5}},
-      {tier:6,effect:"One random buff (25s CD, 10s): ~+4% avg DMG + Phys Pen +5.1 (T5 breakthrough)",stat:{generalDmg:4,outerPen:5.1}},
+      {tier:6,effect:"One random buff (25s CD, 10s): ~+4% avg DMG + Phys Pen +5.1 + Max Phys Atk +63.9 (Attr Buff)",stat:{generalDmg:4,outerPen:5.1,maxOuter:63.9}},
     ]
   },
   {
@@ -360,7 +360,7 @@ export const INNER_WAYS: InnerWay[] = [
       {tier:3,effect:"Piercing burst: 100% ATK. 10% proc",stat:{generalDmg:2}},
       {tier:4,effect:"Piercing burst: 120% ATK. 10% proc",stat:{generalDmg:2}},
       {tier:5,effect:"Piercing burst: 150% ATK. 10% proc. AoE hits count toward stacking",stat:{generalDmg:2}},
-      {tier:6,effect:"Piercing burst 150% ATK + AoE splash + Crit DMG Bonus +3.5% (T5 breakthrough)",stat:{generalDmg:2,critDmg:3.5}},
+      {tier:6,effect:"Piercing burst 150% ATK + AoE splash + Crit DMG Bonus +3.5% + Max Phys Atk +56.8 (Attr Buff)",stat:{generalDmg:2,critDmg:3.5,maxOuter:56.8}},
     ]
   },
   {
@@ -373,7 +373,7 @@ export const INNER_WAYS: InnerWay[] = [
       {tier:3,effect:"Range +0.9m, +6% DMG, restore 6% HP",stat:{generalDmg:6}},
       {tier:4,effect:"Range +1.2m, +8% DMG, restore 8% HP",stat:{generalDmg:8}},
       {tier:5,effect:"Range +1.5m, +10% DMG, restore 8% HP on hit",stat:{generalDmg:10}},
-      {tier:6,effect:"Range +1.5m, +10% DMG, restore 10% HP + Phys DMG Bonus +2.2% (T5 breakthrough)",stat:{generalDmg:10,outerDmg:2.2}},
+      {tier:6,effect:"Range +1.5m, +10% DMG, restore 10% HP + Phys DMG Bonus +2.2% + Min Phys Atk +56.8 (Attr Buff)",stat:{generalDmg:10,outerDmg:2.2,minOuter:56.8}},
     ]
   },
   {
@@ -468,7 +468,7 @@ export const INNER_WAYS: InnerWay[] = [
       {tier:3,effect:"Combo: +6% DMG for 8s",stat:{generalDmg:6}},
       {tier:4,effect:"Combo: +8% DMG for 9s",stat:{generalDmg:8}},
       {tier:5,effect:"Combo: Ballistic Skills +10% DMG for 10s",stat:{generalDmg:10}},
-      {tier:6,effect:"Combo +10% DMG 10s + Crit DMG Bonus +4.4% (T5 breakthrough)",stat:{generalDmg:10,critDmg:4.4}},
+      {tier:6,effect:"Combo +10% DMG 10s + Crit DMG Bonus +4.4% + Crit Rate +8.2% (Attr Buff)",stat:{generalDmg:10,critDmg:4.4,crit:8.2}},
     ]
   },
   {
@@ -481,7 +481,7 @@ export const INNER_WAYS: InnerWay[] = [
       {tier:3,effect:"Bone Mark: +3.5%, Airborne: +7% for 6s",stat:{outerDmg:3.5}},
       {tier:4,effect:"Bone Mark: +4%, Airborne: +8% for 7s",stat:{outerDmg:4}},
       {tier:5,effect:"Bone Mark: +5% Phys ATK Bonus 8s. Airborne: +10% Phys ATK Bonus",stat:{outerDmg:5}},
-      {tier:6,effect:"Bone Mark +5%, Airborne +10% ATK + Phys Pen +5.1 (T5 breakthrough)",stat:{outerDmg:5,outerPen:5.1}},
+      {tier:6,effect:"Bone Mark +5%, Airborne +10% ATK + Phys Pen +5.1 + Min/Max Phys Atk +21.2/+42.5 (Attr Buff)",stat:{outerDmg:5,outerPen:5.1,minOuter:21.2,maxOuter:42.5}},
     ]
   },
   {
@@ -494,7 +494,7 @@ export const INNER_WAYS: InnerWay[] = [
       {tier:3,effect:"Grants 2 stacks. +10% HP DMG per stack",stat:{generalDmg:10}},
       {tier:4,effect:"Grants 3 stacks. +12% HP DMG per stack",stat:{generalDmg:12}},
       {tier:5,effect:"Grants 3 stacks. +15% HP DMG per stack (12s). Once per 15s",stat:{generalDmg:15}},
-      {tier:6,effect:"3 stacks, +15% HP DMG/stack + Phys DMG Bonus +2.5% (T5 breakthrough)",stat:{generalDmg:15,outerDmg:2.5}},
+      {tier:6,effect:"3 stacks, +15% HP DMG/stack + Phys DMG Bonus +2.5% + Min/Max Phys Atk +21.2/+42.5 (Attr Buff)",stat:{generalDmg:15,outerDmg:2.5,minOuter:21.2,maxOuter:42.5}},
     ]
   },
   {
@@ -507,7 +507,7 @@ export const INNER_WAYS: InnerWay[] = [
       {tier:3,effect:"+2 charges. CD +2.5s",stat:{}},
       {tier:4,effect:"+2 charges. CD +2.8s",stat:{}},
       {tier:5,effect:"+2 charges, CD +3s + Silkbind Penetration +6 (breakthrough)",stat:{pzPen:6}},
-      {tier:6,effect:"+2 charges, CD +3s; each charge hit -0.5s next CD; Silkbind Pen +6",stat:{pzPen:6}},
+      {tier:6,effect:"+2 charges, CD +3s; each charge hit -0.5s next CD; Silkbind Pen +6 + Precision +6.5% (Attr Buff)",stat:{pzPen:6,prec:6.5}},
     ]
   },
   {
@@ -520,7 +520,7 @@ export const INNER_WAYS: InnerWay[] = [
       {tier:3,effect:"HP-loss threshold for Righteous Return/Relentless Combat 20% → 15%",stat:{}},
       {tier:4,effect:"Righteous Return: gain Light/Darkness (max 5) — +10%/stack to Return/Relentless",stat:{}},
       {tier:5,effect:"Physical Penetration +5.1 (breakthrough)",stat:{outerPen:5.1}},
-      {tier:6,effect:"Righteous Return/Relentless enhanced: +5% direct DMG (+1%/15% HP lost, max 4%) + Phys Pen +5.1",stat:{outerPen:5.1}},
+      {tier:6,effect:"Righteous Return/Relentless enhanced: +5% direct DMG (+1%/15% HP lost, max 4%) + Phys Pen +5.1 + Min/Max Phys Atk +21.2/+42.5 (Attr Buff)",stat:{outerPen:5.1,minOuter:21.2,maxOuter:42.5}},
     ]
   },
 
@@ -535,7 +535,7 @@ export const INNER_WAYS: InnerWay[] = [
       {tier:3,effect:"Free Tier 2, chains into follow-up (11s CD)",stat:{}},
       {tier:4,effect:"Free Tier 3, chains into follow-up (10s CD)",stat:{}},
       {tier:5,effect:"Free T3 Charged Heavy Attack, chains into follow-up (10s CD) + Crit DMG +4.4% (breakthrough)",stat:{critDmg:4.4}},
-      {tier:6,effect:"Free T3, chains, counter DMG +15% (10s CD); Crit DMG +4.4%",stat:{critDmg:4.4}},
+      {tier:6,effect:"Free T3, chains, counter DMG +15% (10s CD); Crit DMG +4.4% + Crit Rate +8.2% (Attr Buff)",stat:{critDmg:4.4,crit:8.2}},
     ]
   },
   {
@@ -561,7 +561,7 @@ export const INNER_WAYS: InnerWay[] = [
       {tier:3,effect:"HP shield duration +3s; DMG/Healing boost +5% (v1.7)",stat:{generalDmg:5}},
       {tier:4,effect:"HP shield duration +3.5s; DMG/Healing boost +6%",stat:{generalDmg:6}},
       {tier:5,effect:"HP shield duration +4s; DMG/Healing boost +8%",stat:{generalDmg:8}},
-      {tier:6,effect:"HP shield duration +4s; DMG/Healing boost +10%, broken shield grants +10% more (v1.7)",stat:{generalDmg:10}},
+      {tier:6,effect:"HP shield duration +4s; DMG/Healing boost +10%, broken shield grants +10% more (v1.7) + Min/Max Stonesplit Atk +11.9/+24.1 (Attr Buff)",stat:{generalDmg:10,minPz:11.9,maxPz:24.1}},
     ]
   },
   {
@@ -589,7 +589,7 @@ export const INNER_WAYS: InnerWay[] = [
       {tier:3,effect:"Full Grave Frost + Dual-Weapon Skill triggers Finding Spring; hitting it restores 0.5 Blade Momentum",stat:{}},
       {tier:4,effect:"Inner Passion max stacks → 4; Snowbreak Spring spends 1 stack for +40% HP damage vs non-players",stat:{}},
       {tier:5,effect:"Breakthrough: Direct Critical Rate +4.6%",stat:{dcrit:4.6}},
-      {tier:6,effect:"Snowbreak Spring +10% DMG + Forgetfulness (charge-less Grave Frost 3s) + Direct Crit +4.6%",stat:{dcrit:4.6}},
+      {tier:6,effect:"Snowbreak Spring +10% DMG + Forgetfulness (charge-less Grave Frost 3s) + Direct Crit +4.6% + Min Phys Atk +70.8 (Attr Buff)",stat:{dcrit:4.6,minOuter:70.8}},
     ]
   },
   {
@@ -602,7 +602,7 @@ export const INNER_WAYS: InnerWay[] = [
       {tier:3,effect:"Inner Passion: Mo Blade Anxi Soldier applies Mountain Splitter 10s (+10% Crit DMG; guaranteed Crit at ≥70% Crit Rate)",stat:{critDmg:10}},
       {tier:4,effect:"Inner Passion: Phalanxbane Charged Skill free of Blade Momentum; Burning Heart +32% DMG vs non-players",stat:{critDmg:10}},
       {tier:5,effect:"Breakthrough: Critical DMG Bonus +4.0%. (Base Mountain Splitter +10% Crit DMG)",stat:{critDmg:14}},
-      {tier:6,effect:"Burning Heart on Exhausted: Mountain Splitter + Charge Enhancement (full Inner Passion bonus, ≤3/30s)",stat:{critDmg:14}},
+      {tier:6,effect:"Burning Heart on Exhausted: Mountain Splitter + Charge Enhancement (full Inner Passion bonus, ≤3/30s) + Crit Rate +7.3% (Attr Buff)",stat:{critDmg:14,crit:7.3}},
     ]
   },
   {
@@ -615,7 +615,7 @@ export const INNER_WAYS: InnerWay[] = [
       {tier:3,effect:"Throat-Pierced: Light/Heavy Varied Combo ignores 3 Physical Resistance and +3% Crit DMG",stat:{critDmg:3}},
       {tier:4,effect:"Throat-Pierced max stacks → 5",stat:{critDmg:3}},
       {tier:5,effect:"Breakthrough: Stonesplit Penetration +6",stat:{critDmg:3,pzPen:6}},
-      {tier:6,effect:"Successful parry grants 5 Throat-Pierced stacks (20s CD); Assist skills also apply it",stat:{critDmg:3,pzPen:6}},
+      {tier:6,effect:"Successful parry grants 5 Throat-Pierced stacks (20s CD); Assist skills also apply it + Min/Max Stonesplit Atk +11.9/+24.1 (Attr Buff)",stat:{critDmg:3,pzPen:6,minPz:11.9,maxPz:24.1}},
     ]
   },
   {
@@ -628,7 +628,7 @@ export const INNER_WAYS: InnerWay[] = [
       {tier:3,effect:"Tenacity: +4% DMG Reduction, +1% per nearby enemy in 5m (max +3%)",stat:{}},
       {tier:4,effect:"Tenacity: +3% HP Drain (capped 2% Max HP/s)",stat:{}},
       {tier:5,effect:"Breakthrough: Physical Damage Bonus +2.5%",stat:{outerDmg:2.5}},
-      {tier:6,effect:"Bonus damage/reduction per nearby enemy 1% → 1.5% (max +4.5%) + Phys DMG +2.5%",stat:{outerDmg:2.5}},
+      {tier:6,effect:"Bonus damage/reduction per nearby enemy 1% → 1.5% (max +4.5%) + Phys DMG +2.5% + Min/Max Phys Atk +21.2/+42.5 (Attr Buff)",stat:{outerDmg:2.5,minOuter:21.2,maxOuter:42.5}},
     ]
   },
 ];
