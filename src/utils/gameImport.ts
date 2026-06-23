@@ -11,6 +11,8 @@
 // ponytail: heuristic mapper from one sample — correct family + value, best-effort
 // on min/max & critDMG/affDMG/pen collisions. Refine AFFIX_OVERRIDE as users report.
 
+import { resolveAffixStat, OFFICIAL_SLOT_MAP } from "../data/affixMap";
+
 export interface ImportedSub { type: string; val: string; flagged?: boolean }
 export interface ImportedPiece { officialSlot: string; slot: string; subs: ImportedSub[] }
 export interface ImportResult {
@@ -19,16 +21,10 @@ export interface ImportResult {
   skipped: string[]; // human notes about slots/affixes we couldn't map
 }
 
-// Official equip-slot id → app gear slot. 9 & 21 are bow/archer-only pieces the app
-// models as a ring attribute, not gear — skipped. Armour 3/4/5/8 order is a guess.
-const SLOT_MAP: Record<string, string> = {
-  "1": "Umbrella", "2": "Rope Dart",
-  "3": "Helmet", "4": "Chest", "5": "Greaves", "8": "Bracers",
-  "10": "Disc", "11": "Pendant",
-};
-
-// Exact affixId → stat overrides (highest confidence). Extend as we confirm codes.
-const AFFIX_OVERRIDE: Record<string, string> = {};
+// Slot + affixId decode tables live in src/data/affixMap.ts (extracted from the
+// official + competitor data). resolveAffixStat() returns a CONFIRMED stat or null;
+// OFFICIAL_SLOT_MAP maps official slot ids → app slots (9 & 21 = bow pieces, skipped).
+const SLOT_MAP = OFFICIAL_SLOT_MAP;
 
 // Known max rolls (display units) → candidate stat. `flagged` collisions need a
 // human check. Min/Max phys share 63.8 and are split by the id's last digit below.
@@ -53,7 +49,9 @@ function round1(n: number): string {
 
 function mapAffix(affixId: number, value: number, quality: number): ImportedSub | null {
   const id = String(affixId);
-  if (AFFIX_OVERRIDE[id]) return { type: AFFIX_OVERRIDE[id], val: round1(value < 1 ? value * 100 : value), flagged: true };
+  // Confirmed exact mapping first (affixMap), else fall back to the max-roll heuristic.
+  const exact = resolveAffixStat(affixId);
+  if (exact) return { type: exact, val: round1(value < 1 ? value * 100 : value), flagged: false };
   const q = quality > 0 ? quality : 1;
   const pct = value > 0 && value < 1;        // %-stats are stored as fractions
   const shown = pct ? value * 100 : value;
