@@ -15,7 +15,14 @@ mechanic của tất cả Inner Ways** để nhập vào `src/data/innerways.ts`
 4. **Attribute Buff** (substat panel — đây là phần QUAN TRỌNG NHẤT): các dòng kiểu
    Precision Rate %, Crit Rate %, Crit DMG %, Direct Crit %, Direct Affinity %, Affinity DMG %,
    Physical Penetration, Min/Max Physical Attack, Min/Max <element> Attack, Physical DMG Bonus %.
-5. **Tier 1-6 breakthrough gains** (mỗi tier 1 dòng).
+   ⚠️ **Attribute Buff thường có NHIỀU dòng, mỗi dòng mở khóa ở một tier khác nhau** (vd Mountain's
+   Might: T2 mở "Max Bellstrike", T5 mở "Bellstrike Pen +6"). Phải gom **TẤT CẢ dòng Attribute Buff
+   từ mọi tier** thành tổng cuối ở max tier — KHÔNG chỉ lấy dòng hiện ở T6 breakthrough screen.
+   ⚠️ Nhiều dòng ghi **"based on Solo Mode Level"** = giá trị ĐỘNG theo level → cần con số ở **Lv91/95
+   (Global T91)**. wwmdb có thể cho số cố định theo level; nếu có level selector chọn 91/95. Số cố định
+   verified ở 91: Min Phys 63.8 / Min hệ 36.2 / Pen 5.1 hoặc 6 / DMG bonus 2.5-2.8% / Precision 6.5% /
+   Direct Crit 4.1-4.6% — dùng làm mốc đối chiếu.
+5. **Tier 1-6 breakthrough gains** (mỗi tier 1 dòng) + **đánh dấu tier nào mở dòng Attribute Buff nào**.
 
 ## Cách crawl (gợi ý)
 - Mở site bằng Playwright, để JS render. Tìm route list inner-ways (thử `/inner-way`, `/innerways`,

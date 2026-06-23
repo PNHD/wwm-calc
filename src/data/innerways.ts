@@ -161,7 +161,7 @@ export const INNER_WAYS: InnerWay[] = [
       {tier:3,effect:"Endless Gale: -11% Endurance cost for 4s",stat:{}},
       {tier:4,effect:"Endless Gale: -15% Endurance cost for 4.5s",stat:{}},
       {tier:5,effect:"Endless Gale: -18% Endurance cost for 5s",stat:{}},
-      {tier:6,effect:"Endless Gale: -20% Endurance cost 5s + Bellstrike Pen +6 (T5 breakthrough)",stat:{pzPen:6}},
+      {tier:6,effect:"Endless Gale: -20% Endurance cost 5s + Bellstrike Pen +6 (T5 breakthrough). NOTE: Attribute Buff also has 'Max Bellstrike Atk based on Solo Mode Level' (icon in Details tab) — value pending wwmdb crawl, add as maxPz when known",stat:{pzPen:6}},
     ]
   },
   {
