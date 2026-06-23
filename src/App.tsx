@@ -3083,6 +3083,26 @@ export default function App() {
     };
   };
 
+  // ── Team builder (Phase 4) ──────────────────────────────────────────────────
+  // Team DPS = sum of each member's solo DPS (their saved profile panel run through
+  // the current build's rotation) × optional team-wide buff multipliers. Kill time =
+  // boss HP / team DPS. Placed AFTER getDynamicProfileStats (TDZ).
+  const [teamMemberIds, setTeamMemberIds] = useState<string[]>(["", "", "", "", ""]);
+  const [teamVuln, setTeamVuln] = useState<boolean>(false);
+  const [teamRevelry, setTeamRevelry] = useState<boolean>(false);
+  const [bossHp, setBossHp] = useState<number>(3500000);
+  const teamSim = useMemo(() => {
+    const active = teamMemberIds.map(id => {
+      const prof = id ? profiles.find(p => p.id === id) : undefined;
+      return prof ? { id, name: prof.name, dps: getDynamicProfileStats(prof).dps } : null;
+    }).filter(Boolean) as { id: string; name: string; dps: number }[];
+    const soloSum = active.reduce((s, m) => s + m.dps, 0);
+    const buffMult = 1 + (teamVuln ? 0.08 : 0) + (teamRevelry ? 0.30 : 0);
+    const teamDps = soloSum * buffMult;
+    const killTime = teamDps > 0 ? bossHp / teamDps : 0;
+    return { active, soloSum, buffMult, teamDps, killTime };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [teamMemberIds, profiles, teamVuln, teamRevelry, bossHp, adjustedPanel, activeTier, datang, yishui, selectedBuild, iwStats, baselineScore]);
 
   const statPriorities = useMemo(() => {
     const baseDmg = rotationStats.totalDmg;
@@ -4347,6 +4367,7 @@ export default function App() {
                     { key: "best-build", label: "Best Build" },
                     { key: "rotations", label: "Rotations" },
                     { key: "skill-editor", label: "Skill Editor" },
+                    { key: "team", label: "Team" },
                   ].map(tab => (
                     <div
                       key={tab.key}
@@ -4530,6 +4551,71 @@ export default function App() {
                     </div>
                     );
                   })()}
+                  {gradModalActiveTab === "team" && (
+                    <div className="space-y-4" style={{ textAlign: 'left' }}>
+                      <div className="bg-[#1e1a12] border border-[#ffd700]/30 rounded-xl p-4">
+                        <h3 className="text-sm font-bold text-[#ffd700] mb-2 flex items-center gap-2">👥 Team Builder <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#ffd700]/15 text-[#ffd700]/80">beta</span></h3>
+                        <p className="text-[12px] text-slate-300 leading-relaxed">
+                          Pick up to 5 members from your <b>saved profiles</b>. Team DPS = sum of each member's solo DPS (their saved panel run through this build's rotation) × team buffs. Kill time = boss HP / team DPS.
+                        </p>
+                      </div>
+
+                      <div className="bg-[#2d2d35] border border-[#3d3d45] rounded-xl p-4 space-y-2">
+                        <span className="text-[10px] uppercase tracking-widest text-[#a19683] font-mono">Members</span>
+                        {teamMemberIds.map((id, i) => {
+                          const m = teamSim.active.find(a => a.id === id);
+                          return (
+                            <div key={i} className="flex items-center gap-3">
+                              <span className="w-5 text-center text-[12px] text-[#a19683] font-mono">{i + 1}</span>
+                              <select value={id} onChange={e => setTeamMemberIds(prev => prev.map((x, j) => j === i ? e.target.value : x))}
+                                className="flex-1 bg-[#1a1a22] border border-[#3d3d45] rounded px-2 py-1 text-slate-100 text-[12.5px]">
+                                <option value="">— empty —</option>
+                                {profiles.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                              </select>
+                              <span className="w-28 text-right text-[12.5px] font-bold text-slate-200">{m ? Math.round(m.dps).toLocaleString() + " /s" : "—"}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      <div className="bg-[#2d2d35] border border-[#3d3d45] rounded-xl p-4 space-y-2">
+                        <span className="text-[10px] uppercase tracking-widest text-[#a19683] font-mono">Team buffs <span className="text-slate-500 normal-case">(idealized full-uptime — don't double-count with per-member settings)</span></span>
+                        <label className="flex items-center gap-2 text-[12.5px] text-slate-300"><input type="checkbox" checked={teamVuln} onChange={e => setTeamVuln(e.target.checked)} /> Vulnerability +8% (teammate debuff on boss)</label>
+                        <label className="flex items-center gap-2 text-[12.5px] text-slate-300"><input type="checkbox" checked={teamRevelry} onChange={e => setTeamRevelry(e.target.checked)} /> Revelry Script +30% (HP &lt; 30%)</label>
+                      </div>
+
+                      <div className="bg-[#2d2d35] border border-[#3d3d45] rounded-xl p-4 flex flex-wrap items-center gap-3">
+                        <span className="text-[10px] uppercase tracking-widest text-[#a19683] font-mono">Boss HP</span>
+                        <input type="number" value={bossHp} onChange={e => setBossHp(Math.max(0, Number(e.target.value) || 0))}
+                          className="w-36 bg-[#1a1a22] border border-[#3d3d45] rounded px-2 py-1 text-slate-100 text-[12.5px]" />
+                        {([["Puppeteer", 3500000], ["1M", 1000000], ["5M", 5000000]] as [string, number][]).map(([lbl, hp]) => (
+                          <button key={lbl} onClick={() => setBossHp(hp)} className="text-[11px] px-2 py-1 rounded border border-[#3d3d45] text-slate-300 hover:border-[#ffd700]/50">{lbl}</button>
+                        ))}
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="bg-[#2d2d35] border border-[#3d3d45] rounded-xl p-3 text-center">
+                          <div className="text-[10px] uppercase tracking-widest text-[#a19683] font-mono">Team DPS</div>
+                          <div className="text-[20px] font-bold text-[#ffd700] leading-tight">{Math.round(teamSim.teamDps).toLocaleString()}<span className="text-[11px] text-slate-400 font-normal"> /s</span></div>
+                          {teamSim.buffMult > 1 && <div className="text-[11px] text-[#7ee787]">+{Math.round((teamSim.buffMult - 1) * 100)}% buffs</div>}
+                        </div>
+                        <div className="bg-[#2d2d35] border border-[#3d3d45] rounded-xl p-3 text-center">
+                          <div className="text-[10px] uppercase tracking-widest text-[#a19683] font-mono">Members</div>
+                          <div className="text-[20px] font-bold text-slate-100 leading-tight">{teamSim.active.length}<span className="text-[11px] text-slate-400 font-normal"> / 5</span></div>
+                          <div className="text-[11px] text-slate-400">solo Σ {Math.round(teamSim.soloSum).toLocaleString()}</div>
+                        </div>
+                        <div className="bg-[#2d2d35] border border-[#3d3d45] rounded-xl p-3 text-center">
+                          <div className="text-[10px] uppercase tracking-widest text-[#a19683] font-mono">Kill time</div>
+                          <div className="text-[20px] font-bold text-slate-100 leading-tight">{teamSim.killTime > 0 ? teamSim.killTime.toFixed(1) + "s" : "—"}</div>
+                          <div className="text-[11px] text-slate-400">boss {(bossHp / 1e6).toFixed(2)}M</div>
+                        </div>
+                      </div>
+
+                      <p className="text-[11px] text-slate-500 leading-snug">
+                        Each member's DPS uses their saved panel run through <b>this build's</b> rotation. Buffs are flat idealized multipliers (no Qi-break window / buff-ramp timeline — that needs a real per-second engine, hence no DPS-over-time chart).
+                      </p>
+                    </div>
+                  )}
                   {gradModalActiveTab === "manual" && (
                     <div className="space-y-6" style={{ textAlign: 'left' }}>
                       {/* How to use */}
