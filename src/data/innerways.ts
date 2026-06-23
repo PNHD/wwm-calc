@@ -14,7 +14,7 @@ export const INNER_WAYS: InnerWay[] = [
       {tier:3,effect:"Phantom Resonance DMG: 70% weapon ATK, range +10%",stat:{generalDmg:5}},
       {tier:4,effect:"Phantom Resonance DMG: 90% weapon ATK, range +15%",stat:{generalDmg:6}},
       {tier:5,effect:"Phantom Resonance DMG: 110% weapon ATK, range +20%",stat:{generalDmg:7}},
-      {tier:6,effect:"Phantom Resonance DMG: 130% weapon ATK + Phys DMG Bonus +2.8% (T5 breakthrough)",stat:{generalDmg:8,outerDmg:2.8}},
+      {tier:6,effect:"Crit Rate +8.2% + Phys DMG Bonus +2.8%. (Resonance/Phantom Chime are boss-ineffective — not credited.)",stat:{crit:8.2,outerDmg:2.8}},
     ]
   },
   {
@@ -27,7 +27,7 @@ export const INNER_WAYS: InnerWay[] = [
       {tier:3,effect:"Each stack: +1.5% Crit DMG (max +7.5%)",stat:{critDmg:7.5}},
       {tier:4,effect:"Each stack: +1.8% Crit DMG (max +9%)",stat:{critDmg:9}},
       {tier:5,effect:"Each stack: +2.0% Crit DMG above 50% HP (max +10%), Life Drain below 50%",stat:{critDmg:10}},
-      {tier:6,effect:"Each stack: +2.0% Crit DMG (max +10%) + Crit DMG Bonus +4.0% (T5 breakthrough)",stat:{critDmg:14}},
+      {tier:6,effect:"Tang Melody +3% Crit DMG/stack ×5 = +15% (MA Skills) + Crit DMG Bonus +4.0% + Precision +6.5%",stat:{critDmg:19,prec:6.5}},
     ]
   },
   {
@@ -40,7 +40,7 @@ export const INNER_WAYS: InnerWay[] = [
       {tier:3,effect:"Each stack: +1.5% damage taken (max +7.5%)",stat:{generalDmg:7.5}},
       {tier:4,effect:"Each stack: +1.8% damage taken (max +9%)",stat:{generalDmg:9}},
       {tier:5,effect:"Each stack: +2% damage-taken (max +10%) + Bamboocut Penetration +6.0 (v1.7 breakthrough, swapped from Towline Sweep)",stat:{generalDmg:10,pzPen:6}},
-      {tier:6,effect:"Each stack: +2% damage-taken (max +10%) + Bamboocut Pen +6.0; 5-stack Candlelight immobilizes 2s (non-boss)",stat:{generalDmg:10,pzPen:6}},
+      {tier:6,effect:"Min Bamboocut Atk +36.2 + Bamboocut Pen +6.0. (Candlelight needs 3+ enemies — boss-ineffective, not credited.)",stat:{minPz:36.2,pzPen:6}},
     ]
   },
   {
@@ -53,7 +53,7 @@ export const INNER_WAYS: InnerWay[] = [
       {tier:3,effect:"Gain 30 Tokens, Piercing Dart sweeping combo applies 1 Soulbreak per hit",stat:{}},
       {tier:4,effect:"Gain 40 Tokens, Piercing Dart applies 2 Soulbreak per hit",stat:{}},
       {tier:5,effect:"Physical Penetration +5.1 (v1.7 breakthrough, swapped from Light Anew)",stat:{outerPen:5.1}},
-      {tier:6,effect:"Phys Pen +5.1; Piercing Dart applies Soul Loss, Soulbreak/Soul Return last 21s",stat:{outerPen:5.1}},
+      {tier:6,effect:"Min Phys Atk +63.8 + Phys Pen +5.1; Piercing Dart applies Soul Loss",stat:{minOuter:63.8,outerPen:5.1}},
     ]
   },
 
@@ -243,7 +243,7 @@ export const INNER_WAYS: InnerWay[] = [
       {tier:3,effect:"~+2.5% avg DMG",stat:{generalDmg:2.5}},
       {tier:4,effect:"~+3% avg DMG",stat:{generalDmg:3}},
       {tier:5,effect:"One of four buffs: Crit +10%, Pen +10, Phys DMG +10%, or Min ATK +200 (~+4% avg)",stat:{generalDmg:4}},
-      {tier:6,effect:"Two simultaneous buffs (~+5% avg DMG) + Phys DMG Bonus +2.8% (T5 breakthrough)",stat:{generalDmg:5,outerDmg:2.8}},
+      {tier:6,effect:"Two buffs (~+5% avg DMG) + Phys DMG Bonus +2.8% + Min/Max Phys Atk +23.6/+47.2",stat:{generalDmg:5,outerDmg:2.8,minOuter:23.6,maxOuter:47.2}},
     ]
   },
   {
@@ -256,7 +256,7 @@ export const INNER_WAYS: InnerWay[] = [
       {tier:3,effect:"Max 4 stacks: +1.6 Phys Pen, +0.8% DMG per stack (max: +6.4 Pen, +3.2% DMG)",stat:{outerPen:6.4,outerDmg:3.2}},
       {tier:4,effect:"Max 5 stacks: +1.8 Phys Pen, +0.9% DMG per stack (max: +9 Pen, +4.5% DMG)",stat:{outerPen:9,outerDmg:4.5}},
       {tier:5,effect:"Breakthrough: Direct Critical Rate +4.6%. (Base max 5 stacks: +10 Pen, +5% DMG)",stat:{outerPen:10,outerDmg:5,dcrit:4.6}},
-      {tier:6,effect:"Max 5 stacks: +2 Phys Pen, +1% DMG per stack + Direct Crit +4.6%. Stack duration → 15s",stat:{outerPen:10,outerDmg:5,dcrit:4.6}},
+      {tier:6,effect:"Yi River +2 Pen/+1% DMG per stack ×5 + Direct Crit +4.6% + Min/Max Phys Atk +23.6/+47.2",stat:{outerPen:10,outerDmg:5,dcrit:4.6,minOuter:23.6,maxOuter:47.2}},
     ]
   },
   {
@@ -282,7 +282,7 @@ export const INNER_WAYS: InnerWay[] = [
       {tier:3,effect:"+3.5% all DMG. Disabled 6s after hit. Cage: +5% DMG taken",stat:{generalDmg:3.5}},
       {tier:4,effect:"+4% all DMG. Disabled 6s after hit. Cage: +5% DMG taken",stat:{generalDmg:4}},
       {tier:5,effect:"+5% all DMG & healing. Disabled 5s after hit. Cage: +5% DMG taken",stat:{generalDmg:5}},
-      {tier:6,effect:"+5% all DMG & healing, disabled 4s after hit + Phys Pen +5.1 (T5 breakthrough)",stat:{generalDmg:5,outerPen:5.1}},
+      {tier:6,effect:"+8% all DMG & healing (T4) + Phys Pen +5.1 + Min Phys Atk +63.8",stat:{generalDmg:8,outerPen:5.1,minOuter:63.8}},
     ]
   },
   {
@@ -295,7 +295,7 @@ export const INNER_WAYS: InnerWay[] = [
       {tier:3,effect:"Poison: -0.4% per stack (max -2%)",stat:{outerPen:2}},
       {tier:4,effect:"Poison: -0.5% per stack (max -2.5%)",stat:{outerPen:2.5}},
       {tier:5,effect:"Poison: -0.6% per stack (max 5 stacks = -3%), 10% proc chance",stat:{outerPen:3}},
-      {tier:6,effect:"Poison: -0.6%/stack, proc on Crit + Phys DMG Bonus +2.5% (T5 breakthrough)",stat:{outerPen:3,outerDmg:2.5}},
+      {tier:6,effect:"Poison −0.6%/stack + Phys DMG Bonus +2.5% + Precision +6.5%",stat:{outerPen:3,outerDmg:2.5,prec:6.5}},
     ]
   },
   {

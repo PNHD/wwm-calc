@@ -2332,6 +2332,9 @@ export default function App() {
       aff: 0,
       dcrit: 0,
       daff: 0,
+      prec: 0,
+      minOuter: 0,
+      maxOuter: 0,
     };
     selectedInnerWays.forEach((id) => {
       const iw = INNER_WAYS.find((item) => item.id === id);
@@ -2351,6 +2354,9 @@ export default function App() {
           if (s.aff) bonus.aff += s.aff;
           if (s.dcrit) bonus.dcrit += s.dcrit;
           if (s.daff) bonus.daff += s.daff;
+          if (s.prec) bonus.prec += s.prec;
+          if (s.minOuter) bonus.minOuter += s.minOuter;
+          if (s.maxOuter) bonus.maxOuter += s.maxOuter;
         }
       }
     });
@@ -2527,6 +2533,9 @@ export default function App() {
     p.affDmg += iwStats.affDmg;
     p.outerDmg += iwStats.outerDmg;
     p.pzDmg += iwStats.pzDmg;
+    p.prec += iwStats.prec;
+    p.minOuter += iwStats.minOuter;
+    p.maxOuter += iwStats.maxOuter;
     // generalDmg stays in its own "general DMG%" multiplier bucket in the formula.
     p.iwGeneralDmg = iwStats.generalDmg;
     p.iwOuterPen = iwStats.outerPen;
@@ -2744,6 +2753,7 @@ export default function App() {
     p.outerPen += iwStats.outerPen; p.pzPen += iwStats.pzPen; p.crit += iwStats.crit; p.aff += iwStats.aff;
     p.dcrit += iwStats.dcrit; p.critDmg += iwStats.critDmg; p.affDmg += iwStats.affDmg;
     p.outerDmg += iwStats.outerDmg; p.pzDmg += iwStats.pzDmg; p.iwGeneralDmg = iwStats.generalDmg;
+    p.prec += iwStats.prec; p.minOuter += iwStats.minOuter; p.maxOuter += iwStats.maxOuter;
     let totalDmg = 0;
     getRotationForBuild(selectedBuild).forEach(item => {
       const { total } = calcSkill(item, p, activeTier, { set: p.set, datang, yishui, buildKey: selectedBuild, weaponStars: (p as any).weaponStars } as any);
@@ -2812,6 +2822,7 @@ export default function App() {
       p.outerPen += iwStats.outerPen; p.pzPen += iwStats.pzPen; p.crit += iwStats.crit; p.aff += iwStats.aff;
       p.dcrit += iwStats.dcrit; p.critDmg += iwStats.critDmg; p.affDmg += iwStats.affDmg;
       p.outerDmg += iwStats.outerDmg; p.pzDmg += iwStats.pzDmg; p.iwGeneralDmg = iwStats.generalDmg;
+    p.prec += iwStats.prec; p.minOuter += iwStats.minOuter; p.maxOuter += iwStats.maxOuter;
       let t = 0;
       getRotationForBuild(selectedBuild).forEach(item => { t += calcSkill(item, p, activeTier, { set: p.set, datang, yishui, buildKey: selectedBuild, weaponStars: (p as any).weaponStars } as any).total; });
       return t / rotTime;
