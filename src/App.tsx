@@ -40,6 +40,7 @@ import { INNER_WAYS } from "./data/innerways";
 import { INNER_WAY_IMAGES, WEAPON_IMAGES_G8, MYSTIC_SKILL_IMAGES, ARMOR_SET_IMAGES } from "./data/game8Images";
 import { WWM_DATA } from "./data/wwmData";
 import OcrScanner from "./components/OcrScanner";
+import { parseGameData, ImportResult } from "./utils/gameImport";
 import { runDualPassOcr } from "./utils/ocrParser";
 import StatSwapSimulator from "./components/StatSwapSimulator";
 import SearchableSelect from "./components/SearchableSelect";
@@ -1159,6 +1160,10 @@ export default function App() {
   const [isSimOpen, setIsSimOpen] = useState<boolean>(false);
   const [simRuns, setSimRuns] = useState<number>(100);
   const [simResult, setSimResult] = useState<any>(null);
+  const [isGameImportOpen, setIsGameImportOpen] = useState<boolean>(false);
+  const [gameImportRaw, setGameImportRaw] = useState<string>("");
+  const [gameImportResult, setGameImportResult] = useState<ImportResult | null>(null);
+  const [gameImportError, setGameImportError] = useState<string>("");
   const [isExportImportModalOpen, setIsExportImportModalOpen] = useState<boolean>(false);
   const [isBatchOcrModalOpen, setIsBatchOcrModalOpen] = useState<boolean>(false);
   const [isXinfaModalOpen, setIsXinfaModalOpen] = useState<boolean>(false);
@@ -1896,6 +1901,41 @@ export default function App() {
       saveActiveGear(updatedGear);
       setIsItemModalOpen(false);
     }
+  };
+
+  const parseGameImport = () => {
+    setGameImportError("");
+    try {
+      setGameImportResult(parseGameData(gameImportRaw));
+    } catch (e: any) {
+      setGameImportResult(null);
+      setGameImportError(e?.message || "Could not parse the data.");
+    }
+  };
+
+  const applyGameImport = () => {
+    if (!gameImportResult) return;
+    const cur = getActiveGear();
+    const importedSlots = new Set(gameImportResult.pieces.map(p => p.slot));
+    // Unequip whatever is currently equipped in the slots we're importing (kept in
+    // the pool, just isEquipped:false), then add+equip the imported pieces.
+    const updated = cur.map(g => importedSlots.has(g.slot) ? { ...g, isEquipped: false } : g);
+    const defaultTypes = BUILD_WEAPON_TYPES[selectedBuild] || ["Umbrella", "Rope Dart"];
+    const newItems: GearItem[] = gameImportResult.pieces.map((p, i) => ({
+      id: "import-" + Date.now() + "-" + i,
+      slot: p.slot,
+      name: `${gameImportResult.roleName} ${p.slot}`,
+      quality: "gold",
+      set: "none",
+      subs: p.subs.map(s => ({ type: s.type, val: s.val })),
+      isEquipped: true,
+      weaponType: p.slot === "Umbrella" ? defaultTypes[0] : p.slot === "Rope Dart" ? defaultTypes[1] : undefined,
+    }));
+    saveActiveGear([...updated, ...newItems]);
+    setIsGameImportOpen(false);
+    setGameImportResult(null);
+    setGameImportRaw("");
+    setGameImportError("");
   };
 
   const openCooldownModal = () => {
@@ -3198,6 +3238,13 @@ export default function App() {
           >
             Batch OCR
           </button>
+          <button
+            onClick={() => setIsGameImportOpen(true)}
+            className="secondary-btn"
+            title="Import your equipped gear straight from the official WWM dashboard"
+          >
+            📥 Import from Game
+          </button>
         </div>
       </header>
 
@@ -3884,6 +3931,91 @@ export default function App() {
           </div>
         </aside>
       </div>
+
+      {/* ── IMPORT FROM GAME MODAL ── */}
+      {isGameImportOpen && (() => {
+        const bookmarklet = `javascript:(function(){var t=localStorage.getItem('h72na_data_token');if(!t){var c=document.cookie.match(/token=([^;]+)/);if(c)t=c[1]}if(!t){alert('Not logged in to the WWM dashboard.');return}var x=new XMLHttpRequest();x.open('GET','https://s2.easebar.com/78ae9d90792a3e9b/role/roleInfo',true);x.withCredentials=true;x.setRequestHeader('access_token',t);x.onload=function(){try{var j=JSON.parse(x.responseText);if(!j.data||!j.data.wearEquipsDetailed){alert('Could not load gear data.');return}navigator.clipboard.writeText(JSON.stringify(j.data)).then(function(){alert('Gear copied! Paste it into the calculator.')}).catch(function(){prompt('Copy this:',JSON.stringify(j.data))})}catch(e){alert('Error: '+e.message)}};x.send()})()`;
+        const res = gameImportResult;
+        return (
+          <div className="modal" onClick={() => setIsGameImportOpen(false)}>
+            <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 620, maxHeight: "88vh", display: "flex", flexDirection: "column" }}>
+              <div className="modal-header">
+                <h2>📥 Import Equipped Gear from Game <span style={{ fontSize: 11, color: "#f0b400", fontWeight: 600 }}>(Beta)</span></h2>
+                <span className="close-btn" onClick={() => setIsGameImportOpen(false)}>&times;</span>
+              </div>
+              <div className="modal-body" style={{ padding: 20, overflowY: "auto" }}>
+                <div style={{ fontSize: 12.5, color: "#c9d1d9", lineHeight: 1.6, marginBottom: 12 }}>
+                  <b style={{ color: "#58a6ff" }}>How to use</b>
+                  <ol style={{ margin: "6px 0 0", paddingLeft: 20 }}>
+                    <li>Open the <a href="https://www.wherewindsmeetgame.com/m/2025h5sjgj/en/" target="_blank" rel="noreferrer" style={{ color: "#58a6ff" }}>official WWM dashboard</a> and log in (your character must show).</li>
+                    <li>Make a bookmark whose URL is the code below (copy it, create a bookmark, paste as the URL).</li>
+                    <li>Click that bookmark while on the dashboard → your gear is copied to the clipboard.</li>
+                    <li>Paste it here and click <b>Parse</b>.</li>
+                  </ol>
+                  <p style={{ margin: "6px 0 0", color: "#6e7681", fontSize: 11 }}>Only <b>equipped</b> gear is available from the dashboard (the API has no bag/inventory). For other owned gear, use Batch OCR.</p>
+                </div>
+
+                <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+                  <input readOnly value={bookmarklet} onFocus={e => e.currentTarget.select()}
+                    style={{ flex: 1, padding: "6px 8px", background: "#15161a", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 6, color: "#8b949e", fontSize: 11, fontFamily: "monospace" }} />
+                  <button type="button" onClick={() => { navigator.clipboard.writeText(bookmarklet); }}
+                    style={{ padding: "6px 12px", fontSize: 12, fontWeight: 700, borderRadius: 6, border: "1px solid rgba(88,166,255,0.5)", background: "rgba(88,166,255,0.15)", color: "#58a6ff", cursor: "pointer", whiteSpace: "nowrap" }}>Copy bookmarklet</button>
+                </div>
+
+                <textarea value={gameImportRaw} onChange={e => setGameImportRaw(e.target.value)}
+                  placeholder="Paste the copied gear JSON here..."
+                  style={{ width: "100%", height: 90, padding: 8, background: "#15161a", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 6, color: "#e0e0e0", fontSize: 12, fontFamily: "monospace", resize: "vertical" }} />
+                <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                  <button type="button" onClick={parseGameImport}
+                    style={{ padding: "6px 14px", fontSize: 12, fontWeight: 700, borderRadius: 6, border: "1px solid rgba(126,231,135,0.5)", background: "rgba(126,231,135,0.15)", color: "#7ee787", cursor: "pointer" }}>Parse</button>
+                  {res && (
+                    <button type="button" onClick={applyGameImport}
+                      style={{ padding: "6px 14px", fontSize: 12, fontWeight: 700, borderRadius: 6, border: "1px solid rgba(245,180,0,0.6)", background: "rgba(245,180,0,0.18)", color: "#f0b400", cursor: "pointer" }}>
+                      ✓ Import &amp; equip {res.pieces.length} pieces
+                    </button>
+                  )}
+                </div>
+
+                {gameImportError && <p style={{ color: "#ff7b72", fontSize: 12, marginTop: 10 }}>{gameImportError}</p>}
+
+                {res && (
+                  <div style={{ marginTop: 14 }}>
+                    <div style={{ fontSize: 12, color: "#c9d1d9", marginBottom: 8 }}>
+                      <b style={{ color: "#fff" }}>{res.roleName}</b> · Lv {res.level} · {res.pieces.length} pieces parsed.
+                      <span style={{ color: "#f0b400" }}> Amber = auto-mapped, please verify.</span>
+                    </div>
+                    <div style={{ border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, overflow: "hidden" }}>
+                      {res.pieces.map(p => (
+                        <div key={p.officialSlot} style={{ padding: "6px 10px", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+                          <div style={{ fontSize: 11.5, fontWeight: 700, color: "#f0b400" }}>{p.slot}</div>
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: "2px 12px", marginTop: 2 }}>
+                            {p.subs.map((s, i) => (
+                              <span key={i} style={{ fontSize: 11.5, color: s.flagged ? "#f0b400" : "#c9d1d9" }}>
+                                {s.type}: <b>{s.val}</b>{s.flagged ? " ?" : ""}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    {res.skipped.length > 0 && (
+                      <details style={{ marginTop: 8 }}>
+                        <summary style={{ cursor: "pointer", fontSize: 11, color: "#8b949e" }}>{res.skipped.length} not imported ▾</summary>
+                        <ul style={{ margin: "4px 0 0", paddingLeft: 18, fontSize: 11, color: "#6e7681" }}>
+                          {res.skipped.map((s, i) => <li key={i}>{s}</li>)}
+                        </ul>
+                      </details>
+                    )}
+                    <p style={{ marginTop: 10, fontSize: 11, color: "#6e7681" }}>
+                      Values are exact from the game. Set bonus isn't imported (pick it per piece after). Importing equips these and unequips the current piece in each slot (old pieces stay in your pool).
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ── DAMAGE STATISTICS MODAL (in-game style) ── */}
       {isDmgStatsOpen && (() => {
