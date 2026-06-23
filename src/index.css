@@ -52,6 +52,36 @@ h1,.app-title,.banner-value,.current-rate-box .value,.modal-title{font-family:va
 /* Card surfaces follow the warmer bg via --card-bg above */
 .equip-card,.stats-panel,.panel-checkbox-container{background:linear-gradient(180deg,#141619,#111316)!important;border-color:#23262c!important}
 
+/* ---- Phase 3: semantic main-page components ---- */
+header{background-color:#0e1013!important;border-bottom-color:#23262c!important}
+.equip-card:hover{border-color:var(--glm-gold-line)!important}
+.equip-card-equipped{border-color:var(--glm-gold-line)!important}
+.card-title h3{color:#ebe7df!important}
+.equip-icon{border-color:#23262c!important}
+/* Equipment + inner-way slots */
+.sim-slot{background:#0c0d10!important;border:1px solid #23262c!important}
+.sim-slot:hover{border-color:var(--glm-gold-line)!important}
+.xinfa-slot{background:linear-gradient(180deg,#181a1e,#0c0d10)!important}
+.xinfa-slot:hover{box-shadow:0 0 8px rgba(240,180,0,.25)!important}
+.bow-slot{border-color:#23262c!important}
+.slot-name-overlay{background:rgba(0,0,0,.78)!important}
+/* Inputs (element-level; themed pane inputs keep their classes) */
+input,select,textarea{background-color:#0c0d10!important;border:1px solid #23262c!important;color:#ebe7df!important}
+input:focus,select:focus,textarea:focus{outline:none!important;border-color:var(--glm-gold-line)!important;box-shadow:0 0 0 3px var(--glm-gold-soft)!important}
+.mini-select{color:#b8b1a6!important}.mini-select:focus{border-color:#f0b400!important}
+input[readonly]{background-color:#15130c!important;color:#f0b400!important}
+/* Stat readout */
+.stat-row-display{border-bottom-color:rgba(255,255,255,.04)!important}
+/* Modal left panel + gear list */
+.grad-left-panel,.current-rate-box{background:#0e1013!important}
+.current-rate-box{border-bottom-color:#23262c!important}
+.grad-equip-item{background:#141619!important;border-color:#23262c!important}
+.grad-equip-item:hover{border-color:var(--glm-gold-line)!important;background:#181a1e!important}
+.grad-equip-item.active{border-color:#f0b400!important;background:var(--glm-gold-soft)!important}
+/* Scrollbar gold thumb */
+::-webkit-scrollbar-thumb{background:#2a2620!important}
+::-webkit-scrollbar-thumb:hover{background:var(--glm-gold-dim)!important}
+
 /* Selected Inner Way styling */
 .xinfa-select-item.selected-innerway {
   border-color: gold !important;
