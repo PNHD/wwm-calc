@@ -43,6 +43,7 @@ import { INNER_WAY_IMAGES, WEAPON_IMAGES_G8, MYSTIC_SKILL_IMAGES, ARMOR_SET_IMAG
 import { WWM_DATA } from "./data/wwmData";
 import OcrScanner from "./components/OcrScanner";
 import { parseGameData, ImportResult } from "./utils/gameImport";
+import { translateSkillName } from "./utils/skillNameEn";
 import { runDualPassOcr } from "./utils/ocrParser";
 import StatSwapSimulator from "./components/StatSwapSimulator";
 import SearchableSelect from "./components/SearchableSelect";
@@ -3857,7 +3858,7 @@ export default function App() {
             </div>
           )}
 
-          <div className="panel-checkbox-container">
+          <div className="panel-checkbox-container" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
             <div className="panel-checkbox-wrapper">
               <label className="panel-checkbox-label">
                 <input
@@ -4180,7 +4181,7 @@ export default function App() {
                     </div>
                     {skillPreview.map((s, i) => (
                       <div key={s.name + i} style={{ display: "flex", padding: "4px 10px", borderTop: "1px solid rgba(255,255,255,0.05)", fontSize: 11.5 }}>
-                        <span style={{ flex: 1, color: "#c9d1d9", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={s.name}>{s.name} <span style={{ color: "#6e7681" }}>×{s.count}</span></span>
+                        <span style={{ flex: 1, color: "#c9d1d9", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={s.name}>{translateSkillName(s.name)} <span style={{ color: "#6e7681" }}>×{s.count}</span></span>
                         <span style={{ width: 58, textAlign: "right", color: "#c9d1d9", fontFamily: "monospace" }}>{Math.round(s.abrasion).toLocaleString()}</span>
                         <span style={{ width: 58, textAlign: "right", color: "#c9d1d9", fontFamily: "monospace" }}>{Math.round(s.normal).toLocaleString()}</span>
                         <span style={{ width: 58, textAlign: "right", color: "#f0b400", fontFamily: "monospace" }}>{Math.round(s.crit).toLocaleString()}</span>
@@ -4409,7 +4410,7 @@ export default function App() {
                               const ps = rotationSim.perSkill.find(s => s.name === item.name);
                               return (
                                 <tr key={item.name + i} className="border-b border-[#3d3d45]/40">
-                                  <td className="text-left px-3 py-1.5 text-slate-200">{item.name}</td>
+                                  <td className="text-left px-3 py-1.5 text-slate-200" title={item.name}>{translateSkillName(item.name)}</td>
                                   <td className="text-center px-2 py-1.5">
                                     <input type="number" min={0} value={item.count}
                                       onChange={e => { const n = Number(e.target.value); if (!isNaN(n)) setSkillCount(i, n); }}
@@ -4437,7 +4438,7 @@ export default function App() {
                         <select value={addSkillName} onChange={e => setAddSkillName(e.target.value)}
                           className="flex-1 min-w-[160px] bg-[#1a1a22] border border-[#3d3d45] rounded px-2 py-1 text-slate-100 text-[12px]">
                           <option value="">— pick a skill from this build —</option>
-                          {buildSkillNames.map(n => <option key={n} value={n}>{n}</option>)}
+                          {buildSkillNames.map(n => <option key={n} value={n}>{translateSkillName(n)}</option>)}
                         </select>
                         <button onClick={() => addSkillToRotation(addSkillName)} disabled={!addSkillName}
                           className="text-[12px] px-3 py-1.5 rounded border border-[#3d3d45] text-[#7ee787] disabled:opacity-40 hover:border-[#7ee787]/50">+ Add to rotation</button>
@@ -4478,7 +4479,7 @@ export default function App() {
                         <select value={editorSkillName} onChange={e => setEditorSkillName(e.target.value)}
                           className="flex-1 min-w-[200px] bg-[#1a1a22] border border-[#3d3d45] rounded px-2 py-1 text-slate-100 text-[12.5px]">
                           {buildSkillNames.length === 0 && <option value="">(no skills in this build)</option>}
-                          {buildSkillNames.map(n => <option key={n} value={n}>{n}</option>)}
+                          {buildSkillNames.map(n => <option key={n} value={n}>{translateSkillName(n)}</option>)}
                         </select>
                         <button onClick={() => setEditorOverrides(null)} disabled={!editorOverrides}
                           className="text-[12px] px-3 py-1.5 rounded border border-[#3d3d45] text-slate-300 disabled:opacity-40 hover:border-[#ffd700]/50">Reset coefficients</button>
