@@ -1940,6 +1940,11 @@ export default function App() {
     const config = getCustomConfig();
     return config?.innerWayTiers ?? {};
   });
+  // Realistic-DPS efficiency: the rotation/DPS calc is a THEORETICAL ceiling
+  // (perfect rotation + full buff uptime). A real parse loses ~10-20% to rotation
+  // downtime / buff ramp / execution. realistic DPS = theoretical × dpsEff. The
+  // user tunes it to match their in-game parse. Graduation % stays on theoretical.
+  const [dpsEff, setDpsEff] = useState<number>(() => getCustomConfig()?.dpsEff ?? 0.85);
   const [profiles, setProfiles] = useState<SavedProfile[]>([]);
   const [newProfileName, setNewProfileName] = useState<string>("");
   const [compareProfileIds, setCompareProfileIds] = useState<string[]>([]);
@@ -2005,7 +2010,8 @@ export default function App() {
       qianying,
       script50,
       customDef,
-      customRes
+      customRes,
+      dpsEff
     };
     try {
       localStorage.setItem("wwm_t91_custom_config", JSON.stringify(config));
@@ -2695,6 +2701,41 @@ export default function App() {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeScheme?.gear, panel, food, bowSelect, script50, iwStats, activeTier, datang, yishui, selectedBuild]);
+
+  // ── Armor set comparison (swap 2pc stat + 4pc that the calc models) ─────────
+  // 2pc stats are T91-verified; 4pc is only modeled in calc for stars/ivorybloom
+  // (others compare 2pc only — flagged with `modeled`). Needs the Excel for full 4pc.
+  const armorSetCompare = useMemo(() => {
+    const cur = (adjustedPanel.set as string) || "none";
+    const rotTime = getRotationTimeForBuild(selectedBuild);
+    const SETS = ["stars", "ivorybloom", "eaglerise", "jadeware", "swallowreturn", "mistwillow", "none"];
+    const modeled4pc = new Set(["stars", "ivorybloom"]);
+    const dpsFor = (key: string) => {
+      const p: any = { ...adjustedPanel };
+      const rm = (ARMOR_SETS as any)[cur]?.stat2pc as Record<string, number> | undefined;
+      const ad = (ARMOR_SETS as any)[key]?.stat2pc as Record<string, number> | undefined;
+      if (rm) for (const k in rm) p[k] = (p[k] || 0) - rm[k];
+      if (ad) for (const k in ad) p[k] = (p[k] || 0) + ad[k];
+      p.set = key;
+      (p as any).weaponStars = key === "stars" || (adjustedPanel as any).weaponStars;
+      let t = 0;
+      getRotationForBuild(selectedBuild).forEach(item => { t += calcSkill(item, p, activeTier, { set: key, datang, yishui, buildKey: selectedBuild, weaponStars: (p as any).weaponStars } as any).total; });
+      return t / rotTime;
+    };
+    const curDps = dpsFor(cur);
+    return SETS.map(key => {
+      const dps = dpsFor(key);
+      return {
+        key,
+        name: (ARMOR_SETS as any)[key]?.name || key,
+        dps,
+        delta: dps - curDps,
+        active: key === cur,
+        modeled: key === "none" ? true : modeled4pc.has(key),
+      };
+    }).sort((a, b) => b.dps - a.dps);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [adjustedPanel, activeTier, datang, yishui, selectedBuild]);
 
   // ── Monte Carlo Damage Simulation ───────────────────────────────────────────
   // Rolls each cast's outcome (crit/aff/normal/abrasion) instead of using the
@@ -3662,6 +3703,31 @@ export default function App() {
                   </span>
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* Armor set comparison (2pc verified; 4pc modeled only where ✓) */}
+          {armorSetCompare.length > 0 && (
+            <div style={{ marginTop: 12, border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, overflow: "hidden" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 10px", background: "rgba(255,255,255,0.03)" }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: "#f0b400", textTransform: "uppercase", letterSpacing: 0.4 }}>Armor Set</span>
+                <span style={{ fontSize: 10, color: "#6e7681" }} title="DPS for each 4-piece armor set vs your current set. 2pc stats are T91-verified; ✓ = 4pc effect modeled in the calc, others compare the 2pc stat only.">DPS · vs current ⓘ</span>
+              </div>
+              {armorSetCompare.map(o => (
+                <div key={o.key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "5px 10px", borderTop: "1px solid rgba(255,255,255,0.05)", background: o.active ? "rgba(245,180,0,0.08)" : undefined }}>
+                  <span style={{ fontSize: 12, color: o.active ? "#f0b400" : "#c9d1d9", fontWeight: o.active ? 700 : 400 }}>
+                    {o.name}{o.active ? " ✓" : ""}
+                    {!o.modeled && <span style={{ color: "#6e7681", fontSize: 10 }} title="4pc effect not modeled in the calc yet — compares 2pc stat only"> (2pc)</span>}
+                  </span>
+                  <span style={{ display: "flex", gap: 10, alignItems: "baseline" }}>
+                    <span style={{ fontSize: 12.5, fontWeight: 700, color: "#c9d1d9" }}>{Math.round(o.dps).toLocaleString()}</span>
+                    <span style={{ fontSize: 11, width: 56, textAlign: "right", color: o.delta > 0.5 ? "#7ee787" : o.delta < -0.5 ? "#ff7b72" : "#6e7681" }}>{o.active ? "—" : `${o.delta >= 0 ? "+" : ""}${Math.round(o.delta).toLocaleString()}`}</span>
+                  </span>
+                </div>
+              ))}
+              <div style={{ padding: "5px 10px", fontSize: 10, color: "#6e7681", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+                2pc stats are T91-verified. <b>(2pc)</b> rows compare the 2-piece stat only — their 4pc effect isn't modeled yet (needs the Excel source).
+              </div>
             </div>
           )}
 
