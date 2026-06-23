@@ -295,7 +295,7 @@ export const INNER_WAYS: InnerWay[] = [
       {tier:3,effect:"Poison: -0.4% per stack (max -2%)",stat:{outerPen:2}},
       {tier:4,effect:"Poison: -0.5% per stack (max -2.5%)",stat:{outerPen:2.5}},
       {tier:5,effect:"Poison: -0.6% per stack (max 5 stacks = -3%), 10% proc chance",stat:{outerPen:3}},
-      {tier:6,effect:"Poison −0.6%/stack + Phys DMG Bonus +2.5% + Precision +6.5%",stat:{outerPen:3,outerDmg:2.5,prec:6.5}},
+      {tier:6,effect:"At 5 stacks, Poison also reduces target's Physical Resistance by 10 (≈ +10 Phys Pen vs boss) + Phys DMG Bonus +2.5% + Precision +6.5% (game-verified T6)",stat:{outerPen:10,outerDmg:2.5,prec:6.5}},
     ]
   },
   {

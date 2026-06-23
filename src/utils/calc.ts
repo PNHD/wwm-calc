@@ -497,11 +497,6 @@ export function calcSkill(
   let setDmgBonus = 0;
   if (set === "swallowreturn") setDmgBonus += 0.05; // Swaying Heights: +5% vs HP>50% (up to +10% at full HP; conservative)
   if (set === "shakenhill") setDmgBonus += 0.05;    // Shattered Ridge: +5% HP dmg on deflect / boss
-  // Hawkwing (key "eaglerise") 4pc: +2% Phys ATK/stack ×5, full-stack = +10%. Modeled as a
-  // damage multiplier (NOT a pre-def ATK multiplier — that over-credits because effective dmg
-  // = ATK - def, so +10% base yields >10% effective and wrongly beat Stars Align +15%).
-  // ponytail: full-stack ramp is conditional; +10% into T keeps it comparable to other 4pc sets.
-  if (set === "eaglerise") setDmgBonus += 0.10;
 
   // Mystic skill DMG boost: single-target mystic skills eat singleTargetDmg,
   // area/group mystic skills eat groupDmg (matches in-game "Single-Target / Area
@@ -534,7 +529,13 @@ export function calcSkill(
   const F = totalOuterPen >= 0 ? totalOuterPen / 200 : totalOuterPen / 100;
 
   // Panel min/maxOuter already include five-attribute contributions from the game.
-  let atkMult = set === "ironweave" ? 1.05 : 1.0;
+  // Hawkwing (key "eaglerise") 4pc: +2% PHYSICAL ATK/stack ×5 = +10% (game-verified tooltip:
+  // "gain Hawkwing when damage triggers Affinity"). It's an ATK% buff on physical attack only
+  // (NOT element/pz), so it correctly multiplies minO/maxO. Assumes full 5-stack uptime like
+  // every other ramp buff in the app. ponytail: ATK% multiplies before def — that's the game's
+  // order; it lands ≈ Stars Align here, matching the community note that 九剑/Hawkwing scales
+  // well with physical. Don't move this into the damage (T) bucket.
+  let atkMult = set === "eaglerise" ? 1.10 : set === "ironweave" ? 1.05 : 1.0;
   let minO = (panel.minOuter || 0) * atkMult;
   let maxO = (panel.maxOuter || 0) * atkMult;
   if (maxO < minO) maxO = minO;
