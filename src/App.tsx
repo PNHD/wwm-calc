@@ -34,9 +34,10 @@ import {
   Target,
   Crosshair,
 } from "lucide-react";
-import { PanelStats, TierConstants, RotationItem } from "./types";
-import { TIERS, calcSkill, calcBaseline, getRotationForBuild, getRotationTimeForBuild } from "./utils/calc";
+import { PanelStats, TierConstants, RotationItem, SkillDefinition } from "./types";
+import { TIERS, calcSkill, calcBaseline, getRotationForBuild, getRotationTimeForBuild, SKILL_DB } from "./utils/calc";
 import { simulateRotation } from "./utils/timelineEngine";
+import { previewSkill } from "./utils/skillPreview";
 import { INNER_WAYS } from "./data/innerways";
 import { INNER_WAY_IMAGES, WEAPON_IMAGES_G8, MYSTIC_SKILL_IMAGES, ARMOR_SET_IMAGES } from "./data/game8Images";
 import { WWM_DATA } from "./data/wwmData";
@@ -2629,6 +2630,53 @@ export default function App() {
   const removeSkill = (i: number) =>
     editRotation(r => r.filter((_, j) => j !== i));
 
+  // ── Phase 3: Skill editor ───────────────────────────────────────────────────
+  // Pick a skill, tweak its coefficients, and see the per-hit damage recompute
+  // live through previewSkill (reuses the verified calcSkill via a temp SKILL_DB
+  // inject — calc.ts and the real skills are never modified). Calculator/preview
+  // ONLY: edits do NOT feed the rotation DPS (that would need an explicit override,
+  // a later phase).
+  const buildSkillNames = useMemo(() => {
+    const seen = new Set<string>(); const out: string[] = [];
+    for (const it of getRotationForBuild(selectedBuild)) if (!seen.has(it.name)) { seen.add(it.name); out.push(it.name); }
+    return out;
+  }, [selectedBuild]);
+
+  const [editorSkillName, setEditorSkillName] = useState<string>("");
+  const [editorOverrides, setEditorOverrides] = useState<Partial<SkillDefinition> | null>(null);
+  // Default to the build's first skill; drop edits when skill or build changes.
+  useEffect(() => { setEditorSkillName(buildSkillNames[0] || ""); }, [buildSkillNames]);
+  useEffect(() => { setEditorOverrides(null); }, [editorSkillName, selectedBuild]);
+
+  const setSkillField = (field: keyof SkillDefinition, val: number) =>
+    setEditorOverrides(prev => ({ ...(prev || {}), [field]: val }));
+
+  const skillEditorPreview = useMemo(() => {
+    const orig = editorSkillName ? SKILL_DB[editorSkillName] : undefined;
+    if (!orig) return null;
+    const edited: SkillDefinition = { ...orig, ...(editorOverrides || {}) };
+    const opts = {
+      set: adjustedPanel.set, datang, yishui,
+      buildKey: selectedBuild,
+      weaponStars: (adjustedPanel as any).weaponStars,
+    } as any;
+    return {
+      orig, edited,
+      base: previewSkill(orig, adjustedPanel, activeTier, opts),
+      sim: previewSkill(edited, adjustedPanel, activeTier, opts),
+    };
+  }, [editorSkillName, editorOverrides, adjustedPanel, activeTier, datang, yishui, selectedBuild]);
+
+  // Bonus (Phase 2↔3): add a skill to the edited rotation, cloning the build's
+  // default metadata for that skill when present (else a neutral one-cast item).
+  const [addSkillName, setAddSkillName] = useState<string>("");
+  const addSkillToRotation = (name: string) => {
+    if (!name) return;
+    const tmpl = getRotationForBuild(selectedBuild).find(it => it.name === name);
+    const item: RotationItem = tmpl ? { ...tmpl } : { name, count: 1, isDingyin: false, generalBonus: 0, yishui: 0, tiaozhan: 1 };
+    editRotation(r => { r.push(item); return r; });
+  };
+
   // ── Inner Ways: DPS loss if removed ─────────────────────────────────────────
   // Per equipped inner way, recompute the rotation with that way's stats removed
   // from the in-combat panel. The drop = how much DPS that way is contributing.
@@ -4295,6 +4343,7 @@ export default function App() {
                     { key: "transmute", label: "Transmute Advice" },
                     { key: "best-build", label: "Best Build" },
                     { key: "rotations", label: "Rotations" },
+                    { key: "skill-editor", label: "Skill Editor" },
                   ].map(tab => (
                     <div
                       key={tab.key}
@@ -4383,9 +4432,98 @@ export default function App() {
                         crit <b className="text-white">{(bd.crit / bdTot * 100).toFixed(1)}%</b> · affinity <b className="text-white">{(bd.aff / bdTot * 100).toFixed(1)}%</b> · normal <b className="text-white">{(bd.normal / bdTot * 100).toFixed(1)}%</b> · abrasion <b className="text-white">{(bd.abrasion / bdTot * 100).toFixed(1)}%</b>
                       </div>
 
+                      <div className="flex flex-wrap items-center gap-2 bg-[#2d2d35] border border-[#3d3d45] rounded-xl p-3">
+                        <span className="text-[10px] uppercase tracking-widest text-[#a19683] font-mono">Add skill</span>
+                        <select value={addSkillName} onChange={e => setAddSkillName(e.target.value)}
+                          className="flex-1 min-w-[160px] bg-[#1a1a22] border border-[#3d3d45] rounded px-2 py-1 text-slate-100 text-[12px]">
+                          <option value="">— pick a skill from this build —</option>
+                          {buildSkillNames.map(n => <option key={n} value={n}>{n}</option>)}
+                        </select>
+                        <button onClick={() => addSkillToRotation(addSkillName)} disabled={!addSkillName}
+                          className="text-[12px] px-3 py-1.5 rounded border border-[#3d3d45] text-[#7ee787] disabled:opacity-40 hover:border-[#7ee787]/50">+ Add to rotation</button>
+                      </div>
                       <p className="text-[11px] text-slate-500 leading-snug">
-                        Removing a skill or zeroing its count is supported now. Adding arbitrary skills comes with the Skill editor (next phase). DPS = total ÷ the build's fixed rotation window.
+                        Edit counts, remove (✕), or add another cast of a build skill (clones its default buff context). Tweaking a skill's coefficients lives in the <b>Skill Editor</b> tab (preview only). DPS = total ÷ the build's fixed rotation window.
                       </p>
+                    </div>
+                    );
+                  })()}
+                  {gradModalActiveTab === "skill-editor" && (() => {
+                    const p = skillEditorPreview;
+                    const fields: { key: keyof SkillDefinition; label: string; step: number }[] = [
+                      { key: "outerRatio", label: "Phys ratio (外攻倍率)", step: 0.01 },
+                      { key: "eleRatio", label: "Element ratio (元素倍率)", step: 0.01 },
+                      { key: "fixed", label: "Fixed damage", step: 1 },
+                      { key: "exCritDmg", label: "Extra Crit DMG", step: 0.01 },
+                      { key: "exDmg", label: "Extra DMG%", step: 0.01 },
+                      { key: "exPen", label: "Extra Pen", step: 0.1 },
+                    ];
+                    const cells = p ? [
+                      { label: "Abrasion", v: p.sim.grazeHit, b: p.base.grazeHit, color: "#8b949e" },
+                      { label: "Normal", v: p.sim.normHit, b: p.base.normHit, color: "#e8e8e8" },
+                      { label: "Crit", v: p.sim.critHit, b: p.base.critHit, color: "#ffd700" },
+                      { label: "Affinity", v: p.sim.affHit, b: p.base.affHit, color: "#7ee787" },
+                    ] : [];
+                    return (
+                    <div className="space-y-4" style={{ textAlign: 'left' }}>
+                      <div className="bg-[#1e1a12] border border-[#ffd700]/30 rounded-xl p-4">
+                        <h3 className="text-sm font-bold text-[#ffd700] mb-2 flex items-center gap-2">🎚️ Skill Editor <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#ffd700]/15 text-[#ffd700]/80">beta</span></h3>
+                        <p className="text-[12px] text-slate-300 leading-relaxed">
+                          Pick a skill, edit its coefficients, and watch the per-hit damage recompute live through the verified formula. <b>Preview only</b> — edits don't change the rotation DPS or the real skill (the damage math is untouched). Values use your current panel, tier and in-combat buffs.
+                        </p>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-3 bg-[#2d2d35] border border-[#3d3d45] rounded-xl p-4">
+                        <span className="text-[10px] uppercase tracking-widest text-[#a19683] font-mono">Skill</span>
+                        <select value={editorSkillName} onChange={e => setEditorSkillName(e.target.value)}
+                          className="flex-1 min-w-[200px] bg-[#1a1a22] border border-[#3d3d45] rounded px-2 py-1 text-slate-100 text-[12.5px]">
+                          {buildSkillNames.length === 0 && <option value="">(no skills in this build)</option>}
+                          {buildSkillNames.map(n => <option key={n} value={n}>{n}</option>)}
+                        </select>
+                        <button onClick={() => setEditorOverrides(null)} disabled={!editorOverrides}
+                          className="text-[12px] px-3 py-1.5 rounded border border-[#3d3d45] text-slate-300 disabled:opacity-40 hover:border-[#ffd700]/50">Reset coefficients</button>
+                      </div>
+
+                      {p ? (
+                        <>
+                          <div className="grid grid-cols-4 gap-3">
+                            {cells.map(c => {
+                              const d = c.v - c.b;
+                              return (
+                                <div key={c.label} className="bg-[#2d2d35] border border-[#3d3d45] rounded-xl p-3 text-center">
+                                  <div className="text-[10px] uppercase tracking-widest text-[#a19683] font-mono">{c.label}</div>
+                                  <div className="text-[18px] font-bold leading-tight" style={{ color: c.color }}>{Math.round(c.v).toLocaleString()}</div>
+                                  {editorOverrides && Math.abs(d) >= 0.5 && (
+                                    <div className="text-[11px] font-semibold" style={{ color: d >= 0 ? '#7ee787' : '#ff7b72' }}>{d >= 0 ? '+' : ''}{Math.round(d).toLocaleString()}</div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+
+                          <div className="bg-[#2d2d35] border border-[#3d3d45] rounded-xl p-4 grid grid-cols-2 gap-3">
+                            {fields.map(f => {
+                              const val = (editorOverrides?.[f.key] ?? p.orig[f.key]) as number;
+                              const changed = !!editorOverrides && editorOverrides[f.key] !== undefined && editorOverrides[f.key] !== p.orig[f.key];
+                              return (
+                                <label key={f.key} className="flex flex-col gap-1 text-[11.5px] text-slate-300">
+                                  <span className="flex items-center gap-1">{f.label}{changed && <span className="text-[#ffd700]" title="edited">●</span>}</span>
+                                  <input type="number" step={f.step} value={val}
+                                    onChange={e => { const n = Number(e.target.value); if (!isNaN(n)) setSkillField(f.key, n); }}
+                                    className="bg-[#1a1a22] border border-[#3d3d45] rounded px-2 py-1 text-slate-100 text-[12.5px]" />
+                                  <span className="text-[10px] text-slate-500">orig {String(p.orig[f.key])}</span>
+                                </label>
+                              );
+                            })}
+                          </div>
+
+                          <p className="text-[11px] text-slate-500 leading-snug">
+                            Classification fields (type / weapon-type / charge / set bonus) decide how the skill is bucketed and aren't safe to edit in v1. To make an edit affect rotation DPS you'd wire an override — a later phase.
+                          </p>
+                        </>
+                      ) : (
+                        <div className="text-[12px] text-slate-400">Select a skill to edit.</div>
+                      )}
                     </div>
                     );
                   })()}
