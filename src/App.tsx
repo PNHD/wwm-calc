@@ -34,8 +34,9 @@ import {
   Target,
   Crosshair,
 } from "lucide-react";
-import { PanelStats, TierConstants } from "./types";
+import { PanelStats, TierConstants, RotationItem } from "./types";
 import { TIERS, calcSkill, calcBaseline, getRotationForBuild, getRotationTimeForBuild } from "./utils/calc";
+import { simulateRotation } from "./utils/timelineEngine";
 import { INNER_WAYS } from "./data/innerways";
 import { INNER_WAY_IMAGES, WEAPON_IMAGES_G8, MYSTIC_SKILL_IMAGES, ARMOR_SET_IMAGES } from "./data/game8Images";
 import { WWM_DATA } from "./data/wwmData";
@@ -2599,6 +2600,35 @@ export default function App() {
     });
   }, [adjustedPanel, activeTier, datang, yishui, selectedBuild]);
 
+  // ── Phase 2: Rotations editor ───────────────────────────────────────────────
+  // View/edit the current build's rotation and recompute DPS through the timeline
+  // engine (simulateRotation wraps the verified calcSkill — the per-hit formula is
+  // untouched). Re-added as an EDITOR per user request; see CLAUDE.md #7 (distinct
+  // from the old Swap/Rotation Sim that was removed).
+  const [editedRotation, setEditedRotation] = useState<RotationItem[] | null>(null);
+  // Edits are build-specific — discard them when the build changes.
+  useEffect(() => { setEditedRotation(null); }, [selectedBuild]);
+
+  const effectiveRotation = editedRotation ?? getRotationForBuild(selectedBuild);
+
+  const rotationSim = useMemo(() => {
+    const rotation = editedRotation ?? getRotationForBuild(selectedBuild);
+    const opts = {
+      set: adjustedPanel.set, datang, yishui,
+      buildKey: selectedBuild,
+      weaponStars: (adjustedPanel as any).weaponStars,
+    } as any;
+    return simulateRotation(rotation, adjustedPanel, activeTier, opts, getRotationTimeForBuild(selectedBuild));
+  }, [editedRotation, adjustedPanel, activeTier, datang, yishui, selectedBuild]);
+
+  // Seed from the build default on first edit, then mutate a copy.
+  const editRotation = (mutate: (r: RotationItem[]) => RotationItem[]) =>
+    setEditedRotation(prev => mutate((prev ?? getRotationForBuild(selectedBuild)).map(it => ({ ...it }))));
+  const setSkillCount = (i: number, count: number) =>
+    editRotation(r => { r[i] = { ...r[i], count: Math.max(0, count) }; return r; });
+  const removeSkill = (i: number) =>
+    editRotation(r => r.filter((_, j) => j !== i));
+
   // ── Inner Ways: DPS loss if removed ─────────────────────────────────────────
   // Per equipped inner way, recompute the rotation with that way's stats removed
   // from the in-combat panel. The drop = how much DPS that way is contributing.
@@ -4264,6 +4294,7 @@ export default function App() {
                     { key: "compare", label: "Compare" },
                     { key: "transmute", label: "Transmute Advice" },
                     { key: "best-build", label: "Best Build" },
+                    { key: "rotations", label: "Rotations" },
                   ].map(tab => (
                     <div
                       key={tab.key}
@@ -4276,6 +4307,88 @@ export default function App() {
                 </div>
                 <div className="grad-tab-content" style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
                   {/* Tab Panes */}
+                  {gradModalActiveTab === "rotations" && (() => {
+                    const buildLabel = (BUILD_PROFILES as any)[selectedBuild]?.label || selectedBuild;
+                    const rotWindow = getRotationTimeForBuild(selectedBuild);
+                    const bd = rotationSim.breakdown;
+                    const bdTot = (bd.crit + bd.aff + bd.normal + bd.abrasion) || 1;
+                    const dDps = rotationSim.dps - rotationStats.dps;
+                    return (
+                    <div className="space-y-4" style={{ textAlign: 'left' }}>
+                      <div className="bg-[#1e1a12] border border-[#ffd700]/30 rounded-xl p-4">
+                        <h3 className="text-sm font-bold text-[#ffd700] mb-2 flex items-center gap-2">🗡️ Rotations editor <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#ffd700]/15 text-[#ffd700]/80">beta</span></h3>
+                        <p className="text-[12px] text-slate-300 leading-relaxed">
+                          Edit the cast <b>count</b> of each skill in <b className="text-[#ffd700]">{buildLabel}</b>'s rotation; DPS recomputes live through the verified per-hit formula (only the rotation composition changes — the damage math is untouched). Window is fixed at the build's calibrated <b>{rotWindow.toFixed(1)}s</b>.
+                        </p>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-4 bg-[#2d2d35] border border-[#3d3d45] rounded-xl p-4">
+                        <div>
+                          <div className="text-[10px] uppercase tracking-widest text-[#a19683] font-mono">Rotation DPS</div>
+                          <div className="text-[22px] font-bold text-white leading-tight">{Math.round(rotationSim.dps).toLocaleString()}<span className="text-[12px] text-[#8b949e] font-normal"> /s</span></div>
+                        </div>
+                        <div>
+                          <div className="text-[10px] uppercase tracking-widest text-[#a19683] font-mono">Total damage</div>
+                          <div className="text-[18px] font-semibold text-slate-200 leading-tight">{Math.round(rotationSim.totalDmg).toLocaleString()}</div>
+                        </div>
+                        {editedRotation && (
+                          <div>
+                            <div className="text-[10px] uppercase tracking-widest text-[#a19683] font-mono">vs default</div>
+                            <div className="text-[16px] font-semibold leading-tight" style={{ color: dDps >= 0 ? '#7ee787' : '#ff7b72' }}>{dDps >= 0 ? '+' : ''}{Math.round(dDps).toLocaleString()}/s</div>
+                          </div>
+                        )}
+                        <button
+                          onClick={() => setEditedRotation(null)}
+                          disabled={!editedRotation}
+                          className="ml-auto text-[12px] px-3 py-1.5 rounded border border-[#3d3d45] text-slate-300 disabled:opacity-40 hover:border-[#ffd700]/50"
+                        >Reset to build default</button>
+                      </div>
+
+                      <div className="bg-[#2d2d35] border border-[#3d3d45] rounded-xl overflow-hidden">
+                        <table className="w-full text-[12.5px]">
+                          <thead>
+                            <tr className="text-[10px] uppercase tracking-wider text-[#a19683] font-mono border-b border-[#3d3d45]">
+                              <th className="text-left px-3 py-2">Skill</th>
+                              <th className="text-center px-2 py-2">Count</th>
+                              <th className="text-right px-3 py-2">DPS</th>
+                              <th className="text-right px-3 py-2">Share</th>
+                              <th></th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {effectiveRotation.map((item, i) => {
+                              const ps = rotationSim.perSkill.find(s => s.name === item.name);
+                              return (
+                                <tr key={item.name + i} className="border-b border-[#3d3d45]/40">
+                                  <td className="text-left px-3 py-1.5 text-slate-200">{item.name}</td>
+                                  <td className="text-center px-2 py-1.5">
+                                    <input type="number" min={0} value={item.count}
+                                      onChange={e => { const n = Number(e.target.value); if (!isNaN(n)) setSkillCount(i, n); }}
+                                      className="w-14 bg-[#1a1a22] border border-[#3d3d45] rounded px-1.5 py-0.5 text-center text-slate-100 text-[12.5px]" />
+                                  </td>
+                                  <td className="text-right px-3 py-1.5 text-slate-300">{ps ? Math.round(ps.dps).toLocaleString() : '—'}</td>
+                                  <td className="text-right px-3 py-1.5 text-[#ffd700]/90">{ps ? (ps.share * 100).toFixed(1) + '%' : '—'}</td>
+                                  <td className="text-center px-1 py-1.5">
+                                    <button onClick={() => removeSkill(i)} title="Remove skill" className="text-[#ff7b72]/70 hover:text-[#ff7b72] text-[13px]">✕</button>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      <div className="bg-[#2d2d35] border border-[#3d3d45] rounded-xl p-3 text-[12px] text-slate-300">
+                        <span className="text-[10px] uppercase tracking-widest text-[#a19683] font-mono mr-2">Hit-type mix</span>
+                        crit <b className="text-white">{(bd.crit / bdTot * 100).toFixed(1)}%</b> · affinity <b className="text-white">{(bd.aff / bdTot * 100).toFixed(1)}%</b> · normal <b className="text-white">{(bd.normal / bdTot * 100).toFixed(1)}%</b> · abrasion <b className="text-white">{(bd.abrasion / bdTot * 100).toFixed(1)}%</b>
+                      </div>
+
+                      <p className="text-[11px] text-slate-500 leading-snug">
+                        Removing a skill or zeroing its count is supported now. Adding arbitrary skills comes with the Skill editor (next phase). DPS = total ÷ the build's fixed rotation window.
+                      </p>
+                    </div>
+                    );
+                  })()}
                   {gradModalActiveTab === "manual" && (
                     <div className="space-y-6" style={{ textAlign: 'left' }}>
                       {/* How to use */}
