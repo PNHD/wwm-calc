@@ -3880,7 +3880,7 @@ export default function App() {
                 </div>
               ))}
               <div style={{ padding: "5px 10px", fontSize: 10, color: "#6e7681", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
-2pc stats + verified 4pc effects modeled (Stars/Jadeware/Ivorybloom/Rainwhisper/Hawkwing/Swaying/Shattered). <b>(2pc)</b> = 4pc still build-specific, not modeled. Eaglerise (armour) is defensive — not shown.
+2pc + verified 4pc modeled (Stars/Jadeware/Ivorybloom/Rainwhisper/Hawkwing/Swaying/Shattered). <b>(2pc)</b> = 4pc <i>not credited</i> for this rotation, not "no 4pc" — e.g. Mistwillow's 4pc boosts Light/Heavy attacks, not the Martial-Art-Skill rotation. Eaglerise (armour) is defensive — excluded.
               </div>
             </div>
           )}
