@@ -448,6 +448,8 @@ export function calcSkill(
   let precEff = Math.min(1.0, 0.65 + Math.max(0, (panel.prec || 0) - 65) / 100 / jR);
   let dirCrit = (panel.dcrit || 0) / 100;
   let dirAff = (panel.daff || 0) / 100;
+  // Jadeware 4pc: +7.5% Direct Affinity Rate vs qi-imbalanced targets (assume boss).
+  if (set === "jadeware") dirAff += 0.075;
 
   if (set === "stormrain") precEff = Math.min(1.0, precEff + 10.8 / 100 / jR);
   // Eaglerise 4pc is defensive only (damage reduction, no atk/aff bonus).
@@ -472,6 +474,8 @@ export function calcSkill(
   let critMult = 1 + (panel.critDmg || 0) / 100 + (sk.exCritDmg || 0);
   let affMult = 1 + (panel.affDmg || 0) / 100;
   if (set === "stormrain") critMult += 0.1;
+  if (set === "ivorybloom") critMult += 0.15; // Ivorybloom 4pc: +15% Crit DMG at max HP
+  if (set === "jadeware") affMult += 0.10;     // Jadeware 4pc: +10% Affinity DMG vs qi-imbalance (boss)
   if (opts.datang && sk.wType === "umb" && sk.type === "weapon") critMult += 0.15;
 
   let weapBonus = (panel.allArts || 0) / 100;
@@ -488,10 +492,10 @@ export function calcSkill(
   const csBonus = (set === "stars" || (opts as any).weaponStars) ? 0.15 : 0;
   const spinBonus = sk.special === "spin" ? 0.12 : 0;
 
+  // Verified 4pc general-damage weapon sets (game tooltips, boss/standard condition).
   let setDmgBonus = 0;
-  if (set === "jadeware" && (opts.buildKey === "deluge" || opts.buildKey === "jade")) {
-    setDmgBonus += 0.25;
-  }
+  if (set === "swallowreturn") setDmgBonus += 0.05; // Swaying Heights: +5% vs HP>50% (up to +10% at full HP; conservative)
+  if (set === "shakenhill") setDmgBonus += 0.05;    // Shattered Ridge: +5% HP dmg on deflect / boss
 
   // Mystic skill DMG boost: single-target mystic skills eat singleTargetDmg,
   // area/group mystic skills eat groupDmg (matches in-game "Single-Target / Area

@@ -2834,7 +2834,9 @@ export default function App() {
     const rotTime = getRotationTimeForBuild(selectedBuild);
     // DPS-relevant sets only: weapon sets with a stat2pc + Hawkwing (the one DPS armour set).
     const SETS = ["stars", "jadeware", "ivorybloom", "mistwillow", "swallowreturn", "shakenhill", "eaglerise", "none"];
-    const modeled4pc = new Set(["stars", "ivorybloom"]);
+    // 4pc DPS effects now modeled in calc (game-verified). Hawkwing(armor)/Mistwillow
+    // still 2pc-only (armor + build-specific — pending).
+    const modeled4pc = new Set(["stars", "ivorybloom", "jadeware", "swallowreturn", "shakenhill"]);
     const dpsFor = (key: string) => {
       const p: any = { ...adjustedPanel };
       const rm = (ARMOR_SETS as any)[cur]?.stat2pc as Record<string, number> | undefined;
