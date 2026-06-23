@@ -86,15 +86,15 @@ export const INNER_WAYS: InnerWay[] = [
   },
   {
     id:"breaking_point", name:"Breaking Point", cat:"BAMBOOCUT-WIND",
-    desc:"Dealing Critical Damage to an enemy under Spirit Depletion (Exhaustion) grants 1 stack of Collapse. Each stack: +5 Physical Penetration and +5% Critical Damage. Stacks up to 3 times, lasting 3 seconds.",
+    desc:"Dealing damage to an enemy under Spirit Depletion grants 1 stack of Collapse. Each stack: +5 Physical Penetration and +5% Critical Damage. Stacks up to 5 times, lasting 5 seconds. (game-verified)",
     recommended:true, note:"Best T91 inner way for Bamboocut-Dust. Activate on boss Exhausted/Spirit Depletion state for max stacks.",
     tiers:[
-      {tier:1,effect:"Each Collapse stack: +2 Phys Pen, +2% Crit DMG (max 3 stacks = +6 Pen, +6% CDmg)",stat:{outerPen:6,critDmg:6}},
-      {tier:2,effect:"Each stack: +3 Phys Pen, +3% Crit DMG (max +9 Pen, +9% CDmg)",stat:{outerPen:9,critDmg:9}},
-      {tier:3,effect:"Each stack: +4 Phys Pen, +4% Crit DMG (max +12 Pen, +12% CDmg)",stat:{outerPen:12,critDmg:12}},
-      {tier:4,effect:"Each stack: +4.5 Phys Pen, +4.5% Crit DMG (max +13.5 each)",stat:{outerPen:13.5,critDmg:13.5}},
-      {tier:5,effect:"Each stack: +5 Phys Pen, +5% Crit DMG (max 3 stacks = +15 Pen, +15% CDmg)",stat:{outerPen:15,critDmg:15}},
-      {tier:6,effect:"Each stack: +5 Phys Pen, +5% Crit DMG (max +15 each) + Direct Crit +4.1% (T5)",stat:{outerPen:15,critDmg:15,dcrit:4.1}},
+      {tier:1,effect:"Each Collapse stack: +5 Phys Pen, +5% Crit DMG; Disintegration duration → 5s",stat:{outerPen:25,critDmg:25}},
+      {tier:2,effect:"Precision Rate +(Solo Mode)",stat:{outerPen:25,critDmg:25}},
+      {tier:3,effect:"Hitting an Exhausted enemy grants 1 Disintegration stack",stat:{outerPen:25,critDmg:25}},
+      {tier:4,effect:"Disintegration max stacks → 5",stat:{outerPen:25,critDmg:25}},
+      {tier:5,effect:"Breakthrough: Direct Critical Rate +4.1%. (Base Collapse: max 5 stacks = +25 Pen, +25% Crit DMG)",stat:{outerPen:25,critDmg:25,dcrit:4.1}},
+      {tier:6,effect:"Collapse max 5 (+25 Pen, +25% CDmg) + Perfect Dodge → 5 Disintegration stacks (15s CD) + Precision +6.5% + Direct Crit +4.1%",stat:{outerPen:25,critDmg:25,dcrit:4.1,prec:6.5}},
     ]
   },
   {
