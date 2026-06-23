@@ -156,7 +156,7 @@ const GRAD_MARKERS = [
   { pct: 80, label: "C", color: "bg-slate-500" },
   { pct: 85, label: "B", color: "bg-lime-600" },
   { pct: 88, label: "A", color: "bg-yellow-500" },
-  { pct: 90, label: "S", color: "bg-[#ffd700]" },
+  { pct: 90, label: "S", color: "bg-[#f0b400]" },
   { pct: 100, label: "🎓", color: "bg-emerald-500" },
 ];
 
@@ -473,7 +473,7 @@ function getWeaponIconUrlByType(weaponType: string | undefined, fallbackSlot: st
 // distinct without fabricating image URLs)
 const SET_BADGE_COLORS: Record<string, string> = {
   // Weapon / accessory sets
-  "stars":         "from-[#ffd700] to-yellow-700",
+  "stars":         "from-[#f0b400] to-yellow-700",
   "eaglerise":     "from-sky-500 to-blue-700",
   "jadeware":      "from-emerald-400 to-green-700",
   "ivorybloom":    "from-pink-400 to-rose-700",
@@ -493,7 +493,7 @@ const SET_BADGE_COLORS: Record<string, string> = {
   "calmwaters":    "from-blue-500 to-blue-800",
   "jadeembrace":   "from-emerald-700 to-teal-900",
   "agilesteps":    "from-yellow-500 to-orange-700",
-  "flawlessdef":   "from-yellow-200 to-[#ffd700]",
+  "flawlessdef":   "from-yellow-200 to-[#f0b400]",
   "ironweave":     "from-slate-400 to-slate-700",
   // Bow/Ring sets
   "pursuing":      "from-purple-400 to-violet-700",
@@ -808,7 +808,7 @@ const sanitizeChars = <T,>(data: T): T => {
 const BUILD_PROFILES = {
   "bamboocut-dust": {
     label: "Bamboocut-Dust", weapons: "Everspring Umbrella + Unfettered Rope Dart",
-    tier: "T0 AoE", color: "text-[#ffd700]",
+    tier: "T0 AoE", color: "text-[#f0b400]",
     gradTargets: { maxOuter: 3050, minOuter: 1340, outerPen: 42.0, crit: 116.9, aff: 14.7, critDmg: 54 },
     notes: "T91 Global graduation target. Priority: Max Phys ATK → Phys Pen → Bamboocut ATK. Crit ~116%+ panel to cap at 80% eff.",
     priorityStats: ["maxOuter","outerPen","crit","critDmg","maxPz","umbMartial"],
@@ -857,7 +857,7 @@ const BUILD_PROFILES = {
   },
   "bamboocut-kite": {
     label: "Bamboocut-Kite (beta · not in Global yet)", weapons: "Heavenstrike Gauntlets + Unfettered Rope Dart",
-    tier: "T0 AoE", color: "text-[#ffd700]",
+    tier: "T0 AoE", color: "text-[#f0b400]",
     gradTargets: { maxOuter: 2830, minOuter: 1185, outerPen: 36.5, crit: 116.9, aff: 14.7, critDmg: 54 },
     notes: "Priority: Max Phys ATK → Bamboocut ATK → Phys Pen. Gauntlets + Rope Dart.",
     priorityStats: ["maxOuter","outerPen","crit","critDmg","maxPz","ropeMartial"],
@@ -1301,14 +1301,14 @@ export default function App() {
   const Section = ({ id, title, children }: { id: string; title: string; children: React.ReactNode }) => {
     const isOpen = expandedSections.has(id);
     return (
-      <div className="border-b border-[#3d3d45]/50 pb-2 mb-2">
+      <div className="border-b border-[#23262c]/50 pb-2 mb-2">
         <button
           onClick={() => setExpandedSections(prev => {
             const next = new Set(prev);
             if (next.has(id)) next.delete(id); else next.add(id);
             return next;
           })}
-          className="w-full flex items-center justify-between text-[11px] font-mono tracking-wider text-[#ffd700]/80 uppercase mb-1"
+          className="w-full flex items-center justify-between text-[11px] font-mono tracking-wider text-[#f0b400]/80 uppercase mb-1"
         >
           <span>{title}</span>
           <span className="text-slate-300">{isOpen ? "▼" : "▶"}</span>
@@ -3110,7 +3110,7 @@ export default function App() {
 
     // Define increments for testing marginal gains
     const increments = [
-      { key: "maxOuter", label: "Physical Atk (Phys Atk)", value: 10, bonusLabel: "+10 Atk", color: "from-[#e6c200] to-[#ffd700]" },
+      { key: "maxOuter", label: "Physical Atk (Phys Atk)", value: 10, bonusLabel: "+10 Atk", color: "from-[#e6c200] to-[#f0b400]" },
       { key: "outerPen", label: "Physical Penetration (Phys Pen %)", value: 1.0, bonusLabel: "+1.0%", color: "from-red-600 to-rose-500" },
       { key: "crit", label: "Critical Rate (Crit Rate %)", value: 1.0, bonusLabel: "+1.0%", color: "from-orange-500 to-orange-400" },
       { key: "critDmg", label: "Critical Damage (Crit DMG %)", value: 1.0, bonusLabel: "+1.0%", color: "from-yellow-600 to-yellow-500" },
@@ -3227,9 +3227,9 @@ export default function App() {
 
 
   return (
-    <div className="min-h-screen bg-[#1a1a1d] text-[#e0e0e0] font-sans antialiased selection:bg-[#ffd700]/25 selection:text-[#ffd700]">
+    <div className="min-h-screen bg-[#1a1a1d] text-[#e0e0e0] font-sans antialiased selection:bg-[#f0b400]/25 selection:text-[#f0b400]">
       {/* Accent line */}
-      <div className="h-0.5 w-full bg-gradient-to-r from-[#e6c200] via-[#ffd700] to-[#e6c200]" />
+      <div className="h-0.5 w-full bg-gradient-to-r from-[#e6c200] via-[#f0b400] to-[#e6c200]" />
 
       {/* ── HEADER ── */}
       <header>
@@ -4388,14 +4388,14 @@ export default function App() {
                     const dDps = rotationSim.dps - rotationStats.dps;
                     return (
                     <div className="space-y-4" style={{ textAlign: 'left' }}>
-                      <div className="bg-[#1e1a12] border border-[#ffd700]/30 rounded-xl p-4">
-                        <h3 className="text-sm font-bold text-[#ffd700] mb-2 flex items-center gap-2">🗡️ Rotations editor <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#ffd700]/15 text-[#ffd700]/80">beta</span></h3>
+                      <div className="bg-[#1e1a12] border border-[#f0b400]/30 rounded-xl p-4">
+                        <h3 className="text-sm font-bold text-[#f0b400] mb-2 flex items-center gap-2">🗡️ Rotations editor <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#f0b400]/15 text-[#f0b400]/80">beta</span></h3>
                         <p className="text-[12px] text-slate-300 leading-relaxed">
-                          Edit the cast <b>count</b> of each skill in <b className="text-[#ffd700]">{buildLabel}</b>'s rotation; DPS recomputes live through the verified per-hit formula (only the rotation composition changes — the damage math is untouched). Window is fixed at the build's calibrated <b>{rotWindow.toFixed(1)}s</b>.
+                          Edit the cast <b>count</b> of each skill in <b className="text-[#f0b400]">{buildLabel}</b>'s rotation; DPS recomputes live through the verified per-hit formula (only the rotation composition changes — the damage math is untouched). Window is fixed at the build's calibrated <b>{rotWindow.toFixed(1)}s</b>.
                         </p>
                       </div>
 
-                      <div className="flex flex-wrap items-center gap-4 bg-[#2d2d35] border border-[#3d3d45] rounded-xl p-4">
+                      <div className="flex flex-wrap items-center gap-4 bg-[#141619] border border-[#23262c] rounded-xl p-4">
                         <div>
                           <div className="text-[10px] uppercase tracking-widest text-[#a19683] font-mono">Rotation DPS</div>
                           <div className="text-[22px] font-bold text-white leading-tight">{Math.round(rotationSim.dps).toLocaleString()}<span className="text-[12px] text-[#8b949e] font-normal"> /s</span></div>
@@ -4413,14 +4413,14 @@ export default function App() {
                         <button
                           onClick={() => setEditedRotation(null)}
                           disabled={!editedRotation}
-                          className="ml-auto text-[12px] px-3 py-1.5 rounded border border-[#3d3d45] text-slate-300 disabled:opacity-40 hover:border-[#ffd700]/50"
+                          className="ml-auto text-[12px] px-3 py-1.5 rounded border border-[#23262c] text-slate-300 disabled:opacity-40 hover:border-[#f0b400]/50"
                         >Reset to build default</button>
                       </div>
 
-                      <div className="bg-[#2d2d35] border border-[#3d3d45] rounded-xl overflow-hidden">
+                      <div className="bg-[#141619] border border-[#23262c] rounded-xl overflow-hidden">
                         <table className="w-full text-[12.5px]">
                           <thead>
-                            <tr className="text-[10px] uppercase tracking-wider text-[#a19683] font-mono border-b border-[#3d3d45]">
+                            <tr className="text-[10px] uppercase tracking-wider text-[#a19683] font-mono border-b border-[#23262c]">
                               <th className="text-left px-3 py-2">Skill</th>
                               <th className="text-center px-2 py-2">Count</th>
                               <th className="text-right px-3 py-2">DPS</th>
@@ -4432,15 +4432,15 @@ export default function App() {
                             {effectiveRotation.map((item, i) => {
                               const ps = rotationSim.perSkill.find(s => s.name === item.name);
                               return (
-                                <tr key={item.name + i} className="border-b border-[#3d3d45]/40">
+                                <tr key={item.name + i} className="border-b border-[#23262c]/40">
                                   <td className="text-left px-3 py-1.5 text-slate-200" title={item.name}>{translateSkillName(item.name)}</td>
                                   <td className="text-center px-2 py-1.5">
                                     <input type="number" min={0} value={item.count}
                                       onChange={e => { const n = Number(e.target.value); if (!isNaN(n)) setSkillCount(i, n); }}
-                                      className="w-14 bg-[#1a1a22] border border-[#3d3d45] rounded px-1.5 py-0.5 text-center text-slate-100 text-[12.5px]" />
+                                      className="w-14 bg-[#111316] border border-[#23262c] rounded px-1.5 py-0.5 text-center text-slate-100 text-[12.5px]" />
                                   </td>
                                   <td className="text-right px-3 py-1.5 text-slate-300">{ps ? Math.round(ps.dps).toLocaleString() : '—'}</td>
-                                  <td className="text-right px-3 py-1.5 text-[#ffd700]/90">{ps ? (ps.share * 100).toFixed(1) + '%' : '—'}</td>
+                                  <td className="text-right px-3 py-1.5 text-[#f0b400]/90">{ps ? (ps.share * 100).toFixed(1) + '%' : '—'}</td>
                                   <td className="text-center px-1 py-1.5">
                                     <button onClick={() => removeSkill(i)} title="Remove skill" className="text-[#ff7b72]/70 hover:text-[#ff7b72] text-[13px]">✕</button>
                                   </td>
@@ -4451,20 +4451,20 @@ export default function App() {
                         </table>
                       </div>
 
-                      <div className="bg-[#2d2d35] border border-[#3d3d45] rounded-xl p-3 text-[12px] text-slate-300">
+                      <div className="bg-[#141619] border border-[#23262c] rounded-xl p-3 text-[12px] text-slate-300">
                         <span className="text-[10px] uppercase tracking-widest text-[#a19683] font-mono mr-2">Hit-type mix</span>
                         crit <b className="text-white">{(bd.crit / bdTot * 100).toFixed(1)}%</b> · affinity <b className="text-white">{(bd.aff / bdTot * 100).toFixed(1)}%</b> · normal <b className="text-white">{(bd.normal / bdTot * 100).toFixed(1)}%</b> · abrasion <b className="text-white">{(bd.abrasion / bdTot * 100).toFixed(1)}%</b>
                       </div>
 
-                      <div className="flex flex-wrap items-center gap-2 bg-[#2d2d35] border border-[#3d3d45] rounded-xl p-3">
+                      <div className="flex flex-wrap items-center gap-2 bg-[#141619] border border-[#23262c] rounded-xl p-3">
                         <span className="text-[10px] uppercase tracking-widest text-[#a19683] font-mono">Add skill</span>
                         <select value={addSkillName} onChange={e => setAddSkillName(e.target.value)}
-                          className="flex-1 min-w-[160px] bg-[#1a1a22] border border-[#3d3d45] rounded px-2 py-1 text-slate-100 text-[12px]">
+                          className="flex-1 min-w-[160px] bg-[#111316] border border-[#23262c] rounded px-2 py-1 text-slate-100 text-[12px]">
                           <option value="">— pick a skill from this build —</option>
                           {buildSkillNames.map(n => <option key={n} value={n}>{translateSkillName(n)}</option>)}
                         </select>
                         <button onClick={() => addSkillToRotation(addSkillName)} disabled={!addSkillName}
-                          className="text-[12px] px-3 py-1.5 rounded border border-[#3d3d45] text-[#7ee787] disabled:opacity-40 hover:border-[#7ee787]/50">+ Add to rotation</button>
+                          className="text-[12px] px-3 py-1.5 rounded border border-[#23262c] text-[#7ee787] disabled:opacity-40 hover:border-[#7ee787]/50">+ Add to rotation</button>
                       </div>
                       <p className="text-[11px] text-slate-500 leading-snug">
                         Edit counts, remove (✕), or add another cast of a build skill (clones its default buff context). Tweaking a skill's coefficients lives in the <b>Skill Editor</b> tab (preview only). DPS = total ÷ the build's fixed rotation window.
@@ -4485,27 +4485,27 @@ export default function App() {
                     const cells = p ? [
                       { label: "Abrasion", v: p.sim.grazeHit, b: p.base.grazeHit, color: "#8b949e" },
                       { label: "Normal", v: p.sim.normHit, b: p.base.normHit, color: "#e8e8e8" },
-                      { label: "Crit", v: p.sim.critHit, b: p.base.critHit, color: "#ffd700" },
+                      { label: "Crit", v: p.sim.critHit, b: p.base.critHit, color: "#f0b400" },
                       { label: "Affinity", v: p.sim.affHit, b: p.base.affHit, color: "#7ee787" },
                     ] : [];
                     return (
                     <div className="space-y-4" style={{ textAlign: 'left' }}>
-                      <div className="bg-[#1e1a12] border border-[#ffd700]/30 rounded-xl p-4">
-                        <h3 className="text-sm font-bold text-[#ffd700] mb-2 flex items-center gap-2">🎚️ Skill Editor <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#ffd700]/15 text-[#ffd700]/80">beta</span></h3>
+                      <div className="bg-[#1e1a12] border border-[#f0b400]/30 rounded-xl p-4">
+                        <h3 className="text-sm font-bold text-[#f0b400] mb-2 flex items-center gap-2">🎚️ Skill Editor <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#f0b400]/15 text-[#f0b400]/80">beta</span></h3>
                         <p className="text-[12px] text-slate-300 leading-relaxed">
                           Pick a skill, edit its coefficients, and watch the per-hit damage recompute live through the verified formula. <b>Preview only</b> — edits don't change the rotation DPS or the real skill (the damage math is untouched). Values use your current panel, tier and in-combat buffs.
                         </p>
                       </div>
 
-                      <div className="flex flex-wrap items-center gap-3 bg-[#2d2d35] border border-[#3d3d45] rounded-xl p-4">
+                      <div className="flex flex-wrap items-center gap-3 bg-[#141619] border border-[#23262c] rounded-xl p-4">
                         <span className="text-[10px] uppercase tracking-widest text-[#a19683] font-mono">Skill</span>
                         <select value={editorSkillName} onChange={e => setEditorSkillName(e.target.value)}
-                          className="flex-1 min-w-[200px] bg-[#1a1a22] border border-[#3d3d45] rounded px-2 py-1 text-slate-100 text-[12.5px]">
+                          className="flex-1 min-w-[200px] bg-[#111316] border border-[#23262c] rounded px-2 py-1 text-slate-100 text-[12.5px]">
                           {buildSkillNames.length === 0 && <option value="">(no skills in this build)</option>}
                           {buildSkillNames.map(n => <option key={n} value={n}>{translateSkillName(n)}</option>)}
                         </select>
                         <button onClick={() => setEditorOverrides(null)} disabled={!editorOverrides}
-                          className="text-[12px] px-3 py-1.5 rounded border border-[#3d3d45] text-slate-300 disabled:opacity-40 hover:border-[#ffd700]/50">Reset coefficients</button>
+                          className="text-[12px] px-3 py-1.5 rounded border border-[#23262c] text-slate-300 disabled:opacity-40 hover:border-[#f0b400]/50">Reset coefficients</button>
                       </div>
 
                       {p ? (
@@ -4514,7 +4514,7 @@ export default function App() {
                             {cells.map(c => {
                               const d = c.v - c.b;
                               return (
-                                <div key={c.label} className="bg-[#2d2d35] border border-[#3d3d45] rounded-xl p-3 text-center">
+                                <div key={c.label} className="bg-[#141619] border border-[#23262c] rounded-xl p-3 text-center">
                                   <div className="text-[10px] uppercase tracking-widest text-[#a19683] font-mono">{c.label}</div>
                                   <div className="text-[18px] font-bold leading-tight" style={{ color: c.color }}>{Math.round(c.v).toLocaleString()}</div>
                                   {editorOverrides && Math.abs(d) >= 0.5 && (
@@ -4525,16 +4525,16 @@ export default function App() {
                             })}
                           </div>
 
-                          <div className="bg-[#2d2d35] border border-[#3d3d45] rounded-xl p-4 grid grid-cols-2 gap-3">
+                          <div className="bg-[#141619] border border-[#23262c] rounded-xl p-4 grid grid-cols-2 gap-3">
                             {fields.map(f => {
                               const val = (editorOverrides?.[f.key] ?? p.orig[f.key]) as number;
                               const changed = !!editorOverrides && editorOverrides[f.key] !== undefined && editorOverrides[f.key] !== p.orig[f.key];
                               return (
                                 <label key={f.key} className="flex flex-col gap-1 text-[11.5px] text-slate-300">
-                                  <span className="flex items-center gap-1">{f.label}{changed && <span className="text-[#ffd700]" title="edited">●</span>}</span>
+                                  <span className="flex items-center gap-1">{f.label}{changed && <span className="text-[#f0b400]" title="edited">●</span>}</span>
                                   <input type="number" step={f.step} value={val}
                                     onChange={e => { const n = Number(e.target.value); if (!isNaN(n)) setSkillField(f.key, n); }}
-                                    className="bg-[#1a1a22] border border-[#3d3d45] rounded px-2 py-1 text-slate-100 text-[12.5px]" />
+                                    className="bg-[#111316] border border-[#23262c] rounded px-2 py-1 text-slate-100 text-[12.5px]" />
                                   <span className="text-[10px] text-slate-500">orig {String(p.orig[f.key])}</span>
                                 </label>
                               );
@@ -4553,14 +4553,14 @@ export default function App() {
                   })()}
                   {gradModalActiveTab === "team" && (
                     <div className="space-y-4" style={{ textAlign: 'left' }}>
-                      <div className="bg-[#1e1a12] border border-[#ffd700]/30 rounded-xl p-4">
-                        <h3 className="text-sm font-bold text-[#ffd700] mb-2 flex items-center gap-2">👥 Team Builder <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#ffd700]/15 text-[#ffd700]/80">beta</span></h3>
+                      <div className="bg-[#1e1a12] border border-[#f0b400]/30 rounded-xl p-4">
+                        <h3 className="text-sm font-bold text-[#f0b400] mb-2 flex items-center gap-2">👥 Team Builder <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#f0b400]/15 text-[#f0b400]/80">beta</span></h3>
                         <p className="text-[12px] text-slate-300 leading-relaxed">
                           Pick up to 5 members from your <b>saved profiles</b>. Team DPS = sum of each member's solo DPS (their saved panel run through this build's rotation) × team buffs. Kill time = boss HP / team DPS.
                         </p>
                       </div>
 
-                      <div className="bg-[#2d2d35] border border-[#3d3d45] rounded-xl p-4 space-y-2">
+                      <div className="bg-[#141619] border border-[#23262c] rounded-xl p-4 space-y-2">
                         <span className="text-[10px] uppercase tracking-widest text-[#a19683] font-mono">Members</span>
                         {teamMemberIds.map((id, i) => {
                           const m = teamSim.active.find(a => a.id === id);
@@ -4568,7 +4568,7 @@ export default function App() {
                             <div key={i} className="flex items-center gap-3">
                               <span className="w-5 text-center text-[12px] text-[#a19683] font-mono">{i + 1}</span>
                               <select value={id} onChange={e => setTeamMemberIds(prev => prev.map((x, j) => j === i ? e.target.value : x))}
-                                className="flex-1 bg-[#1a1a22] border border-[#3d3d45] rounded px-2 py-1 text-slate-100 text-[12.5px]">
+                                className="flex-1 bg-[#111316] border border-[#23262c] rounded px-2 py-1 text-slate-100 text-[12.5px]">
                                 <option value="">— empty —</option>
                                 {profiles.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                               </select>
@@ -4578,33 +4578,33 @@ export default function App() {
                         })}
                       </div>
 
-                      <div className="bg-[#2d2d35] border border-[#3d3d45] rounded-xl p-4 space-y-2">
+                      <div className="bg-[#141619] border border-[#23262c] rounded-xl p-4 space-y-2">
                         <span className="text-[10px] uppercase tracking-widest text-[#a19683] font-mono">Team buffs <span className="text-slate-500 normal-case">(idealized full-uptime — don't double-count with per-member settings)</span></span>
                         <label className="flex items-center gap-2 text-[12.5px] text-slate-300"><input type="checkbox" checked={teamVuln} onChange={e => setTeamVuln(e.target.checked)} /> Vulnerability +8% (teammate debuff on boss)</label>
                         <label className="flex items-center gap-2 text-[12.5px] text-slate-300"><input type="checkbox" checked={teamRevelry} onChange={e => setTeamRevelry(e.target.checked)} /> Revelry Script +30% (HP &lt; 30%)</label>
                       </div>
 
-                      <div className="bg-[#2d2d35] border border-[#3d3d45] rounded-xl p-4 flex flex-wrap items-center gap-3">
+                      <div className="bg-[#141619] border border-[#23262c] rounded-xl p-4 flex flex-wrap items-center gap-3">
                         <span className="text-[10px] uppercase tracking-widest text-[#a19683] font-mono">Boss HP</span>
                         <input type="number" value={bossHp} onChange={e => setBossHp(Math.max(0, Number(e.target.value) || 0))}
-                          className="w-36 bg-[#1a1a22] border border-[#3d3d45] rounded px-2 py-1 text-slate-100 text-[12.5px]" />
+                          className="w-36 bg-[#111316] border border-[#23262c] rounded px-2 py-1 text-slate-100 text-[12.5px]" />
                         {([["Puppeteer", 3500000], ["1M", 1000000], ["5M", 5000000]] as [string, number][]).map(([lbl, hp]) => (
-                          <button key={lbl} onClick={() => setBossHp(hp)} className="text-[11px] px-2 py-1 rounded border border-[#3d3d45] text-slate-300 hover:border-[#ffd700]/50">{lbl}</button>
+                          <button key={lbl} onClick={() => setBossHp(hp)} className="text-[11px] px-2 py-1 rounded border border-[#23262c] text-slate-300 hover:border-[#f0b400]/50">{lbl}</button>
                         ))}
                       </div>
 
                       <div className="grid grid-cols-3 gap-3">
-                        <div className="bg-[#2d2d35] border border-[#3d3d45] rounded-xl p-3 text-center">
+                        <div className="bg-[#141619] border border-[#23262c] rounded-xl p-3 text-center">
                           <div className="text-[10px] uppercase tracking-widest text-[#a19683] font-mono">Team DPS</div>
-                          <div className="text-[20px] font-bold text-[#ffd700] leading-tight">{Math.round(teamSim.teamDps).toLocaleString()}<span className="text-[11px] text-slate-400 font-normal"> /s</span></div>
+                          <div className="text-[20px] font-bold text-[#f0b400] leading-tight">{Math.round(teamSim.teamDps).toLocaleString()}<span className="text-[11px] text-slate-400 font-normal"> /s</span></div>
                           {teamSim.buffMult > 1 && <div className="text-[11px] text-[#7ee787]">+{Math.round((teamSim.buffMult - 1) * 100)}% buffs</div>}
                         </div>
-                        <div className="bg-[#2d2d35] border border-[#3d3d45] rounded-xl p-3 text-center">
+                        <div className="bg-[#141619] border border-[#23262c] rounded-xl p-3 text-center">
                           <div className="text-[10px] uppercase tracking-widest text-[#a19683] font-mono">Members</div>
                           <div className="text-[20px] font-bold text-slate-100 leading-tight">{teamSim.active.length}<span className="text-[11px] text-slate-400 font-normal"> / 5</span></div>
                           <div className="text-[11px] text-slate-400">solo Σ {Math.round(teamSim.soloSum).toLocaleString()}</div>
                         </div>
-                        <div className="bg-[#2d2d35] border border-[#3d3d45] rounded-xl p-3 text-center">
+                        <div className="bg-[#141619] border border-[#23262c] rounded-xl p-3 text-center">
                           <div className="text-[10px] uppercase tracking-widest text-[#a19683] font-mono">Kill time</div>
                           <div className="text-[20px] font-bold text-slate-100 leading-tight">{teamSim.killTime > 0 ? teamSim.killTime.toFixed(1) + "s" : "—"}</div>
                           <div className="text-[11px] text-slate-400">boss {(bossHp / 1e6).toFixed(2)}M</div>
@@ -4619,15 +4619,15 @@ export default function App() {
                   {gradModalActiveTab === "manual" && (
                     <div className="space-y-6" style={{ textAlign: 'left' }}>
                       {/* How to use */}
-                      <div className="bg-[#1e1a12] border border-[#ffd700]/30 rounded-xl p-4">
-                        <h3 className="text-sm font-bold text-[#ffd700] mb-2 flex items-center gap-2">📖 How to use</h3>
+                      <div className="bg-[#1e1a12] border border-[#f0b400]/30 rounded-xl p-4">
+                        <h3 className="text-sm font-bold text-[#f0b400] mb-2 flex items-center gap-2">📖 How to use</h3>
                         <ol className="text-[12.5px] text-slate-300 leading-relaxed list-decimal pl-5 space-y-1">
                           <li><b>Enter panel</b>: Open <b>Combat Attributes</b> in-game (the <b>C</b> key) and type the stats below. Or the panel auto-computes from the gear you entered on the main screen.</li>
                           <li><b>Read results</b>: The top bar shows <b>Graduation Rate</b> (% vs the BiS T91 build) and <b>DPS Expectation</b>.</li>
                           <li><b>Pick build & bow/set</b>: In the <b>Panel Simulator</b> (right of the main screen) choose the right path, bow attribute, and gear set.</li>
                         </ol>
-                        <div className="text-[12px] text-slate-400 mt-3 pt-2 border-t border-[#3d3d45]/60 leading-relaxed">
-                          <b className="text-[#ffd700]/90">What the other tabs do:</b>
+                        <div className="text-[12px] text-slate-400 mt-3 pt-2 border-t border-[#23262c]/60 leading-relaxed">
+                          <b className="text-[#f0b400]/90">What the other tabs do:</b>
                           <ul className="list-disc pl-5 mt-1 space-y-0.5">
                             <li><b>Stat Priority</b> — which stats to add/drop to graduate fastest.</li>
                             <li><b>Cultivate</b> — substat (条) summary, which tuned (✦) lines to upgrade, and the next 8 substats worth investing in.</li>
@@ -4636,18 +4636,18 @@ export default function App() {
                           </ul>
                         </div>
                       </div>
-                      <div className="bg-[#2d2d35] border border-[#3d3d45] rounded-xl p-4 space-y-2">
+                      <div className="bg-[#141619] border border-[#23262c] rounded-xl p-4 space-y-2">
                         <p className="text-[11.5px] text-slate-400 leading-snug">
-                          Panel stats are <b className="text-[#ffd700]">auto-computed from equipped gear</b>. Equip/unequip items to see stats change. Inner Ways are added on top automatically.
+                          Panel stats are <b className="text-[#f0b400]">auto-computed from equipped gear</b>. Equip/unequip items to see stats change. Inner Ways are added on top automatically.
                         </p>
                       </div>
 
-                      <div className="bg-[#2d2d35] border border-[#3d3d45] rounded-xl p-4 space-y-3">
+                      <div className="bg-[#141619] border border-[#23262c] rounded-xl p-4 space-y-3">
                         <span className="text-[12px] font-mono font-bold tracking-widest text-[#a19683] uppercase">Dungeon Target</span>
                         <select
                           value={tierKey}
                           onChange={(e) => setTierKey(e.target.value)}
-                          className="bg-[#2d2d35] font-mono text-sm text-[#ffd700] rounded px-2.5 py-1"
+                          className="bg-[#141619] font-mono text-sm text-[#f0b400] rounded px-2.5 py-1"
                         >
                           <option value="350|0.45">Tier 91 / Lv95 (Global)</option>
                           <option value="307|0.3">Tier 86 / Lv90</option>
@@ -4709,11 +4709,11 @@ export default function App() {
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {GROUPS.map((grp) => (
                               <div key={grp.title}>
-                                <h3 className="text-sm font-semibold text-[#ffd700] uppercase tracking-widest mb-1 border-b border-[#3d3d45] pb-1">{grp.title}</h3>
+                                <h3 className="text-sm font-semibold text-[#f0b400] uppercase tracking-widest mb-1 border-b border-[#23262c] pb-1">{grp.title}</h3>
                                 {grp.note && <p className="text-[10.5px] text-slate-500 mb-2 leading-snug">{grp.note}</p>}
                                 <div className="space-y-2 mt-2">
                                   {grp.fields.map((st) => (
-                                    <div key={st.key} className="flex justify-between items-center bg-[#1a1a1d]/70 p-2 rounded border border-[#3d3d45] text-sm">
+                                    <div key={st.key} className="flex justify-between items-center bg-[#1a1a1d]/70 p-2 rounded border border-[#23262c] text-sm">
                                       <span className="text-slate-500">{st.label}</span>
                                       <input
                                         type="number"
@@ -4737,18 +4737,18 @@ export default function App() {
                     <div style={{ textAlign: 'left' }}>
                       {gradModalActiveTab === "priority" && (
           <div className="space-y-6">
-            <div className="bg-[#2d2d35] border border-[#3d3d45] rounded-xl p-6 shadow-lg">
-              <div className="border-b border-[#ffd700]/25 pb-4 mb-5">
+            <div className="bg-[#141619] border border-[#23262c] rounded-xl p-6 shadow-lg">
+              <div className="border-b border-[#f0b400]/25 pb-4 mb-5">
                 <h2 className="text-lg font-bold font-serif text-slate-100 flex items-center gap-2">
-                  <TrendingUp className="text-[#ffd700] w-5 h-5" /> Stat Priority — Graduation Impact
+                  <TrendingUp className="text-[#f0b400] w-5 h-5" /> Stat Priority — Graduation Impact
                 </h2>
                 <p className="text-slate-500 text-sm mt-1">
-                  Live ranking for <strong className="text-[#ffd700]">{(BUILD_PROFILES as any)[selectedBuild]?.label || "your build"}</strong>, computed from your current panel ({rotationStats.gradRate.toFixed(1)}% graduation). Each row simulates adding/removing <strong>one typical substat roll</strong> on a single sub-stat and shows the resulting change in graduation %.
+                  Live ranking for <strong className="text-[#f0b400]">{(BUILD_PROFILES as any)[selectedBuild]?.label || "your build"}</strong>, computed from your current panel ({rotationStats.gradRate.toFixed(1)}% graduation). Each row simulates adding/removing <strong>one typical substat roll</strong> on a single sub-stat and shows the resulting change in graduation %.
                 </p>
               </div>
 
               {/* Two-column gain/loss ranking */}
-              <div className="bg-[#1a1a1d]/60 rounded-xl p-3 border border-[#3d3d45] text-sm text-[#ffd700]/95 flex items-center gap-2 mb-4">
+              <div className="bg-[#1a1a1d]/60 rounded-xl p-3 border border-[#23262c] text-sm text-[#f0b400]/95 flex items-center gap-2 mb-4">
                 <span className="text-lg">💡</span>
                 <span>
                   Calculated against the <strong>Global Tier 91 (Lv95)</strong> boss constants (Defense 350, Judgment Resist ×1.45), using your live panel and active build's rotation.
@@ -4830,28 +4830,28 @@ export default function App() {
             </div>
 
             {/* General T91 Priority Rules Guide */}
-            <div className="bg-[#2d2d35] border border-[#3d3d45] rounded-xl p-6 shadow-lg">
-              <h3 className="text-sm uppercase tracking-widest font-extrabold text-[#ffd700] font-serif border-b border-[#3d3d45] pb-2 mb-4">
+            <div className="bg-[#141619] border border-[#23262c] rounded-xl p-6 shadow-lg">
+              <h3 className="text-sm uppercase tracking-widest font-extrabold text-[#f0b400] font-serif border-b border-[#23262c] pb-2 mb-4">
                 General Theorycrafting Guide · T91 Global (http://spongem.com/yysls/)
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5 text-sm text-slate-300 leading-relaxed">
                 <div className="space-y-3">
                   <p>
-                    <strong className="text-[#ffd700]">1. Physical Penetration (Phys Pen)</strong>: The most crucial core attribute until reaching the optimal cap in dungeon content (e.g., 51.2% for T91). Every point of Phys Pen below this threshold provides massive exponential damage amplification.
+                    <strong className="text-[#f0b400]">1. Physical Penetration (Phys Pen)</strong>: The most crucial core attribute until reaching the optimal cap in dungeon content (e.g., 51.2% for T91). Every point of Phys Pen below this threshold provides massive exponential damage amplification.
                   </p>
                   <p>
-                    <strong className="text-[#ffd700]">2. Critical Rate Cap (80%)</strong>: The absolute maximum Critical Rate in Where Winds Meet is capped at <strong className="text-orange-400">80%</strong>. If your combined character attributes and passive/active buffs push your Crit beyond 80%, the surplus is ignored. Aim for roughly 73% unbuffed so that party buffs safely top you off at the optimal 80% maximum.
+                    <strong className="text-[#f0b400]">2. Critical Rate Cap (80%)</strong>: The absolute maximum Critical Rate in Where Winds Meet is capped at <strong className="text-orange-400">80%</strong>. If your combined character attributes and passive/active buffs push your Crit beyond 80%, the surplus is ignored. Aim for roughly 73% unbuffed so that party buffs safely top you off at the optimal 80% maximum.
                   </p>
                   <p>
-                    <strong className="text-[#ffd700]">3. Critical Damage (Crit DMG %)</strong>: Crit DMG works in direct synergy with Crit Rate. Once your critical chance is secure, augmenting critical multipliers scales your total active DPS and Everspring Umbrella execution chain jumps exponentially.
+                    <strong className="text-[#f0b400]">3. Critical Damage (Crit DMG %)</strong>: Crit DMG works in direct synergy with Crit Rate. Once your critical chance is secure, augmenting critical multipliers scales your total active DPS and Everspring Umbrella execution chain jumps exponentially.
                   </p>
                 </div>
                 <div className="space-y-3">
                   <p>
-                    <strong className="text-[#ffd700]">4. Affinity Rate (Cap 40%) & Bamboocut</strong>: Bamboocut Dust damage scales heavily with your overall break stats. Although Affinity is restricted to an absolute <strong className="text-orange-400">40%</strong> maximum cap in-game, adding Affinity attributes on Tier 91 gears (up to 4.5% per item) remains a powerful build option to convert graze hits into full-powered breaking attacks.
+                    <strong className="text-[#f0b400]">4. Affinity Rate (Cap 40%) & Bamboocut</strong>: Bamboocut Dust damage scales heavily with your overall break stats. Although Affinity is restricted to an absolute <strong className="text-orange-400">40%</strong> maximum cap in-game, adding Affinity attributes on Tier 91 gears (up to 4.5% per item) remains a powerful build option to convert graze hits into full-powered breaking attacks.
                   </p>
                   <p>
-                    <strong className="text-[#ffd700]">5. Substat Relaying (Inherit mechanics)</strong>: When refining Level 91 gear, always prioritize relaying/inheriting attributes that have reached diamond/gold thresholds (such as Phys Pen 9.0%, Max Atk 63.8, Crit 7.4%, etc.). A carefully put-together set can singlehandedly contribute over 40% of your graduation progression.
+                    <strong className="text-[#f0b400]">5. Substat Relaying (Inherit mechanics)</strong>: When refining Level 91 gear, always prioritize relaying/inheriting attributes that have reached diamond/gold thresholds (such as Phys Pen 9.0%, Max Atk 63.8, Crit 7.4%, etc.). A carefully put-together set can singlehandedly contribute over 40% of your graduation progression.
                   </p>
                 </div>
               </div>
@@ -4864,8 +4864,8 @@ export default function App() {
                     <div style={{ textAlign: 'left' }}>
                       {gradModalActiveTab === "cultivate" && (
           <div className="space-y-6">
-            <div className="bg-[#2d2d35] border border-[#3d3d45] rounded-xl p-6 shadow-lg">
-              <div className="border-b border-[#ffd700]/25 pb-4 mb-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div className="bg-[#141619] border border-[#23262c] rounded-xl p-6 shadow-lg">
+              <div className="border-b border-[#f0b400]/25 pb-4 mb-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                   <h2 className="text-lg font-bold font-serif text-slate-105 flex items-center gap-2">
                     🎯 Cultivation Summary
@@ -4882,7 +4882,7 @@ export default function App() {
                   <select
                     value={cultivateClass}
                     onChange={(e) => setCultivateClass(e.target.value)}
-                    className="bg-[#1a1a1d] border border-[#3d3d45]/30 hover:border-[#ffd700]/50 text-[#ffd700] text-sm rounded-lg px-3 py-1.5 focus:outline-none font-bold transition-all cursor-pointer"
+                    className="bg-[#1a1a1d] border border-[#23262c]/30 hover:border-[#f0b400]/50 text-[#f0b400] text-sm rounded-lg px-3 py-1.5 focus:outline-none font-bold transition-all cursor-pointer"
                   >
                     {Object.keys(GRAD95_PANEL).map((cls) => (
                       <option key={cls} value={cls}>
@@ -5052,7 +5052,7 @@ export default function App() {
                   let bgCardClass = "bg-[#1f1915]/40 border-rose-950/40 text-rose-450";
                   let progressFillColor = "bg-rose-500";
                   if (progressPct >= 80) { bgCardClass = "bg-[#141c16]/40 border-emerald-950/30 text-emerald-400"; progressFillColor = "bg-emerald-500"; }
-                  else if (progressPct >= 40) { bgCardClass = "bg-[#1e1a12]/40 border-[#3d3d45]/30 text-[#ffd700]"; progressFillColor = "bg-[#ffd700]"; }
+                  else if (progressPct >= 40) { bgCardClass = "bg-[#1e1a12]/40 border-[#23262c]/30 text-[#f0b400]"; progressFillColor = "bg-[#f0b400]"; }
                   return { label: cat.label, currentCount, targetCount, progressPct, progressCapped, bgCardClass, progressFillColor };
                 }).filter(Boolean) as any[];
 
@@ -5176,20 +5176,20 @@ export default function App() {
                   <div className="space-y-6">
                     {/* Header Summary Statistics */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="bg-[#181512] border border-[#3d3d45] rounded-xl p-5 flex flex-col justify-center">
+                      <div className="bg-[#181512] border border-[#23262c] rounded-xl p-5 flex flex-col justify-center">
                         <span className="text-sm font-mono uppercase tracking-wider text-slate-500">
                           Total sub-stat progress
                         </span>
-                        <div className="text-3xl font-extrabold text-[#ffd700] font-serif mt-1 flex items-baseline gap-1.5">
+                        <div className="text-3xl font-extrabold text-[#f0b400] font-serif mt-1 flex items-baseline gap-1.5">
                           <span>{totalProgressVal.toFixed(1)}</span>
                           <span className="text-base font-sans font-normal text-slate-500">/ {totalTargetCount} 条</span>
                         </div>
                       </div>
-                      <div className="bg-[#181512] border border-[#3d3d45] rounded-xl p-5 flex flex-col justify-center">
+                      <div className="bg-[#181512] border border-[#23262c] rounded-xl p-5 flex flex-col justify-center">
                         <span className="text-sm font-mono uppercase tracking-wider text-slate-500">
                           Dingyin (Tuned) stats
                         </span>
-                        <div className="text-3xl font-extrabold text-[#ffd700] font-serif mt-1">
+                        <div className="text-3xl font-extrabold text-[#f0b400] font-serif mt-1">
                           {dingyinPct.toFixed(1)}<span className="text-lg font-sans font-normal text-slate-500">%</span>
                         </div>
                       </div>
@@ -5222,7 +5222,7 @@ export default function App() {
                             </div>
 
                             <div className="space-y-1.5 pt-1">
-                              <div className="w-full bg-[#1a1a1d]/70 rounded-full h-2.5 overflow-hidden border border-[#3d3d45]">
+                              <div className="w-full bg-[#1a1a1d]/70 rounded-full h-2.5 overflow-hidden border border-[#23262c]">
                                 <div 
                                   className={`h-full rounded-full transition-all duration-300 ${tile.progressFillColor}`}
                                   style={{ width: `${tile.progressCapped}%` }}
@@ -5239,19 +5239,19 @@ export default function App() {
                     </div>
 
                     {/* Note at bottom */}
-                    <div className="bg-[#2d2d35]/30 border border-[#3d3d45]/40 rounded-xl p-4 text-sm text-slate-500 leading-relaxed font-mono">
+                    <div className="bg-[#141619]/30 border border-[#23262c]/40 rounded-xl p-4 text-sm text-slate-500 leading-relaxed font-mono">
                       Counts are in 条 (substat units): current = your gear's summed value ÷ the 95下 max roll; target = the verified 95下 (Global T91) graduated substat count for this path. Penetration is tuned/attuned (定音) — tracked separately.
                     </div>
 
                     {/* ── STEP 2: 定音词条总结 (Tuned Substat Summary) ── */}
-                    <div className="bg-[#181512] border border-[#3d3d45] rounded-xl p-5">
-                      <div className="flex items-center justify-between mb-4 border-b border-[#3d3d45]/50 pb-3">
+                    <div className="bg-[#181512] border border-[#23262c] rounded-xl p-5">
+                      <div className="flex items-center justify-between mb-4 border-b border-[#23262c]/50 pb-3">
                         <h3 className="text-base font-bold font-serif text-slate-100">
                           🎵 Tuned (定音) Substat Summary
                         </h3>
                         <div className="text-right">
                           <span className="text-[11px] uppercase tracking-wider text-slate-500 font-mono block">% of max</span>
-                          <span className="text-xl font-extrabold text-[#ffd700] font-mono">{dingyinFillPct.toFixed(1)}%</span>
+                          <span className="text-xl font-extrabold text-[#f0b400] font-mono">{dingyinFillPct.toFixed(1)}%</span>
                         </div>
                       </div>
                       {dingyinRows.length === 0 ? (
@@ -5261,7 +5261,7 @@ export default function App() {
                           <p className="text-[12px] text-slate-500 mb-3 font-mono">Tuned lines ranked by graduation-% gained if upgraded to the 95下 cap:</p>
                           <div className="flex flex-col gap-2">
                             {dingyinRows.map((row, idx) => (
-                              <div key={idx} className="flex items-center justify-between gap-3 p-3 bg-white/[0.03] rounded-lg border-l-[3px] border-[#ffd700]">
+                              <div key={idx} className="flex items-center justify-between gap-3 p-3 bg-white/[0.03] rounded-lg border-l-[3px] border-[#f0b400]">
                                 <div className="min-w-0">
                                   <div className="text-sm font-bold text-slate-100 truncate">{row.slotLabel}</div>
                                   <div className="text-[12px] text-slate-500 truncate">{row.statType}</div>
@@ -5328,9 +5328,9 @@ export default function App() {
                     <div style={{ textAlign: 'left' }}>
                       {gradModalActiveTab === "compare" && (
           <div className="space-y-6">
-            <div className="bg-[#2d2d35] border border-[#3d3d45] rounded-xl p-6">
-              <div className="mb-4 border-b border-[#3d3d45] pb-3">
-                <h2 className="text-base font-extrabold text-[#ffd700] uppercase tracking-wider font-serif flex items-center gap-2">
+            <div className="bg-[#141619] border border-[#23262c] rounded-xl p-6">
+              <div className="mb-4 border-b border-[#23262c] pb-3">
+                <h2 className="text-base font-extrabold text-[#f0b400] uppercase tracking-wider font-serif flex items-center gap-2">
                   <TrendingUp className="w-4 h-4" /> Item Comparison & Graduation Deltas
                 </h2>
                 <p className="text-[12px] text-slate-500 mt-0.5">
@@ -5429,14 +5429,14 @@ export default function App() {
               {/* Comparison list section — slot selected via left panel */}
               <div>
                 <h3 className="text-sm uppercase font-bold tracking-widest text-slate-500 font-mono mb-4">
-                  Graduation ranking for slot: <span className="text-[#ffd700] font-serif">{getSlotLabel(selectedSlot)}</span>
+                  Graduation ranking for slot: <span className="text-[#f0b400] font-serif">{getSlotLabel(selectedSlot)}</span>
                 </h3>
 
                 {(() => {
                   const slotItems = getActiveGear().filter(it => it.slot === selectedSlot);
                   if (slotItems.length === 0) {
                     return (
-                      <div className="bg-[#1a1a1d]/40 border border-dashed border-[#3d3d45] p-8 rounded-lg text-center font-mono">
+                      <div className="bg-[#1a1a1d]/40 border border-dashed border-[#23262c] p-8 rounded-lg text-center font-mono">
                         <p className="text-slate-500 text-sm">No items in this slot to compare.</p>
                         <p className="text-[12px] text-slate-500 mt-1">Go to the "🛡 Gear" tab to add items for comparison.</p>
                       </div>
@@ -5462,19 +5462,19 @@ export default function App() {
                         const item = entry.item;
                         const isBest = rank === 1;
                         const gapToBest = isBest ? 0 : bestScore - entry.total;
-                        const qualityClass = item.quality === "gold" ? "border-[#3d3d45] bg-[#1b1510]/80" : item.quality === "purple" ? "border-purple-500/20 bg-[#16121c]/80" : "border-sky-500/20 bg-[#11141a]/80";
+                        const qualityClass = item.quality === "gold" ? "border-[#23262c] bg-[#1b1510]/80" : item.quality === "purple" ? "border-purple-500/20 bg-[#16121c]/80" : "border-sky-500/20 bg-[#11141a]/80";
                         
                         return (
                           <div
                             key={item.id}
                             className={`p-4 rounded-xl border relative transition-all ${qualityClass}`}
                           >
-                            <div className="absolute top-4 left-4 w-7 h-7 rounded-full bg-[#1a1a1d] border border-slate-700 flex items-center justify-center font-bold text-sm text-[#ffd700] font-serif shadow-inner">
+                            <div className="absolute top-4 left-4 w-7 h-7 rounded-full bg-[#1a1a1d] border border-slate-700 flex items-center justify-center font-bold text-sm text-[#f0b400] font-serif shadow-inner">
                               #{rank}
                             </div>
 
                             <div className="pl-10">
-                              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#3d3d45]/40 pb-2 mb-3">
+                              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#23262c]/40 pb-2 mb-3">
                                 <div>
                                   <h4 className="text-sm font-bold text-slate-100 flex items-center gap-2">
                                     <span>{item.name}</span>
@@ -5487,7 +5487,7 @@ export default function App() {
 
                                 </div>
                                 <div className="text-right flex flex-col items-end gap-1.5">
-                                  <div className="text-sm font-mono font-extrabold text-[#ffd700]">
+                                  <div className="text-sm font-mono font-extrabold text-[#f0b400]">
                                     +{entry.total.toFixed(2)}% graduation
                                   </div>
                                   {!isBest && (
@@ -5502,7 +5502,7 @@ export default function App() {
                                       const reordered = [item, ...others];
                                       saveActiveGear(reordered);
                                     }}
-                                    className="text-[11px] px-2 py-1 rounded bg-[#ffd700] hover:bg-[#ffed4e] text-slate-950 font-bold font-mono uppercase tracking-wide transition-colors"
+                                    className="text-[11px] px-2 py-1 rounded bg-[#f0b400] hover:bg-[#ffed4e] text-slate-950 font-bold font-mono uppercase tracking-wide transition-colors"
                                   >
                                     ⚔ Equip
                                   </button>
@@ -5514,10 +5514,10 @@ export default function App() {
                                   const subDeltaString = sub.delta > 0 ? `+${sub.delta.toFixed(2)}` : "0.00";
                                   
                                   return (
-                                    <div key={sidx} className="bg-[#1a1a1d]/70 p-2 rounded border border-[#3d3d45] flex items-center justify-between font-mono text-[12px]">
+                                    <div key={sidx} className="bg-[#1a1a1d]/70 p-2 rounded border border-[#23262c] flex items-center justify-between font-mono text-[12px]">
                                       <div className="truncate text-slate-500 flex items-center gap-1 shrink md:shrink-0 pr-1">
                                         <span>{sub.type}</span>
-                                        {sub.isTuned && <span className="text-[#ffd700] text-[11px]">✦</span>}
+                                        {sub.isTuned && <span className="text-[#f0b400] text-[11px]">✦</span>}
                                       </div>
                                       <div className="text-right shrink-0">
                                         <div className="text-slate-300 font-semibold">{sub.val}</div>
@@ -5630,9 +5630,9 @@ export default function App() {
 
                         return (
                           <div className="space-y-6">
-                            <div className="bg-[#2d2d35] border border-[#3d3d45] rounded-xl p-6">
-                              <div className="mb-4 border-b border-[#3d3d45] pb-3">
-                                <h2 className="text-base font-extrabold text-[#ffd700] uppercase tracking-wider font-serif flex items-center gap-2">
+                            <div className="bg-[#141619] border border-[#23262c] rounded-xl p-6">
+                              <div className="mb-4 border-b border-[#23262c] pb-3">
+                                <h2 className="text-base font-extrabold text-[#f0b400] uppercase tracking-wider font-serif flex items-center gap-2">
                                   🔄 Transmutation Advice
                                 </h2>
                                 <p className="text-[12px] text-slate-500 mt-0.5">
@@ -5642,16 +5642,16 @@ export default function App() {
 
                               {/* Equipped item display — slot selected via left panel */}
                               {!equipped ? (
-                                <div className="bg-[#1a1a1d]/40 border border-dashed border-[#3d3d45] p-8 rounded-lg text-center font-mono">
+                                <div className="bg-[#1a1a1d]/40 border border-dashed border-[#23262c] p-8 rounded-lg text-center font-mono">
                                   <p className="text-slate-500 text-sm">No items in this slot. Add gear via the 🛡 Gear tab.</p>
                                 </div>
                               ) : (
                                 <div className="space-y-4">
                                   {/* Current item card */}
-                                  <div className="bg-[#1a1a1d]/60 border border-[#3d3d45] rounded-xl p-4">
-                                    <div className="flex items-center justify-between mb-3 border-b border-[#3d3d45]/40 pb-2">
+                                  <div className="bg-[#1a1a1d]/60 border border-[#23262c] rounded-xl p-4">
+                                    <div className="flex items-center justify-between mb-3 border-b border-[#23262c]/40 pb-2">
                                       <h3 className="text-sm font-bold text-slate-100">{equipped.name}</h3>
-                                      <span className="text-sm font-mono font-extrabold text-[#ffd700]">+{currentTotal.toFixed(2)}% graduation</span>
+                                      <span className="text-sm font-mono font-extrabold text-[#f0b400]">+{currentTotal.toFixed(2)}% graduation</span>
                                     </div>
                                     <p className="text-[11px] text-slate-500 mb-3">Click a substat to select it for transmutation analysis:</p>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
@@ -5663,14 +5663,14 @@ export default function App() {
                                             onClick={() => setTransmuteSubIndex(isSubSelected ? null : sidx)}
                                             className={`p-2 rounded border font-mono text-[12px] text-left transition-all ${
                                               isSubSelected
-                                                ? "bg-[#ffd700]/15 border-[#ffd700] ring-1 ring-[#ffd700]/50"
-                                                : "bg-[#1a1a1d]/70 border-[#3d3d45] hover:border-slate-600"
+                                                ? "bg-[#f0b400]/15 border-[#f0b400] ring-1 ring-[#f0b400]/50"
+                                                : "bg-[#1a1a1d]/70 border-[#23262c] hover:border-slate-600"
                                             }`}
                                           >
                                             <div className="flex items-center justify-between">
                                               <div className="truncate text-slate-400 flex items-center gap-1 pr-1">
                                                 <span>{sub.type}</span>
-                                                {sub.isTuned && <span className="text-[#ffd700] text-[11px]">✦</span>}
+                                                {sub.isTuned && <span className="text-[#f0b400] text-[11px]">✦</span>}
                                               </div>
                                               <div className="text-right shrink-0">
                                                 <div className="text-slate-300 font-semibold">{sub.val}</div>
@@ -5680,7 +5680,7 @@ export default function App() {
                                               </div>
                                             </div>
                                             {isSubSelected && (
-                                              <div className="mt-1.5 pt-1.5 border-t border-[#ffd700]/30 text-[10px] text-[#ffd700] font-bold uppercase tracking-wider">
+                                              <div className="mt-1.5 pt-1.5 border-t border-[#f0b400]/30 text-[10px] text-[#f0b400] font-bold uppercase tracking-wider">
                                                 ▸ Selected for re-roll
                                               </div>
                                             )}
@@ -5692,9 +5692,9 @@ export default function App() {
 
                                   {/* Results */}
                                   {transmuteSubIndex !== null && equipped.subs[transmuteSubIndex] && (
-                                    <div className="bg-[#2d2d35] border border-[#3d3d45] rounded-xl p-4 space-y-4">
-                                      <div className="border-b border-[#3d3d45] pb-3">
-                                        <h3 className="text-[12px] font-mono font-bold tracking-widest text-[#ffd700] uppercase">
+                                    <div className="bg-[#141619] border border-[#23262c] rounded-xl p-4 space-y-4">
+                                      <div className="border-b border-[#23262c] pb-3">
+                                        <h3 className="text-[12px] font-mono font-bold tracking-widest text-[#f0b400] uppercase">
                                           Transmutation Results
                                         </h3>
                                         <p className="text-[11px] text-slate-500 mt-0.5">
@@ -5704,7 +5704,7 @@ export default function App() {
 
                                       {/* Verdict banner */}
                                       {verdict && (
-                                        <div className={`bg-[#1a1a1d]/80 border border-[#3d3d45] rounded-lg p-3 text-center ${verdictColor}`}>
+                                        <div className={`bg-[#1a1a1d]/80 border border-[#23262c] rounded-lg p-3 text-center ${verdictColor}`}>
                                           <div className="text-sm font-bold font-serif">{verdict}</div>
                                           {bestResult && bestResult.delta > 0 && (
                                             <div className="text-[11px] text-slate-400 mt-1">
@@ -5719,7 +5719,7 @@ export default function App() {
                                       <div className="space-y-2">
                                         {results.map((r, ridx) => {
                                           const colorClass = r.delta > 0.5 ? "text-emerald-400" : r.delta > 0.1 ? "text-yellow-400" : r.delta > 0 ? "text-slate-400" : "text-rose-400";
-                                          const bgClass = ridx === 0 && r.delta > 0.1 ? "bg-emerald-500/5 border-emerald-500/20" : "bg-[#1a1a1d]/60 border-[#3d3d45]";
+                                          const bgClass = ridx === 0 && r.delta > 0.1 ? "bg-emerald-500/5 border-emerald-500/20" : "bg-[#1a1a1d]/60 border-[#23262c]";
                                           return (
                                             <div key={r.candidateStat} className={`flex items-center justify-between p-3 rounded-lg border ${bgClass}`}>
                                               <div>
@@ -5756,9 +5756,9 @@ export default function App() {
                   )}
                   {gradModalActiveTab === "best-build" && (
                     <div style={{ textAlign: 'left' }}>
-                      <div className="bg-[#2d2d35] border border-[#3d3d45] rounded-xl p-6">
-                        <div className="mb-4 border-b border-[#3d3d45] pb-3">
-                          <h2 className="text-base font-extrabold text-[#ffd700] uppercase tracking-wider font-serif flex items-center gap-2">🏆 Best Build</h2>
+                      <div className="bg-[#141619] border border-[#23262c] rounded-xl p-6">
+                        <div className="mb-4 border-b border-[#23262c] pb-3">
+                          <h2 className="text-base font-extrabold text-[#f0b400] uppercase tracking-wider font-serif flex items-center gap-2">🏆 Best Build</h2>
                           <p className="text-[12px] text-slate-500 mt-0.5">
                             Scans every gear piece in this scheme's pool (equipped or not), grouped by slot, and finds the combination with the highest graduation rate for the current build, set, ring and Inner Ways.
                           </p>
@@ -5785,15 +5785,15 @@ export default function App() {
                           };
                           return (
                             <div className="space-y-4">
-                              <div className="bg-[#1a1a1d]/60 border border-[#3d3d45] rounded-xl p-4">
-                                <div className="flex items-center justify-between mb-3 border-b border-[#3d3d45]/40 pb-2">
+                              <div className="bg-[#1a1a1d]/60 border border-[#23262c] rounded-xl p-4">
+                                <div className="flex items-center justify-between mb-3 border-b border-[#23262c]/40 pb-2">
                                   <h3 className="text-sm font-bold text-slate-100">Best combination</h3>
-                                  <span className="text-sm font-mono font-extrabold text-[#ffd700]">{best.rate.toFixed(2)}% graduation</span>
+                                  <span className="text-sm font-mono font-extrabold text-[#f0b400]">{best.rate.toFixed(2)}% graduation</span>
                                 </div>
                                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                                   {best.gear.map((g, i) => (
-                                    <div key={i} className="bg-[#15161a] border border-[#3d3d45] rounded p-2">
-                                      <div className="text-[10px] text-[#ffd700] uppercase tracking-wide">{slotLabels[g.slot] || g.slot}</div>
+                                    <div key={i} className="bg-[#15161a] border border-[#23262c] rounded p-2">
+                                      <div className="text-[10px] text-[#f0b400] uppercase tracking-wide">{slotLabels[g.slot] || g.slot}</div>
                                       <div className="text-[11.5px] text-slate-200 truncate" title={g.name}>{g.name}</div>
                                     </div>
                                   ))}
@@ -5809,10 +5809,10 @@ export default function App() {
                                   <h4 className="text-[12px] font-bold text-slate-400 uppercase tracking-wide mb-2">Top alternatives</h4>
                                   <div className="space-y-1">
                                     {bestBuildResult.slice(1, 6).map((r, idx) => (
-                                      <div key={idx} className="flex items-center justify-between bg-[#1a1a1d]/40 border border-[#3d3d45] rounded px-3 py-1.5 text-[11.5px]">
+                                      <div key={idx} className="flex items-center justify-between bg-[#1a1a1d]/40 border border-[#23262c] rounded px-3 py-1.5 text-[11.5px]">
                                         <span className="text-slate-400">#{idx + 2}</span>
                                         <span className="text-slate-300 truncate flex-1 px-2" title={r.gear.map(g => g.name).join(", ")}>{r.gear.map(g => g.name).join(" · ")}</span>
-                                        <span className="font-mono font-bold text-[#ffd700] mr-2">{r.rate.toFixed(2)}%</span>
+                                        <span className="font-mono font-bold text-[#f0b400] mr-2">{r.rate.toFixed(2)}%</span>
                                         <button
                                           onClick={() => equipCombo(r.gear)}
                                           className="text-[10px] uppercase tracking-wide px-2 py-1 rounded border border-[#4caf50]/60 text-[#4caf50] hover:bg-[#4caf50]/15 whitespace-nowrap"
@@ -6014,7 +6014,7 @@ export default function App() {
                       <React.Fragment key={sidx}>
                         {sidx === 0 && <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Main Substat · 主词条</div>}
                         {sidx === 1 && <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 6 }}>Sub Substats · 副词条</div>}
-                        {sidx === 5 && <div style={{ fontSize: 11, fontWeight: 700, color: '#ffd700', textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 6 }}>Tuned Substat · 定音 (tick ✦ on the tuned line)</div>}
+                        {sidx === 5 && <div style={{ fontSize: 11, fontWeight: 700, color: '#f0b400', textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 6 }}>Tuned Substat · 定音 (tick ✦ on the tuned line)</div>}
                       <div className="flex-row" style={{ gap: '8px', alignItems: 'center' }}>
                         <SearchableSelect
                           value={sub.type}
@@ -6056,9 +6056,9 @@ export default function App() {
                               }
                               setFormSubs(next);
                             }}
-                            className="accent-[#ffd700] h-3.5 w-3.5"
+                            className="accent-[#f0b400] h-3.5 w-3.5"
                           />
-                          <span className="text-[#ffd700] font-bold text-[10px] uppercase font-mono">Tuned ✦</span>
+                          <span className="text-[#f0b400] font-bold text-[10px] uppercase font-mono">Tuned ✦</span>
                         </label>
                       </div>
                       </React.Fragment>
