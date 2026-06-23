@@ -2042,6 +2042,7 @@ export default function App() {
           if (config.script50 !== undefined) setScript50(config.script50);
           if (config.customDef !== undefined) setCustomDef(config.customDef);
           if (config.customRes !== undefined) setCustomRes(config.customRes);
+          if (config.dpsEff !== undefined) setDpsEff(config.dpsEff);
           return;
         } catch (e) {
           console.error(e);
@@ -3752,6 +3753,18 @@ export default function App() {
                 <span>Script &lt;50% HP (+15% Direct Crit)</span>
               </label>
             </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, fontSize: 11.5, color: '#8b949e' }}>
+              <span title="DPS Expectation is a THEORETICAL ceiling (perfect rotation + full buff uptime). A real parse loses ~10-20% to rotation downtime, buff ramp-up and execution. This factor estimates your realistic sustained DPS — tune it to match your in-game parse. Graduation % is unaffected.">
+                Rotation efficiency ⓘ
+              </span>
+              <input
+                type="range" min={50} max={100} step={1}
+                value={Math.round(dpsEff * 100)}
+                onChange={(e) => setDpsEff(parseInt(e.target.value, 10) / 100)}
+                style={{ flex: 1 }}
+              />
+              <span style={{ color: '#f0b400', fontWeight: 700, width: 38, textAlign: 'right' }}>{Math.round(dpsEff * 100)}%</span>
+            </div>
           </div>
 
           {/* Graduation rate banner */}
@@ -3772,6 +3785,8 @@ export default function App() {
             <div className="banner-footer banner-footer-content">
               <span className="banner-footer-text">
                 DPS Expectation: <span className="text-white font-bold">{Math.round(rotationStats.dps).toLocaleString()}</span>
+                <span className="text-[#8b949e]" title="Realistic sustained DPS ≈ theoretical × rotation efficiency. Matches a real parse better than the theoretical ceiling."> · Realistic ≈ </span>
+                <span className="font-bold" style={{ color: '#7ee787' }}>{Math.round(rotationStats.dps * dpsEff).toLocaleString()}</span>
                 <span className="text-[#8b949e]"> · Total DMG: </span>
                 <span className="text-white font-bold">{Math.round(rotationStats.totalDmg).toLocaleString()}</span>
               </span>
