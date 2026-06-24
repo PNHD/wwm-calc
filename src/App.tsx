@@ -762,6 +762,29 @@ const BASE_PANEL_NO_GEAR: PanelStats = (() => {
 // of all sub-stats across the 8 equipped items, mapped via SUB_MAP. Fields not
 // covered by SUB_MAP (set, attunedBonus, dcrit, daff, wuxiang*, bossDmg, etc.)
 // are carried over from `current` unchanged.
+// The game grants ONE weapon-set 4pc AND ONE armor-set 4pc at the same time. A
+// set is "weapon 4pc" when ≥4 of its pieces sit in weapon/accessory slots
+// (Umbrella/Rope Dart/Pendant/Disc) and "armor 4pc" when ≥4 sit in armour slots
+// (Helmet/Chest/Greaves/Bracers). Counting by slot category — not a single
+// active4pc string — is what lets stars(weapon) + stormrain(armor) both apply.
+// Pass only the gear you want counted (equipped pieces, or a Best-Build combo).
+const WEAPON_SLOT_SET = new Set(["Umbrella", "Rope Dart", "Pendant", "Disc"]);
+const detectSet4pc = (gear: GearItem[]): { weaponSet: string; armorSet: string } => {
+  const w: Record<string, number> = {};
+  const a: Record<string, number> = {};
+  gear.forEach(it => {
+    if (!it.set || it.set === "none") return;
+    const bucket = WEAPON_SLOT_SET.has(it.slot) ? w : a;
+    bucket[it.set] = (bucket[it.set] || 0) + 1;
+  });
+  const pick = (c: Record<string, number>) => {
+    let best = "none";
+    for (const k in c) if (c[k] >= 4) best = k;
+    return best;
+  };
+  return { weaponSet: pick(w), armorSet: pick(a) };
+};
+
 const computeGearPanel = (current: PanelStats, gear: GearItem[], baseOverride?: Partial<PanelStats> | null, ownElement?: string): PanelStats => {
   const gearSum = sumGearSubs(gear);
   const next = { ...current };
@@ -2517,28 +2540,24 @@ export default function App() {
       p.dcrit += 15.0;
     }
 
-    // Determine active set from equipped gear for the DPS formula
-    const gear = getActiveGear();
-    const setCounts: Record<string, number> = {};
-    gear.forEach(item => {
-      if (item.set && item.set !== "none") {
-        setCounts[item.set] = (setCounts[item.set] || 0) + 1;
-      }
-    });
-    let active4pcSet = "none";
-    Object.entries(setCounts).forEach(([setKey, count]) => {
-      if (count >= 4) {
-        active4pcSet = setKey;
-      }
-    });
+    // Determine active 4pc sets from EQUIPPED gear only (spare pieces in the bag
+    // must not count). Weapon 4pc and armor 4pc are tracked separately so e.g.
+    // 4×stars (weapon) + 4×stormrain (armor) BOTH apply — the game grants one of
+    // each at once. `p.set` carries the weapon set (the DPS formula's primary set
+    // hooks: stars/jadeware/ivorybloom/…); `p.armorSet` carries the armour set
+    // (stormrain/eaglerise/…). Previously a single active4pc string kept only one,
+    // and its value depended on object-key order over ALL gear → wrong/unstable.
+    const allGearAP = getActiveGear();
+    const equippedAP = allGearAP.filter(it => isItemEquipped(it, allGearAP));
+    const { weaponSet: wSet4pc, armorSet: aSet4pc } = detectSet4pc(equippedAP);
     if (autoGearPanel) {
-      p.set = active4pcSet;
+      p.set = wSet4pc;
+      (p as any).armorSet = aSet4pc;
     }
     // Stars Align 4pc gives the Martial Art Skill stack effect. Tracked separately
-    // so it applies alongside any armor 4pc (e.g. Eaglerise). The 2pc +64 Min Atk
-    // bonus is already baked into the user's panel input (game shows post-2pc).
-    const starsCount = setCounts["stars"] || 0;
-    (p as any).weaponStars = starsCount >= 4 || p.set === "stars";
+    // so it applies alongside the armor 4pc. The 2pc +64 Min Atk bonus is already
+    // baked into the user's panel input (game shows post-2pc).
+    (p as any).weaponStars = wSet4pc === "stars" || p.set === "stars";
 
     // Inner ways are IN-COMBAT buffs (proc/stack effects) — they do NOT appear in
     // the game's character-menu panel. The manual `panel` fields therefore represent
@@ -2590,6 +2609,7 @@ export default function App() {
         yishui,
         buildKey: selectedBuild,
         weaponStars: (adjustedPanel as any).weaponStars,
+        armorSet: (adjustedPanel as any).armorSet,
       } as any);
       totalDmg += total;
       comp.crit += breakdown.crit;
@@ -2631,6 +2651,7 @@ export default function App() {
       const { sim } = calcSkill(item, adjustedPanel, activeTier, {
         set: adjustedPanel.set, datang, yishui, buildKey: selectedBuild,
         weaponStars: (adjustedPanel as any).weaponStars,
+        armorSet: (adjustedPanel as any).armorSet,
       } as any);
       return { name: item.name, count: item.count, crit: sim.critHit, aff: sim.affHit, normal: sim.normHit, abrasion: sim.grazeHit };
     });
@@ -2653,6 +2674,7 @@ export default function App() {
       set: adjustedPanel.set, datang, yishui,
       buildKey: selectedBuild,
       weaponStars: (adjustedPanel as any).weaponStars,
+      armorSet: (adjustedPanel as any).armorSet,
     } as any;
     return simulateRotation(rotation, adjustedPanel, activeTier, opts, getRotationTimeForBuild(selectedBuild));
   }, [editedRotation, adjustedPanel, activeTier, datang, yishui, selectedBuild]);
@@ -2694,6 +2716,7 @@ export default function App() {
       set: adjustedPanel.set, datang, yishui,
       buildKey: selectedBuild,
       weaponStars: (adjustedPanel as any).weaponStars,
+      armorSet: (adjustedPanel as any).armorSet,
     } as any;
     return {
       orig, edited,
@@ -2723,6 +2746,7 @@ export default function App() {
         t += calcSkill(item, panel, activeTier, {
           set: (panel as any).set, datang, yishui, buildKey: selectedBuild,
           weaponStars: (panel as any).weaponStars,
+          armorSet: (panel as any).armorSet,
         } as any).total;
       });
       return t;
@@ -2767,19 +2791,17 @@ export default function App() {
     if (food) { p.minOuter += activeTier.foodMin; p.maxOuter += activeTier.foodMax; }
     if (bowSelect === "crit") p.crit += 3.7; else if (bowSelect === "prec") p.prec += 3.3; else if (bowSelect === "aff") p.aff += 1.8;
     if (script50) p.dcrit += 15.0;
-    const setCounts: Record<string, number> = {};
-    combo.forEach(it => { if (it.set && it.set !== "none") setCounts[it.set] = (setCounts[it.set] || 0) + 1; });
-    let active4pc = "none";
-    Object.entries(setCounts).forEach(([k, c]) => { if (c >= 4) active4pc = k; });
-    p.set = active4pc;
-    (p as any).weaponStars = (setCounts["stars"] || 0) >= 4 || active4pc === "stars";
+    const { weaponSet, armorSet } = detectSet4pc(combo);
+    p.set = weaponSet;
+    (p as any).armorSet = armorSet;
+    (p as any).weaponStars = weaponSet === "stars";
     p.outerPen += iwStats.outerPen; p.pzPen += iwStats.pzPen; p.crit += iwStats.crit; p.aff += iwStats.aff;
     p.dcrit += iwStats.dcrit; p.critDmg += iwStats.critDmg; p.affDmg += iwStats.affDmg;
     p.outerDmg += iwStats.outerDmg; p.pzDmg += iwStats.pzDmg; p.iwGeneralDmg = iwStats.generalDmg;
     p.prec += iwStats.prec; p.minOuter += iwStats.minOuter; p.maxOuter += iwStats.maxOuter;
     let totalDmg = 0;
     getRotationForBuild(selectedBuild).forEach(item => {
-      const { total } = calcSkill(item, p, activeTier, { set: p.set, datang, yishui, buildKey: selectedBuild, weaponStars: (p as any).weaponStars } as any);
+      const { total } = calcSkill(item, p, activeTier, { set: p.set, datang, yishui, buildKey: selectedBuild, weaponStars: (p as any).weaponStars, armorSet: (p as any).armorSet } as any);
       totalDmg += total;
     });
     return { total: totalDmg, crit: p.crit };
@@ -2838,16 +2860,14 @@ export default function App() {
       if (food) { p.minOuter += activeTier.foodMin; p.maxOuter += activeTier.foodMax; }
       if (bow === "crit") p.crit += 3.7; else if (bow === "prec") p.prec += 3.3; else if (bow === "aff") p.aff += 1.8;
       if (script50) p.dcrit += 15.0;
-      const setCounts: Record<string, number> = {};
-      equipped.forEach(it => { if (it.set && it.set !== "none") setCounts[it.set] = (setCounts[it.set] || 0) + 1; });
-      let active4pc = "none"; Object.entries(setCounts).forEach(([k, c]) => { if (c >= 4) active4pc = k; });
-      p.set = active4pc; (p as any).weaponStars = (setCounts["stars"] || 0) >= 4 || active4pc === "stars";
+      const { weaponSet, armorSet } = detectSet4pc(equipped);
+      p.set = weaponSet; (p as any).armorSet = armorSet; (p as any).weaponStars = weaponSet === "stars";
       p.outerPen += iwStats.outerPen; p.pzPen += iwStats.pzPen; p.crit += iwStats.crit; p.aff += iwStats.aff;
       p.dcrit += iwStats.dcrit; p.critDmg += iwStats.critDmg; p.affDmg += iwStats.affDmg;
       p.outerDmg += iwStats.outerDmg; p.pzDmg += iwStats.pzDmg; p.iwGeneralDmg = iwStats.generalDmg;
     p.prec += iwStats.prec; p.minOuter += iwStats.minOuter; p.maxOuter += iwStats.maxOuter;
       let t = 0;
-      getRotationForBuild(selectedBuild).forEach(item => { t += calcSkill(item, p, activeTier, { set: p.set, datang, yishui, buildKey: selectedBuild, weaponStars: (p as any).weaponStars } as any).total; });
+      getRotationForBuild(selectedBuild).forEach(item => { t += calcSkill(item, p, activeTier, { set: p.set, datang, yishui, buildKey: selectedBuild, weaponStars: (p as any).weaponStars, armorSet: (p as any).armorSet } as any).total; });
       return t / rotTime;
     };
     const curDps = dpsFor(bowSelect);
@@ -2877,10 +2897,14 @@ export default function App() {
       const ad = (ARMOR_SETS as any)[key]?.stat2pc as Record<string, number> | undefined;
       if (rm) for (const k in rm) p[k] = (p[k] || 0) - rm[k];
       if (ad) for (const k in ad) p[k] = (p[k] || 0) + ad[k];
+      // This table swaps the WEAPON set only; the equipped armour 4pc (adjustedPanel
+      // .armorSet) stays applied. weaponStars must reflect the candidate weapon set
+      // `key` alone — NOT "|| adjustedPanel.weaponStars", which used to grant every
+      // candidate the Stars-Align stack and flattened Stars vs the others (Bug 1).
       p.set = key;
-      (p as any).weaponStars = key === "stars" || (adjustedPanel as any).weaponStars;
+      (p as any).weaponStars = key === "stars";
       let t = 0;
-      getRotationForBuild(selectedBuild).forEach(item => { t += calcSkill(item, p, activeTier, { set: key, datang, yishui, buildKey: selectedBuild, weaponStars: (p as any).weaponStars } as any).total; });
+      getRotationForBuild(selectedBuild).forEach(item => { t += calcSkill(item, p, activeTier, { set: key, datang, yishui, buildKey: selectedBuild, weaponStars: (p as any).weaponStars, armorSet: (adjustedPanel as any).armorSet } as any).total; });
       return t / rotTime;
     };
     const curDps = dpsFor(cur);
@@ -3080,7 +3104,9 @@ export default function App() {
           datang,
           yishui,
           buildKey: selectedBuild,
-        });
+          weaponStars: (adjustedPanel as any).weaponStars,
+          armorSet: (p as any).armorSet ?? (adjustedPanel as any).armorSet,
+        } as any);
         total += dmg;
       });
       return total;
@@ -5239,6 +5265,7 @@ export default function App() {
                       set: p.set || adjustedPanel.set,
                       datang, yishui, buildKey: selectedBuild,
                       weaponStars: (adjustedPanel as any).weaponStars,
+                      armorSet: (p as any).armorSet ?? (adjustedPanel as any).armorSet,
                     } as any);
                     total += dmg;
                   });

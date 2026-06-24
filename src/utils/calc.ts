@@ -401,7 +401,7 @@ export function calcSkill(
   rot: RotationItem,
   panel: PanelStats,
   tier: TierConstants,
-  opts: { set: string; datang: boolean; yishui: boolean; buildKey?: string }
+  opts: { set: string; datang: boolean; yishui: boolean; buildKey?: string; armorSet?: string; weaponStars?: boolean }
 ) {
   let sk = SKILL_DB[rot.name];
   if (!sk) {
@@ -434,6 +434,10 @@ export function calcSkill(
   if (!sk) return { perHit: 0, total: 0, breakdown: { crit: 0, aff: 0, normal: 0, abrasion: 0 }, sim: { pCrit: 0, pAff: 0, pWhite: 0, pGraze: 0, critHit: 0, affHit: 0, normHit: 0, grazeHit: 0, casts: 0 } };
 
   const set = opts.set;
+  // Armor 4pc applies ALONGSIDE the weapon 4pc (the game allows one of each). When
+  // the caller doesn't split them, fall back to `set` so a single "stormrain"
+  // passed as `set` still works (back-compat).
+  const armorSet = opts.armorSet ?? opts.set;
   const judgeRes = tier.judgeRes;
   const physRes = tier.physRes;
   const attrRes = tier.attrRes;
@@ -451,7 +455,7 @@ export function calcSkill(
   // Jadeware 4pc: +7.5% Direct Affinity Rate vs qi-imbalanced targets (assume boss).
   if (set === "jadeware") dirAff += 0.075;
 
-  if (set === "stormrain") precEff = Math.min(1.0, precEff + 10.8 / 100 / jR);
+  if (armorSet === "stormrain") precEff = Math.min(1.0, precEff + 10.8 / 100 / jR);
   // Eaglerise 4pc is defensive only (damage reduction, no atk/aff bonus).
 
   let pCrit: number, pAff: number, pPrec: number, pGraze: number;
@@ -473,7 +477,7 @@ export function calcSkill(
 
   let critMult = 1 + (panel.critDmg || 0) / 100 + (sk.exCritDmg || 0);
   let affMult = 1 + (panel.affDmg || 0) / 100;
-  if (set === "stormrain") critMult += 0.1;
+  if (armorSet === "stormrain") critMult += 0.1;
   if (set === "ivorybloom") critMult += 0.15; // Ivorybloom 4pc: +15% Crit DMG at max HP
   if (set === "rainwhisper") critMult += 0.10; // Rainwhisper 4pc: +10% Crit DMG (+15% w/ shield)
   if (set === "jadeware") affMult += 0.10;     // Jadeware 4pc: +10% Affinity DMG vs qi-imbalance (boss)
@@ -536,7 +540,7 @@ export function calcSkill(
   // (Nameless/九剑), and stays below Stars Align's unconditional +15% MA dmg on crit builds.
   // ponytail: linear-with-affinity is a heuristic, not the exact per-stack uptime curve.
   const hawkUptime = Math.min(1, (panel.aff || 0) / 100 + (panel.daff || 0) / 100);
-  let atkMult = set === "eaglerise" ? 1 + 0.10 * hawkUptime : set === "ironweave" ? 1.05 : 1.0;
+  let atkMult = armorSet === "eaglerise" ? 1 + 0.10 * hawkUptime : armorSet === "ironweave" ? 1.05 : 1.0;
   let minO = (panel.minOuter || 0) * atkMult;
   let maxO = (panel.maxOuter || 0) * atkMult;
   if (maxO < minO) maxO = minO;
@@ -560,7 +564,7 @@ export function calcSkill(
   const totalPzPen = (panel.pzPen || 0) - attrRes;
   const Fpz = totalPzPen >= 0 ? totalPzPen / 200 : totalPzPen / 100;
 
-  const pzMult = set === "formbend" ? 1.05 : 1.0;
+  const pzMult = armorSet === "formbend" ? 1.05 : 1.0;
   const minPzTot = (panel.minPz || 0) + (panel.wuxiangMin || 0);
   const maxPzTot = (panel.maxPz || 0) + (panel.wuxiangMax || 0);
   const minPz_e = Math.max(0, minPzTot * pzMult - tier.def);
