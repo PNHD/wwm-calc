@@ -4494,23 +4494,25 @@ export default function App() {
               <div className="grad-right-panel" style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
                 <div className="grad-tabs">
                   {[
-                    { key: "manual", label: "Manual Sheet" },
-                    { key: "priority", label: "Stat Priority" },
-                    { key: "cultivate", label: "Cultivate (beta)" },
-                    { key: "compare", label: "Compare" },
-                    { key: "transmute", label: "Transmute Advice" },
-                    { key: "bis", label: "BiS Gear" },
-                    { key: "best-build", label: "Best Build" },
-                    { key: "rotations", label: "Rotations" },
-                    { key: "skill-editor", label: "Skill Editor" },
-                    { key: "team", label: "Team" },
+                    { key: "manual", label: "Manual Sheet", tip: "View and manually edit the full combat-attribute panel. Inputs are read-only when panel auto-computes from gear." },
+                    { key: "priority", label: "Stat Priority", tip: "Which stats to add or drop to graduate fastest — shows the DPS gained per stat point." },
+                    { key: "cultivate", label: "Cultivate (beta)", tip: "Substat (条) summary, which tuned (✦) lines to upgrade, and the next 8 substats worth investing in." },
+                    { key: "compare", label: "Compare", tip: "Compare each equipped gear piece to see which one raises your graduation rate the most." },
+                    { key: "transmute", label: "Transmute Advice", tip: "Per-slot transmute (转律) suggestions: the optimal main + sub substat config to raise graduation." },
+                    { key: "bis", label: "BiS Gear", tip: "Per-slot ideal config for this build: recommended weapon set (updates live with your panel), main-stat, and the top substats to prioritise." },
+                    { key: "best-build", label: "Best Build", tip: "Ranks all paths by graduated DPS so you can see where this character fits best." },
+                    { key: "rotations", label: "Rotations", tip: "Edit per-skill cast counts and recompute DPS through the timeline engine (verified formula — only the cast mix changes)." },
+                    { key: "skill-editor", label: "Skill Editor", tip: "Tweak a skill's coefficients and preview its per-hit damage. Calculator only — does not change rotation DPS." },
+                    { key: "team", label: "Team", tip: "Compare saved builds side by side." },
                   ].map(tab => (
                     <div
                       key={tab.key}
                       className={`grad-tab ${gradModalActiveTab === tab.key ? "active" : ""}`}
                       onClick={() => setGradModalActiveTab(tab.key)}
+                      title={tab.tip}
                     >
                       {tab.label}
+                      <span title={tab.tip} style={{ marginLeft: 4, opacity: 0.55, fontSize: '0.85em', cursor: 'help' }}>ⓘ</span>
                     </div>
                   ))}
                 </div>
