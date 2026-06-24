@@ -83,14 +83,14 @@ worker/
   schema.sql       – CREATE TABLE users / visits
 ```
 
-### `POST /api/checkin` — body `{ uid, server }`
+### `POST /api/checkin` — body `{ uid }` (server fixed to `global`)
 1. **Sanitize** `uid`: digits only, length 6–15. Else → `{ ok:false, reason:"format" }`.
 2. **`allowUid(uid)`** — whitelist hook. *Now: always returns `true`.* Future:
    check an allowlist table/KV.
 3. **Cache hit** (uid already in `users`):
    - `UPDATE users SET last_seen=now, visits=visits+1`; `INSERT INTO visits`.
    - Return `{ ok:true, name: <cached>, cached:true }`. **Does not call wwmmap.**
-4. **Cache miss** → `GET characterface?q=uid&server=server`:
+4. **Cache miss** → `GET characterface?q=uid&server=global`:
    - `result == null` → `{ ok:false, reason:"notfound" }` (app blocks).
    - has `player_name` → `INSERT users` + `INSERT visits`; return `{ ok:true, name }`.
 5. **Upstream failure** (timeout >3s, 5xx) → `{ ok:false, reason:"upstream" }`.
@@ -129,7 +129,8 @@ CREATE INDEX idx_visits_uid ON visits(uid);
 ## 5. Frontend detail
 
 ### `src/components/UidGateModal.tsx` (new)
-- Inputs: UID text field + server select (Global default / China) + "Continue".
+- Inputs: UID text field + "Continue". **Server is hard-coded to `global`** (no
+  selector — this app is Global-only). China is out of scope.
 - States: idle → checking (spinner) → result.
   - ok → `Welcome, <name> 👋`, store localStorage, call `onPass`.
   - `notfound` → "UID not found. Check your Player ID and server."
