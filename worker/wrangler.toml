@@ -1,0 +1,8 @@
+name = "wwm-gate"
+main = "src/index.ts"
+compatibility_date = "2026-01-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "wwm_gate_db"
+database_id = "REPLACE_AFTER_d1_create"

@@ -42,6 +42,7 @@ import { INNER_WAYS } from "./data/innerways";
 import { INNER_WAY_IMAGES, WEAPON_IMAGES_G8, MYSTIC_SKILL_IMAGES, ARMOR_SET_IMAGES } from "./data/game8Images";
 import { WWM_DATA } from "./data/wwmData";
 import OcrScanner from "./components/OcrScanner";
+import UidGateModal from "./components/UidGateModal";
 import { parseGameData, ImportResult } from "./utils/gameImport";
 import { translateSkillName } from "./utils/skillNameEn";
 import { runDualPassOcr } from "./utils/ocrParser";
@@ -1201,6 +1202,11 @@ const getCustomConfig = () => {
 };
 
 export default function App() {
+  // UID gate: block the app until a valid WWM Player ID is entered (stored once).
+  const [uidGate, setUidGate] = useState<{ uid: string; name: string; server: "global" } | null>(() => {
+    try { return JSON.parse(localStorage.getItem("wwm_uid") || "null"); }
+    catch { return null; }
+  });
   const [tierKey, setTierKey] = useState<string>(() => {
     const config = getCustomConfig();
     return config?.tierKey ?? "350|0.45";
@@ -3352,6 +3358,10 @@ export default function App() {
     }));
   };
 
+
+  // Block the whole app behind the Player-ID gate until a valid UID is stored.
+  // (All hooks above run unconditionally, so this early return is hook-safe.)
+  if (!uidGate) return <UidGateModal onPass={setUidGate} />;
 
   return (
     <div className="min-h-screen bg-[#1a1a1d] text-[#e0e0e0] font-sans antialiased selection:bg-[#f0b400]/25 selection:text-[#f0b400]">

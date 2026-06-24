@@ -9,7 +9,11 @@
 // Longest tokens first so compounds match before their parts.
 const TOKENS: [string, string][] = [
   ["骑龙回马打满", "Dragon's Breath Full Strike"],
+  ["单次后续流星", "Single Follow-up Meteor"],
+  ["首轮流星", "First Meteor"],
+  ["箫吟千浪", "Flute of the Tides"],
   ["千营", "Thousand Camps"],
+  ["易水歌", "Yishui Song"],
   ["尘绳标", "Rope Dart"],
   ["尘伞", "Umbrella"],
   ["完美", "Perfect"],
@@ -19,6 +23,8 @@ const TOKENS: [string, string][] = [
   ["幻鸣", "Echo"],
   ["芳歌", "Blossom Song"],
   ["气竭", "Exhausted"],
+  ["远程", "Ranged"],
+  ["流星", "Meteor"],
   ["流血", "Bleed"],
   ["绳标", "Rope Dart"],
   ["双刀", "Twinblades"],

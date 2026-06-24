@@ -1,0 +1,15 @@
+CREATE TABLE IF NOT EXISTS users (
+  uid        TEXT PRIMARY KEY,
+  name       TEXT NOT NULL,
+  server     TEXT NOT NULL,
+  first_seen INTEGER NOT NULL,
+  last_seen  INTEGER NOT NULL,
+  visits     INTEGER NOT NULL DEFAULT 1
+);
+CREATE TABLE IF NOT EXISTS visits (
+  id  INTEGER PRIMARY KEY AUTOINCREMENT,
+  uid TEXT NOT NULL,
+  ts  INTEGER NOT NULL,
+  ua  TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_visits_uid ON visits(uid);
