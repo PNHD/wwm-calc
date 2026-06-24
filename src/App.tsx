@@ -1186,6 +1186,7 @@ export default function App() {
   const [simRuns, setSimRuns] = useState<number>(100);
   const [simResult, setSimResult] = useState<any>(null);
   const [isGameImportOpen, setIsGameImportOpen] = useState<boolean>(false);
+  const [isHelpOpen, setIsHelpOpen] = useState<boolean>(false);
   const [gameImportRaw, setGameImportRaw] = useState<string>("");
   const [gameImportResult, setGameImportResult] = useState<ImportResult | null>(null);
   const [gameImportError, setGameImportError] = useState<string>("");
@@ -3401,6 +3402,14 @@ export default function App() {
           >
             📥 Import from Game
           </button>
+          <button
+            onClick={() => setIsHelpOpen(true)}
+            className="secondary-btn"
+            title="How to use this calculator — where to look to improve your gear"
+          >
+            <HelpCircle className="w-4 h-4" style={{ display: 'inline', verticalAlign: '-2px', marginRight: 4 }} />
+            Help
+          </button>
         </div>
       </header>
 
@@ -4087,6 +4096,76 @@ export default function App() {
           </div>
         </aside>
       </div>
+
+      {/* ── HELP / HOW-TO MODAL ── */}
+      {isHelpOpen && (
+        <div className="modal" onClick={() => setIsHelpOpen(false)}>
+          <div className="modal-content modal-content-large" onClick={e => e.stopPropagation()} style={{ maxHeight: '88vh', display: 'flex', flexDirection: 'column' }}>
+            <div className="modal-header">
+              <h2><HelpCircle className="w-4 h-4" style={{ display: 'inline', verticalAlign: '-2px', marginRight: 6 }} />How to use this calculator</h2>
+              <span className="close-btn" onClick={() => setIsHelpOpen(false)}>&times;</span>
+            </div>
+            <div className="modal-body" style={{ lineHeight: 1.55, fontSize: '0.86rem' }}>
+              <div style={{ background: 'rgba(240,180,0,0.08)', border: '1px solid rgba(240,180,0,0.25)', borderRadius: 8, padding: '12px 14px', marginBottom: 16 }}>
+                <div style={{ fontWeight: 700, color: '#f0b400', marginBottom: 6 }}>⚡ Quick answer: "I have lots of gear — which should I use / swap?"</div>
+                <ol style={{ margin: 0, paddingLeft: 18 }}>
+                  <li>Enter all your gear (main area) — use <b>Batch OCR</b> to scan screenshots fast.</li>
+                  <li>Pick your path in the <b>Panel Simulator</b> dropdown, then press <b>⚙ Calibrate panel to in-game</b>.</li>
+                  <li>Open the <b>Graduation Rate</b> banner → <b>🏆 Best Build</b> tab → <b>Find best build</b>.</li>
+                  <li>It scans your whole gear pool and shows the best combination — press <b>Equip this build</b>. Done.</li>
+                  <li>Want to know what to upgrade next? Use the <b>Compare</b> and <b>Stat Priority</b> tabs.</li>
+                </ol>
+              </div>
+
+              <h3 style={{ color: '#f0b400', margin: '14px 0 6px' }}>1 · First-time setup (once)</h3>
+              <ul style={{ marginTop: 0, paddingLeft: 18 }}>
+                <li><b>Enter gear:</b> use each slot tab + <b>+ Add Gear</b>, or <b>Batch OCR</b> to read screenshots automatically — best when you own many pieces. Add <i>every</i> gearbox you own, not just equipped ones, so Best Build has the full pool to choose from.</li>
+                <li><b>Pick path:</b> the <b>Panel Simulator</b> dropdown (e.g. Bamboocut-Dust) — pick the build you actually play.</li>
+                <li><b>Calibrate:</b> press <b>⚙ Calibrate panel to in-game</b>, open your in-game <b>Combat Attributes</b> (C key), type those numbers, save. The button turns to <b>✓ Calibrated</b>. This makes every DPS number realistic. Tip: select the same Inner Ways in the app as in-game first.</li>
+              </ul>
+
+              <h3 style={{ color: '#f0b400', margin: '14px 0 6px' }}>2 · The headline numbers</h3>
+              <ul style={{ marginTop: 0, paddingLeft: 18 }}>
+                <li><b>Graduation Rate %</b> — how "finished" your gear is vs the best-in-slot T91 build. ~100% = graduated. Your single "how good is my gear" score.</li>
+                <li><b>DPS Expectation</b> — theoretical DPS (perfect play, full buff uptime).</li>
+                <li><b>Realistic DPS ≈</b> — what a real parse looks like. Drag the <b>Rotation efficiency</b> slider to match your own play.</li>
+                <li>Click the <b>Graduation Rate banner (›)</b> to open the analysis tabs — that's where the gear-improvement tools live.</li>
+              </ul>
+
+              <h3 style={{ color: '#f0b400', margin: '14px 0 6px' }}>3 · 🏆 Best Build — "which of my gear do I use?"</h3>
+              <p style={{ margin: '0 0 6px' }}>Analysis modal → <b>Best Build</b> → <b>Find best build</b>. It brute-forces every combination of the gear you entered and finds the highest graduation rate. Press <b>Equip this build</b> to equip that exact set. <b>#2–#6</b> alternatives each have their own Equip button.</p>
+
+              <h3 style={{ color: '#f0b400', margin: '14px 0 6px' }}>4 · Compare — "which slot should I improve?"</h3>
+              <p style={{ margin: '0 0 6px' }}>Analysis modal → <b>Compare</b>. Shows how much graduation each equipped piece contributes. The slot with the lowest contribution = your weakest piece = upgrade that one first.</p>
+
+              <h3 style={{ color: '#f0b400', margin: '14px 0 6px' }}>5 · Stat Priority — "what stats should I chase?"</h3>
+              <p style={{ margin: '0 0 6px' }}>Analysis modal → <b>Stat Priority</b>. Ranks stats by DPS gained per point — what to add and what's wasted. Use it when re-rolling sub-stats.</p>
+
+              <h3 style={{ color: '#f0b400', margin: '14px 0 6px' }}>6 · More tools</h3>
+              <ul style={{ marginTop: 0, paddingLeft: 18 }}>
+                <li><b>Transmute Advice</b> — per-slot best main + sub config to raise graduation via transmute (转律).</li>
+                <li><b>BiS Gear</b> — per-slot ideal set + main-stat + top substats for your build.</li>
+                <li><b>Cultivate</b> — substat summary, which tuned (✦) lines to upgrade, next 8 substats to invest in.</li>
+                <li><b>Damage Statistics</b> / <b>Simulate</b> — damage split by hit type, and a Monte-Carlo parse showing DPS variance.</li>
+                <li><b>Set all</b> — apply one set to all weapon / armor slots at once. <b>Export/Import Data</b> — back up or move your setup.</li>
+              </ul>
+
+              <h3 style={{ color: '#7ee787', margin: '14px 0 6px' }}>✅ Typical workflow</h3>
+              <ol style={{ marginTop: 0, paddingLeft: 18 }}>
+                <li>Batch OCR all your gear in.</li>
+                <li>Pick path → Calibrate.</li>
+                <li>Best Build → Find best build → Equip this build.</li>
+                <li>Compare → see weakest slot → farm/upgrade that.</li>
+                <li>Stat Priority → know which sub-stats to keep when rolling.</li>
+                <li>Re-check Graduation Rate went up. Repeat as you get new gear.</li>
+              </ol>
+            </div>
+            <div className="modal-footer">
+              <button className="primary-btn" onClick={() => setIsHelpOpen(false)}>Got it</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── IMPORT FROM GAME MODAL ── */}
       {isGameImportOpen && (() => {
