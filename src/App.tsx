@@ -4110,12 +4110,16 @@ export default function App() {
               <div style={{ background: 'rgba(240,180,0,0.08)', border: '1px solid rgba(240,180,0,0.25)', borderRadius: 8, padding: '12px 14px', marginBottom: 16 }}>
                 <div style={{ fontWeight: 700, color: '#f0b400', marginBottom: 6 }}>⚡ Quick answer: "I have lots of gear — which should I use / swap?"</div>
                 <ol style={{ margin: 0, paddingLeft: 18 }}>
-                  <li>Enter all your gear (main area) — use <b>Batch OCR</b> to scan screenshots fast.</li>
+                  <li>Enter <b>every</b> gearbox you own (main area) — including spares, not just what's equipped. Use <b>Batch OCR</b> to scan screenshots fast.</li>
                   <li>Pick your path in the <b>Panel Simulator</b> dropdown, then press <b>⚙ Calibrate panel to in-game</b>.</li>
-                  <li>Open the <b>Graduation Rate</b> banner → <b>🏆 Best Build</b> tab → <b>Find best build</b>.</li>
-                  <li>It scans your whole gear pool and shows the best combination — press <b>Equip this build</b>. Done.</li>
-                  <li>Want to know what to upgrade next? Use the <b>Compare</b> and <b>Stat Priority</b> tabs.</li>
+                  <li>Click the gold <b>Graduation Rate %</b> banner (the <b>›</b> arrow on it) to open the analysis window → <b>🏆 Best Build</b> tab → <b>Find best build</b>.</li>
+                  <li>It tries every combination of the gear you entered and shows the highest-graduation set — press <b>Equip this build</b>. Done.</li>
+                  <li>Want to know what to upgrade next? See the <b>DPS Breakdown by Gear</b> (in the panel, lowest = weakest slot) and the <b>Compare</b> / <b>Stat Priority</b> tabs.</li>
                 </ol>
+              </div>
+
+              <div style={{ background: 'rgba(88,166,255,0.07)', border: '1px solid rgba(88,166,255,0.22)', borderRadius: 8, padding: '10px 13px', marginBottom: 16, fontSize: '0.82rem', color: '#c9d1d9' }}>
+                <b style={{ color: '#58a6ff' }}>ⓘ Note on accuracy.</b> Every DPS / graduation number here is a <b>reference estimate</b>, not a guarantee. It assumes a fixed reference rotation, full buff uptime and a standard target — your real parse will differ depending on your <b>actual rotation</b>, uptime, target and Inner-Way stacks. Use the numbers to compare options (this gear vs that gear, this set vs that set), not as an exact in-game DPS readout. You can edit the cast mix in the <b>Rotations</b> tab to match how you actually play.
               </div>
 
               <h3 style={{ color: '#f0b400', margin: '14px 0 6px' }}>1 · First-time setup (once)</h3>
@@ -4131,7 +4135,13 @@ export default function App() {
                 <li><b>DPS Expectation</b> — theoretical DPS (perfect play, full buff uptime).</li>
                 <li><b>Realistic DPS ≈</b> — what a real parse looks like. Drag the <b>Rotation efficiency</b> slider to match your own play.</li>
                 <li>Click the <b>Graduation Rate banner (›)</b> to open the analysis tabs — that's where the gear-improvement tools live.</li>
+                <li><b>DPS Breakdown by Gear</b> (in the panel) — "DPS lost if removed" per slot. The <i>smallest</i> number = your weakest piece = upgrade that slot first.</li>
+                <li><b>Weapon Set / Ring</b> tables (in the panel) — show DPS for each set/ring vs your current one. A big <span style={{ color: '#7ee787' }}>green +number</span> means switching there is a free upgrade.</li>
               </ul>
+
+              <div style={{ fontSize: '0.8rem', color: '#8b949e', margin: '4px 0 0', paddingLeft: 4 }}>
+                <b style={{ color: '#c9d1d9' }}>Slot names:</b> <b>Weapon 1</b> = your main weapon, <b>Weapon 2</b> = your off-hand/secondary weapon. Both must be filled for the build to score correctly — an empty weapon slot tanks your graduation rate.
+              </div>
 
               <h3 style={{ color: '#f0b400', margin: '14px 0 6px' }}>3 · 🏆 Best Build — "which of my gear do I use?"</h3>
               <p style={{ margin: '0 0 6px' }}>Analysis modal → <b>Best Build</b> → <b>Find best build</b>. It brute-forces every combination of the gear you entered and finds the highest graduation rate. Press <b>Equip this build</b> to equip that exact set. <b>#2–#6</b> alternatives each have their own Equip button.</p>
@@ -4500,7 +4510,7 @@ export default function App() {
                     { key: "compare", label: "Compare", tip: "Compare each equipped gear piece to see which one raises your graduation rate the most." },
                     { key: "transmute", label: "Transmute Advice", tip: "Per-slot transmute (转律) suggestions: the optimal main + sub substat config to raise graduation." },
                     { key: "bis", label: "BiS Gear", tip: "Per-slot ideal config for this build: recommended weapon set (updates live with your panel), main-stat, and the top substats to prioritise." },
-                    { key: "best-build", label: "Best Build", tip: "Ranks all paths by graduated DPS so you can see where this character fits best." },
+                    { key: "best-build", label: "Best Build", tip: "Tries every combination of the gear you entered (equipped or spare) and finds the set with the highest graduation rate." },
                     { key: "rotations", label: "Rotations", tip: "Edit per-skill cast counts and recompute DPS through the timeline engine (verified formula — only the cast mix changes)." },
                     { key: "skill-editor", label: "Skill Editor", tip: "Tweak a skill's coefficients and preview its per-hit damage. Calculator only — does not change rotation DPS." },
                     { key: "team", label: "Team", tip: "Compare saved builds side by side." },
@@ -4772,7 +4782,7 @@ export default function App() {
                             <li><b>Compare</b> — compare each gear piece to see which raises graduation the most.</li>
                             <li><b>Transmute Advice</b> — per-slot transmute (转律) suggestions: the optimal main + sub substat config to raise graduation.</li>
                             <li><b>BiS Gear</b> — per-slot ideal config for the selected build: recommended weapon set (updates live with your panel), main-stat, and the top substats to prioritise.</li>
-                            <li><b>Best Build</b> — ranks all paths by graduated DPS so you can see where this character fits.</li>
+                            <li><b>Best Build</b> — tries every combination of the gear you entered (equipped or spare) and finds the set with the highest graduation rate, then lets you equip it.</li>
                             <li><b>Rotations</b> — edit per-skill cast counts and recompute DPS through the timeline engine (verified formula, only the cast mix changes).</li>
                             <li><b>Skill Editor</b> — tweak a skill's coefficients and preview its per-hit damage (calculator only — does not change rotation DPS).</li>
                             <li><b>Team</b> — compare saved builds side by side.</li>
@@ -4782,6 +4792,9 @@ export default function App() {
                       <div className="bg-[#141619] border border-[#23262c] rounded-xl p-4 space-y-2">
                         <p className="text-[11.5px] text-slate-400 leading-snug">
                           Panel stats are <b className="text-[#f0b400]">auto-computed from equipped gear</b>. Equip/unequip items to see stats change. Inner Ways are added on top automatically.
+                        </p>
+                        <p className="text-[11.5px] text-[#58a6ff]/90 leading-snug">
+                          ⓘ All DPS / graduation figures are <b>reference estimates</b> for comparing options — they assume a fixed reference rotation and full buff uptime, so your in-game numbers will differ with your actual rotation, target and uptime. Use them to rank gear/sets, not as an exact DPS readout.
                         </p>
                       </div>
 
