@@ -3612,7 +3612,7 @@ export default function App() {
             onClick={() => setCalibOpen(true)}
             className="secondary-btn"
             title="Match the panel to your in-game Combat Attributes (per character)"
-            style={{ width: '100%', marginBottom: 12, whiteSpace: 'nowrap', borderColor: activeScheme?.baseOverride ? '#4caf50' : undefined, color: activeScheme?.baseOverride ? '#4caf50' : undefined }}
+            style={{ width: '100%', marginTop: 12, marginBottom: 0, whiteSpace: 'nowrap', order: 5, borderColor: activeScheme?.baseOverride ? '#4caf50' : undefined, color: activeScheme?.baseOverride ? '#4caf50' : undefined }}
           >
             {activeScheme?.baseOverride ? "✓ Calibrated — matches in-game" : "⚙ Calibrate panel to in-game"}
           </button>
@@ -3720,7 +3720,7 @@ export default function App() {
           </div>
 
           {/* Xinfa (Inner Ways) Slots */}
-          <div className="xinfa-section" style={{ marginTop: '10px' }}>
+          <div className="xinfa-section" style={{ marginTop: '10px', order: 2 }}>
             <div className="xinfa-grid">
               {[0, 1, 2, 3].map(index => {
                 const iwId = selectedInnerWays[index];
@@ -3758,7 +3758,7 @@ export default function App() {
 
           {/* Inner Ways — DPS loss if removed */}
           {innerWayContrib.length > 0 && (
-            <div style={{ marginTop: 10, border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, overflow: "hidden" }}>
+            <div style={{ marginTop: 10, border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, overflow: "hidden", order: 3 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 10px", background: "rgba(255,255,255,0.03)" }}>
                 <span style={{ fontSize: 11, fontWeight: 700, color: "#f0b400", textTransform: "uppercase", letterSpacing: 0.4 }}>Inner Way Contribution</span>
                 <span style={{ fontSize: 10, color: "#6e7681" }} title="DPS lost if this inner way were removed at its current tier. Bigger loss = more important to keep leveled.">DPS loss if removed ⓘ</span>
@@ -3776,7 +3776,7 @@ export default function App() {
           )}
 
           {/* Equipped Slots Grid */}
-          <div className="sim-layout-container" style={{ marginTop: '15px' }}>
+          <div className="sim-layout-container" style={{ marginTop: '15px', order: 4 }}>
             <div className="sim-slots-grid">
               {(() => {
                 const defaultTypes = BUILD_WEAPON_TYPES[selectedBuild] || ["Umbrella", "Rope Dart"];
@@ -3883,7 +3883,7 @@ export default function App() {
 
           {/* Gear Contribution — DPS loss if each equipped piece were removed */}
           {gearContrib.length > 0 && (
-            <div style={{ marginTop: 12, border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, overflow: "hidden" }}>
+            <div style={{ marginTop: 12, border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, overflow: "hidden", order: 8 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 10px", background: "rgba(255,255,255,0.03)" }}>
                 <span style={{ fontSize: 11, fontWeight: 700, color: "#f0b400", textTransform: "uppercase", letterSpacing: 0.4 }}>DPS Breakdown by Gear</span>
                 <span style={{ fontSize: 10, color: "#6e7681" }} title="DPS lost if this piece were unequipped (its sub-stats and any set bonus it completes). Bigger loss = bigger contributor.">DPS loss if removed ⓘ</span>
@@ -3902,7 +3902,7 @@ export default function App() {
 
           {/* Ring (bow) attribute comparison */}
           {bowCompare.length > 0 && (
-            <div style={{ marginTop: 12, border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, overflow: "hidden" }}>
+            <div style={{ marginTop: 12, border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, overflow: "hidden", order: 9 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 10px", background: "rgba(255,255,255,0.03)" }}>
                 <span style={{ fontSize: 11, fontWeight: 700, color: "#f0b400", textTransform: "uppercase", letterSpacing: 0.4 }}>Ring Attribute</span>
                 <span style={{ fontSize: 10, color: "#6e7681" }} title="DPS for each ring choice vs your current pick. Switch in the Ring selector above.">DPS · vs current ⓘ</span>
@@ -3921,7 +3921,7 @@ export default function App() {
 
           {/* Set bonus comparison — W = weapon set, A = armour set (2pc verified; most 4pc not modeled) */}
           {armorSetCompare.length > 0 && (
-            <div style={{ marginTop: 12, border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, overflow: "hidden" }}>
+            <div style={{ marginTop: 12, border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, overflow: "hidden", order: 10 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 10px", background: "rgba(255,255,255,0.03)" }}>
                 <span style={{ fontSize: 11, fontWeight: 700, color: "#f0b400", textTransform: "uppercase", letterSpacing: 0.4 }}>Weapon Set</span>
                 <span style={{ fontSize: 10, color: "#6e7681" }} title="DPS per weapon set vs your current set. 2pc stats + verified 4pc effects modeled; (2pc) = 4pc not modeled yet (build-specific). Eaglerise (armour) is defensive — excluded.">DPS · vs current ⓘ</span>
@@ -3944,7 +3944,7 @@ export default function App() {
             </div>
           )}
 
-          <div className="panel-checkbox-container" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
+          <div className="panel-checkbox-container" style={{ flexDirection: 'column', alignItems: 'stretch', order: 7 }}>
             <div className="panel-checkbox-wrapper">
               <label className="panel-checkbox-label">
                 <input
@@ -3983,6 +3983,7 @@ export default function App() {
           <div
             className="graduation-banner"
             id="open-grad-modal-btn"
+            style={{ order: 1 }}
             onClick={() => {
               setGradModalActiveTab("manual");
               setIsGradModalOpen(true);
@@ -4027,7 +4028,7 @@ export default function App() {
           </div>
 
           {/* Stats Display — two columns: in-game menu base vs in-combat (with Inner Ways + buffs) */}
-          <div id="stats-display" className="stats-panel">
+          <div id="stats-display" className="stats-panel" style={{ order: 6 }}>
             {(() => {
               const fmt = (v: number | undefined, pct?: boolean, plus?: boolean) => {
                 if (v === undefined) return "—";

@@ -325,3 +325,7 @@ input:focus, select:focus { outline: none !important; border-color: var(--accent
 .compare-card, .transmute-target-card, .transmute-result-card, .transmute-bestbuild-card { border-radius: 10px; }
 .transmute-sub-btn { border-radius: 8px; }
 .transmute-sub-btn.selected { border-color: var(--accent); background: rgba(212,148,58,0.15); box-shadow: 0 0 8px var(--ga-accent-glow); }
+
+/* Simulator-panel block ordering: flex column lets us reorder blocks via `order`
+   inline-style without moving JSX. Header/scheme stay at the top (default order 0). */
+#simulator-panel { display: flex; flex-direction: column; }
