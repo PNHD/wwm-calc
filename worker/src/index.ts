@@ -60,7 +60,7 @@ async function checkin(req: Request, env: Env): Promise<Response> {
   let name: string | null = null;
   try {
     const ctrl = new AbortController();
-    const t = setTimeout(() => ctrl.abort(), 3000);
+    const t = setTimeout(() => ctrl.abort(), 8000);
     const r = await fetch(
       `https://wwmmap.pages.dev/service/characterface?q=${encodeURIComponent(uid)}&server=global`,
       { signal: ctrl.signal },
