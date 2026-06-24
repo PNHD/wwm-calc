@@ -2801,10 +2801,11 @@ export default function App() {
   // ponytail: single source for "gear combo → in-combat panel → rotation total".
   // Mirrors adjustedPanel's buff pipeline; reused by Best Build, gear contribution,
   // and the set/bow comparison tables.
-  const comboInCombat = (combo: GearItem[]): { total: number; crit: number } => {
+  const comboInCombat = (combo: GearItem[], bowOverride?: string): { total: number; crit: number } => {
     let p = computeGearPanel(panel, combo, activeScheme?.baseOverride, innerAttrName(selectedBuild));
     if (food) { p.minOuter += activeTier.foodMin; p.maxOuter += activeTier.foodMax; }
-    if (bowSelect === "crit") p.crit += 3.7; else if (bowSelect === "prec") p.prec += 3.3; else if (bowSelect === "aff") p.aff += 1.8;
+    const bow = bowOverride ?? bowSelect;
+    if (bow === "crit") p.crit += 3.7; else if (bow === "prec") p.prec += 3.3; else if (bow === "aff") p.aff += 1.8;
     if (script50) p.dcrit += 15.0;
     const { weaponSet, armorSet } = detectSet4pc(combo);
     p.set = weaponSet;
@@ -2835,6 +2836,25 @@ export default function App() {
     const overCrit = Math.max(0, crit - critCap);
     rate -= overCrit * 0.001;
     return rate;
+  };
+
+  // Best ring (bow) attribute for a given gear combo. The ring just adds one stat
+  // (crit/prec/aff), so it never changes which GEAR combo wins — we only need to
+  // try the 3 rings on the already-chosen best combo (3 cheap evals), not ×3 the
+  // whole search. Returns the ring key + its DPS so Best Build can recommend it.
+  const RING_OPTS: { key: string; label: string }[] = [
+    { key: "crit", label: "Crit Ring (+3.7%)" },
+    { key: "prec", label: "Precision Ring (+3.3%)" },
+    { key: "aff", label: "Affinity Ring (+1.8%)" },
+  ];
+  const bestRingForCombo = (combo: GearItem[]): { key: string; label: string; dps: number; current: boolean } => {
+    let best = RING_OPTS[0], bestTotal = -1;
+    for (const r of RING_OPTS) {
+      const { total } = comboInCombat(combo, r.key);
+      if (total > bestTotal) { bestTotal = total; best = r; }
+    }
+    const rotTime = getRotationTimeForBuild(selectedBuild);
+    return { key: best.key, label: best.label, dps: bestTotal / rotTime, current: best.key === bowSelect };
   };
 
   // ── Per-slot DPS contribution ("DPS Breakdown by Gear") ─────────────────────
@@ -4566,7 +4586,7 @@ export default function App() {
                     { key: "compare", label: "Compare", tip: "Compare each equipped gear piece to see which one raises your graduation rate the most." },
                     { key: "transmute", label: "Transmute Advice", tip: "Per-slot transmute (转律) suggestions: the optimal main + sub substat config to raise graduation." },
                     { key: "bis", label: "BiS Gear", tip: "Per-slot ideal config for this build: recommended weapon set (updates live with your panel), main-stat, and the top substats to prioritise." },
-                    { key: "best-build", label: "Best Build", tip: "Tries every combination of the gear you entered (equipped or spare) and finds the set with the highest graduation rate." },
+                    { key: "best-build", label: "Best Build", tip: "Tries every combination of the gear you entered (equipped or spare), finds the highest-graduation set, and recommends the best ring for it." },
                     { key: "rotations", label: "Rotations", tip: "Edit per-skill cast counts and recompute DPS through the timeline engine (verified formula — only the cast mix changes)." },
                     { key: "skill-editor", label: "Skill Editor", tip: "Tweak a skill's coefficients and preview its per-hit damage. Calculator only — does not change rotation DPS." },
                     { key: "team", label: "Team", tip: "Compare saved builds side by side." },
@@ -6058,6 +6078,18 @@ export default function App() {
                                     </div>
                                   ))}
                                 </div>
+                                {(() => {
+                                  const ring = bestRingForCombo(best.gear);
+                                  return (
+                                    <div className="flex items-center gap-2 mt-3 text-[11.5px] bg-[#15161a] border border-[#23262c] rounded p-2">
+                                      <span className="text-[10px] text-[#f0b400] uppercase tracking-wide">Best ring</span>
+                                      <span className="text-slate-200">{ring.label}</span>
+                                      {ring.current
+                                        ? <span className="text-[#7ee787] ml-auto">✓ already selected</span>
+                                        : <button onClick={() => setBowSelect(ring.key as any)} className="ml-auto text-[10px] uppercase tracking-wide px-2 py-1 rounded border border-[#4caf50]/60 text-[#4caf50] hover:bg-[#4caf50]/15">Use this ring</button>}
+                                    </div>
+                                  );
+                                })()}
                                 <button
                                   onClick={() => equipCombo(best.gear)}
                                   className="primary-btn"
