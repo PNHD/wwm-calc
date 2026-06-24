@@ -732,6 +732,21 @@ const parseSubValue = (val: string): number => {
   return m ? parseFloat(m[0]) : 0;
 };
 
+// Yield to the event loop WITHOUT setTimeout. Chrome heavily throttles
+// setTimeout in a backgrounded tab (clamped to ~1/sec), which froze the Best
+// Build search at whatever % it was at when the user alt-tabbed away. A
+// MessageChannel message is a normal task that is NOT background-throttled, so
+// the search keeps running at full speed even when the tab isn't focused.
+const yieldToEventLoop = (() => {
+  const ch = typeof MessageChannel !== "undefined" ? new MessageChannel() : null;
+  if (!ch) return () => new Promise<void>(r => setTimeout(r, 0));
+  return () =>
+    new Promise<void>(resolve => {
+      ch.port1.onmessage = () => resolve();
+      ch.port2.postMessage(0);
+    });
+})();
+
 // Sums all sub-stat values from a gear list into PanelStats keys via SUB_MAP.
 const sumGearSubs = (gear: GearItem[]): Partial<Record<keyof PanelStats, number>> => {
   const sums: Partial<Record<keyof PanelStats, number>> = {};
@@ -2996,11 +3011,14 @@ export default function App() {
   const [bestBuildResult, setBestBuildResult] = useState<{ rate: number; gear: GearItem[] }[] | null>(null);
   const [bestBuildRunning, setBestBuildRunning] = useState(false);
   const [bestBuildProgress, setBestBuildProgress] = useState(0);
+  const [bestBuildEta, setBestBuildEta] = useState<number | null>(null);
 
   const runBestBuild = async () => {
     setBestBuildRunning(true);
     setBestBuildResult(null);
     setBestBuildProgress(0);
+    setBestBuildEta(null);
+    const startedAt = performance.now();
     await new Promise(r => setTimeout(r, 30)); // let UI paint the spinner
 
     const pool = getActiveGear();
@@ -3009,8 +3027,11 @@ export default function App() {
     SLOT_ORDER.forEach(s => { bySlot[s] = pool.filter(it => it.slot === s); });
 
     // Cap combinations to keep it responsive: if a slot has many items, keep the
-    // top ~6 by individual grad delta. ponytail: linear pre-prune, exhaustive
-    // search within the pruned set; raise the cap if users need deeper search.
+    // top N by individual grad delta. ponytail: linear pre-prune, exhaustive
+    // search within the pruned set. Kept at 6 — each combo runs the full ~50-skill
+    // rotation, so 6 (≈86k combos, ~a few s) is the sweet spot; 10 (≈168k) ran
+    // ~45s. The MessageChannel yield (below) is what fixed the alt-tab freeze,
+    // independent of this cap.
     const MAX_PER_SLOT = 6;
     SLOT_ORDER.forEach(s => {
       if (bySlot[s].length > MAX_PER_SLOT) {
@@ -3033,9 +3054,12 @@ export default function App() {
         top.sort((a, b) => b.rate - a.rate);
         if (top.length > 10) top.length = 10;
         checked++;
-        if (checked % 200 === 0) {
-          setBestBuildProgress(Math.round((checked / Math.max(1, totalCombos)) * 100));
-          await new Promise(r => setTimeout(r, 0)); // yield to keep UI alive
+        if (checked % 500 === 0) {
+          const frac = checked / Math.max(1, totalCombos);
+          setBestBuildProgress(Math.round(frac * 100));
+          const elapsed = (performance.now() - startedAt) / 1000;
+          if (frac > 0.02) setBestBuildEta(Math.ceil((elapsed / frac) * (1 - frac)));
+          await yieldToEventLoop(); // keep UI alive AND running while backgrounded
         }
         return;
       }
@@ -3046,6 +3070,7 @@ export default function App() {
 
     await recurse(0, []);
     setBestBuildProgress(100);
+    setBestBuildEta(null);
     setBestBuildResult(top);
     setBestBuildRunning(false);
   };
@@ -3642,6 +3667,11 @@ export default function App() {
           >
             {activeScheme?.baseOverride ? "✓ Calibrated — matches in-game" : "⚙ Calibrate panel to in-game"}
           </button>
+          {activeScheme?.baseOverride && (
+            <div style={{ order: 5, fontSize: 11, color: '#8b949e', marginTop: 4, lineHeight: 1.45 }}>
+              Calibration sticks to your character, not to one gear set. When you swap gear (e.g. after Best Build), the panel re-computes for the new gear automatically — the numbers change but stay correct. <b style={{ color: '#7ee787' }}>No need to re-calibrate.</b>
+            </div>
+          )}
           {calibOpen && (
             <div className="modal" onClick={() => setCalibOpen(false)}>
               <div className="modal-content modal-content-medium" onClick={e => e.stopPropagation()}>
@@ -5994,10 +6024,16 @@ export default function App() {
                         )}
                         {bestBuildRunning && (
                           <div style={{ marginBottom: 12 }}>
-                            <div className="text-[12px] text-slate-300 mb-1">Searching combinations… {bestBuildProgress}%</div>
+                            <div className="text-[12px] text-slate-300 mb-1">
+                              Searching combinations… {bestBuildProgress}%
+                              {bestBuildEta != null && bestBuildProgress > 2 && bestBuildProgress < 100 && (
+                                <span className="text-slate-500"> · ~{bestBuildEta}s left</span>
+                              )}
+                            </div>
                             <div className="progress-bar-container" style={{ height: 8, background: '#1a1a1d', borderRadius: 4, overflow: 'hidden' }}>
                               <div style={{ width: `${bestBuildProgress}%`, height: '100%', background: '#4caf50', transition: 'width 0.2s' }} />
                             </div>
+                            <div className="text-[11px] text-slate-500 mt-1">Runs in the background — you can switch tabs or apps; it won't pause.</div>
                           </div>
                         )}
                         {bestBuildResult && bestBuildResult.length > 0 && (() => {

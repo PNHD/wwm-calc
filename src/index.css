@@ -40,6 +40,13 @@ h1,.app-title,.banner-value,.current-rate-box .value,.modal-title{font-family:va
 .grad-tabs{background:#0a0b0d!important}
 .grad-tab.active{color:#f0b400!important;background:transparent!important;border-bottom:2px solid #f0b400!important}
 .grad-tab:hover{color:#b8b1a6!important;background:rgba(255,255,255,.02)!important}
+/* Make the horizontal-scroll affordance obvious: a right-edge fade hints there
+   are more tabs off-screen, and an always-visible thin scrollbar confirms it. */
+.grad-tabs{-webkit-mask-image:linear-gradient(to right,#000 calc(100% - 28px),transparent);mask-image:linear-gradient(to right,#000 calc(100% - 28px),transparent);scrollbar-width:thin;scrollbar-color:#f0b400 transparent}
+.grad-tabs::-webkit-scrollbar{height:6px}
+.grad-tabs::-webkit-scrollbar-thumb{background:#f0b400;border-radius:3px}
+.grad-tabs::-webkit-scrollbar-track{background:transparent}
+.grad-tab{flex:0 0 auto}
 /* Modal → GLM (top gold hairline) */
 .modal-content{background:#111316!important;border:1px solid rgba(255,255,255,.12)!important;box-shadow:0 16px 40px rgba(0,0,0,.7)!important;position:relative}
 .modal-content::after{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,#f0b400,transparent);pointer-events:none;z-index:2}
