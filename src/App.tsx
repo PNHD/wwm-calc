@@ -47,6 +47,7 @@ import { translateSkillName } from "./utils/skillNameEn";
 import { runDualPassOcr } from "./utils/ocrParser";
 import StatSwapSimulator from "./components/StatSwapSimulator";
 import SearchableSelect from "./components/SearchableSelect";
+import UidGateModal from "./components/UidGateModal";
 
 // Constants
 const PATH_ICONS: Record<string, string> = {
@@ -1213,6 +1214,11 @@ export default function App() {
   // Panel stats are ALWAYS computed from equipped gear (like spongem).
   // No manual toggle — equip/unequip gear → panel updates automatically.
   const autoGearPanel = true;
+
+  const [uidGate, setUidGate] = useState<{ uid: string; name: string; server: "global" } | null>(() => {
+    try { return JSON.parse(localStorage.getItem("wwm_uid") || "null"); }
+    catch { return null; }
+  });
 
   const [activeTab, setActiveTab ] = useState<"calculator" | "priority" | "gear" | "compare" | "simulators" | "ocr" | "profiles" | "rot-sim" | "cultivate">("calculator");
 
@@ -3352,6 +3358,7 @@ export default function App() {
     }));
   };
 
+  if (!uidGate) return <UidGateModal onPass={setUidGate} />;
 
   return (
     <div className="min-h-screen bg-[#1a1a1d] text-[#e0e0e0] font-sans antialiased selection:bg-[#f0b400]/25 selection:text-[#f0b400]">
