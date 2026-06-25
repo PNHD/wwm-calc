@@ -48,6 +48,8 @@ import { runDualPassOcr } from "./utils/ocrParser";
 import StatSwapSimulator from "./components/StatSwapSimulator";
 import SearchableSelect from "./components/SearchableSelect";
 import UidGateModal from "./components/UidGateModal";
+import { engine2Dps, BUILD_TO_WWM } from "./utils/engine2";
+import { ROTATIONS_WWM } from "./data/rotationsWWM";
 
 // Constants
 const PATH_ICONS: Record<string, string> = {
@@ -4595,6 +4597,7 @@ export default function App() {
                     { key: "bis", label: "BiS Gear", tip: "Per-slot ideal config for this build: recommended weapon set (updates live with your panel), main-stat, and the top substats to prioritise." },
                     { key: "best-build", label: "Best Build", tip: "Tries every combination of the gear you entered (equipped or spare), finds the highest-graduation set, and recommends the best ring for it." },
                     { key: "rotations", label: "Rotations", tip: "Edit per-skill cast counts and recompute DPS through the timeline engine (verified formula — only the cast mix changes)." },
+                    { key: "dps-compare", label: "DPS Compare", tip: "Read-only comparison of the app's default rotation DPS against WWMath bundle rotations, priced through the same verified formula." },
                     { key: "skill-editor", label: "Skill Editor", tip: "Tweak a skill's coefficients and preview its per-hit damage. Calculator only — does not change rotation DPS." },
                     { key: "team", label: "Team", tip: "Compare saved builds side by side." },
                   ].map(tab => (
@@ -4701,6 +4704,52 @@ export default function App() {
                         Edit counts, remove (✕), or add another cast of a build skill (clones its default buff context). Tweaking a skill's coefficients lives in the <b>Skill Editor</b> tab (preview only). DPS = total ÷ the build's fixed rotation window.
                       </p>
                     </div>
+                    );
+                  })()}
+                  {gradModalActiveTab === "dps-compare" && (() => {
+                    const wwmKey = BUILD_TO_WWM[selectedBuild];
+                    if (!wwmKey || !ROTATIONS_WWM[wwmKey]) {
+                      return <div style={{ padding: 16, color: "#8b949e" }}>No WWMath data for this build.</div>;
+                    }
+                    // App default DPS for the same inputs (sanity anchor).
+                    const appTotal = computeTotalDamage(adjustedPanel);
+                    const appTime = getRotationTimeForBuild(selectedBuild);
+                    const appDps = appTime > 0 ? appTotal / appTime : 0;
+                    const tiers = Object.keys(ROTATIONS_WWM[wwmKey]);
+                    const opts = { set: adjustedPanel.set || "gold", datang, yishui };
+                    return (
+                      <div style={{ padding: 12 }}>
+                        <div style={{ marginBottom: 8, color: "#e6edf3" }}>
+                          <b>{selectedBuild}</b> — App default DPS: <b>{Math.round(appDps).toLocaleString()}</b> (rotation {appTime}s)
+                        </div>
+                        <table style={{ borderCollapse: "collapse", width: "100%", fontSize: 13 }}>
+                          <thead><tr>
+                            {["WWMath rotation", "Steps", "Mapped", "DPS (app formula)", "vs app"].map((h) => (
+                              <th key={h} style={{ border: "1px solid #30363d", padding: "5px 9px", textAlign: "left", background: "#161b22" }}>{h}</th>
+                            ))}
+                          </tr></thead>
+                          <tbody>
+                            {tiers.map((tier) => {
+                              const r = engine2Dps(selectedBuild, tier, adjustedPanel, activeTier, opts, appTime);
+                              const partial = r.unmapped.length > 0;
+                              const pct = appDps > 0 ? ((r.dps - appDps) / appDps) * 100 : 0;
+                              return (
+                                <tr key={tier} style={{ opacity: partial ? 0.7 : 1 }}>
+                                  <td style={{ border: "1px solid #30363d", padding: "5px 9px" }}>{tier}</td>
+                                  <td style={{ border: "1px solid #30363d", padding: "5px 9px" }}>{r.steps}</td>
+                                  <td style={{ border: "1px solid #30363d", padding: "5px 9px" }}>{r.mapped}/{r.steps}</td>
+                                  <td style={{ border: "1px solid #30363d", padding: "5px 9px" }}>
+                                    {Math.round(r.dps).toLocaleString()}{partial ? " (partial)" : ""}
+                                  </td>
+                                  <td style={{ border: "1px solid #30363d", padding: "5px 9px", color: pct >= 0 ? "#3fb950" : "#ff7b72" }}>
+                                    {pct >= 0 ? "+" : ""}{pct.toFixed(1)}%{partial ? ` ⚠ ${r.unmapped.length} unmapped` : ""}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
                     );
                   })()}
                   {gradModalActiveTab === "skill-editor" && (() => {
