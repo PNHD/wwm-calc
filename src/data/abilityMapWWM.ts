@@ -30,7 +30,7 @@ export const ABILITY_MAP_WWM: Record<string, Record<string, AppMapping>> = {
     "Rope Charge 1-3 Hit": { appName: "Rope Dart R1-3 (Dart Song 3tk + Soul Loss)", isDingyin: false, generalBonus: 0.315, yishui: 10, tiaozhan: 1 },
     "Rope Charge 4-5 Hit": { appName: "Rope Dart R4-5 (Dart Song 3tk + Soul Loss)", isDingyin: false, generalBonus: 0.315, yishui: 10, tiaozhan: 1 },
     "Fire Breath 2-Hit": { appName: "Dragon's Breath Full Strike (5 Echo)", isDingyin: false, generalBonus: 0.315, yishui: 10, tiaozhan: 1 },
-    "Flute of the Tides Full": { appName: "Flute of the Tides (AoE + Soul Loss)", isDingyin: false, generalBonus: 0.465, yishui: 10, tiaozhan: 1 },
+    "Flute of the Tides Full": { appName: "Flute of the Tides (AoE + Soul Loss)", isDingyin: false, generalBonus: 0.265, yishui: 10, tiaozhan: 1 },
     // NOTE left out (no clear app-skill equivalent — utility/traversal/defensive, not modeled
     // as a separate damage row in ClassConfig.ROTATIONS["破竹尘"]):
     // "Flute of the Tides Prepull", "Flute of the Tides Cancel", "Soaring", "Toad[Cancel]",
@@ -104,7 +104,7 @@ export const ABILITY_MAP_WWM: Record<string, Record<string, AppMapping>> = {
     "Umb HeavyLight": { appName: "伞重击派生(无纵地)", isDingyin: false, generalBonus: 0.185, yishui: 4 },
     "UmbDrone": { appName: "丢伞(无纵地)", isDingyin: false, generalBonus: 0.195, yishui: 6.00000000000001 },
     "UmbDroneLaunch[20hit]": { appName: "丢伞(无纵地)", isDingyin: false, generalBonus: 0.195, yishui: 6.00000000000001 },
-    "Fire Breath 1-Hit": { appName: "骑龙回马打满(纵地阴阳断石)", isDingyin: false, generalBonus: 0.215, yishui: 10 },
+    "Fire Breath 1-Hit": { appName: "骑龙回马打满(纵地阴阳断石)", isDingyin: false, generalBonus: 0.345, yishui: 6.00000000000001 },
     "FanQ": { appName: "扇Q(近距离命中)+阴阳鬼掣", isDingyin: false, generalBonus: 0.365, yishui: 10 },
     "FanLightCharged": { appName: "扇左蓄(风墙3惊春阴阳鬼掣)", isDingyin: false, generalBonus: 0.885, yishui: 10 },
     "FanHeavyPursuit 3-Hit": { appName: "扇普通重击派生(风墙阴阳低真气鬼掣)", isDingyin: false, generalBonus: 0.545, yishui: 10 },
