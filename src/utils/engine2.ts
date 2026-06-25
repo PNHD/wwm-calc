@@ -59,8 +59,12 @@ export function engine2Dps(
     });
     // A mapped-but-unpriced skill (0 total AND not in SKILL_DB after calc) is
     // treated as unmapped — "mapped" must mean mapped AND priced.
-    if (t <= 0 && !SKILL_DB[item.name] && !sk) { unmapped.push(item.name); continue; }
-    total += t * item.count;
+    if (t <= 0 && !sk) { unmapped.push(item.name); continue; }
+    // calcSkill already multiplies by rot.count internally (see calc.ts:603-604,
+    // `total = perHit * rot.count * (rot.tiaozhan || 1)`), and the app's own
+    // computeTotalDamage (App.tsx) sums `total` once per item with no external
+    // `* count`. Match that: do NOT multiply by item.count again here.
+    total += t;
     priced++;
   }
   const dps = rotationTimeSec > 0 ? total / rotationTimeSec : 0;
