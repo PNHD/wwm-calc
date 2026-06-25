@@ -87,7 +87,7 @@ export const ARMOR_SET_IMAGES: Record<string, string> = {
   "pursuing":      "https://img.game8.co/4340534/776a788d1e0426ee5e438f6ffa1a8da9.png/show", // Agile Steps (proxy)
   "calmwaters":    "https://img.game8.co/4340530/9134ca9931c119f026b2dd002628a214.png/show", // Calmwaters
   "swiftgale":     "https://img.game8.co/4340537/d99e1a627f9c50fe80daba8223dba6f3.png/show", // Swift Gale
-  "veilwillow":    "https://img.game8.co/4340532/c0cd16ea2d9da31e0d57bcb014320d96.png/show", // Veil of the Willow
+  "veilwillow":    "https://img.game8.co/4340532/c0cd16ea2d9da31e0d57bcb014320d96.png/show", // NOT a separate set — it's Mistwillow's upgraded 4pc state (both buffs active). Image unused.
   "formbend":      "https://img.game8.co/4340536/87d470ca8a867ec427483e2821d3f79c.png/show", // Formbend
   "beyondchill":   "https://img.game8.co/4340526/c6eb1a2ff0c84affca3030adde0f3ff8.png/show", // Beyond the Chill
   "whirlsnow":     "https://img.game8.co/4340535/b19e666f46335ed3f9c1da0838cdff76.png/show", // Whirlsnow

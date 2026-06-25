@@ -501,6 +501,10 @@ export function calcSkill(
   let setDmgBonus = 0;
   if (set === "swallowreturn") setDmgBonus += 0.05; // Swaying Heights: +5% vs HP>50% (up to +10% at full HP; conservative)
   if (set === "shakenhill") setDmgBonus += 0.05;    // Shattered Ridge: +5% HP dmg on deflect / boss
+  // Swallowcall 4pc (patch): +6% Physical & Bamboocut DMG vs targets with Qi <40% or in an
+  // Abnormal Qi State (Bone Corrosion / Qi Imbalance). Boss is assumed qi-imbalanced — the same
+  // standard DPS condition as Jadeware/Swaying Heights — so the bonus is credited unconditionally here.
+  if (set === "swallowcall") setDmgBonus += 0.06;
 
   // Mystic skill DMG boost: single-target mystic skills eat singleTargetDmg,
   // area/group mystic skills eat groupDmg (matches in-game "Single-Target / Area

@@ -1070,14 +1070,14 @@ const ARMOR_SETS = {
     name: "Swallowcall",
     stat2pc: { minOuter: 64 },           // ✅ confirmed T91
     desc2pc: "2/4: Min Physical ATK +64",
-    desc4pc: "4/4: Various effect — verify in-game.",
+    desc4pc: "4/4: +6% Physical & Bamboocut DMG vs targets with Qi <40% or in an Abnormal Qi State (Bone Corrosion / Qi Imbalance).",
     recommended: [],
   },
   "mistwillow": {
     name: "Mistwillow",
     stat2pc: { prec: 6.6 },              // ✅ confirmed T91
     desc2pc: "2/4: +6.6% Precision Rate",
-    desc4pc: "4/4: After Light/Heavy Attack, following attacks deal bonus DMG for 10s.",
+    desc4pc: "4/4: Heavy Attack/Pursuit → +10% Physical & Silkbind DMG to Light Attacks/Projectile Skills for 15s (and vice versa). With both buffs active → upgrades to Veil of the Willow: +10% Physical & Silkbind to BOTH. Refresh ≤ once / 2s. (Buffs Light/Heavy/Projectile/Pursuit — not the Martial-Art-Skill rotation, so 2pc-only in DPS.)",
     recommended: [],
   },
   "stormrain": {
@@ -2930,10 +2930,10 @@ export default function App() {
     const cur = (adjustedPanel.set as string) || "none";
     const rotTime = getRotationTimeForBuild(selectedBuild);
     // DPS weapon sets (game-verified). Hawkwing = key "eaglerise" (weapon, not armour).
-    const SETS = ["stars", "jadeware", "ivorybloom", "rainwhisper", "eaglerise", "swallowreturn", "shakenhill", "mistwillow", "none"];
+    const SETS = ["stars", "jadeware", "ivorybloom", "rainwhisper", "eaglerise", "swallowreturn", "shakenhill", "swallowcall", "mistwillow", "none"];
     // 4pc DPS effects now modeled in calc (game-verified). Mistwillow still 2pc-only
     // (build-specific light/heavy alternation — pending).
-    const modeled4pc = new Set(["stars", "ivorybloom", "jadeware", "rainwhisper", "eaglerise", "swallowreturn", "shakenhill"]);
+    const modeled4pc = new Set(["stars", "ivorybloom", "jadeware", "rainwhisper", "eaglerise", "swallowreturn", "shakenhill", "swallowcall"]);
     const dpsFor = (key: string) => {
       const p: any = { ...adjustedPanel };
       const rm = (ARMOR_SETS as any)[cur]?.stat2pc as Record<string, number> | undefined;
