@@ -145,3 +145,54 @@ app name, count) so the user can eyeball the mapping. No editing, no persistence
 - `bamboocut-wind`, `bamboocut-kite`, `stonesplit-awe`: no bundle data → not in tab.
   Add when a future crawl finds them.
 - `silkbind-deluge`: placeholder only → excluded until real data exists.
+
+## Coverage (as built)
+
+Per-build ability-mapping coverage, from Task 2's verification pass
+(`.superpowers/sdd/task-2-report.md`) — unique bundle abilities mapped vs. total,
+appName source resolved through `STATIC_SKILLS`/`SKILL_DB` (bamboocut_dust) or the
+build's CN `SkillData[cnClass]` (the other 5):
+
+| build | bundle abilities (unique) | mapped | unmapped |
+|---|---|---|---|
+| bamboocut_dust | 17 | 9 | 8 |
+| bellstrike_umbra | 18 | 6 | 12 |
+| bellstrike_splendor | 15 | 5 | 10 |
+| stonesplit_might | 11 | 2 | 9 |
+| silkbind_jade | 36 | 13 (14 entries) | 23 |
+| stonesplit_strength | 22 | 5 | 17 |
+
+`stonesplit_might` (2/11) and `stonesplit_strength` (5/17) are the thinnest —
+a data-availability ceiling in `referenceData.ts`'s verified CN rotation rows, not
+a mapping-effort gap. `bamboocut_dust` is best-covered relative to its size and is
+the verification anchor (see below).
+
+**Per-tier sanity run (Task 5, ad hoc `tsx` script, deleted after use)** —
+`bamboocut-dust`, app's `INITIAL_PANEL` (`App.tsx:183-225`), tier `"350|0.45"`
+(locked 95下/T91 Global), `rotationTimeSec` from `getRotationTimeForBuild` (60s):
+
+| tier | dps | total | steps | mapped | unmapped | mapped/steps |
+|---|---|---|---|---|---|---|
+| Default | 11,007 | 660,449 | 56 | 49 | 7 | 0.88 |
+| infinite vitality | 11,187 | 671,225 | 59 | 47 | 12 | 0.80 |
+| wolf maiden break | 3,686 | 221,176 | 19 | 17 | 2 | 0.89 |
+
+App's own main-screen reference for the same panel/tier (`calc.ts` `ROTATION`,
+60s window): total 2,058,579, dps 34,310. `Default` and `wolf maiden break` tie for
+the best mapped/steps ratio (0.88-0.89); `Default` is the larger, more representative
+rotation. Engine 2's DPS lands at ~32% of the app reference, fully attributable to
+the 7-12 unmapped bundle abilities per tier (not yet priced) rather than a
+double-count artifact — see the count-semantics fix below, which actually *reduced*
+engine2's total (removing an inflation bug), moving it closer to, not further from,
+the app reference.
+
+### Count-semantics fix (Task 5)
+
+`calc.ts`'s `calcSkill` already multiplies by `rot.count` internally
+(`total = perHit * rot.count * (rot.tiaozhan || 1)`, calc.ts:603-604), and the app's
+own `computeTotalDamage` (`App.tsx:1545-1557`) sums `calcSkill(...).total` once per
+item with **no** external `* count`. `engine2Dps` previously had `total += t *
+item.count;`, double-counting every step. Fixed to `total += t;`. Also simplified the
+tautological unmapped guard `if (t <= 0 && !SKILL_DB[item.name] && !sk)` (where `sk`
+was already assigned `SKILL_DB[item.name]` one line above) to `if (t <= 0 && !sk)`.
+Both behavior-preserving aside from the count fix itself.
