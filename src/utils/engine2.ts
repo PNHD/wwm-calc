@@ -57,8 +57,9 @@ export function engine2Dps(
       yishui: opts.yishui,
       buildKey,
     });
-    // A mapped-but-unpriced skill (0 total AND not in SKILL_DB after calc) is
-    // treated as unmapped — "mapped" must mean mapped AND priced.
+    // A mapped-but-unpriced skill (0 damage AND its name resolves nowhere — `sk`
+    // was absent before calc and calcSkill returns 0 for an unknown skill) is
+    // treated as unmapped: "mapped" must mean mapped AND priced.
     if (t <= 0 && !sk) { unmapped.push(item.name); continue; }
     // calcSkill already multiplies by rot.count internally (see calc.ts:603-604,
     // `total = perHit * rot.count * (rot.tiaozhan || 1)`), and the app's own
