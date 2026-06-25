@@ -27,7 +27,7 @@ export const INNER_WAYS: InnerWay[] = [
       {tier:3,effect:"Each stack: +1.5% Crit DMG (max +7.5%)",stat:{critDmg:7.5}},
       {tier:4,effect:"Each stack: +1.8% Crit DMG (max +9%)",stat:{critDmg:9}},
       {tier:5,effect:"Each stack: +2.0% Crit DMG above 50% HP (max +10%), Life Drain below 50%",stat:{critDmg:10}},
-      {tier:6,effect:"Tang Melody +3% Crit DMG/stack ×5 = +15% (MA Skills) + Crit DMG Bonus +4.0% + Precision +6.5%",stat:{critDmg:19,prec:6.5}},
+      {tier:6,effect:"Basic Buff (conditional, NOT summed): Tang Melody +3% Crit DMG/stack ×5 = +15% to MA Skills. Attr Buff: Crit DMG Bonus +4.0%, Precision +6.5%",stat:{critDmg:4,prec:6.5}},
     ]
   },
   {
@@ -85,7 +85,7 @@ export const INNER_WAYS: InnerWay[] = [
     ]
   },
   {
-    id:"breaking_point", name:"Breaking Point", cat:"BAMBOOCUT-WIND",
+    id:"breaking_point", name:"Breaking Point", cat:"BAMBOOCUT-DUST",
     desc:"Dealing damage to an enemy under Spirit Depletion grants 1 stack of Collapse. Each stack: +5 Physical Penetration and +5% Critical Damage. Stacks up to 5 times, lasting 5 seconds. (game-verified)",
     recommended:true, note:"Best T91 inner way for Bamboocut-Dust. Activate on boss Exhausted/Spirit Depletion state for max stacks.",
     tiers:[
@@ -94,7 +94,7 @@ export const INNER_WAYS: InnerWay[] = [
       {tier:3,effect:"Hitting an Exhausted enemy grants 1 Disintegration stack",stat:{outerPen:25,critDmg:25}},
       {tier:4,effect:"Disintegration max stacks → 5",stat:{outerPen:25,critDmg:25}},
       {tier:5,effect:"Breakthrough: Direct Critical Rate +4.1%. (Base Collapse: max 5 stacks = +25 Pen, +25% Crit DMG)",stat:{outerPen:25,critDmg:25,dcrit:4.1}},
-      {tier:6,effect:"Collapse max 5 (+25 Pen, +25% CDmg) + Perfect Dodge → 5 Disintegration stacks (15s CD) + Precision +6.5% + Direct Crit +4.1%",stat:{outerPen:25,critDmg:25,dcrit:4.1,prec:6.5}},
+      {tier:6,effect:"Basic Buff (conditional, Spirit Depletion, NOT summed): Collapse ×5 = +25 Pen, +25% Crit DMG; Perfect Dodge → 5 Disintegration stacks (15s CD). Attr Buff: Precision +6.5%, Direct Crit +4.1%",stat:{dcrit:4.1,prec:6.5}},
     ]
   },
   {
@@ -256,7 +256,7 @@ export const INNER_WAYS: InnerWay[] = [
       {tier:3,effect:"Max 4 stacks: +1.6 Phys Pen, +0.8% DMG per stack (max: +6.4 Pen, +3.2% DMG)",stat:{outerPen:6.4,outerDmg:3.2}},
       {tier:4,effect:"Max 5 stacks: +1.8 Phys Pen, +0.9% DMG per stack (max: +9 Pen, +4.5% DMG)",stat:{outerPen:9,outerDmg:4.5}},
       {tier:5,effect:"Breakthrough: Direct Critical Rate +4.6%. (Base max 5 stacks: +10 Pen, +5% DMG)",stat:{outerPen:10,outerDmg:5,dcrit:4.6}},
-      {tier:6,effect:"Yi River +2 Pen/+1% DMG per stack ×5 + Direct Crit +4.6% + Min/Max Phys Atk +23.6/+47.2",stat:{outerPen:10,outerDmg:5,dcrit:4.6,minOuter:23.6,maxOuter:47.2}},
+      {tier:6,effect:"Yi River +2 Pen/stack ×5 = +10 Pen (ramp, kept). Basic Buff (conditional, NOT summed): +1% DMG/stack ×5. Attr Buff: Direct Crit +4.6%, Min/Max Phys Atk +23.6/+47.2",stat:{outerPen:10,dcrit:4.6,minOuter:23.6,maxOuter:47.2}},
     ]
   },
   {
