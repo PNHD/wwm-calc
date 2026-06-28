@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Noto+Serif+SC:wght@500;600;700&family=Noto+Sans+SC:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,500;0,600;0,700;1,500&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
 
 /* Theme adapted from the redesign brief: deep blue-black bg, warm gold + teal
    accents. Legacy var names are remapped to the new palette so the whole app
@@ -336,3 +337,259 @@ input:focus, select:focus { outline: none !important; border-color: var(--accent
 /* Simulator-panel block ordering: flex column lets us reorder blocks via `order`
    inline-style without moving JSX. Header/scheme stay at the top (default order 0). */
 #simulator-panel { display: flex; flex-direction: column; }
+
+/* ============================================================
+   RICE-PAPER WUXIA REDESIGN — appended override theme (delete this
+   block to revert). Implements the Claude-Design prototype "Gear
+   Graduation Calculator.dc.html" default skin: tone-rice / accent
+   vermilion / compact. A warm rice-paper (giấy gạo) ground, dark sumi
+   ink text, a single vermilion (朱砂) accent + jade-green positive
+   deltas, with Spectral (serif headings) + IBM Plex Sans (UI) + IBM
+   Plex Mono (tabular numbers). Pure variable + selector overrides plus
+   inline-hex remaps; no calc/data path in App.tsx is touched.
+   ============================================================ */
+:root{
+  /* —— rice-paper palette (from the prototype's .app tone-rice vars) —— */
+  --paper:#f3efe6;--surface:#faf7f1;--surface2:#f0ebdf;
+  --ink:#211d18;--ink2:#6f675b;--ink3:#9b948a;
+  --line:#ddd5c5;--line2:#cabfa9;
+  --vermilion:#9e2b25;--vermilion2:#b8442f;
+  --jade:#3f7a52;--neg:#a23b2e;--muted-gold:#a8842f;
+  /* —— remap the app's legacy vars onto the paper palette —— */
+  --bg-color:var(--paper);--card-bg:var(--surface);--border:var(--line2);
+  --text-main:var(--ink);--text-sub:var(--ink2);
+  --gold:var(--muted-gold);--accent:var(--vermilion);--accent-hover:var(--vermilion2);
+  --purple:#86609f;
+  /* tints reused below */
+  --verm-soft:rgba(158,43,37,.08);--verm-line:rgba(158,43,37,.28);
+  /* fonts */
+  --glm-display:'Spectral','Noto Serif SC',serif;
+  --glm-body:'IBM Plex Sans','Noto Sans SC',system-ui,sans-serif;
+  --font-display:var(--glm-display);--font-body:var(--glm-body);
+  --font-mono:'IBM Plex Mono',ui-monospace,'SF Mono',monospace;
+  /* design-system tokens → light surfaces */
+  --ga-bg-deep:#ece5d6;--ga-bg-secondary:var(--surface2);--ga-bg-tertiary:var(--surface);
+  --ga-surface:var(--surface);--ga-surface-hover:var(--surface2);--ga-border-light:var(--line2);
+  --ga-accent2:var(--jade);--ga-accent-glow:rgba(158,43,37,.14);
+  --rarity5:#b8923f;--rarity4:#86609f;--rarity3:#4f7fa8;
+  --success:var(--jade);--danger:var(--neg);--info:#4f7fa8;
+}
+html,body{background-color:var(--paper)!important;color:var(--ink)!important;
+  font-family:var(--font-body),'Segoe UI',sans-serif!important}
+h1,h2,h3,.app-title,.modal-title,.wordmark,.card-title h3,
+.sim-header h2,.modal-header h2,.welcome-title{font-family:var(--font-display)!important}
+/* tabular numeric readouts → mono */
+.banner-value,.current-rate-box .value,.stat-row-display .stat-val,
+.ga-card__sub-val,.ga-card__delta,.ga-card__score-val,input[type="number"]{
+  font-family:var(--font-mono)!important;font-variant-numeric:tabular-nums;
+}
+
+/* —— header: rice-paper bar + vermilion seal mark —— */
+header{background:var(--surface)!important;border-bottom:1px solid var(--line2)!important;
+  box-shadow:0 1px 0 rgba(40,30,20,.04)!important;backdrop-filter:none!important}
+header h1{color:var(--ink)!important;display:flex!important;align-items:center;gap:12px;
+  background:none!important;-webkit-background-clip:initial!important;background-clip:initial!important;
+  -webkit-text-fill-color:var(--ink)!important}
+header h1::before{content:"律";font-family:var(--glm-display);width:38px;height:38px;flex:none;
+  display:inline-flex;align-items:center;justify-content:center;border-radius:5px;
+  background:var(--vermilion);color:#f7efe2;font-size:23px;font-weight:700;
+  transform:rotate(-1.5deg);box-shadow:0 1px 0 rgba(0,0,0,.15),inset 0 0 0 1px rgba(255,255,255,.08)}
+
+/* —— filter bar + chips —— */
+#filter-bar{background-color:var(--paper)!important;border-bottom:1px solid var(--line)!important}
+.filter-capsule{background-color:var(--surface)!important;border-color:var(--line2)!important;
+  box-shadow:0 1px 3px rgba(40,30,20,.06)!important}
+.filter-btn{color:var(--ink2)!important}
+.filter-btn:hover{color:var(--ink)!important;background-color:var(--surface2)!important}
+.filter-btn.active{background-color:var(--ink)!important;color:#f7efe2!important;box-shadow:none!important}
+
+/* —— buttons: ink-on-paper secondary, vermilion primary (overrides GLM gold) —— */
+.secondary-btn,.ocr-btn-blue{background:var(--surface)!important;border:1px solid var(--line2)!important;
+  color:var(--ink)!important}
+.secondary-btn:hover,.ocr-btn-blue:hover{background:var(--surface2)!important;border-color:var(--ink3)!important;
+  color:var(--ink)!important}
+.primary-btn,.save-btn,#add-btn{background:var(--vermilion)!important;color:#f7efe2!important;
+  border:1px solid var(--vermilion)!important}
+.primary-btn:hover,.save-btn:hover,#add-btn:hover{background:var(--vermilion2)!important;
+  border-color:var(--vermilion2)!important;box-shadow:0 4px 12px -4px rgba(158,43,37,.45)!important}
+.danger-btn{color:var(--neg)!important;border-color:var(--neg)!important;background:transparent!important}
+.cancel-btn{background:var(--surface)!important;color:var(--ink2)!important;border-color:var(--line2)!important}
+.max-btn{color:var(--vermilion)!important}
+.info-icon-btn{color:var(--ink2)!important}
+.info-icon-btn:hover{color:var(--vermilion)!important;background:var(--verm-soft)!important}
+#account-select{background:var(--surface)!important;color:var(--ink)!important;border-color:var(--line2)!important}
+
+/* —— gear inventory cards —— */
+#equipment-grid,.layout-left{background-color:var(--paper)!important}
+.equip-card{background-color:var(--surface)!important;border:1px solid var(--line2)!important}
+.equip-card:hover{box-shadow:0 4px 14px -8px rgba(40,30,20,.4)!important}
+.equip-card-equipped{border:1px solid var(--vermilion)!important;background:var(--surface)!important;
+  box-shadow:inset 3px 0 0 var(--vermilion)!important}
+.equip-card-equipped:hover{box-shadow:inset 3px 0 0 var(--vermilion),0 5px 18px -10px rgba(158,43,37,.5)!important}
+.equipped-badge{background:transparent!important;color:var(--vermilion)!important;border:1px solid var(--vermilion);
+  box-shadow:none!important;border-radius:3px!important;font-weight:700}
+.equipped-badge::before{color:var(--vermilion)!important}
+.card-header{border-bottom:1px solid var(--line)!important}
+.card-title h3,.val,.main-stat{color:var(--ink)!important}
+.card-title span,.sub-stat{color:var(--ink2)!important}
+.equip-icon{border-color:var(--line2)!important}
+.delete-btn,.edit-btn{color:var(--ink2)!important}
+
+/* —— panel simulator —— */
+#simulator-panel{background-color:var(--surface2)!important;border-left:1px solid var(--line2)!important}
+.sim-header h2,.sim-label{color:var(--ink)!important}
+/* GLM layer paints these with a dark gradient *image* via the `background`
+   shorthand — must use the shorthand (not background-color) to wipe it. */
+.equip-card,.stats-panel,.panel-checkbox-container,.sim-layout-container,
+.xinfa-slot,.sim-slot{background:var(--surface)!important}
+.stats-panel{border:1px solid var(--line2)!important;border-radius:7px!important}
+.stat-row-display{border-bottom:1px solid var(--line)!important}
+.stat-label{color:var(--ink2)!important}.stat-val{color:var(--ink)!important}
+.mini-select{background-color:var(--surface)!important;color:var(--ink)!important;border-color:var(--line2)!important}
+.sim-slot,.xinfa-slot{background:var(--surface)!important;border:1px solid var(--line2)!important}
+.slot-name-overlay{background:rgba(247,239,226,.82)!important;color:var(--ink)!important;text-shadow:none!important}
+.xinfa-name{background:linear-gradient(to top,rgba(33,29,24,.78),rgba(33,29,24,0))!important}
+.sim-layout-container,.panel-checkbox-container{background:var(--surface)!important;
+  border:1px solid var(--line2)!important}
+.panel-checkbox-label{color:var(--ink2)!important}
+.panel-check-hint{background-color:var(--surface)!important;border-color:var(--line2)!important;color:var(--ink2)!important}
+
+/* —— graduation banner (vermilion) —— */
+.graduation-banner{background:linear-gradient(180deg,var(--surface),var(--surface2))!important;
+  border:1px solid var(--vermilion)!important;box-shadow:none!important;text-align:left!important}
+.graduation-banner:hover{background:linear-gradient(180deg,var(--surface),var(--surface2))!important;
+  border-color:var(--vermilion)!important;box-shadow:0 6px 20px -10px rgba(158,43,37,.5)!important}
+.banner-label{color:var(--ink2)!important}
+.banner-value{background:none!important;-webkit-text-fill-color:var(--vermilion)!important;
+  color:var(--vermilion)!important;filter:none!important;font-weight:600!important}
+.banner-footer{color:var(--ink2)!important;border-top:1px dashed var(--line2)!important}
+.banner-footer-text,#total-damage-display{color:var(--ink2)!important}
+.banner-arrow{color:var(--vermilion)!important;opacity:.85!important}
+.graduation-banner:hover .banner-arrow{color:var(--vermilion)!important}
+
+/* —— modals / graduation analysis workspace —— */
+.modal-content{background-color:var(--paper)!important;border:1px solid var(--line2)!important}
+.modal-header,.modal-footer{background-color:var(--surface)!important;border-color:var(--line2)!important}
+.modal-header h2{color:var(--ink)!important}
+.modal-body{color:var(--ink)!important}
+.close-btn{color:var(--ink2)!important}.close-btn:hover{color:var(--vermilion)!important}
+.grad-layout-container,.grad-layout-container-inline,.grad-right-panel{background-color:var(--paper)!important}
+.grad-left-panel{background-color:var(--surface2)!important;border-right:1px solid var(--line2)!important}
+.current-rate-box{background:linear-gradient(to bottom,var(--surface),var(--surface2))!important;
+  border-bottom:1px solid var(--line2)!important}
+.current-rate-box .label{color:var(--ink2)!important}
+.current-rate-box .value{background:none!important;-webkit-text-fill-color:var(--vermilion)!important;color:var(--vermilion)!important}
+.grad-equip-item{background-color:var(--surface)!important;border:1px solid var(--line2)!important}
+.grad-equip-item:hover{background-color:var(--surface2)!important;border-color:var(--vermilion)!important}
+.grad-equip-item.active{background-color:var(--verm-soft)!important;border-color:var(--vermilion)!important}
+.grad-equip-name{color:var(--ink)!important}.grad-equip-sub{color:var(--ink2)!important}
+.grad-tabs{background-color:var(--surface2)!important;border-bottom:1px solid var(--line2)!important}
+.grad-tab{color:var(--ink2)!important;border-right:1px solid var(--line)!important}
+.grad-tab:hover{color:var(--ink)!important;background-color:var(--surface)!important}
+.grad-tab.active{color:var(--vermilion)!important;background-color:var(--paper)!important;border-bottom:2px solid var(--vermilion)!important}
+.compare-card,.transmute-result-card,.transmute-bestbuild-card,.sim-stat-box,
+.sim-intro,.sim-results,.best-build-solution{background-color:var(--surface)!important;border:1px solid var(--line2)!important}
+.transmute-sub-btn,.transmute-target-card{background-color:var(--surface)!important;border-color:var(--line2)!important;color:var(--ink)!important}
+.transmute-sub-btn.selected{border-color:var(--vermilion)!important;background-color:var(--verm-soft)!important;box-shadow:none!important}
+#compare-slot-title{color:var(--ink)!important}
+.diff-up{color:var(--neg)!important}.diff-down{color:var(--jade)!important}.diff-equal{color:var(--ink3)!important}
+.stat-priority-list{background:var(--surface)!important;border:1px solid var(--line2)!important}
+.stat-priority-title-red{color:var(--neg)!important}.stat-priority-title-green{color:var(--jade)!important}
+
+/* —— forms / inputs —— */
+input,select,textarea{background-color:var(--surface)!important;color:var(--ink)!important;border-color:var(--line2)!important}
+input::placeholder{color:var(--ink3)!important}
+input[readonly]{background-color:var(--surface2)!important;color:var(--muted-gold)!important;border-color:var(--line2)!important}
+.available-classes-select-display,.options-list{background-color:var(--surface)!important;color:var(--ink)!important;border-color:var(--line2)!important}
+.export-import-textarea,.batch-ocr-textarea,.batch-ocr-select{background-color:var(--surface)!important;color:var(--ink)!important}
+
+/* —— welcome / empty states —— */
+.welcome-message,.welcome-content{background-color:var(--paper)!important}
+.welcome-content{border:1px solid var(--line2)!important;background:var(--surface)!important}
+.welcome-title{color:var(--vermilion)!important}.welcome-text{color:var(--ink2)!important}
+
+/* —— quality + semantic text colors —— */
+.quality-gold{color:var(--muted-gold)!important}.quality-purple{color:var(--purple)!important}
+.text-gold,.welcome-title{color:var(--muted-gold)!important}
+.text-green{color:var(--jade)!important}.text-red{color:var(--neg)!important}
+.text-white,.text-e0,.text-ddd,.text-bbb{color:var(--ink)!important}
+.text-gray,.text-light-gray,.text-dark-gray,.text-a0a0a0{color:var(--ink2)!important}
+.text-purple{color:var(--purple)!important}
+
+/* —— scrollbars —— */
+::-webkit-scrollbar-track{background:var(--paper)!important}
+::-webkit-scrollbar-thumb{background:var(--line2)!important;border:2px solid var(--paper)!important}
+::-webkit-scrollbar-thumb:hover{background:var(--ink3)!important}
+
+/* —— inline-hex remaps (JSX style={{…}} literals) ——
+   dark backgrounds → light surfaces */
+[style*="#23262c"],[style*="#141619"],[style*="#15161a"],[style*="#111316"],
+[style*="#181512"],[style*="#1e1a12"],[style*="#1a1a1d"],[style*="#0d1117"],
+[style*="#161b22"],[style*="#141c16"],[style*="#232328"],[style*="#2c2c32"],
+[style*="#2d2d35"],[style*="#2a2a30"],[style*="#1e1e24"]{
+  background-color:var(--surface)!important;border-color:var(--line2)!important}
+/* light text → dark ink */
+[style*="#c9d1d9"],[style*="#e6edf3"],[style*="#e0e0e0"],[style*="#e8e8e8"],
+[style*="#adbac7"],[style*="#a7b0bb"],[style*="#fff"]{color:var(--ink)!important}
+/* mid greys (cool) → warm ink2 */
+[style*="#8b949e"],[style*="#6e7681"],[style*="#6b7280"],[style*="#7b8794"],
+[style*="#5b6570"],[style*="#56657a"],[style*="#a19683"],[style*="#b5a297"]{color:var(--ink2)!important}
+/* gold accents → vermilion (text + border) */
+[style*="#f0b400"],[style*="#e6c200"],[style*="#d4b24a"],[style*="#ffed4e"],[style*="#f59e0b"]{
+  color:var(--vermilion)!important}
+[style*="rgba(245,180,0"],[style*="rgba(240,180,0"],[style*="rgba(255,215,0"]{
+  border-color:var(--verm-line)!important;background-color:var(--verm-soft)!important}
+/* greens stay jade */
+[style*="#7ee787"],[style*="#4caf50"],[style*="#3fb950"]{color:var(--jade)!important}
+
+/* —— Analysis Tools nav: bordered grouped chip box (prototype .anav) —— */
+.anav{order:0.5;margin-top:4px;border:1px solid var(--line2);border-radius:8px;
+  background:var(--surface);overflow:hidden;display:flex;flex-direction:column}
+.anav-group{display:flex;align-items:flex-start;gap:9px;padding:7px 11px;
+  border-bottom:1px solid var(--line);flex-direction:row}
+.anav-group:last-child{border-bottom:0}
+.anav-group-label{width:60px;flex:none;font:700 8.5px var(--glm-body);letter-spacing:.09em;
+  text-transform:uppercase;color:var(--ink3);padding-top:6px;padding-left:0}
+.anav-row{display:flex;flex-wrap:wrap;gap:5px;flex:1}
+.anav-btn{flex:0 0 auto;font:600 11px var(--glm-body);
+  padding:5px 9px;border-radius:5px;background:var(--surface2);
+  border:1px solid var(--line2);color:var(--ink);cursor:pointer;white-space:nowrap;
+  transition:all .12s;text-align:center}
+.anav-btn:hover{border-color:var(--vermilion);background:var(--verm-soft);color:var(--vermilion)}
+
+/* —— collapsible stat panel toggle —— */
+.stats-panel-toggle{display:block;width:100%;margin-top:8px;padding:8px;
+  background:var(--surface);border:1px solid var(--line2);border-radius:6px;
+  color:var(--ink2);font:600 11px var(--glm-body);letter-spacing:.03em;
+  cursor:pointer;transition:all .12s}
+.stats-panel-toggle:hover{border-color:var(--vermilion);color:var(--vermilion);background:var(--verm-soft)}
+
+/* —— safety: the React root wrapper / app shell stay rice-paper —— */
+#root,.app-layout{background-color:var(--paper)!important}
+
+/* ============================================================
+   Tailwind arbitrary-value class overrides (the Graduation Analysis
+   modal tabs are built with bg-[#hex]/text-[#hex]/border-[#hex] utility
+   classes, not inline styles — so they need class-level remaps onto the
+   rice-paper palette). Escaped selectors target the generated classes.
+   ============================================================ */
+/* dark surfaces → light paper surface */
+.bg-\[\#141619\],.bg-\[\#1a1a1d\],.bg-\[\#111316\],.bg-\[\#1e1a12\],.bg-\[\#181512\],
+.bg-\[\#15161a\],.bg-\[\#141c16\],.bg-\[\#1f1915\],.bg-\[\#1b1510\],.bg-\[\#161310\],
+.bg-\[\#16121c\],.bg-\[\#11141a\],.bg-\[\#0f0d0b\]{background-color:var(--surface)!important}
+/* accent fills → vermilion */
+.bg-\[\#f0b400\],.bg-\[\#ffed4e\],.hover\:bg-\[\#ffed4e\]:hover{background-color:var(--vermilion)!important;color:#f7efe2!important}
+.bg-\[\#4caf50\],.hover\:bg-\[\#4caf50\]:hover{background-color:var(--jade)!important;color:#f7efe2!important}
+/* gold accent text → vermilion; warm/cool greys → ink2; greens → jade */
+.text-\[\#f0b400\]{color:var(--vermilion)!important}
+.text-\[\#a19683\],.text-\[\#8b949e\]{color:var(--ink2)!important}
+.text-\[\#7ee787\],.text-\[\#4caf50\]{color:var(--jade)!important}
+.text-\[\#ff7b72\],.hover\:text-\[\#ff7b72\]:hover{color:var(--neg)!important}
+.text-\[\#58a6ff\]{color:var(--info)!important}
+/* borders */
+.border-\[\#23262c\]{border-color:var(--line2)!important}
+.border-\[\#f0b400\],.hover\:border-\[\#f0b400\]:hover,.ring-\[\#f0b400\]{border-color:var(--vermilion)!important}
+.border-\[\#4caf50\],.border-\[\#7ee787\],.hover\:border-\[\#7ee787\]:hover{border-color:var(--jade)!important}
+/* gradient stops used on chips/bars → vermilion ramp */
+.from-\[\#e6c200\],.from-\[\#f0b400\]{--tw-gradient-from:var(--vermilion)!important}
+.to-\[\#f0b400\]{--tw-gradient-to:var(--vermilion2)!important}

@@ -1281,6 +1281,7 @@ export default function App() {
   };
   const [analysisMenuOpen, setAnalysisMenuOpen] = useState(false);
   const [slotPopover, setSlotPopover] = useState<string | null>(null); // slot name whose quick-swap popover is open
+  const [showFullStats, setShowFullStats] = useState(false); // stat readout: 8 key rows by default, full 26-row panel on toggle
   const [rotationTab, setRotationTab] = useState<"list" | "top">("list");
 
   const [rotSimClass, setRotSimClass] = useState<string>("Bamboocut-Dust");
@@ -3363,9 +3364,9 @@ export default function App() {
   if (!uidGate) return <UidGateModal onPass={setUidGate} />;
 
   return (
-    <div className="min-h-screen bg-[#1a1a1d] text-[#e0e0e0] font-sans antialiased selection:bg-[#f0b400]/25 selection:text-[#f0b400]">
+    <div className="min-h-screen bg-[#f3efe6] text-[#211d18] font-sans antialiased selection:bg-[#9e2b25]/25 selection:text-[#9e2b25]">
       {/* Accent line */}
-      <div className="h-0.5 w-full bg-gradient-to-r from-[#e6c200] via-[#f0b400] to-[#e6c200]" />
+      <div className="h-0.5 w-full bg-gradient-to-r from-[#9e2b25] via-[#b8442f] to-[#9e2b25]" />
 
       {/* ── HEADER ── */}
       <header>
@@ -4064,6 +4065,49 @@ export default function App() {
             </div>
           </div>
 
+          {/* Analysis Tools — grouped, always-visible nav sitting right above the
+              Graduation banner so each tool opens directly instead of being
+              hidden behind the banner click. */}
+          <nav className="anav" aria-label="Analysis tools">
+            {[
+              { label: "Improve", tools: [
+                { key: "compare", label: "Compare" },
+                { key: "priority", label: "Stat Priority" },
+                { key: "cultivate", label: "Cultivate" },
+              ] },
+              { label: "Plan ahead", tools: [
+                { key: "best-build", label: "Best Build" },
+                { key: "bis", label: "BiS Gear" },
+                { key: "transmute", label: "Transmute" },
+              ] },
+              { label: "Rotation & DPS", tools: [
+                { key: "rotations", label: "Rotations" },
+                { key: "dps-compare", label: "DPS Compare" },
+                { key: "skill-editor", label: "Skill Editor" },
+              ] },
+              { label: "Reference", tools: [
+                { key: "manual", label: "Manual Sheet" },
+                { key: "team", label: "Team" },
+              ] },
+            ].map(group => (
+              <div className="anav-group" key={group.label}>
+                <span className="anav-group-label">{group.label}</span>
+                <div className="anav-row">
+                  {group.tools.map(t => (
+                    <button
+                      key={t.key}
+                      type="button"
+                      className="anav-btn"
+                      onClick={() => { setGradModalActiveTab(t.key); setIsGradModalOpen(true); }}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </nav>
+
           {/* Graduation rate banner */}
           <div
             className="graduation-banner"
@@ -4148,6 +4192,7 @@ export default function App() {
                 { label: "Single-Target Mystic DMG", base: basePanel.singleTargetDmg, combat: adjustedPanel.singleTargetDmg, pct: true },
                 { label: "Area Mystic Skill DMG", base: basePanel.groupDmg, combat: adjustedPanel.groupDmg, pct: true },
               ];
+              const displayRows = showFullStats ? rows : rows.filter(r => !r.derived).slice(0, 8);
               return (
                 <>
                   <div className="stat-row-display" style={{ borderBottom: "1px solid rgba(245,180,0,0.25)", paddingBottom: 4, marginBottom: 2 }}>
@@ -4157,7 +4202,7 @@ export default function App() {
                       <span style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: 0.5, color: "#f0b400", width: 56, textAlign: "right" }} title="Effective in-combat value = base + Inner Ways + toggled buffs">Combat</span>
                     </span>
                   </div>
-                  {rows.map((r, idx) => {
+                  {displayRows.map((r, idx) => {
                     const boosted = !r.derived && r.base !== undefined && r.combat !== undefined && Math.abs(r.combat - r.base) > 0.05;
                     return (
                       <div key={idx} className="stat-row-display">
@@ -4173,6 +4218,9 @@ export default function App() {
                       </div>
                     );
                   })}
+                  <button type="button" className="stats-panel-toggle" onClick={() => setShowFullStats(v => !v)}>
+                    {showFullStats ? "▲ Show key stats only" : `▼ Show full panel (${rows.length} stats)`}
+                  </button>
                   <p style={{ fontSize: 10.5, color: "#6e7681", marginTop: 6, lineHeight: 1.4 }}>
                     <b style={{ color: "#8b949e" }}>Menu</b> = matches your in-game Combat Attributes screen · <b style={{ color: "#f0b400" }}>Combat</b> = effective in fight (Inner Ways at max stacks + active buffs). Green = boosted by Inner Ways/buffs.
                   </p>
