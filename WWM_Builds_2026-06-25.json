@@ -1,0 +1,1854 @@
+{
+  "chars": [
+    {
+      "id": "char-1781712768576",
+      "name": "Main Hero",
+      "schemes": [
+        {
+          "id": "scheme-1781712768576",
+          "name": "Scheme 1",
+          "panel": {
+            "minOuter": 1557.8000000000002,
+            "maxOuter": 2326.5,
+            "outerPen": 14.000000000000002,
+            "minPz": 307.9,
+            "maxPz": 720.0999999999999,
+            "pzPen": 27.7,
+            "pzDmg": 9,
+            "prec": 108.80000000000001,
+            "crit": 104.20000000000002,
+            "aff": 18.6,
+            "dcrit": 0,
+            "daff": 0,
+            "critDmg": 40,
+            "affDmg": 35,
+            "outerDmg": -5,
+            "bossDmg": 5.1,
+            "umbAll": 5.1,
+            "umbMartial": 14.399999999999999,
+            "umbSpecial": 0,
+            "umbCharged": 0,
+            "ropeAll": 0,
+            "ropeMartial": 0,
+            "ropeSpecial": 0,
+            "ropeCharged": 3.9,
+            "swordAll": 0,
+            "swordMartial": 0,
+            "swordSpecial": 0,
+            "swordCharged": 0,
+            "spearAll": 0,
+            "spearMartial": 0,
+            "spearSpecial": 0,
+            "spearCharged": 0,
+            "fanAll": 0,
+            "fanMartial": 0,
+            "fanSpecial": 0,
+            "fanCharged": 0,
+            "twinbladesAll": 0,
+            "twinbladesMartial": 0,
+            "twinbladesSpecial": 0,
+            "twinbladesCharged": 0,
+            "modaoAll": 0,
+            "modaoMartial": 0,
+            "modaoSpecial": 0,
+            "modaoCharged": 0,
+            "hengdaoAll": 0,
+            "hengdaoMartial": 0,
+            "hengdaoSpecial": 0,
+            "hengdaoCharged": 0,
+            "gauntletsAll": 0,
+            "gauntletsMartial": 0,
+            "gauntletsSpecial": 0,
+            "gauntletsCharged": 0,
+            "allArts": 0,
+            "attunedBonus": 0,
+            "wuxiangMin": 0,
+            "wuxiangMax": 0,
+            "set": "stars",
+            "constitution": 137,
+            "power": 255.2,
+            "defense": 137,
+            "agility": 373.5,
+            "momentum": 137,
+            "physResGear": 0,
+            "physDmgReduction": 0,
+            "groupDmg": 0,
+            "singleTargetDmg": 8,
+            "strength": 0,
+            "playerDmg": 0,
+            "offPzMin": 0,
+            "offPzMax": 35
+          },
+          "gear": [
+            {
+              "id": "gear-1782022947243",
+              "slot": "Chest",
+              "name": "Chest 4",
+              "quality": "gold",
+              "set": "stormrain",
+              "subs": [
+                {
+                  "type": "Precision",
+                  "val": "5.0",
+                  "isTuned": false
+                },
+                {
+                  "type": "Max Bamboocut Atk",
+                  "val": "32.9",
+                  "isTuned": false
+                },
+                {
+                  "type": "Min Phys Atk",
+                  "val": "63.8",
+                  "isTuned": true
+                },
+                {
+                  "type": "Single-Target Mystic DMG",
+                  "val": "8.0",
+                  "isTuned": false
+                },
+                {
+                  "type": "Max Phys Atk",
+                  "val": "60.0",
+                  "isTuned": false
+                },
+                {
+                  "type": "Rope Dart Charged Skill DMG Boost",
+                  "val": "3.9",
+                  "isTuned": false
+                }
+              ],
+              "isRelay": false,
+              "isEquipped": true,
+              "mastery": 946
+            },
+            {
+              "id": "gear-1782022992571",
+              "slot": "Greaves",
+              "name": "Greaves 2",
+              "quality": "gold",
+              "set": "stormrain",
+              "subs": [
+                {
+                  "type": "Power",
+                  "val": "36.9",
+                  "isTuned": false
+                },
+                {
+                  "type": "Max Bamboocut Atk",
+                  "val": "35.7",
+                  "isTuned": false
+                },
+                {
+                  "type": "Max Bellstrike Atk",
+                  "val": "34.2",
+                  "isTuned": false
+                },
+                {
+                  "type": "Max Phys Atk",
+                  "val": "61.8",
+                  "isTuned": false
+                },
+                {
+                  "type": "Momentum",
+                  "val": "38.9",
+                  "isTuned": false
+                },
+                {
+                  "type": "Rope Dart Charged Skill DMG Boost",
+                  "val": "3.2",
+                  "isTuned": false
+                }
+              ],
+              "isRelay": false,
+              "isEquipped": false,
+              "mastery": 819
+            },
+            {
+              "id": "0.5727537260761099",
+              "slot": "Umbrella",
+              "name": "Agility: 39.0",
+              "quality": "gold",
+              "set": "stars",
+              "subs": [
+                {
+                  "type": "Agility",
+                  "val": "39.0",
+                  "isTuned": false
+                },
+                {
+                  "type": "Max Phys Atk",
+                  "val": "63.8",
+                  "isTuned": true
+                },
+                {
+                  "type": "Precision",
+                  "val": "6.1",
+                  "isTuned": false
+                },
+                {
+                  "type": "Min Silkbind Atk",
+                  "val": "33.9",
+                  "isTuned": false
+                },
+                {
+                  "type": "Agility",
+                  "val": "40.3",
+                  "isTuned": false
+                },
+                {
+                  "type": "Phys Pen",
+                  "val": "8.9",
+                  "isTuned": false
+                }
+              ],
+              "mastery": 832,
+              "isEquipped": false,
+              "weaponType": "Rope Dart",
+              "isRelay": false
+            },
+            {
+              "id": "gear-1782018898150",
+              "slot": "Rope Dart",
+              "name": "Weapon 2 1",
+              "quality": "purple",
+              "set": "stars",
+              "subs": [
+                {
+                  "type": "Max Phys Atk",
+                  "val": "59.2",
+                  "isTuned": false
+                },
+                {
+                  "type": "Max Phys Atk",
+                  "val": "63.8",
+                  "isTuned": false
+                },
+                {
+                  "type": "Art of Umbrella Boost",
+                  "val": "5.1",
+                  "isTuned": false
+                },
+                {
+                  "type": "Min Phys Atk",
+                  "val": "62.9",
+                  "isTuned": false
+                },
+                {
+                  "type": "Crit Rate",
+                  "val": "7.4",
+                  "isTuned": true
+                },
+                {
+                  "type": "Phys Pen",
+                  "val": "7.4",
+                  "isTuned": false
+                }
+              ],
+              "weaponType": "Umbrella",
+              "isRelay": false,
+              "isEquipped": true,
+              "mastery": 798
+            },
+            {
+              "id": "gear-1782018918755",
+              "slot": "Disc",
+              "name": "Disc 1",
+              "quality": "gold",
+              "set": "stars",
+              "subs": [
+                {
+                  "type": "Min Phys Atk",
+                  "val": "56.2",
+                  "isTuned": false
+                },
+                {
+                  "type": "Max Phys Atk",
+                  "val": "59.9",
+                  "isTuned": false
+                },
+                {
+                  "type": "Min Phys Atk",
+                  "val": "61.7",
+                  "isTuned": false
+                },
+                {
+                  "type": "Max Silkbind Atk",
+                  "val": "35.0",
+                  "isTuned": false
+                },
+                {
+                  "type": "Crit Rate",
+                  "val": "7.4",
+                  "isTuned": true
+                },
+                {
+                  "type": "Phys Pen",
+                  "val": "8.3",
+                  "isTuned": false
+                }
+              ],
+              "isRelay": false,
+              "isEquipped": true,
+              "mastery": 658
+            },
+            {
+              "id": "gear-1782018943191",
+              "slot": "Pendant",
+              "name": "Pendant 1",
+              "quality": "purple",
+              "set": "stars",
+              "subs": [
+                {
+                  "type": "Min Phys Atk",
+                  "val": "60.6",
+                  "isTuned": false
+                },
+                {
+                  "type": "Max Phys Atk",
+                  "val": "58.1",
+                  "isTuned": false
+                },
+                {
+                  "type": "Crit Rate",
+                  "val": "7.0",
+                  "isTuned": false
+                },
+                {
+                  "type": "Min Phys Atk",
+                  "val": "59.7",
+                  "isTuned": false
+                },
+                {
+                  "type": "Affinity Rate",
+                  "val": "3.4",
+                  "isTuned": false
+                },
+                {
+                  "type": "Phys Pen",
+                  "val": "8.3",
+                  "isTuned": false
+                }
+              ],
+              "isRelay": false,
+              "isEquipped": true,
+              "mastery": 688
+            },
+            {
+              "id": "gear-1782018973762",
+              "slot": "Helmet",
+              "name": "Helmet 1",
+              "quality": "gold",
+              "set": "stormrain",
+              "subs": [
+                {
+                  "type": "Crit Rate",
+                  "val": "7.0",
+                  "isTuned": false
+                },
+                {
+                  "type": "Crit Rate",
+                  "val": "7.1",
+                  "isTuned": false
+                },
+                {
+                  "type": "Agility",
+                  "val": "40.4",
+                  "isTuned": true
+                },
+                {
+                  "type": "Max Bamboocut Atk",
+                  "val": "33.4",
+                  "isTuned": false
+                },
+                {
+                  "type": "Max Phys Atk",
+                  "val": "62.7",
+                  "isTuned": false
+                },
+                {
+                  "type": "Umb Martial Art Skill DMG Boost",
+                  "val": "4.8",
+                  "isTuned": false
+                }
+              ],
+              "isRelay": false,
+              "isEquipped": true,
+              "mastery": 801
+            },
+            {
+              "id": "gear-1782019068485",
+              "slot": "Chest",
+              "name": "Chest 1",
+              "quality": "gold",
+              "set": "stormrain",
+              "subs": [
+                {
+                  "type": "Precision",
+                  "val": "6.3",
+                  "isTuned": false
+                },
+                {
+                  "type": "Max Bamboocut Atk",
+                  "val": "34.8",
+                  "isTuned": false
+                },
+                {
+                  "type": "Min Bamboocut Atk",
+                  "val": "35.4",
+                  "isTuned": false
+                },
+                {
+                  "type": "Crit Rate",
+                  "val": "7.4",
+                  "isTuned": true
+                },
+                {
+                  "type": "Max Phys Atk",
+                  "val": "59.7",
+                  "isTuned": false
+                },
+                {
+                  "type": "Umb Martial Art Skill DMG Boost",
+                  "val": "4.8",
+                  "isTuned": false
+                }
+              ],
+              "isRelay": false,
+              "isEquipped": false,
+              "mastery": 987
+            },
+            {
+              "id": "gear-1782019122291",
+              "slot": "Greaves",
+              "name": "Greaves 1",
+              "quality": "gold",
+              "set": "stormrain",
+              "subs": [
+                {
+                  "type": "Power",
+                  "val": "38.8",
+                  "isTuned": false
+                },
+                {
+                  "type": "Boss DMG%",
+                  "val": "2.6",
+                  "isTuned": false
+                },
+                {
+                  "type": "Crit Rate",
+                  "val": "7.4",
+                  "isTuned": true
+                },
+                {
+                  "type": "Agility",
+                  "val": "38.1",
+                  "isTuned": false
+                },
+                {
+                  "type": "Max Phys Atk",
+                  "val": "59.0",
+                  "isTuned": false
+                },
+                {
+                  "type": "Umb Martial Art Skill DMG Boost",
+                  "val": "4.6",
+                  "isTuned": false
+                }
+              ],
+              "isRelay": false,
+              "isEquipped": true,
+              "mastery": 849
+            },
+            {
+              "id": "gear-1782019162103",
+              "slot": "Bracers",
+              "name": "Bracers 1",
+              "quality": "purple",
+              "set": "stormrain",
+              "subs": [
+                {
+                  "type": "Precision",
+                  "val": "6.2",
+                  "isTuned": false
+                },
+                {
+                  "type": "Max Phys Atk",
+                  "val": "60.0",
+                  "isTuned": true
+                },
+                {
+                  "type": "Max Bamboocut Atk",
+                  "val": "34.0",
+                  "isTuned": false
+                },
+                {
+                  "type": "Crit Rate",
+                  "val": "7.0",
+                  "isTuned": false
+                },
+                {
+                  "type": "Boss DMG%",
+                  "val": "2.4",
+                  "isTuned": false
+                },
+                {
+                  "type": "Umb Martial Art Skill DMG Boost",
+                  "val": "3.9",
+                  "isTuned": false
+                }
+              ],
+              "isRelay": true,
+              "isEquipped": false
+            },
+            {
+              "id": "gear-1782019294547",
+              "slot": "Umbrella",
+              "name": "Weapon 1 2",
+              "quality": "gold",
+              "set": "stars",
+              "subs": [
+                {
+                  "type": "Max Phys Atk",
+                  "val": "60",
+                  "isTuned": false
+                },
+                {
+                  "type": "Min Phys Atk",
+                  "val": "60.0",
+                  "isTuned": true
+                },
+                {
+                  "type": "Min Bamboocut Atk",
+                  "val": "34.0",
+                  "isTuned": false
+                },
+                {
+                  "type": "Crit Rate",
+                  "val": "7.0",
+                  "isTuned": false
+                },
+                {
+                  "type": "Max Phys Atk",
+                  "val": "60.0",
+                  "isTuned": false
+                },
+                {
+                  "type": "Formless Penetration",
+                  "val": "9.7",
+                  "isTuned": false
+                }
+              ],
+              "weaponType": "Rope Dart",
+              "isRelay": false,
+              "isEquipped": true,
+              "mastery": 813
+            },
+            {
+              "id": "gear-1782019363924",
+              "slot": "Umbrella",
+              "name": "Weapon 1 3",
+              "quality": "gold",
+              "set": "stars",
+              "subs": [
+                {
+                  "type": "Max Bamboocut Atk",
+                  "val": "34.0",
+                  "isTuned": false
+                },
+                {
+                  "type": "Max Phys Atk",
+                  "val": "60.0",
+                  "isTuned": false
+                },
+                {
+                  "type": "Min Phys Atk",
+                  "val": "60.0",
+                  "isTuned": true
+                },
+                {
+                  "type": "Power",
+                  "val": "38.0",
+                  "isTuned": false
+                },
+                {
+                  "type": "Crit Rate",
+                  "val": "7.0",
+                  "isTuned": false
+                },
+                {
+                  "type": "Attr Pen",
+                  "val": "8.4",
+                  "isTuned": false
+                }
+              ],
+              "weaponType": "Rope Dart",
+              "isRelay": true,
+              "isEquipped": false
+            },
+            {
+              "id": "gear-1782019442509",
+              "slot": "Umbrella",
+              "name": "Weapon 1 4",
+              "quality": "gold",
+              "set": "stars",
+              "subs": [
+                {
+                  "type": "Max Phys Atk",
+                  "val": "53.0",
+                  "isTuned": false
+                },
+                {
+                  "type": "Power",
+                  "val": "38.0",
+                  "isTuned": false
+                },
+                {
+                  "type": "Max Bellstrike Atk",
+                  "val": "33.5",
+                  "isTuned": false
+                },
+                {
+                  "type": "Max Bamboocut Atk",
+                  "val": "34.7",
+                  "isTuned": false
+                },
+                {
+                  "type": "Art of Rope Dart Boost",
+                  "val": "4.8",
+                  "isTuned": false
+                },
+                {
+                  "type": "Phys Resist",
+                  "val": "7.6",
+                  "isTuned": false
+                }
+              ],
+              "weaponType": "Rope Dart",
+              "isRelay": false,
+              "isEquipped": false
+            },
+            {
+              "id": "gear-1782019495253",
+              "slot": "Umbrella",
+              "name": "Weapon 1 5",
+              "quality": "purple",
+              "set": "stars",
+              "subs": [
+                {
+                  "type": "Max Phys Atk",
+                  "val": "60.2",
+                  "isTuned": false
+                },
+                {
+                  "type": "Max Phys Atk",
+                  "val": "59.5",
+                  "isTuned": false
+                },
+                {
+                  "type": "Min Bamboocut Atk",
+                  "val": "33.3",
+                  "isTuned": false
+                },
+                {
+                  "type": "Max Bamboocut Atk",
+                  "val": "32.8",
+                  "isTuned": false
+                },
+                {
+                  "type": "Power",
+                  "val": "37.6",
+                  "isTuned": false
+                },
+                {
+                  "type": "Attr Pen",
+                  "val": "8.7",
+                  "isTuned": false
+                }
+              ],
+              "weaponType": "Rope Dart",
+              "isRelay": false,
+              "isEquipped": false
+            },
+            {
+              "id": "gear-1782021087004",
+              "slot": "Rope Dart",
+              "name": "Weapon 2 2",
+              "quality": "gold",
+              "set": "stars",
+              "subs": [
+                {
+                  "type": "Agility",
+                  "val": "40.1",
+                  "isTuned": false
+                },
+                {
+                  "type": "Affinity Rate",
+                  "val": "3.6",
+                  "isTuned": false
+                },
+                {
+                  "type": "Max Bamboocut Atk",
+                  "val": "36.2",
+                  "isTuned": false
+                },
+                {
+                  "type": "Max Phys Atk",
+                  "val": "63.8",
+                  "isTuned": false
+                },
+                {
+                  "type": "Power",
+                  "val": "40.4",
+                  "isTuned": true
+                },
+                {
+                  "type": "Phys Pen",
+                  "val": "7.5",
+                  "isTuned": false
+                }
+              ],
+              "weaponType": "Umbrella",
+              "isRelay": false,
+              "isEquipped": false
+            },
+            {
+              "id": "gear-1782021352252",
+              "slot": "Rope Dart",
+              "name": "Weapon 2 3",
+              "quality": "gold",
+              "set": "stars",
+              "subs": [
+                {
+                  "type": "Min Phys Atk",
+                  "val": "62.0",
+                  "isTuned": false
+                },
+                {
+                  "type": "Crit Rate",
+                  "val": "7.1",
+                  "isTuned": false
+                },
+                {
+                  "type": "Min Stonesplit Atk",
+                  "val": "33.6",
+                  "isTuned": false
+                },
+                {
+                  "type": "Art of Umbrella Boost",
+                  "val": "4.8",
+                  "isTuned": false
+                },
+                {
+                  "type": "Phys Resist",
+                  "val": "6.9",
+                  "isTuned": false
+                },
+                {
+                  "type": "Max Stonesplit Atk",
+                  "val": "36.2",
+                  "isTuned": true
+                }
+              ],
+              "weaponType": "Umbrella",
+              "isRelay": false,
+              "isEquipped": false
+            },
+            {
+              "id": "gear-1782022529948",
+              "slot": "Rope Dart",
+              "name": "Weapon 2 4",
+              "quality": "gold",
+              "set": "stars",
+              "subs": [
+                {
+                  "type": "Agility",
+                  "val": "34.8",
+                  "isTuned": false
+                },
+                {
+                  "type": "Max Bamboocut Atk",
+                  "val": "32.9",
+                  "isTuned": false
+                },
+                {
+                  "type": "Max Stonesplit Atk",
+                  "val": "34.0",
+                  "isTuned": false
+                },
+                {
+                  "type": "Crit Rate",
+                  "val": "7.1",
+                  "isTuned": false
+                },
+                {
+                  "type": "Power",
+                  "val": "38.8",
+                  "isTuned": false
+                },
+                {
+                  "type": "Attr Pen",
+                  "val": "6.8",
+                  "isTuned": false
+                }
+              ],
+              "weaponType": "Umbrella",
+              "isRelay": false,
+              "isEquipped": false
+            },
+            {
+              "id": "gear-1782022555842",
+              "slot": "Rope Dart",
+              "name": "Weapon 2 5",
+              "quality": "gold",
+              "set": "stars",
+              "subs": [
+                {
+                  "type": "Min Silkbind Atk",
+                  "val": "32.4",
+                  "isTuned": false
+                },
+                {
+                  "type": "Crit Rate",
+                  "val": "7.4",
+                  "isTuned": false
+                },
+                {
+                  "type": "Agility",
+                  "val": "40.4",
+                  "isTuned": true
+                },
+                {
+                  "type": "Max Bamboocut Atk",
+                  "val": "33.9",
+                  "isTuned": false
+                },
+                {
+                  "type": "Power",
+                  "val": "37.8",
+                  "isTuned": false
+                },
+                {
+                  "type": "Phys Pen",
+                  "val": "5.4",
+                  "isTuned": false
+                }
+              ],
+              "weaponType": "Umbrella",
+              "isRelay": false,
+              "isEquipped": false
+            },
+            {
+              "id": "gear-1782022579097",
+              "slot": "Rope Dart",
+              "name": "Weapon 2 6",
+              "quality": "gold",
+              "set": "stars",
+              "subs": [
+                {
+                  "type": "Agility",
+                  "val": "38.0",
+                  "isTuned": false
+                },
+                {
+                  "type": "Max Phys Atk",
+                  "val": "60.0",
+                  "isTuned": false
+                },
+                {
+                  "type": "Power",
+                  "val": "38.0",
+                  "isTuned": true
+                },
+                {
+                  "type": "Min Bamboocut Atk",
+                  "val": "34.0",
+                  "isTuned": false
+                },
+                {
+                  "type": "Agility",
+                  "val": "38.0",
+                  "isTuned": false
+                },
+                {
+                  "type": "Phys Pen",
+                  "val": "8.1",
+                  "isTuned": false
+                }
+              ],
+              "weaponType": "Umbrella",
+              "isRelay": false,
+              "isEquipped": false
+            },
+            {
+              "id": "gear-1782022611322",
+              "slot": "Rope Dart",
+              "name": "Weapon 2 7",
+              "quality": "purple",
+              "set": "stars",
+              "subs": [
+                {
+                  "type": "Max Bamboocut Atk",
+                  "val": "34.6",
+                  "isTuned": false
+                },
+                {
+                  "type": "Precision",
+                  "val": "6.4",
+                  "isTuned": false
+                },
+                {
+                  "type": "Max Bamboocut Atk",
+                  "val": "60.7",
+                  "isTuned": false
+                },
+                {
+                  "type": "Agility",
+                  "val": "39.7",
+                  "isTuned": false
+                },
+                {
+                  "type": "Phys Pen",
+                  "val": "8.6",
+                  "isTuned": false
+                },
+                {
+                  "type": "Max Phys Atk",
+                  "val": "36.2",
+                  "isTuned": true
+                }
+              ],
+              "weaponType": "Umbrella",
+              "isRelay": false,
+              "isEquipped": false
+            },
+            {
+              "id": "gear-1782022633104",
+              "slot": "Disc",
+              "name": "Disc 2",
+              "quality": "gold",
+              "set": "stars",
+              "subs": [
+                {
+                  "type": "Min Phys Atk",
+                  "val": "48.6",
+                  "isTuned": false
+                },
+                {
+                  "type": "Max Bamboocut Atk",
+                  "val": "35.2",
+                  "isTuned": false
+                },
+                {
+                  "type": "Precision",
+                  "val": "6.3",
+                  "isTuned": false
+                },
+                {
+                  "type": "Min Silkbind Atk",
+                  "val": "35.0",
+                  "isTuned": false
+                },
+                {
+                  "type": "Max Phys Atk",
+                  "val": "63.0",
+                  "isTuned": false
+                },
+                {
+                  "type": "Phys Resist",
+                  "val": "8.0",
+                  "isTuned": false
+                }
+              ],
+              "isRelay": false,
+              "isEquipped": false
+            },
+            {
+              "id": "gear-1782022656217",
+              "slot": "Disc",
+              "name": "Disc 3",
+              "quality": "gold",
+              "set": "stars",
+              "subs": [
+                {
+                  "type": "Max Phys Atk",
+                  "val": "54.8",
+                  "isTuned": false
+                },
+                {
+                  "type": "Max Bellstrike Atk",
+                  "val": "35.4",
+                  "isTuned": false
+                },
+                {
+                  "type": "Precision",
+                  "val": "6.6",
+                  "isTuned": false
+                },
+                {
+                  "type": "Crit Rate",
+                  "val": "5.8",
+                  "isTuned": false
+                },
+                {
+                  "type": "Affinity Rate",
+                  "val": "3.6",
+                  "isTuned": false
+                },
+                {
+                  "type": "Phys Pen",
+                  "val": "8.3",
+                  "isTuned": false
+                }
+              ],
+              "isRelay": false,
+              "isEquipped": false
+            },
+            {
+              "id": "gear-1782022691907",
+              "slot": "Disc",
+              "name": "Disc 4",
+              "quality": "gold",
+              "set": "stars",
+              "subs": [
+                {
+                  "type": "Max Phys Atk",
+                  "val": "47.3",
+                  "isTuned": false
+                },
+                {
+                  "type": "Max Bamboocut Atk",
+                  "val": "36.0",
+                  "isTuned": false
+                },
+                {
+                  "type": "Affinity Rate",
+                  "val": "3.4",
+                  "isTuned": false
+                },
+                {
+                  "type": "Precision",
+                  "val": "6.6",
+                  "isTuned": false
+                },
+                {
+                  "type": "Crit Rate",
+                  "val": "7.4",
+                  "isTuned": true
+                },
+                {
+                  "type": "Attr Pen",
+                  "val": "10.8",
+                  "isTuned": false
+                }
+              ],
+              "isRelay": false,
+              "isEquipped": false
+            },
+            {
+              "id": "gear-1782022708108",
+              "slot": "Disc",
+              "name": "Disc 5",
+              "quality": "gold",
+              "set": "stars",
+              "subs": [
+                {
+                  "type": "Max Phys Atk",
+                  "val": "57.4",
+                  "isTuned": false
+                },
+                {
+                  "type": "Max Silkbind Atk",
+                  "val": "34.2",
+                  "isTuned": false
+                },
+                {
+                  "type": "Min Stonesplit Atk",
+                  "val": "32.9",
+                  "isTuned": false
+                },
+                {
+                  "type": "Momentum",
+                  "val": "36.7",
+                  "isTuned": false
+                },
+                {
+                  "type": "Agility",
+                  "val": "39.6",
+                  "isTuned": false
+                },
+                {
+                  "type": "Phys Pen",
+                  "val": "7.0",
+                  "isTuned": false
+                }
+              ],
+              "isRelay": false,
+              "isEquipped": false
+            },
+            {
+              "id": "gear-1782022735045",
+              "slot": "Pendant",
+              "name": "Pendant 2",
+              "quality": "gold",
+              "set": "stars",
+              "subs": [
+                {
+                  "type": "Max Phys Atk",
+                  "val": "45.2",
+                  "isTuned": false
+                },
+                {
+                  "type": "Max Bellstrike Atk",
+                  "val": "30.2",
+                  "isTuned": false
+                },
+                {
+                  "type": "Agility",
+                  "val": "28.5",
+                  "isTuned": false
+                },
+                {
+                  "type": "All Martial Arts",
+                  "val": "2.3",
+                  "isTuned": false
+                },
+                {
+                  "type": "Max Stonesplit Atk",
+                  "val": "31.0",
+                  "isTuned": false
+                },
+                {
+                  "type": "Attr Pen",
+                  "val": "9.4",
+                  "isTuned": false
+                }
+              ],
+              "isRelay": false,
+              "isEquipped": false
+            },
+            {
+              "id": "gear-1782022764439",
+              "slot": "Pendant",
+              "name": "Pendant 3",
+              "quality": "gold",
+              "set": "stars",
+              "subs": [
+                {
+                  "type": "Max Phys Atk",
+                  "val": "49.9",
+                  "isTuned": false
+                },
+                {
+                  "type": "Power",
+                  "val": "40.4",
+                  "isTuned": true
+                },
+                {
+                  "type": "Crit Rate",
+                  "val": "6.8",
+                  "isTuned": false
+                },
+                {
+                  "type": "Max Phys Atk",
+                  "val": "58.3",
+                  "isTuned": false
+                },
+                {
+                  "type": "Min Phys Atk",
+                  "val": "63.8",
+                  "isTuned": false
+                },
+                {
+                  "type": "Phys Resist",
+                  "val": "7.9",
+                  "isTuned": false
+                }
+              ],
+              "isRelay": false,
+              "isEquipped": false
+            },
+            {
+              "id": "gear-1782022784716",
+              "slot": "Pendant",
+              "name": "Pendant 4",
+              "quality": "gold",
+              "set": "stars",
+              "subs": [
+                {
+                  "type": "Max Phys Atk",
+                  "val": "60.0",
+                  "isTuned": false
+                },
+                {
+                  "type": "Max Silkbind Atk",
+                  "val": "34.0",
+                  "isTuned": false
+                },
+                {
+                  "type": "Agility",
+                  "val": "38.0",
+                  "isTuned": false
+                },
+                {
+                  "type": "Precision",
+                  "val": "6.2",
+                  "isTuned": false
+                },
+                {
+                  "type": "Max Phys Atk",
+                  "val": "60.0",
+                  "isTuned": true
+                },
+                {
+                  "type": "Phys Pen",
+                  "val": "6.9",
+                  "isTuned": false
+                }
+              ],
+              "isRelay": false,
+              "isEquipped": false
+            },
+            {
+              "id": "gear-1782022808236",
+              "slot": "Pendant",
+              "name": "Pendant 5",
+              "quality": "gold",
+              "set": "stars",
+              "subs": [
+                {
+                  "type": "Max Phys Atk",
+                  "val": "58.6",
+                  "isTuned": false
+                },
+                {
+                  "type": "Crit Rate",
+                  "val": "7.4",
+                  "isTuned": true
+                },
+                {
+                  "type": "Max Bamboocut Atk",
+                  "val": "35.2",
+                  "isTuned": false
+                },
+                {
+                  "type": "Precision",
+                  "val": "6.5",
+                  "isTuned": false
+                },
+                {
+                  "type": "Affinity Rate",
+                  "val": "3.6",
+                  "isTuned": false
+                },
+                {
+                  "type": "Attr Pen",
+                  "val": "9.7",
+                  "isTuned": false
+                }
+              ],
+              "isRelay": false,
+              "isEquipped": false
+            },
+            {
+              "id": "gear-1782022827261",
+              "slot": "Pendant",
+              "name": "Pendant 6",
+              "quality": "purple",
+              "set": "stars",
+              "subs": [
+                {
+                  "type": "Max Phys Atk",
+                  "val": "60.0",
+                  "isTuned": false
+                },
+                {
+                  "type": "Max Phys Atk",
+                  "val": "60.0",
+                  "isTuned": false
+                },
+                {
+                  "type": "All Martial Arts",
+                  "val": "2.4",
+                  "isTuned": false
+                },
+                {
+                  "type": "Min Bamboocut Atk",
+                  "val": "34.0",
+                  "isTuned": false
+                },
+                {
+                  "type": "Precision",
+                  "val": "6.2",
+                  "isTuned": false
+                },
+                {
+                  "type": "Phys Pen",
+                  "val": "8.6",
+                  "isTuned": false
+                }
+              ],
+              "isRelay": false,
+              "isEquipped": false,
+              "mastery": 695
+            },
+            {
+              "id": "gear-1782022897498",
+              "slot": "Chest",
+              "name": "Chest 2",
+              "quality": "gold",
+              "set": "stormrain",
+              "subs": [
+                {
+                  "type": "Crit Rate",
+                  "val": "6.4",
+                  "isTuned": false
+                },
+                {
+                  "type": "Single-Target Mystic DMG",
+                  "val": "8.0",
+                  "isTuned": false
+                },
+                {
+                  "type": "Min Bamboocut Atk",
+                  "val": "34.2",
+                  "isTuned": false
+                },
+                {
+                  "type": "Max Phys Atk",
+                  "val": "59.9",
+                  "isTuned": false
+                },
+                {
+                  "type": "Crit Rate",
+                  "val": "7.4",
+                  "isTuned": true
+                },
+                {
+                  "type": "Rope Dart Martial Art Skill DMG Boost",
+                  "val": "4.6",
+                  "isTuned": false
+                }
+              ],
+              "isRelay": false,
+              "isEquipped": false,
+              "mastery": 974
+            },
+            {
+              "id": "gear-1782022924318",
+              "slot": "Chest",
+              "name": "Chest 3",
+              "quality": "gold",
+              "set": "stormrain",
+              "subs": [
+                {
+                  "type": "Precision",
+                  "val": "5.5",
+                  "isTuned": false
+                },
+                {
+                  "type": "Max Silkbind Atk",
+                  "val": "34.1",
+                  "isTuned": false
+                },
+                {
+                  "type": "Agility",
+                  "val": "37.5",
+                  "isTuned": false
+                },
+                {
+                  "type": "Crit Rate",
+                  "val": "7.0",
+                  "isTuned": false
+                },
+                {
+                  "type": "Max Phys Atk",
+                  "val": "63.8",
+                  "isTuned": true
+                },
+                {
+                  "type": "Rope Dart Special Skill DMG Boost",
+                  "val": "4.8",
+                  "isTuned": false
+                }
+              ],
+              "isRelay": false,
+              "isEquipped": false
+            },
+            {
+              "id": "gear-1782023045957",
+              "slot": "Greaves",
+              "name": "Greaves 3",
+              "quality": "purple",
+              "set": "stormrain",
+              "subs": [
+                {
+                  "type": "Precision",
+                  "val": "6.0",
+                  "isTuned": false
+                },
+                {
+                  "type": "Max Bamboocut Atk",
+                  "val": "33.1",
+                  "isTuned": false
+                },
+                {
+                  "type": "Precision",
+                  "val": "6.5",
+                  "isTuned": false
+                },
+                {
+                  "type": "Min Bamboocut Atk",
+                  "val": "35.6",
+                  "isTuned": false
+                },
+                {
+                  "type": "HP",
+                  "val": "2348",
+                  "isTuned": false
+                },
+                {
+                  "type": "Rope Dart Charged Skill DMG Boost",
+                  "val": "3.5",
+                  "isTuned": false
+                }
+              ],
+              "isRelay": false,
+              "isEquipped": false
+            },
+            {
+              "id": "gear-1782023071652",
+              "slot": "Greaves",
+              "name": "Greaves 4",
+              "quality": "gold",
+              "set": "stormrain",
+              "subs": [
+                {
+                  "type": "Crit Rate",
+                  "val": "6.8",
+                  "isTuned": false
+                },
+                {
+                  "type": "Max Phys Atk",
+                  "val": "63.8",
+                  "isTuned": true
+                },
+                {
+                  "type": "Precision",
+                  "val": "6.6",
+                  "isTuned": false
+                },
+                {
+                  "type": "Crit Rate",
+                  "val": "6.9",
+                  "isTuned": false
+                },
+                {
+                  "type": "Min Bellstrike Atk",
+                  "val": "33.7",
+                  "isTuned": false
+                },
+                {
+                  "type": "Umb Martial Art Skill DMG Boost",
+                  "val": "4.5",
+                  "isTuned": false
+                }
+              ],
+              "isRelay": false,
+              "isEquipped": false,
+              "mastery": 817
+            },
+            {
+              "id": "gear-1782023126082",
+              "slot": "Bracers",
+              "name": "Bracers 2",
+              "quality": "gold",
+              "set": "stormrain",
+              "subs": [
+                {
+                  "type": "Crit Rate",
+                  "val": "5.1",
+                  "isTuned": false
+                },
+                {
+                  "type": "Max Bamboocut Atk",
+                  "val": "30.4",
+                  "isTuned": false
+                },
+                {
+                  "type": "Min Bellstrike Atk",
+                  "val": "28.1",
+                  "isTuned": false
+                },
+                {
+                  "type": "Crit Rate",
+                  "val": "6.3",
+                  "isTuned": false
+                },
+                {
+                  "type": "Player DMG%",
+                  "val": "2.3",
+                  "isTuned": false
+                },
+                {
+                  "type": "Rope Dart Charged Skill DMG Boost",
+                  "val": "3.2",
+                  "isTuned": false
+                }
+              ],
+              "isRelay": false,
+              "isEquipped": false
+            },
+            {
+              "id": "gear-1782023146697",
+              "slot": "Bracers",
+              "name": "Bracers 3",
+              "quality": "gold",
+              "set": "stormrain",
+              "subs": [
+                {
+                  "type": "Affinity Rate",
+                  "val": "3.4",
+                  "isTuned": false
+                },
+                {
+                  "type": "Min Bellstrike Atk",
+                  "val": "34.7",
+                  "isTuned": false
+                },
+                {
+                  "type": "Max Phys Atk",
+                  "val": "63.5",
+                  "isTuned": false
+                },
+                {
+                  "type": "Min Silkbind Atk",
+                  "val": "34.3",
+                  "isTuned": false
+                },
+                {
+                  "type": "Crit Rate",
+                  "val": "6.9",
+                  "isTuned": false
+                },
+                {
+                  "type": "Rope Dart Charged Skill DMG Boost",
+                  "val": "4.4",
+                  "isTuned": false
+                }
+              ],
+              "isRelay": false,
+              "isEquipped": false
+            },
+            {
+              "id": "gear-1782023192639",
+              "slot": "Bracers",
+              "name": "Bracers 4",
+              "quality": "gold",
+              "set": "stormrain",
+              "subs": [
+                {
+                  "type": "Crit Rate",
+                  "val": "7.3",
+                  "isTuned": false
+                },
+                {
+                  "type": "Min Phys Atk",
+                  "val": "60.9",
+                  "isTuned": false
+                },
+                {
+                  "type": "Max Silkbind Atk",
+                  "val": "32.7",
+                  "isTuned": false
+                },
+                {
+                  "type": "Max Phys Atk",
+                  "val": "63.8",
+                  "isTuned": true
+                },
+                {
+                  "type": "Art of Rope Dart Boost",
+                  "val": "4.3",
+                  "isTuned": false
+                },
+                {
+                  "type": "Player DMG%",
+                  "val": "2.6",
+                  "isTuned": false
+                }
+              ],
+              "isRelay": false,
+              "isEquipped": false
+            },
+            {
+              "id": "gear-1782023224713",
+              "slot": "Bracers",
+              "name": "Bracers 5",
+              "quality": "gold",
+              "set": "stormrain",
+              "subs": [
+                {
+                  "type": "Precision",
+                  "val": "6.5",
+                  "isTuned": false
+                },
+                {
+                  "type": "Agility",
+                  "val": "40.4",
+                  "isTuned": true
+                },
+                {
+                  "type": "Max Phys Atk",
+                  "val": "58.9",
+                  "isTuned": false
+                },
+                {
+                  "type": "Precision",
+                  "val": "6.2",
+                  "isTuned": false
+                },
+                {
+                  "type": "Min Bamboocut Atk",
+                  "val": "34.8",
+                  "isTuned": false
+                },
+                {
+                  "type": "Umb Special Skill DMG Boost",
+                  "val": "4.9",
+                  "isTuned": false
+                }
+              ],
+              "isRelay": false,
+              "isEquipped": false
+            },
+            {
+              "id": "gear-1782023282448",
+              "slot": "Bracers",
+              "name": "Bracers 6",
+              "quality": "gold",
+              "set": "stormrain",
+              "subs": [
+                {
+                  "type": "Crit Rate",
+                  "val": "7.2",
+                  "isTuned": false
+                },
+                {
+                  "type": "Max Bellstrike Atk",
+                  "val": "36.2",
+                  "isTuned": false
+                },
+                {
+                  "type": "Crit Rate",
+                  "val": "7.3",
+                  "isTuned": false
+                },
+                {
+                  "type": "Max Phys Atk",
+                  "val": "59.8",
+                  "isTuned": false
+                },
+                {
+                  "type": "Max Bamboocut Atk",
+                  "val": "36.2",
+                  "isTuned": true
+                },
+                {
+                  "type": "Rope Dart Charged Skill DMG Boost",
+                  "val": "4.1",
+                  "isTuned": false
+                }
+              ],
+              "isRelay": false,
+              "isEquipped": false,
+              "mastery": 795
+            },
+            {
+              "id": "gear-1782023329187",
+              "slot": "Bracers",
+              "name": "Bracers 7",
+              "quality": "gold",
+              "set": "stormrain",
+              "subs": [
+                {
+                  "type": "Crit Rate",
+                  "val": "7.0",
+                  "isTuned": false
+                },
+                {
+                  "type": "Affinity Rate",
+                  "val": "3.3",
+                  "isTuned": false
+                },
+                {
+                  "type": "Min Silkbind Atk",
+                  "val": "34.0",
+                  "isTuned": false
+                },
+                {
+                  "type": "Crit Rate",
+                  "val": "6.9",
+                  "isTuned": false
+                },
+                {
+                  "type": "Max Silkbind Atk",
+                  "val": "34.0",
+                  "isTuned": true
+                },
+                {
+                  "type": "Umb Martial Art Skill DMG Boost",
+                  "val": "4.2",
+                  "isTuned": false
+                }
+              ],
+              "isRelay": false,
+              "isEquipped": false
+            },
+            {
+              "id": "gear-1782023355009",
+              "slot": "Bracers",
+              "name": "Bracers 8",
+              "quality": "gold",
+              "set": "stormrain",
+              "subs": [
+                {
+                  "type": "Power",
+                  "val": "38.0",
+                  "isTuned": false
+                },
+                {
+                  "type": "Crit Rate",
+                  "val": "7.0",
+                  "isTuned": false
+                },
+                {
+                  "type": "Precision",
+                  "val": "6.2",
+                  "isTuned": false
+                },
+                {
+                  "type": "Min Phys Atk",
+                  "val": "60.0",
+                  "isTuned": true
+                },
+                {
+                  "type": "Min Bamboocut Atk",
+                  "val": "34.0",
+                  "isTuned": false
+                },
+                {
+                  "type": "Umb Martial Art Skill DMG Boost",
+                  "val": "4.3",
+                  "isTuned": false
+                }
+              ],
+              "isRelay": false,
+              "isEquipped": false
+            },
+            {
+              "id": "gear-1782023385514",
+              "slot": "Bracers",
+              "name": "Bracers 9",
+              "quality": "purple",
+              "set": "stormrain",
+              "subs": [
+                {
+                  "type": "Crit Rate",
+                  "val": "6.9",
+                  "isTuned": false
+                },
+                {
+                  "type": "Max Bellstrike Atk",
+                  "val": "33.2",
+                  "isTuned": false
+                },
+                {
+                  "type": "Momentum",
+                  "val": "39.1",
+                  "isTuned": false
+                },
+                {
+                  "type": "Affinity Rate",
+                  "val": "3.3",
+                  "isTuned": false
+                },
+                {
+                  "type": "Crit Rate",
+                  "val": "7.1",
+                  "isTuned": false
+                },
+                {
+                  "type": "Umb Martial Art Skill DMG Boost",
+                  "val": "3.9",
+                  "isTuned": false
+                }
+              ],
+              "isRelay": false,
+              "isEquipped": false
+            },
+            {
+              "id": "gear-1782023410723",
+              "slot": "Bracers",
+              "name": "Bracers 10",
+              "quality": "purple",
+              "set": "stormrain",
+              "subs": [
+                {
+                  "type": "Crit Rate",
+                  "val": "6.9",
+                  "isTuned": false
+                },
+                {
+                  "type": "Max Phys Atk",
+                  "val": "63.2",
+                  "isTuned": false
+                },
+                {
+                  "type": "Boss DMG%",
+                  "val": "2.5",
+                  "isTuned": false
+                },
+                {
+                  "type": "Max Bamboocut Atk",
+                  "val": "36.0",
+                  "isTuned": false
+                },
+                {
+                  "type": "Power",
+                  "val": "40.4",
+                  "isTuned": true
+                },
+                {
+                  "type": "Umb Martial Art Skill DMG Boost",
+                  "val": "5",
+                  "isTuned": false
+                }
+              ],
+              "isRelay": false,
+              "isEquipped": true,
+              "mastery": 783
+            }
+          ],
+          "baseOverride": {
+            "minOuter": 1132.9,
+            "maxOuter": 1720.6,
+            "minPz": 273.9,
+            "maxPz": 582.8,
+            "outerPen": -9.999999999999998,
+            "pzPen": 18,
+            "crit": 47.000000000000014,
+            "aff": 15.200000000000001,
+            "prec": 103.80000000000001,
+            "critDmg": 40,
+            "affDmg": 35,
+            "outerDmg": -5,
+            "pzDmg": 9
+          }
+        }
+      ]
+    }
+  ],
+  "activeCharId": "char-1781712768576",
+  "activeSchemeId": "scheme-1781712768576"
+}

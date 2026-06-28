@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "codewhale": {
+      "command": "codewhale",
+      "args": ["mcp"],
+      "env": {
+        "CODEWHALE_API_KEY": "${env:CODEWHALE_API_KEY}"
+      }
+    }
+  }
+}

@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lottie Animated UI Icon Studio</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Lottie Player Script -->
+  <script src="https://unpkg.com/@lottiefiles/lottie-player@2.0.4/dist/lottie-player.js"></script>
+
+  <style>
+    :root {
+      --bg-color: #0c081b;
+      --card-bg: rgba(20, 13, 40, 0.7);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --accent-cyan: #00f2fe;
+      --accent-magenta: #f35588;
+      --accent-indigo: #7b2cbf;
+      --text-main: #eceff4;
+      --text-muted: #8e8a9f;
+      --active-speed: #00f2fe;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg-color);
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(123, 44, 191, 0.15) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(0, 242, 254, 0.1) 0px, transparent 50%);
+      color: var(--text-main);
+      min-height: 100vh;
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* Transparent Checkerboard Pattern */
+    .bg-grid {
+      background-color: #1a1a2e !important;
+      background-image: 
+        linear-gradient(45deg, #22223b 25%, transparent 25%), 
+        linear-gradient(-45deg, #22223b 25%, transparent 25%), 
+        linear-gradient(45deg, transparent 75%, #22223b 75%), 
+        linear-gradient(-45deg, transparent 75%, #22223b 75%) !important;
+      background-size: 20px 20px !important;
+      background-position: 0 0, 0 10px, 10px -10px, -10px 0 !important;
+      background-blend-mode: normal !important;
+    }
+
+    .bg-light {
+      background-color: #f4f6fa !important;
+      background-image: none !important;
+    }
+
+    .bg-dark {
+      background-color: #0c081b !important;
+      background-image: none !important;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 2.5rem;
+      max-width: 800px;
+    }
+
+    header h1 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 2.8rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      margin-bottom: 0.75rem;
+      background: linear-gradient(135deg, var(--text-main) 30%, var(--accent-cyan) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    header p {
+      color: var(--text-muted);
+      font-size: 1.1rem;
+      line-height: 1.6;
+    }
+
+    /* Settings Panel */
+    .settings-panel {
+      width: 100%;
+      max-width: 1200px;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 1.5rem;
+      margin-bottom: 2.5rem;
+      backdrop-filter: blur(12px);
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+      align-items: center;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    }
+
+    .setting-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .setting-label {
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+    }
+
+    .color-pickers {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.75rem;
+    }
+
+    .color-input-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px solid var(--card-border);
+      padding: 0.4rem 0.6rem;
+      border-radius: 8px;
+    }
+
+    .color-input-wrapper input[type="color"] {
+      border: none;
+      background: none;
+      width: 28px;
+      height: 28px;
+      cursor: pointer;
+    }
+
+    .color-input-wrapper span {
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .btn-control {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--card-border);
+      color: var(--text-main);
+      padding: 0.6rem 1rem;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+
+    .btn-control:hover, .btn-control.active {
+      background: var(--accent-cyan);
+      color: #0c081b;
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 12px rgba(0, 242, 254, 0.4);
+    }
+
+    /* Grid Layout */
+    .animations-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 2rem;
+      width: 100%;
+      max-width: 1200px;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      backdrop-filter: blur(12px);
+      transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), border-color 0.3s ease, box-shadow 0.3s ease;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+    }
+
+    .card:hover {
+      transform: translateY(-8px);
+      border-color: rgba(0, 242, 254, 0.25);
+      box-shadow: 0 12px 30px rgba(0, 242, 254, 0.15);
+    }
+
+    .preview-container {
+      width: 100%;
+      height: 240px;
+      background: #120c24;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+      overflow: hidden;
+      border-bottom: 1px solid var(--card-border);
+      transition: background 0.2s ease;
+    }
+
+    lottie-player {
+      width: 100%;
+      height: 100%;
+      max-width: 200px;
+      max-height: 200px;
+    }
+
+    .card-info {
+      padding: 1.2rem;
+      display: flex;
+      flex-direction: column;
+      flex-grow: 1;
+    }
+
+    .card-info h2 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.2rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    .card-info p {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      line-height: 1.5;
+      margin-bottom: 1.2rem;
+      flex-grow: 1;
+    }
+
+    .btn-download {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      background: linear-gradient(135deg, var(--accent-cyan) 0%, var(--accent-magenta) 100%);
+      color: #0c081b;
+      border: none;
+      padding: 0.7rem;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      width: 100%;
+      transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+      box-shadow: 0 4px 15px rgba(243, 85, 136, 0.2);
+    }
+
+    .btn-download:hover {
+      box-shadow: 0 6px 20px rgba(0, 242, 254, 0.4);
+      transform: scale(1.02);
+    }
+
+    /* Footer */
+    footer {
+      margin-top: 4rem;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      text-align: center;
+      padding-bottom: 2rem;
+    }
+
+    footer a {
+      color: var(--accent-cyan);
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Lottie Animated UI Icon Studio</h1>
+    <p>Premium programmatic UI icons (Iconly Pro style), lightweight and perfectly aligned. Customize color vectors dynamically, adjust speeds, preview across backdrops, and export clean JSON files.</p>
+  </header>
+
+  <!-- Global controls -->
+  <section class="settings-panel">
+    <div class="setting-group">
+      <span class="setting-label">Real-time Color Editor</span>
+      <div class="color-pickers">
+        <div class="color-input-wrapper">
+          <input type="color" id="picker-cyan" value="#00f2fe">
+          <span>Cyan</span>
+        </div>
+        <div class="color-input-wrapper">
+          <input type="color" id="picker-magenta" value="#f35588">
+          <span>Pink</span>
+        </div>
+        <div class="color-input-wrapper">
+          <input type="color" id="picker-indigo" value="#7b2cbf">
+          <span>Purple</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="setting-group">
+      <span class="setting-label">Background Mode</span>
+      <div class="btn-group">
+        <button class="btn-control active" onclick="setBackground('dark', this)">Dark</button>
+        <button class="btn-control" onclick="setBackground('light', this)">Light</button>
+        <button class="btn-control" onclick="setBackground('grid', this)">Grid</button>
+      </div>
+    </div>
+
+    <div class="setting-group">
+      <span class="setting-label">Speed Controls</span>
+      <div class="btn-group">
+        <button class="btn-control" onclick="setSpeed(0.5, this)">0.5x</button>
+        <button class="btn-control active" onclick="setSpeed(1, this)">1.0x</button>
+        <button class="btn-control" onclick="setSpeed(1.5, this)">1.5x</button>
+        <button class="btn-control" onclick="setSpeed(2, this)">2.0x</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Dynamic Animations Grid -->
+  <main class="animations-grid" id="grid-container"></main>
+
+  <footer>
+    <p>Created by Antigravity Studio &bull; Premium Vector Assets</p>
+  </footer>
+
+  <script>
+    // Metadata for the 10 Lottie UI Icons
+    const ICONS = [
+      { key: "search", file: "search.json", name: "Search Icon", desc: "A magnifying glass scaling with elastic bounce, accompanied by an elegant moving lens flare path." },
+      { key: "bell", file: "bell.json", name: "Notification Bell", desc: "A notification bell swinging dynamically with a spring action and a pulsing notification badge." },
+      { key: "settings", file: "settings.json", name: "Settings Gear", desc: "A precision gear wheel rotating continuously, representing configurations and automation." },
+      { key: "heart", file: "heart.json", name: "Like / Heart", desc: "A heart icon that scales up using an elastic overshoot animation and fires an outer dot particle burst." },
+      { key: "chat", file: "chat.json", name: "Chat Message", desc: "A messaging chat bubble pops in with three typing indicator dots bouncing in a staggered pattern." },
+      { key: "cart", file: "cart.json", name: "Shopping Cart", desc: "A classic cart wheeling in from off-screen, wiggling to a stop as a shopping box drops inside." },
+      { key: "document", file: "document.json", name: "Edit Document", desc: "A paper sheet wiggling as its body text lines draw themselves, traced by a diagonal pencil animation." },
+      { key: "calendar", file: "calendar.json", name: "Calendar Event", desc: "A binder-style calendar card wiggling with a self-drawing target day highlight circle." },
+      { key: "trash", file: "trash.json", name: "Trash / Delete", desc: "A waste basket shaking slightly as the lid tilts open and snaps back shut after a delete event." },
+      { key: "profile", file: "profile.json", name: "Profile / User", desc: "An avatar silhouette popping in from zero scale, accompanied by an expanding ripple outer ring." }
+    ];
+
+    const animationsCache = {};
+    const players = {};
+    let currentSpeed = 1.0;
+    let currentBgMode = 'dark';
+
+    // Original Color References
+    const ORIGINAL_PALETTE = {
+      cyan: [0, 0.95, 1, 1],
+      magenta: [0.95, 0.18, 0.45, 1],
+      indigo: [0.48, 0.17, 0.75, 1]
+    };
+
+    window.addEventListener('DOMContentLoaded', async () => {
+      renderGrid();
+      await loadAllAnimations();
+
+      // Bind input events to color pickers
+      document.getElementById('picker-cyan').addEventListener('input', applyCustomColors);
+      document.getElementById('picker-magenta').addEventListener('input', applyCustomColors);
+      document.getElementById('picker-indigo').addEventListener('input', applyCustomColors);
+    });
+
+    function renderGrid() {
+      const container = document.getElementById('grid-container');
+      container.innerHTML = '';
+
+      ICONS.forEach(icon => {
+        const card = document.createElement('div');
+        card.className = 'card';
+
+        let bgClass = 'bg-dark';
+        if (currentBgMode === 'light') bgClass = 'bg-light';
+        if (currentBgMode === 'grid') bgClass = 'bg-grid';
+
+        card.innerHTML = `
+          <div class="preview-container ${bgClass}" id="preview-${icon.key}">
+            <lottie-player id="player-${icon.key}" loop autoplay></lottie-player>
+          </div>
+          <div class="card-info">
+            <h2>${icon.name}</h2>
+            <p>${icon.desc}</p>
+            <button class="btn-download" onclick="downloadAnimation('${icon.file}', '${icon.key}')">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Download JSON
+            </button>
+          </div>
+        `;
+        container.appendChild(card);
+        players[icon.key] = document.getElementById(`player-${icon.key}`);
+      });
+    }
+
+    async function loadAllAnimations() {
+      for (const icon of ICONS) {
+        await loadLottieFile(icon.file, icon.key);
+      }
+    }
+
+    async function loadLottieFile(fileName, key) {
+      try {
+        const response = await fetch(fileName);
+        const data = await response.json();
+        animationsCache[key] = data;
+        
+        // Load into player
+        players[key].load(data);
+        players[key].setSpeed(currentSpeed);
+      } catch (err) {
+        console.error(`Failed to load ${fileName}:`, err);
+      }
+    }
+
+    // Convert hex (#ff00aa) to normalized RGBA arrays [r, g, b, 1]
+    function hexToRgbaArray(hex) {
+      let c = hex.substring(1);
+      let r = parseInt(c.substring(0, 2), 16) / 255;
+      let g = parseInt(c.substring(2, 4), 16) / 255;
+      let b = parseInt(c.substring(4, 6), 16) / 255;
+      return [parseFloat(r.toFixed(3)), parseFloat(g.toFixed(3)), parseFloat(b.toFixed(3)), 1];
+    }
+
+    // Color match comparison helper
+    function isColorMatch(c1, c2, threshold = 0.05) {
+      return Math.abs(c1[0] - c2[0]) < threshold &&
+             Math.abs(c1[1] - c2[1]) < threshold &&
+             Math.abs(c1[2] - c2[2]) < threshold;
+    }
+
+    // Recurse Lottie structure to replace matched colors
+    function replaceColors(node, mapping) {
+      if (!node || typeof node !== 'object') return;
+
+      if ((node.ty === 'fl' || node.ty === 'st') && node.c && node.c.a === 0 && Array.isArray(node.c.k)) {
+        const current = node.c.k;
+        if (isColorMatch(current, ORIGINAL_PALETTE.cyan)) {
+          node.c.k = mapping.cyan;
+        } else if (isColorMatch(current, ORIGINAL_PALETTE.magenta)) {
+          node.c.k = mapping.magenta;
+        } else if (isColorMatch(current, ORIGINAL_PALETTE.indigo)) {
+          node.c.k = mapping.indigo;
+        }
+      }
+
+      for (const key in node) {
+        if (node.hasOwnProperty(key)) {
+          replaceColors(node[key], mapping);
+        }
+      }
+    }
+
+    function applyCustomColors() {
+      const mapping = {
+        cyan: hexToRgbaArray(document.getElementById('picker-cyan').value),
+        magenta: hexToRgbaArray(document.getElementById('picker-magenta').value),
+        indigo: hexToRgbaArray(document.getElementById('picker-indigo').value)
+      };
+
+      Object.keys(animationsCache).forEach(key => {
+        const originalData = animationsCache[key];
+        if (!originalData) return;
+
+        const modifiedData = JSON.parse(JSON.stringify(originalData));
+        replaceColors(modifiedData, mapping);
+
+        players[key].load(modifiedData);
+        players[key].setSpeed(currentSpeed);
+      });
+    }
+
+    // Adjust playback speed across all active players
+    function setSpeed(speedVal, button) {
+      currentSpeed = speedVal;
+      const container = button.parentNode;
+      container.querySelectorAll('.btn-control').forEach(b => b.classList.remove('active'));
+      button.classList.add('active');
+
+      Object.keys(players).forEach(key => {
+        if (players[key]) {
+          players[key].setSpeed(speedVal);
+        }
+      });
+    }
+
+    // Toggle card backgrounds to verify readability
+    function setBackground(mode, button) {
+      currentBgMode = mode;
+      const container = button.parentNode;
+      container.querySelectorAll('.btn-control').forEach(b => b.classList.remove('active'));
+      button.classList.add('active');
+
+      const previews = document.querySelectorAll('.preview-container');
+      previews.forEach(p => {
+        p.className = 'preview-container';
+        if (mode === 'grid') {
+          p.classList.add('bg-grid');
+        } else if (mode === 'light') {
+          p.classList.add('bg-light');
+        } else {
+          p.classList.add('bg-dark');
+        }
+      });
+    }
+
+    // Download customized JSON trigger
+    function downloadAnimation(fileName, key) {
+      const originalData = animationsCache[key];
+      if (!originalData) return;
+
+      const mapping = {
+        cyan: hexToRgbaArray(document.getElementById('picker-cyan').value),
+        magenta: hexToRgbaArray(document.getElementById('picker-magenta').value),
+        indigo: hexToRgbaArray(document.getElementById('picker-indigo').value)
+      };
+
+      const modifiedData = JSON.parse(JSON.stringify(originalData));
+      replaceColors(modifiedData, mapping);
+
+      // Create download anchor
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(modifiedData, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", fileName);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+    }
+  </script>
+</body>
+</html>
