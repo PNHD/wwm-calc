@@ -2708,6 +2708,11 @@ export default function App() {
   // stripped back out (the sim re-adds them as timeline buffs); food/script stay.
   // At full uptime this reproduces the verified rotation DPS.
   const timelineSim = useMemo(() => {
+    // Uses the app's CALIBRATED rotation (the verified T91-Global number). NOTE:
+    // the reference's exact ability sequence exists (wwmRotation) but only ~half of
+    // its abilities have a priced T91-Global equivalent, so pricing it directly
+    // under-counts (partial mapping) — it is surfaced read-only in DPS Compare, not
+    // used to drive DPS here. An explicit edit always wins.
     const rotation = editedRotation ?? getRotationForBuild(selectedBuild);
     const simBase: PanelStats = { ...adjustedPanel };
     const d = iwStats;
@@ -4726,9 +4731,10 @@ export default function App() {
                           <div className="rotsim-head">
                             <span className="rotsim-title">⏱️ Rotation Simulator</span>
                             <span className="rotsim-tag">buff-uptime model</span>
+                            {editedRotation && <span className="rotsim-src rotsim-src-edit">custom edit</span>}
                           </div>
                           <p className="rotsim-desc">
-                            Casts are laid on a real timeline (cast times from the reference calculator), and stacking inner-way buffs <b>ramp up</b> over the fight — early casts get fewer stacks, so DPS reflects realistic buff <b>uptime</b> rather than a permanent max-stack assumption. Reorder skills below to change what lands under full buffs.
+                            Casts are laid on a real timeline and stacking inner-way buffs <b>ramp up</b> over the fight — early casts get fewer stacks, so DPS reflects realistic buff <b>uptime</b> rather than a permanent max-stack assumption. Reorder skills below to change what lands under full buffs. <span className="rotsim-unmapped">DPS uses this app's verified T91-Global rotation — wherewindsmath's exact CN-1.8 sequence is viewable read-only in <b>DPS Compare</b>.</span>
                           </p>
 
                           <div className="rotsim-stats">
@@ -4773,6 +4779,22 @@ export default function App() {
                               </div>
                             ))}
                           </div>
+
+                          {/* Ordered ability sequence (like the reference's Ability Sequence table) */}
+                          <details className="rotsim-seqlist">
+                            <summary><span className="rotsim-sub" style={{ margin: 0, display: 'inline' }}>Ability sequence · {ts.casts.length} casts</span></summary>
+                            <div className="rotsim-seqrows">
+                              {ts.casts.map((c, i) => (
+                                <div key={i} className="rotsim-seqrow">
+                                  <span className="rotsim-seqnum">{i + 1}</span>
+                                  <span className="rotsim-seqdot" style={{ background: colorOf(c.name) }} />
+                                  <span className="rotsim-seqname" title={c.name}>{translateSkillName(c.name)}</span>
+                                  {rampBuffs.map(b => (c.stacks[b.id] ? <span key={b.id} className="rotsim-seqstk" style={{ color: b.color, borderColor: b.color }}>{b.name.split(' ').map(w=>w[0]).join('')}:{c.stacks[b.id]}</span> : null))}
+                                  <span className="rotsim-seqdmg">{Math.round(c.dmg).toLocaleString()}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </details>
                         </div>
                         );
                       })()}

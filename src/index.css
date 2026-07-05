@@ -776,3 +776,27 @@ header h1{font-family:var(--font-display)!important;font-weight:700!important;
 .rotsim-lane-track{flex:1;display:flex;height:11px;border-radius:4px;overflow:hidden;
   border:1px solid var(--line);background:var(--paper)}
 .rotsim-lane-track>div{height:100%;min-width:1px}
+
+/* source badge + skipped-steps note */
+.rotsim-src{font:700 9px var(--font-body);letter-spacing:.06em;text-transform:uppercase;
+  color:var(--info);background:rgba(95,151,198,.14);border:1px solid rgba(95,151,198,.3);
+  padding:2px 7px;border-radius:20px}
+.rotsim-src-edit{color:var(--muted-gold);background:rgba(224,180,90,.14);border-color:rgba(224,180,90,.35)}
+.rotsim-unmapped{color:var(--ink3);font-size:11px}
+
+/* ordered ability-sequence list */
+.rotsim-seqlist{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}
+.rotsim-seqlist>summary{cursor:pointer;list-style:none;color:var(--muted-gold)}
+.rotsim-seqlist>summary::-webkit-details-marker{display:none}
+.rotsim-seqlist>summary::before{content:"▸ ";color:var(--ink3)}
+.rotsim-seqlist[open]>summary::before{content:"▾ "}
+.rotsim-seqrows{max-height:300px;overflow-y:auto;margin-top:10px;
+  display:flex;flex-direction:column;gap:2px}
+.rotsim-seqrow{display:flex;align-items:center;gap:8px;padding:4px 8px;border-radius:6px;
+  background:var(--surface);border:1px solid var(--line)}
+.rotsim-seqnum{font:600 10px var(--font-mono);color:var(--ink3);width:26px;flex:none;text-align:right}
+.rotsim-seqdot{width:8px;height:8px;border-radius:50%;flex:none}
+.rotsim-seqname{font-size:12px;color:var(--ink);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rotsim-seqstk{font:600 9px var(--font-mono);padding:1px 5px;border-radius:10px;
+  border:1px solid;background:rgba(255,255,255,.03);flex:none}
+.rotsim-seqdmg{font:600 11.5px var(--font-mono);color:var(--ink2);width:66px;text-align:right;flex:none}
