@@ -349,30 +349,33 @@ input:focus, select:focus { outline: none !important; border-color: var(--accent
    inline-hex remaps; no calc/data path in App.tsx is touched.
    ============================================================ */
 :root{
-  /* —— rice-paper palette (from the prototype's .app tone-rice vars) —— */
-  --paper:#f3efe6;--surface:#faf7f1;--surface2:#f0ebdf;
-  --ink:#211d18;--ink2:#6f675b;--ink3:#9b948a;
-  --line:#ddd5c5;--line2:#cabfa9;
-  --vermilion:#9e2b25;--vermilion2:#b8442f;
-  --jade:#3f7a52;--neg:#a23b2e;--muted-gold:#a8842f;
-  /* —— remap the app's legacy vars onto the paper palette —— */
+  /* —— dark wuxia palette (ink-wash black, seal-red + jade + gold) ——
+     The whole app is themed through these tokens, so flipping the values
+     here restyles every surface. Contrast is tuned for WCAG AA on the dark
+     ink background. */
+  --paper:#0b0d12;--surface:#161b23;--surface2:#1f2530;
+  --ink:#ece7db;--ink2:#a9a496;--ink3:#726c60;
+  --line:#242a33;--line2:#39404d;
+  --vermilion:#e05a41;--vermilion2:#f0715a;
+  --jade:#4fb27c;--neg:#f0715a;--muted-gold:#e0b45a;
+  /* —— remap the app's legacy vars onto the ink palette —— */
   --bg-color:var(--paper);--card-bg:var(--surface);--border:var(--line2);
   --text-main:var(--ink);--text-sub:var(--ink2);
   --gold:var(--muted-gold);--accent:var(--vermilion);--accent-hover:var(--vermilion2);
-  --purple:#86609f;
+  --purple:#bd8fdb;
   /* tints reused below */
-  --verm-soft:rgba(158,43,37,.08);--verm-line:rgba(158,43,37,.28);
+  --verm-soft:rgba(224,90,65,.14);--verm-line:rgba(224,90,65,.42);
   /* fonts */
   --glm-display:'Spectral','Noto Serif SC',serif;
   --glm-body:'IBM Plex Sans','Noto Sans SC',system-ui,sans-serif;
   --font-display:var(--glm-display);--font-body:var(--glm-body);
   --font-mono:'IBM Plex Mono',ui-monospace,'SF Mono',monospace;
-  /* design-system tokens → light surfaces */
-  --ga-bg-deep:#ece5d6;--ga-bg-secondary:var(--surface2);--ga-bg-tertiary:var(--surface);
+  /* design-system tokens → dark surfaces */
+  --ga-bg-deep:#07090d;--ga-bg-secondary:var(--surface2);--ga-bg-tertiary:var(--surface);
   --ga-surface:var(--surface);--ga-surface-hover:var(--surface2);--ga-border-light:var(--line2);
-  --ga-accent2:var(--jade);--ga-accent-glow:rgba(158,43,37,.14);
-  --rarity5:#b8923f;--rarity4:#86609f;--rarity3:#4f7fa8;
-  --success:var(--jade);--danger:var(--neg);--info:#4f7fa8;
+  --ga-accent2:var(--jade);--ga-accent-glow:rgba(224,90,65,.30);
+  --rarity5:#e0b45a;--rarity4:#bd8fdb;--rarity3:#5f97c6;
+  --success:var(--jade);--danger:var(--neg);--info:#5f97c6;
 }
 html,body{background-color:var(--paper)!important;color:var(--ink)!important;
   font-family:var(--font-body),'Segoe UI',sans-serif!important}
@@ -593,3 +596,125 @@ input[readonly]{background-color:var(--surface2)!important;color:var(--muted-gol
 /* gradient stops used on chips/bars → vermilion ramp */
 .from-\[\#e6c200\],.from-\[\#f0b400\]{--tw-gradient-from:var(--vermilion)!important}
 .to-\[\#f0b400\]{--tw-gradient-to:var(--vermilion2)!important}
+
+/* ============================================================
+   REDESIGN 2026 — dark-wuxia fixes + layout declutter.
+   Loaded last so it wins. Handles: root wrapper, hardcoded-light
+   leftovers, a properly laid-out header, and column rebalancing.
+   ============================================================ */
+
+/* —— app shell —— */
+.app-root{background-color:var(--paper)!important;color:var(--ink)!important;
+  min-height:100vh}
+.app-accent-line{height:2px;width:100%;
+  background:linear-gradient(90deg,var(--vermilion),var(--muted-gold) 50%,var(--vermilion));
+  opacity:.9}
+#root,.app-layout{background-color:var(--paper)!important}
+::selection{background:var(--verm-soft);color:var(--vermilion)}
+
+/* —— HEADER: the flex layout was never defined (title & controls
+   overlapped). Define it cleanly. —— */
+header{display:flex!important;flex-wrap:wrap;align-items:center;
+  justify-content:space-between;gap:14px 20px;
+  padding:14px clamp(16px,3vw,32px)!important;
+  background:linear-gradient(180deg,#0f131a,#0b0d12)!important;
+  border-bottom:1px solid var(--line2)!important;
+  box-shadow:0 1px 0 rgba(0,0,0,.5)!important;backdrop-filter:none!important}
+.header-title-container{display:flex;flex-direction:column;gap:2px;min-width:0}
+.header-title-group{display:flex;align-items:center;gap:10px;min-width:0}
+header h1{font-family:var(--font-display)!important;font-weight:700!important;
+  font-size:clamp(1.05rem,1.4vw,1.5rem)!important;line-height:1.15!important;
+  letter-spacing:.3px!important;white-space:normal!important;
+  color:var(--ink)!important;-webkit-text-fill-color:var(--ink)!important;
+  background:none!important;margin:0!important;overflow:visible!important;
+  text-overflow:clip!important}
+.header-title-group::before,header h1::before{transform:rotate(-2deg)}
+.xinli-hint{font:500 11px var(--font-body);color:var(--ink3)!important;
+  letter-spacing:.02em}
+.header-controls{display:flex;flex-wrap:wrap;align-items:center;gap:8px;
+  justify-content:flex-end}
+.account-select-group{display:flex;align-items:center;gap:8px}
+.account-select-group label{color:var(--ink2)!important;font-size:12px;
+  white-space:nowrap}
+
+/* —— header buttons: compact ink chips —— */
+.header-controls .secondary-btn{padding:7px 12px!important;border-radius:8px!important;
+  font-size:12.5px!important;font-weight:600!important}
+
+/* —— overlays / leftovers that were still light —— */
+.slot-name-overlay{background:linear-gradient(to top,rgba(6,7,10,.92),rgba(6,7,10,0))!important;
+  color:var(--ink)!important;text-shadow:0 1px 2px rgba(0,0,0,.6)!important}
+.xinfa-name{background:linear-gradient(to top,rgba(6,7,10,.9),rgba(6,7,10,0))!important}
+
+/* —— soften card / panel elevation with a hairline top light —— */
+.ga-card,.equip-card{box-shadow:0 1px 0 rgba(255,255,255,.02) inset,
+  0 8px 24px -18px rgba(0,0,0,.9)!important}
+
+/* —— gear inventory: fill the dead left-column space with a denser grid —— */
+#equipment-grid{grid-template-columns:repeat(auto-fill,minmax(272px,1fr))!important;
+  gap:12px!important;align-content:start}
+
+/* —— analysis-tools nav: clearer grouped rail —— */
+.anav{background:var(--surface)!important;border:1px solid var(--line2)!important;
+  border-radius:10px!important}
+.anav-group{border-bottom:1px solid var(--line)!important}
+.anav-group-label{color:var(--muted-gold)!important;font-weight:800!important}
+.anav-btn{background:var(--surface2)!important;border:1px solid var(--line2)!important;
+  color:var(--ink)!important;font-weight:600!important}
+.anav-btn:hover{border-color:var(--vermilion)!important;background:var(--verm-soft)!important;
+  color:var(--vermilion)!important}
+
+/* —— readable secondary text everywhere (kills the low-contrast greys) —— */
+.banner-footer,.banner-footer-text,#total-damage-display,.stat-label,
+.panel-checkbox-label,.grad-equip-sub{color:var(--ink2)!important}
+
+/* —— calmer "equipped" signal: drop the loud full orange border, keep a
+   single seal-red accent bar so 8 cards no longer scream —— */
+.equip-card-equipped{border:1px solid var(--line2)!important;
+  box-shadow:inset 3px 0 0 var(--vermilion),0 8px 24px -18px rgba(0,0,0,.9)!important}
+.equip-card-equipped:hover{border-color:var(--vermilion)!important;
+  box-shadow:inset 3px 0 0 var(--vermilion),0 10px 26px -14px rgba(224,90,65,.35)!important}
+.equipped-badge{color:var(--jade)!important;border-color:var(--verm-line)!important}
+.equipped-badge::before{color:var(--jade)!important}
+
+/* —— sidebar sections: consistent framing + breathing room so the long
+   right rail parses as distinct groups instead of one wall —— */
+#simulator-panel{padding:14px!important}
+#simulator-panel>*{margin-bottom:2px}
+
+/* —— section eyebrow labels (DPS breakdown / ring / weapon-set) —— */
+[class*="section-label"],.section-eyebrow{color:var(--muted-gold)!important;
+  letter-spacing:.08em!important;text-transform:uppercase}
+
+/* —— FILTER BAR: the slot capsule was wrapping into a ragged 2-row mess
+   ("rớt text tè le"). Give the capsule its own full-width row as a clean
+   single-line segmented control; push the set-controls to their own row. —— */
+#filter-bar{flex-wrap:wrap!important;gap:10px 12px!important;
+  padding:12px 0!important;background:transparent!important;border-bottom:0!important}
+.filter-capsule{flex:1 1 100%!important;display:flex!important;flex-wrap:wrap!important;
+  align-items:center!important;justify-content:flex-start!important;gap:3px!important;
+  padding:5px!important;width:100%!important;
+  background:var(--surface)!important;border:1px solid var(--line2)!important;
+  border-radius:10px!important}
+.filter-btn{flex:0 0 auto!important;padding:7px 14px!important;font-size:12.5px!important;
+  font-weight:600!important;white-space:nowrap!important;border-radius:7px!important;
+  line-height:1!important}
+.filter-btn.active{color:#fff!important}
+
+/* —— advanced-analysis collapse toggle (keeps the right rail short) —— */
+.adv-panel-toggle{margin-top:12px;width:100%;padding:9px 12px;
+  background:var(--surface)!important;border:1px solid var(--line2)!important;
+  border-radius:9px!important;color:var(--ink2)!important;
+  font:700 11px var(--font-body)!important;letter-spacing:.04em;text-align:left;
+  cursor:pointer;transition:all .14s}
+.adv-panel-toggle:hover{border-color:var(--vermilion)!important;color:var(--vermilion)!important;
+  background:var(--verm-soft)!important}
+
+/* —— rotation damage-distribution bars (wherewindsmath-style) —— */
+.rot-share{display:flex;align-items:center;gap:8px;justify-content:flex-end}
+.rot-share-track{flex:1;height:8px;min-width:48px;border-radius:5px;
+  background:var(--surface2);overflow:hidden;border:1px solid var(--line)}
+.rot-share-fill{height:100%;border-radius:5px;
+  background:linear-gradient(90deg,var(--vermilion),var(--muted-gold))}
+.rot-share-val{font:600 12px var(--font-mono);color:var(--muted-gold);
+  width:46px;text-align:right;flex:none}

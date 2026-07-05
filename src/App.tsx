@@ -47,7 +47,6 @@ import { translateSkillName } from "./utils/skillNameEn";
 import { runDualPassOcr } from "./utils/ocrParser";
 import StatSwapSimulator from "./components/StatSwapSimulator";
 import SearchableSelect from "./components/SearchableSelect";
-import UidGateModal from "./components/UidGateModal";
 import { engine2Dps, BUILD_TO_WWM } from "./utils/engine2";
 import { ROTATIONS_WWM } from "./data/rotationsWWM";
 
@@ -1217,14 +1216,12 @@ export default function App() {
   // No manual toggle — equip/unequip gear → panel updates automatically.
   const autoGearPanel = true;
 
-  const [uidGate, setUidGate] = useState<{ uid: string; name: string; server: "global" } | null>(() => {
-    try { return JSON.parse(localStorage.getItem("wwm_uid") || "null"); }
-    catch { return null; }
-  });
-
   const [activeTab, setActiveTab ] = useState<"calculator" | "priority" | "gear" | "compare" | "simulators" | "ocr" | "profiles" | "rot-sim" | "cultivate">("calculator");
 
   // ── NEW STATES & HELPERS FOR REDESIGNED LAYOUT ──
+  // Advanced gear-analysis tables (DPS breakdown / ring / set) collapse by
+  // default so the right rail isn't an endless scroll.
+  const [advPanelOpen, setAdvPanelOpen] = useState<boolean>(false);
   const [isGradModalOpen, setIsGradModalOpen] = useState<boolean>(false);
   const [gradModalActiveTab, setGradModalActiveTab] = useState<string>("manual");
   const [isDmgStatsOpen, setIsDmgStatsOpen] = useState<boolean>(false);
@@ -3361,12 +3358,10 @@ export default function App() {
     }));
   };
 
-  if (!uidGate) return <UidGateModal onPass={setUidGate} />;
-
   return (
-    <div className="min-h-screen bg-[#f3efe6] text-[#211d18] font-sans antialiased selection:bg-[#9e2b25]/25 selection:text-[#9e2b25]">
+    <div className="app-root min-h-screen font-sans antialiased">
       {/* Accent line */}
-      <div className="h-0.5 w-full bg-gradient-to-r from-[#9e2b25] via-[#b8442f] to-[#9e2b25]" />
+      <div className="app-accent-line" />
 
       {/* ── HEADER ── */}
       <header>
@@ -3967,6 +3962,16 @@ export default function App() {
             </div>
           </div>
 
+          {/* Advanced gear-analysis tables — collapsed by default to keep the rail short */}
+          <button
+            className="adv-panel-toggle"
+            style={{ order: 8 }}
+            onClick={() => setAdvPanelOpen(v => !v)}
+            title="DPS breakdown by gear · ring attribute · weapon set comparisons"
+          >
+            {advPanelOpen ? "▲ Hide gear analysis" : "▾ Gear analysis — DPS breakdown · ring · set"}
+          </button>
+          {advPanelOpen && <>
           {/* Gear Contribution — DPS loss if each equipped piece were removed */}
           {gearContrib.length > 0 && (
             <div style={{ marginTop: 12, border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, overflow: "hidden", order: 8 }}>
@@ -4029,6 +4034,7 @@ export default function App() {
               </div>
             </div>
           )}
+          </>}
 
           <div className="panel-checkbox-container" style={{ flexDirection: 'column', alignItems: 'stretch', order: 7 }}>
             <div className="panel-checkbox-wrapper">
@@ -4668,6 +4674,8 @@ export default function App() {
                     const bd = rotationSim.breakdown;
                     const bdTot = (bd.crit + bd.aff + bd.normal + bd.abrasion) || 1;
                     const dDps = rotationSim.dps - rotationStats.dps;
+                    // Peak share drives the damage-distribution bars (top skill = full bar).
+                    const maxShare = Math.max(0.0001, ...rotationSim.perSkill.map(s => s.share));
                     return (
                     <div className="space-y-4" style={{ textAlign: 'left' }}>
                       <div className="bg-[#1e1a12] border border-[#f0b400]/30 rounded-xl p-4">
@@ -4722,7 +4730,14 @@ export default function App() {
                                       className="w-14 bg-[#111316] border border-[#23262c] rounded px-1.5 py-0.5 text-center text-slate-100 text-[12.5px]" />
                                   </td>
                                   <td className="text-right px-3 py-1.5 text-slate-300">{ps ? Math.round(ps.dps).toLocaleString() : '—'}</td>
-                                  <td className="text-right px-3 py-1.5 text-[#f0b400]/90">{ps ? (ps.share * 100).toFixed(1) + '%' : '—'}</td>
+                                  <td className="px-3 py-1.5" style={{ minWidth: 140 }}>
+                                    <div className="rot-share">
+                                      <div className="rot-share-track">
+                                        <div className="rot-share-fill" style={{ width: (ps ? Math.max(3, (ps.share / maxShare) * 100) : 0) + '%' }} />
+                                      </div>
+                                      <span className="rot-share-val">{ps ? (ps.share * 100).toFixed(1) + '%' : '—'}</span>
+                                    </div>
+                                  </td>
                                   <td className="text-center px-1 py-1.5">
                                     <button onClick={() => removeSkill(i)} title="Remove skill" className="text-[#ff7b72]/70 hover:text-[#ff7b72] text-[13px]">✕</button>
                                   </td>
