@@ -37,6 +37,7 @@ import {
 import { PanelStats, TierConstants, RotationItem, SkillDefinition } from "./types";
 import { TIERS, calcSkill, calcBaseline, getRotationForBuild, getRotationTimeForBuild, SKILL_DB } from "./utils/calc";
 import { simulateRotation } from "./utils/timelineEngine";
+import { simulateTimeline, buildTimelineBuffs } from "./utils/rotationTimeline";
 import { previewSkill } from "./utils/skillPreview";
 import { INNER_WAYS } from "./data/innerways";
 import { INNER_WAY_IMAGES, WEAPON_IMAGES_G8, MYSTIC_SKILL_IMAGES, ARMOR_SET_IMAGES } from "./data/game8Images";
@@ -2700,6 +2701,32 @@ export default function App() {
     return simulateRotation(rotation, adjustedPanel, activeTier, opts, getRotationTimeForBuild(selectedBuild));
   }, [editedRotation, adjustedPanel, activeTier, datang, yishui, selectedBuild]);
 
+  // ── Buff-uptime timeline simulator ───────────────────────────────────────────
+  // Lays the rotation on a real timeline (cast times from skillTiming) and models
+  // stacking inner-way buffs RAMPING UP, so DPS reflects realistic buff uptime
+  // (like wherewindsmath). Base panel = adjustedPanel with the inner-way buffs
+  // stripped back out (the sim re-adds them as timeline buffs); food/script stay.
+  // At full uptime this reproduces the verified rotation DPS.
+  const timelineSim = useMemo(() => {
+    const rotation = editedRotation ?? getRotationForBuild(selectedBuild);
+    const simBase: PanelStats = { ...adjustedPanel };
+    const d = iwStats;
+    simBase.outerPen -= d.outerPen; simBase.pzPen -= d.pzPen; simBase.crit -= d.crit;
+    simBase.aff -= d.aff; simBase.dcrit -= d.dcrit; simBase.daff -= d.daff;
+    simBase.critDmg -= d.critDmg; simBase.affDmg -= d.affDmg; simBase.outerDmg -= d.outerDmg;
+    simBase.pzDmg -= d.pzDmg; simBase.prec -= d.prec; simBase.minOuter -= d.minOuter;
+    simBase.maxOuter -= d.maxOuter;
+    simBase.iwGeneralDmg = 0; simBase.iwOuterPen = 0; simBase.iwPzPen = 0; simBase.iwPzDmg = 0;
+    const buffs = buildTimelineBuffs(selectedInnerWays, innerWayTiers);
+    const opts = {
+      set: adjustedPanel.set, datang, yishui,
+      buildKey: selectedBuild,
+      weaponStars: (adjustedPanel as any).weaponStars,
+      armorSet: (adjustedPanel as any).armorSet,
+    } as any;
+    return simulateTimeline(rotation, simBase, buffs, activeTier, opts, getRotationTimeForBuild(selectedBuild));
+  }, [editedRotation, adjustedPanel, iwStats, selectedInnerWays, innerWayTiers, activeTier, datang, yishui, selectedBuild]);
+
   // Seed from the build default on first edit, then mutate a copy.
   const editRotation = (mutate: (r: RotationItem[]) => RotationItem[]) =>
     setEditedRotation(prev => mutate((prev ?? getRotationForBuild(selectedBuild)).map(it => ({ ...it }))));
@@ -2707,6 +2734,8 @@ export default function App() {
     editRotation(r => { r[i] = { ...r[i], count: Math.max(0, count) }; return r; });
   const removeSkill = (i: number) =>
     editRotation(r => r.filter((_, j) => j !== i));
+  const moveSkill = (i: number, dir: -1 | 1) =>
+    editRotation(r => { const j = i + dir; if (j < 0 || j >= r.length) return r; [r[i], r[j]] = [r[j], r[i]]; return r; });
 
   // ── Phase 3: Skill editor ───────────────────────────────────────────────────
   // Pick a skill, tweak its coefficients, and see the per-hit damage recompute
@@ -4685,6 +4714,69 @@ export default function App() {
                         </p>
                       </div>
 
+                      {/* ── BUFF-UPTIME TIMELINE SIMULATOR ── */}
+                      {(() => {
+                        const ts = timelineSim;
+                        const win = getRotationTimeForBuild(selectedBuild);
+                        const SKILL_COLORS = ['#e05a41','#e0b45a','#4fb27c','#bd8fdb','#5f97c6','#4fc9c0','#d68f5f','#9ab04f','#c96b8f','#6b8fc9','#c9a84f','#4f9ec9'];
+                        const colorOf = (name: string) => SKILL_COLORS[Math.abs([...name].reduce((a,c)=>a+c.charCodeAt(0),0)) % SKILL_COLORS.length];
+                        const rampBuffs = ts.perBuff.filter(b => b.ramp);
+                        return (
+                        <div className="rotsim">
+                          <div className="rotsim-head">
+                            <span className="rotsim-title">⏱️ Rotation Simulator</span>
+                            <span className="rotsim-tag">buff-uptime model</span>
+                          </div>
+                          <p className="rotsim-desc">
+                            Casts are laid on a real timeline (cast times from the reference calculator), and stacking inner-way buffs <b>ramp up</b> over the fight — early casts get fewer stacks, so DPS reflects realistic buff <b>uptime</b> rather than a permanent max-stack assumption. Reorder skills below to change what lands under full buffs.
+                          </p>
+
+                          <div className="rotsim-stats">
+                            <div><div className="rotsim-stat-lbl">Realistic DPS · ramp</div><div className="rotsim-stat-big">{Math.round(ts.dps).toLocaleString()}<span className="rotsim-unit">/s</span></div></div>
+                            <div><div className="rotsim-stat-lbl">Full-uptime · verified</div><div className="rotsim-stat-mid">{Math.round(ts.fullUptimeDps).toLocaleString()}</div></div>
+                            <div><div className="rotsim-stat-lbl">Lost to ramp</div><div className="rotsim-stat-mid" style={{ color: ts.uptimeLoss > 0.001 ? 'var(--neg)' : 'var(--ink2)' }}>{ts.uptimeLoss > 0.001 ? '−' + (ts.uptimeLoss*100).toFixed(1) + '%' : '—'}</div></div>
+                            <div><div className="rotsim-stat-lbl">Window · casts</div><div className="rotsim-stat-mid">{win.toFixed(1)}s · {ts.casts.length}</div></div>
+                          </div>
+
+                          {ts.perBuff.length > 0 ? (
+                            <div className="rotsim-buffs">
+                              <div className="rotsim-sub">Buff uptime</div>
+                              {ts.perBuff.map(b => (
+                                <div key={b.id} className="rotsim-buff">
+                                  <span className="rotsim-buff-dot" style={{ background: b.color }} />
+                                  <span className="rotsim-buff-name">{b.name}{!b.ramp && <span className="rotsim-buff-static"> · static</span>}</span>
+                                  <div className="rotsim-buff-track"><div className="rotsim-buff-fill" style={{ width: (b.uptime*100)+'%', background: b.color }} /></div>
+                                  <span className="rotsim-buff-val">{(b.uptime*100).toFixed(0)}%</span>
+                                  <span className="rotsim-buff-stk">{b.ramp ? b.avgStacks.toFixed(1)+'/'+b.maxStacks+' stk' : 'max'}</span>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="rotsim-hint">Select inner-way buffs in the <b>Panel Simulator</b> to see them ramp on the timeline. With none selected, realistic = full-uptime.</p>
+                          )}
+
+                          <div className="rotsim-tl">
+                            <div className="rotsim-sub">Timeline · {win.toFixed(0)}s</div>
+                            <div className="rotsim-seq" title="Each segment = one cast (width ∝ cast time), coloured by skill">
+                              {ts.casts.map((c, i) => (
+                                <div key={i} className="rotsim-seg" style={{ width: (c.dur/win*100)+'%', background: colorOf(c.name) }} title={translateSkillName(c.name)+' · '+Math.round(c.dmg).toLocaleString()} />
+                              ))}
+                            </div>
+                            {rampBuffs.map(b => (
+                              <div key={b.id} className="rotsim-lane">
+                                <span className="rotsim-lane-lbl" style={{ color: b.color }}>{b.name}</span>
+                                <div className="rotsim-lane-track">
+                                  {ts.casts.map((c, i) => (
+                                    <div key={i} style={{ width: (c.dur/win*100)+'%', background: b.color, opacity: (c.stacks[b.id]||0)/b.maxStacks*0.85+0.05 }} />
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        );
+                      })()}
+
                       <div className="flex flex-wrap items-center gap-4 bg-[#141619] border border-[#23262c] rounded-xl p-4">
                         <div>
                           <div className="text-[10px] uppercase tracking-widest text-[#a19683] font-mono">Rotation DPS</div>
@@ -4738,8 +4830,10 @@ export default function App() {
                                       <span className="rot-share-val">{ps ? (ps.share * 100).toFixed(1) + '%' : '—'}</span>
                                     </div>
                                   </td>
-                                  <td className="text-center px-1 py-1.5">
-                                    <button onClick={() => removeSkill(i)} title="Remove skill" className="text-[#ff7b72]/70 hover:text-[#ff7b72] text-[13px]">✕</button>
+                                  <td className="text-center px-1 py-1.5 whitespace-nowrap">
+                                    <button onClick={() => moveSkill(i, -1)} disabled={i === 0} title="Move earlier" className="rotmove">▲</button>
+                                    <button onClick={() => moveSkill(i, 1)} disabled={i === effectiveRotation.length - 1} title="Move later" className="rotmove">▼</button>
+                                    <button onClick={() => removeSkill(i)} title="Remove skill" className="text-[#ff7b72]/70 hover:text-[#ff7b72] text-[13px] ml-1">✕</button>
                                   </td>
                                 </tr>
                               );

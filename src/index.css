@@ -718,3 +718,61 @@ header h1{font-family:var(--font-display)!important;font-weight:700!important;
   background:linear-gradient(90deg,var(--vermilion),var(--muted-gold))}
 .rot-share-val{font:600 12px var(--font-mono);color:var(--muted-gold);
   width:46px;text-align:right;flex:none}
+
+/* —— reorder arrows in the count editor —— */
+.rotmove{color:var(--ink3);font-size:10px;padding:0 3px;line-height:1;cursor:pointer;
+  transition:color .12s}
+.rotmove:hover:not(:disabled){color:var(--vermilion)}
+.rotmove:disabled{opacity:.25;cursor:default}
+
+/* ============================================================
+   Rotation Simulator (buff-uptime timeline) — the wherewindsmath-style view.
+   ============================================================ */
+.rotsim{background:linear-gradient(180deg,#161b23,#12161d);
+  border:1px solid var(--line2);border-radius:14px;padding:16px;margin-bottom:16px}
+.rotsim-head{display:flex;align-items:center;gap:9px;margin-bottom:6px}
+.rotsim-title{font:700 15px var(--font-display);color:var(--muted-gold)}
+.rotsim-tag{font:700 9px var(--font-body);letter-spacing:.08em;text-transform:uppercase;
+  color:var(--jade);background:rgba(79,178,124,.14);border:1px solid rgba(79,178,124,.3);
+  padding:2px 7px;border-radius:20px}
+.rotsim-desc{font-size:12px;line-height:1.55;color:var(--ink2);margin-bottom:14px}
+.rotsim-desc b{color:var(--ink)}
+.rotsim-hint{font-size:11.5px;color:var(--ink2);background:var(--surface2);
+  border:1px dashed var(--line2);border-radius:8px;padding:9px 11px;margin-bottom:14px}
+.rotsim-hint b{color:var(--muted-gold)}
+
+.rotsim-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;
+  margin-bottom:16px}
+.rotsim-stats>div{background:var(--surface2);border:1px solid var(--line);border-radius:9px;
+  padding:9px 12px}
+.rotsim-stat-lbl{font:600 9px var(--font-mono);letter-spacing:.06em;text-transform:uppercase;
+  color:var(--ink3);margin-bottom:3px}
+.rotsim-stat-big{font:700 24px var(--font-mono);color:#fff;line-height:1}
+.rotsim-unit{font-size:12px;color:var(--ink2);font-weight:400}
+.rotsim-stat-mid{font:700 17px var(--font-mono);color:var(--ink);line-height:1}
+
+.rotsim-sub{font:700 10px var(--font-mono);letter-spacing:.08em;text-transform:uppercase;
+  color:var(--muted-gold);margin-bottom:9px}
+.rotsim-buffs{margin-bottom:16px}
+.rotsim-buff{display:flex;align-items:center;gap:9px;padding:4px 0}
+.rotsim-buff-dot{width:9px;height:9px;border-radius:50%;flex:none}
+.rotsim-buff-name{font-size:12.5px;color:var(--ink);width:150px;flex:none;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rotsim-buff-static{color:var(--ink3);font-size:10px}
+.rotsim-buff-track{flex:1;height:9px;border-radius:5px;background:var(--surface2);
+  border:1px solid var(--line);overflow:hidden}
+.rotsim-buff-fill{height:100%;border-radius:5px;transition:width .2s}
+.rotsim-buff-val{font:700 12px var(--font-mono);color:var(--ink);width:38px;text-align:right;flex:none}
+.rotsim-buff-stk{font:500 10.5px var(--font-mono);color:var(--ink3);width:56px;text-align:right;flex:none}
+
+.rotsim-tl{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px}
+.rotsim-seq{display:flex;width:100%;height:26px;border-radius:6px;overflow:hidden;
+  border:1px solid var(--line2);background:var(--paper)}
+.rotsim-seg{height:100%;min-width:1px;border-right:1px solid rgba(0,0,0,.25)}
+.rotsim-seg:hover{filter:brightness(1.35)}
+.rotsim-lane{display:flex;align-items:center;gap:8px;margin-top:6px}
+.rotsim-lane-lbl{font:600 10px var(--font-body);width:110px;flex:none;text-align:right;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rotsim-lane-track{flex:1;display:flex;height:11px;border-radius:4px;overflow:hidden;
+  border:1px solid var(--line);background:var(--paper)}
+.rotsim-lane-track>div{height:100%;min-width:1px}
