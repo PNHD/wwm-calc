@@ -2688,6 +2688,23 @@ export default function App() {
   // Edits are build-specific — discard them when the build changes.
   useEffect(() => { setEditedRotation(null); }, [selectedBuild]);
 
+  // Standard Rotation Guide: the reference (wherewindsmath) canonical ability
+  // sequences per build/path — read-only execution guide (NOT used for DPS, since
+  // the app doesn't carry the reference's per-ability coefficients).
+  const [guideVariant, setGuideVariant] = useState<string>("");
+  const guideData = useMemo(() => {
+    const wwmKey = BUILD_TO_WWM[selectedBuild];
+    const variants = wwmKey && ROTATIONS_WWM[wwmKey] ? Object.keys(ROTATIONS_WWM[wwmKey]) : [];
+    if (!variants.length) return null;
+    const active = variants.includes(guideVariant) ? guideVariant : variants[0];
+    const steps = ROTATIONS_WWM[wwmKey!][active] || [];
+    const damageSteps = steps.filter(s => s.ability !== "Delay");
+    const totalHits = steps.reduce((n, s) => n + s.numUse * (s.dmgInstances || 0), 0);
+    return { variants, active, steps, damageSteps: damageSteps.length, totalHits };
+  }, [selectedBuild, guideVariant]);
+  // Reset the variant selection when the build changes.
+  useEffect(() => { setGuideVariant(""); }, [selectedBuild]);
+
   const effectiveRotation = editedRotation ?? getRotationForBuild(selectedBuild);
 
   const rotationSim = useMemo(() => {
@@ -4798,6 +4815,39 @@ export default function App() {
                         </div>
                         );
                       })()}
+
+                      {/* ── STANDARD ROTATION GUIDE (wherewindsmath, read-only) ── */}
+                      {guideData && (
+                        <details className="rotguide" open>
+                          <summary>
+                            <span className="rotguide-title">📖 Standard Rotation Guide</span>
+                            <span className="rotguide-src">wherewindsmath · Ruricon</span>
+                          </summary>
+                          <p className="rotguide-desc">
+                            The canonical execution sequence for this path from wherewindsmath — the exact order to press abilities. This is an <b>execution guide</b> (how to play), not a DPS calc: the app doesn't carry their per-ability coefficients, so no damage number is shown here to avoid misleading values.
+                          </p>
+                          <div className="rotguide-controls">
+                            <label>Rotation variant</label>
+                            <select value={guideData.active} onChange={e => setGuideVariant(e.target.value)}>
+                              {guideData.variants.map(v => <option key={v} value={v}>{v}</option>)}
+                            </select>
+                            <span className="rotguide-meta">{guideData.damageSteps} abilities · {guideData.totalHits} hits</span>
+                          </div>
+                          <div className="rotguide-list">
+                            {(() => { let n = 0; return guideData.steps.map((s, i) => {
+                              const isDelay = s.ability === "Delay";
+                              if (!isDelay) n++;
+                              return (
+                                <div key={i} className={`rotguide-row${isDelay ? ' is-delay' : ''}${s.isFightStart ? ' is-start' : ''}`}>
+                                  <span className="rotguide-num">{isDelay ? '' : n}</span>
+                                  <span className="rotguide-ab">{s.ability}{s.isFightStart && <span className="rotguide-flag">fight start</span>}</span>
+                                  <span className="rotguide-hits">{isDelay ? `delay ×${s.numUse}` : `${s.numUse > 1 ? s.numUse + '× · ' : ''}${s.dmgInstances} hit${s.dmgInstances === 1 ? '' : 's'}`}</span>
+                                </div>
+                              );
+                            }); })()}
+                          </div>
+                        </details>
+                      )}
 
                       <div className="flex flex-wrap items-center gap-4 bg-[#141619] border border-[#23262c] rounded-xl p-4">
                         <div>
