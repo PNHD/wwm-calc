@@ -559,7 +559,7 @@ export function calcSkill(
     (sk.exPen || 0) +
     (opts.yishui && rot.yishui ? rot.yishui : 0) -
     physRes;
-  const F = totalOuterPen >= 0 ? totalOuterPen / 200 : totalOuterPen / 100;
+  const F = netPenZone(totalOuterPen);
 
   // Panel min/maxOuter already include five-attribute contributions from the game.
   // Hawkwing (key "eaglerise") 4pc: +2% PHYSICAL ATK/stack ×5 = +10% at full stacks, but
@@ -591,7 +591,7 @@ export function calcSkill(
   const dmgFixed = (pGraze + pWhite) * dN_F + pCrit * dC_F + pAff * dA_F;
 
   const totalPzPen = (panel.pzPen || 0) - attrRes;
-  const Fpz = totalPzPen >= 0 ? totalPzPen / 200 : totalPzPen / 100;
+  const Fpz = netPenZone(totalPzPen);
 
   const pzMult = armorSet === "formbend" ? 1.05 : 1.0;
   const minPzTot = (panel.minPz || 0) + (panel.wuxiangMin || 0);
@@ -667,9 +667,13 @@ const T91_GRAD_DPS: Record<string, number> = {
   "stonesplit-pure-datang": 36498,  // Might variant
 };
 
+function netPenZone(delta: number): number {
+  // Workbook/Violetta: positive net pen is stronger (/100), negative net pen is mitigation (/200).
+  return delta >= 0 ? delta / 100 : delta / 200;
+}
+
 function penMultiplier(pen: number, resistance: number): number {
-  const delta = pen - resistance;
-  return 1 + (delta >= 0 ? delta / 200 : delta / 100);
+  return 1 + netPenZone(pen - resistance);
 }
 
 function tierBaselineScale(tier: TierConstants): number {
