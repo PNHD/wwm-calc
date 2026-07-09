@@ -605,10 +605,13 @@ export function calcSkill(
   const ownMax = Math.max(0, maxPzTot - offMax) + tier.hiddenAttr;
 
   const pzDmgBonus = (panel.pzDmg || 0) / 100;
-  const pzAvgTerm = (ownMin * sk.eleRatio + offMin * sk.outerRatio + ownMax * sk.eleRatio + offMax * sk.outerRatio) / 2;
-  const dN_PZ = pzAvgTerm * (1 + Fpz) * T * (1 + pzDmgBonus);
-  const dC_PZ = pzAvgTerm * (1 + Fpz) * T * (1 + pzDmgBonus) * critMult;
-  const dA_PZ = (ownMax * sk.eleRatio + offMax * sk.outerRatio) * (1 + Fpz) * T * (1 + pzDmgBonus) * affMult;
+  const ownPzZone = (1 + Fpz) * T * (1 + pzDmgBonus);
+  const offPzZone = T;
+  const ownAvgTerm = ((ownMin + ownMax) / 2) * sk.eleRatio;
+  const offAvgTerm = ((offMin + offMax) / 2) * sk.outerRatio;
+  const dN_PZ = ownAvgTerm * ownPzZone + offAvgTerm * offPzZone;
+  const dC_PZ = ownAvgTerm * ownPzZone * critMult + offAvgTerm * offPzZone * critMult;
+  const dA_PZ = ownMax * sk.eleRatio * ownPzZone * affMult + offMax * sk.outerRatio * offPzZone * affMult;
   const dmgPz = (pGraze + pWhite) * dN_PZ + pCrit * dC_PZ + pAff * dA_PZ;
 
   let perHit = dmgOuter + dmgFixed + dmgPz;

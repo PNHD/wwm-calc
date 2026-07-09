@@ -21,7 +21,7 @@ Date: 2026-07-09
 - Fixed Transmute Advice display for Physical Pen max roll from `7.0%` to the workbook's `9.0%`.
 - Fixed the rare Crit/Affinity overflow branch so Affinity squeezes Crit before Precision is applied, matching the public formula guide and the workbook probability model.
 - Fixed penetration branch to match Violetta/workbook: positive net penetration uses `/100`, while negative net penetration uses `/200`.
-- Fixed attribute damage to match workbook/`fn_Qt.js`: primary element attack adds the hidden level attribute and does not subtract physical defense; off-element attack uses the physical ratio and no hidden bonus.
+- Fixed attribute damage to match workbook/`fn_Qt.js`: primary element attack adds the hidden level attribute and does not subtract physical defense; off-element attack uses the physical ratio, no hidden bonus, and no elemental penetration / elemental-damage bonus.
 - Fixed graduation baseline handling: exact T91 workbook DPS remains the source of truth for current Global, while T96/CN preview tiers now normalize that baseline with active tier attack, elemental damage, and penetration constants instead of silently reusing the T91 denominator.
 - T96 is marked preview until Global patch notes or live game data confirm final numbers.
 - Verified with self-check, TypeScript, production build, and a fresh browser console. Vite still reports the existing large JS chunk warning; leave code-splitting as a separate performance task.
