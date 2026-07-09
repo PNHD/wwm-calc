@@ -594,24 +594,21 @@ export function calcSkill(
   const Fpz = netPenZone(totalPzPen);
 
   const pzMult = armorSet === "formbend" ? 1.05 : 1.0;
-  const minPzTot = (panel.minPz || 0) + (panel.wuxiangMin || 0);
-  const maxPzTot = (panel.maxPz || 0) + (panel.wuxiangMax || 0);
-  const minPz_e = Math.max(0, minPzTot * pzMult - tier.def);
-  const maxPz_e = Math.max(0, maxPzTot * pzMult - tier.def);
+  const minPzTot = ((panel.minPz || 0) + (panel.wuxiangMin || 0)) * pzMult;
+  const maxPzTot = Math.max(((panel.maxPz || 0) + (panel.wuxiangMax || 0)) * pzMult, minPzTot);
 
-  // Off-element (外系) attribute attack uses the PHYSICAL ratio (Excel 伤害公式
-  // B6: 外系元素倍率 = 外攻倍率), NOT the own-element ×1.5 ratio. panel.offPz*
-  // is the off-element share of minPz/maxPz; blend the ratio by that fraction.
-  const offMinFrac = minPzTot > 0 ? Math.min(1, (panel.offPzMin || 0) / minPzTot) : 0;
-  const offMaxFrac = maxPzTot > 0 ? Math.min(1, (panel.offPzMax || 0) / maxPzTot) : 0;
-  const eleRatioMin = sk.eleRatio * (1 - offMinFrac) + sk.outerRatio * offMinFrac;
-  const eleRatioMax = sk.eleRatio * (1 - offMaxFrac) + sk.outerRatio * offMaxFrac;
+  // Own-element damage does not subtract physical defense. It gets the hidden
+  // level bonus; off-element damage does not and uses the physical ratio.
+  const offMin = Math.min(minPzTot, (panel.offPzMin || 0) * pzMult);
+  const offMax = Math.min(maxPzTot, (panel.offPzMax || 0) * pzMult);
+  const ownMin = Math.max(0, minPzTot - offMin) + tier.hiddenAttr;
+  const ownMax = Math.max(0, maxPzTot - offMax) + tier.hiddenAttr;
 
   const pzDmgBonus = (panel.pzDmg || 0) / 100;
-  const pzAvgTerm = (minPz_e * eleRatioMin + maxPz_e * eleRatioMax) / 2;
+  const pzAvgTerm = (ownMin * sk.eleRatio + offMin * sk.outerRatio + ownMax * sk.eleRatio + offMax * sk.outerRatio) / 2;
   const dN_PZ = pzAvgTerm * (1 + Fpz) * T * (1 + pzDmgBonus);
   const dC_PZ = pzAvgTerm * (1 + Fpz) * T * (1 + pzDmgBonus) * critMult;
-  const dA_PZ = maxPz_e * eleRatioMax * (1 + Fpz) * T * (1 + pzDmgBonus) * affMult;
+  const dA_PZ = (ownMax * sk.eleRatio + offMax * sk.outerRatio) * (1 + Fpz) * T * (1 + pzDmgBonus) * affMult;
   const dmgPz = (pGraze + pWhite) * dN_PZ + pCrit * dC_PZ + pAff * dA_PZ;
 
   let perHit = dmgOuter + dmgFixed + dmgPz;

@@ -6,7 +6,7 @@ export const WWM_DATA = {
     "source": "燕云调律计算器 by NGA Violetta (停更 / no longer updated)",
     "extractedFor": "Where Winds Meet Global — Lv95 character / Tier 91 gear (column 95下), plus provisional Tier 96 preview from column 95上",
     "damageFormula": "DMG = base — critZone — affZone — dmgUpZone — independentZone — dmgReduceZone — penZone — dingyinZone — deepenZone (multiplicative zones, per 伤害公式 sheet)",
-    "penFormula": "(pen - resistance) / 200 if positive, else / 100",
+    "penFormula": "(pen - resistance) / 100 if positive, else / 200",
     "judgeResFormula": "precision = 65% + otherPrec/(1+judgeRes); panelCrit = crit/(1+judgeRes)",
     "note": "Class graduation panels & marginal gains computed at native CN level (100/105). Tier constants below cover 95下 (T91 Global) and 95上 (provisional T96 preview)."
   },
