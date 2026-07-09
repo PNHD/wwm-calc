@@ -17,5 +17,18 @@ export default defineConfig(() => {
       hmr: process.env.DISABLE_HMR !== 'true',
       watch: process.env.DISABLE_HMR === 'true' ? null : {},
     },
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (id.includes('/src/data/')) return 'game-data';
+            if (!id.includes('node_modules')) return;
+            if (id.includes('tesseract.js')) return 'ocr';
+            if (id.includes('lucide-react')) return 'icons';
+            if (id.includes('react')) return 'react';
+          },
+        },
+      },
+    },
   };
 });

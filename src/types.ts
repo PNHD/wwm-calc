@@ -97,6 +97,8 @@ export interface TierConstants {
   physRes: number;
   attrRes: number;
   name: string;
+  source?: string;
+  preview?: boolean;
 }
 
 export interface SkillDefinition {

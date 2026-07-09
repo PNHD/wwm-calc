@@ -4,11 +4,11 @@
 export const WWM_DATA = {
   "_meta": {
     "source": "燕云调律计算器 by NGA Violetta (停更 / no longer updated)",
-    "extractedFor": "Where Winds Meet Global — Lv95 character / Tier 91 gear (column 95下)",
+    "extractedFor": "Where Winds Meet Global — Lv95 character / Tier 91 gear (column 95下), plus provisional Tier 96 preview from column 95上",
     "damageFormula": "DMG = base — critZone — affZone — dmgUpZone — independentZone — dmgReduceZone — penZone — dingyinZone — deepenZone (multiplicative zones, per 伤害公式 sheet)",
     "penFormula": "(pen - resistance) / 200 if positive, else / 100",
     "judgeResFormula": "precision = 65% + otherPrec/(1+judgeRes); panelCrit = crit/(1+judgeRes)",
-    "note": "Class graduation panels & marginal gains computed at native CN level (100/105). Tier constants below cover all levels incl. 95下 (T91 Global)."
+    "note": "Class graduation panels & marginal gains computed at native CN level (100/105). Tier constants below cover 95下 (T91 Global) and 95上 (provisional T96 preview)."
   },
   "tiers": {
     "95下": {
@@ -43,6 +43,142 @@ export const WWM_DATA = {
         "subElemMax": 36.2,
         "subAllWeapon": 0.026,
         "subOwnWeapon": 0.052
+      }
+    },
+    "95上": {
+      "base": {
+        "minOuter": 865.89,
+        "maxOuter": 1584.0,
+        "precision": 0.92,
+        "crit": 0.258,
+        "directCrit": 0.0,
+        "critDmg": 0.5,
+        "aff": 0.129,
+        "directAff": 0.0,
+        "affDmg": 0.35,
+        "elemMin": 160.0,
+        "elemMax": 320.0,
+        "outerPen": 0.0,
+        "outerDmgUp": 0.0,
+        "elemPen": 10.8,
+        "elemDmgUp": 0.054,
+        "judgeRes": 0.45
+      },
+      "subCaps": {
+        "jin": 40.4,
+        "min": 40.4,
+        "shi": 40.4,
+        "subMinOuter": 63.8,
+        "subMaxOuter": 63.8,
+        "subPrec": 0.066,
+        "subCrit": 0.074,
+        "subAff": 0.036,
+        "subElemMin": 36.2,
+        "subElemMax": 36.2,
+        "subAllWeapon": 0.026,
+        "subOwnWeapon": 0.052
+      }
+    },
+    "90": {
+      "base": {
+        "minOuter": 740.0,
+        "maxOuter": 1370.0,
+        "precision": 0.885,
+        "crit": 0.244,
+        "directCrit": 0.0,
+        "critDmg": 0.5,
+        "aff": 0.122,
+        "directAff": 0.0,
+        "affDmg": 0.35,
+        "elemMin": 235.0,
+        "elemMax": 471.0,
+        "outerPen": 0.0,
+        "outerDmgUp": 0.0,
+        "elemPen": 9.2,
+        "elemDmgUp": 0.046,
+        "judgeRes": 0.3
+      },
+      "subCaps": {
+        "jin": 34.8,
+        "min": 34.8,
+        "shi": 34.8,
+        "subMinOuter": 54.8,
+        "subMaxOuter": 54.8,
+        "subPrec": 0.056,
+        "subCrit": 0.064,
+        "subAff": 0.032,
+        "subElemMin": 31.0,
+        "subElemMax": 31.0,
+        "subAllWeapon": 0.022,
+        "subOwnWeapon": 0.044
+      }
+    },
+    "100下": {
+      "base": {
+        "minOuter": 1054.0,
+        "maxOuter": 1967.76,
+        "precision": 0.98,
+        "crit": 0.36816,
+        "directCrit": 0.0,
+        "critDmg": 0.5,
+        "aff": 0.18408,
+        "directAff": 0.0,
+        "affDmg": 0.35,
+        "elemMin": 209.2,
+        "elemMax": 405.2,
+        "outerPen": 0.0,
+        "outerDmgUp": 0.0,
+        "elemPen": 22.0,
+        "elemDmgUp": 0.11,
+        "judgeRes": 0.65
+      },
+      "subCaps": {
+        "jin": 49.4,
+        "min": 49.4,
+        "shi": 49.4,
+        "subMinOuter": 77.8,
+        "subMaxOuter": 77.8,
+        "subPrec": 0.08,
+        "subCrit": 0.09,
+        "subAff": 0.044,
+        "subElemMin": 44.2,
+        "subElemMax": 44.2,
+        "subAllWeapon": 0.032,
+        "subOwnWeapon": 0.062
+      }
+    },
+    "100上": {
+      "base": {
+        "minOuter": 1012.0,
+        "maxOuter": 1883.6,
+        "precision": 0.968,
+        "crit": 0.356,
+        "directCrit": 0.0,
+        "critDmg": 0.5,
+        "aff": 0.178,
+        "directAff": 0.0,
+        "affDmg": 0.35,
+        "elemMin": 196.0,
+        "elemMax": 392.0,
+        "outerPen": 0.0,
+        "outerDmgUp": 0.0,
+        "elemPen": 22.0,
+        "elemDmgUp": 0.11,
+        "judgeRes": 0.65
+      },
+      "subCaps": {
+        "jin": 49.4,
+        "min": 49.4,
+        "shi": 49.4,
+        "subMinOuter": 77.8,
+        "subMaxOuter": 77.8,
+        "subPrec": 0.08,
+        "subCrit": 0.09,
+        "subAff": 0.044,
+        "subElemMin": 44.2,
+        "subElemMax": 44.2,
+        "subAllWeapon": 0.032,
+        "subOwnWeapon": 0.062
       }
     }
   },

@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import { createWorker } from "tesseract.js";
 import {
   Shield,
   HelpCircle,
@@ -1642,16 +1641,17 @@ export default function App() {
 
   const handleModalOcr = async (file: File) => {
     setIsModalOcrProcessing(true);
+    let objectUrl = "";
+    let worker: any = null;
     try {
-      const objectUrl = URL.createObjectURL(file);
+      objectUrl = URL.createObjectURL(file);
 
-      const worker: any = await createWorker();
+      const { createWorker } = await import("tesseract.js");
+      worker = await createWorker();
       if (typeof worker.loadLanguage === "function") await worker.loadLanguage("chi_sim+eng");
       if (typeof worker.initialize === "function") await worker.initialize("chi_sim+eng");
 
       const { subs, mastery } = await runDualPassOcr(worker, objectUrl);
-      await worker.terminate();
-      URL.revokeObjectURL(objectUrl);
 
       setFormSubs(subs.map(s => ({ type: s.type, val: s.val, isTuned: !!s.isTuned })));
       if (mastery) setFormMastery(mastery);
@@ -1660,6 +1660,8 @@ export default function App() {
       console.error(e);
       alert("❌ An error occurred during OCR scanning.");
     } finally {
+      if (worker) await worker.terminate();
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
       setIsModalOcrProcessing(false);
     }
   };
@@ -2614,8 +2616,8 @@ export default function App() {
     // to do nothing.
   }, [basePanel, bowSelect, food, script50, activeTier, iwStats, autoGearPanel, activeScheme?.gear]);
 
-  // 3. Baseline = authoritative "fully graduated" T91/Lv95 DPS per build (from the
-  //    源 spreadsheet, converted to rotation-window total). See calcBaseline / T91_GRAD_DPS.
+  // 3. Baseline = authoritative T91/Lv95 graduated DPS per build, normalized by
+  //    tier constants for preview/reference tiers. See calcBaseline / T91_GRAD_DPS.
   const baselineScore = useMemo(() => {
     return calcBaseline(activeTier, selectedBuild);
   }, [activeTier, selectedBuild]);
@@ -3423,7 +3425,7 @@ export default function App() {
               onClick={() => {
                 alert(
                   "Where Winds Meet Gear Graduation Manager\\n" +
-                  "Edition: Global (T91 / Lv95)\\n" +
+                  "Edition: Global (T91 now / T96 preview)\\n" +
                   "Author: Wonton"
                 );
               }}
@@ -3441,7 +3443,7 @@ export default function App() {
         </div>
         <div className="header-controls">
           <div className="account-select-group">
-            <label>Current Role:</label>
+            <label htmlFor="account-select">Current Role:</label>
             <select
               value={charsData.activeCharId ?? ""}
               onChange={(e) => {
@@ -3570,6 +3572,8 @@ export default function App() {
               <select
                 value={setAllWeapon}
                 onChange={e => setSetAllWeapon(e.target.value)}
+                aria-label="Weapon and accessory set"
+                name="weaponSet"
                 title="Weapon / accessory set (Weapon 1·2, Disc, Pendant)"
                 style={{ width: 'auto', minWidth: 88, padding: '6px', fontSize: 12 }}
               >
@@ -3578,6 +3582,8 @@ export default function App() {
               <select
                 value={setAllArmor}
                 onChange={e => setSetAllArmor(e.target.value)}
+                aria-label="Armor set"
+                name="armorSet"
                 title="Armor 4pc set (Helmet, Chest, Hands, Legs)"
                 style={{ width: 'auto', minWidth: 88, padding: '6px', fontSize: 12 }}
               >
@@ -3785,7 +3791,7 @@ export default function App() {
           )}
 
           <div className="scheme-controls">
-            <label className="sim-label" style={{ margin: 0 }}>Scheme:</label>
+            <label htmlFor="scheme-select" className="sim-label" style={{ margin: 0 }}>Scheme:</label>
             <select
               value={charsData.activeSchemeId ?? ""}
               onChange={(e) => {
@@ -4002,6 +4008,8 @@ export default function App() {
                 <select
                   value={bowSelect}
                   onChange={(e) => setBowSelect(e.target.value as any)}
+                  aria-label="Ring attribute"
+                  name="ringAttribute"
                   className="mini-select"
                   title="Select ring attribute"
                 >
@@ -4094,6 +4102,8 @@ export default function App() {
                   type="checkbox"
                   checked={food}
                   onChange={(e) => setFood(e.target.checked)}
+                  aria-label="Food buff"
+                  name="foodBuff"
                   className="panel-checkbox-input"
                 />
                 <span>Food buff (+90 min / +180 max Phys Atk)</span>
@@ -4103,6 +4113,8 @@ export default function App() {
                   type="checkbox"
                   checked={script50}
                   onChange={(e) => setScript50(e.target.checked)}
+                  aria-label="Script under 50 percent HP"
+                  name="scriptUnder50Hp"
                   className="panel-checkbox-input"
                 />
                 <span>Script &lt;50% HP (+15% Direct Crit)</span>
@@ -4116,6 +4128,8 @@ export default function App() {
                 type="range" min={50} max={100} step={1}
                 value={Math.round(dpsEff * 100)}
                 onChange={(e) => setDpsEff(parseInt(e.target.value, 10) / 100)}
+                aria-label="Rotation efficiency"
+                name="rotationEfficiency"
                 style={{ flex: 1 }}
               />
               <span style={{ color: '#f0b400', fontWeight: 700, width: 38, textAlign: 'right' }}>{Math.round(dpsEff * 100)}%</span>
@@ -4321,7 +4335,7 @@ export default function App() {
 
               <h3 style={{ color: '#f0b400', margin: '14px 0 6px' }}>2 · The headline numbers</h3>
               <ul style={{ marginTop: 0, paddingLeft: 18 }}>
-                <li><b>Graduation Rate %</b> — how "finished" your gear is vs the best-in-slot T91 build. ~100% = graduated. Your single "how good is my gear" score.</li>
+                <li><b>Graduation Rate %</b> — how "finished" your gear is vs the selected tier baseline. ~100% = graduated. Your single "how good is my gear" score.</li>
                 <li><b>DPS Expectation</b> — theoretical DPS (perfect play, full buff uptime).</li>
                 <li><b>Realistic DPS ≈</b> — what a real parse looks like. Drag the <b>Rotation efficiency</b> slider to match your own play.</li>
                 <li>Click the <b>Graduation Rate banner (›)</b> to open the analysis tabs — that's where the gear-improvement tools live.</li>
@@ -4671,7 +4685,7 @@ export default function App() {
                 </div>
                 <div className="grad-meta-info-inline">
                   <div className="grad-meta-text">
-                    <div className="grad-meta-item">Edition: <span className="text-white">Global (T91 / Lv95)</span></div>
+                    <div className="grad-meta-item">Edition: <span className="text-white">Global (T91 now / T96 preview)</span></div>
                     <div className="grad-meta-item">Author: <span className="text-white">Wonton</span></div>
                   </div>
                 </div>
@@ -5132,7 +5146,7 @@ export default function App() {
                         <h3 className="text-sm font-bold text-[#f0b400] mb-2 flex items-center gap-2">📖 How to use</h3>
                         <ol className="text-[12.5px] text-slate-300 leading-relaxed list-decimal pl-5 space-y-1">
                           <li><b>Enter panel</b>: Open <b>Combat Attributes</b> in-game (the <b>C</b> key) and type the stats below. Or the panel auto-computes from the gear you entered on the main screen.</li>
-                          <li><b>Read results</b>: The top bar shows <b>Graduation Rate</b> (% vs the BiS T91 build) and <b>DPS Expectation</b>.</li>
+                          <li><b>Read results</b>: The top bar shows <b>Graduation Rate</b> (% vs the selected tier baseline) and <b>DPS Expectation</b>.</li>
                           <li><b>Pick build & bow/set</b>: In the <b>Panel Simulator</b> (right of the main screen) choose the right path, bow attribute, and gear set.</li>
                         </ol>
                         <div className="text-[12px] text-slate-400 mt-3 pt-2 border-t border-[#23262c]/60 leading-relaxed">
@@ -5164,12 +5178,15 @@ export default function App() {
                         <select
                           value={tierKey}
                           onChange={(e) => setTierKey(e.target.value)}
+                          aria-label="Dungeon target"
+                          name="dungeonTarget"
                           className="bg-[#141619] font-mono text-sm text-[#f0b400] rounded px-2.5 py-1"
                         >
-                          <option value="350|0.45">Tier 91 / Lv95 (Global)</option>
+                          <option value="350|0.45">Tier 91 / Lv95 (Global current)</option>
+                          <option value="350|0.45-t96">Tier 96 / Lv95 (Global preview)</option>
                           <option value="307|0.3">Tier 86 / Lv90</option>
-                          <option value="405|0.65">Tier 96 / Lv100 (Lower)</option>
-                          <option value="405|0.65b">Tier 96 / Lv100 (Upper)</option>
+                          <option value="405|0.65">Tier 96 / Lv100 (Lower CN ref)</option>
+                          <option value="405|0.65b">Tier 96 / Lv100 (Upper CN ref)</option>
                           <option value="559|1.15">CN Level 105 (Ref)</option>
                           <option value="custom">Custom Params</option>
                         </select>
@@ -5234,6 +5251,8 @@ export default function App() {
                                       <span className="text-slate-500">{st.label}</span>
                                       <input
                                         type="number"
+                                        aria-label={st.label}
+                                        name={st.key}
                                         step={st.step || 1}
                                         value={panel[st.key as keyof PanelStats] as number}
                                         disabled={autoGearPanel}
@@ -5268,7 +5287,8 @@ export default function App() {
               <div className="bg-[#1a1a1d]/60 rounded-xl p-3 border border-[#23262c] text-sm text-[#f0b400]/95 flex items-center gap-2 mb-4">
                 <span className="text-lg">💡</span>
                 <span>
-                  Calculated against the <strong>Global Tier 91 (Lv95)</strong> boss constants (Defense 350, Judgment Resist ×1.45), using your live panel and active build's rotation.
+                  Calculated against <strong>{activeTier.name}</strong> constants (Defense {activeTier.def}, Judgment Resist ×{(1 + activeTier.judgeRes).toFixed(2)}), using your live panel and active build's rotation.
+                  {activeTier.preview ? " Preview tier: re-check once the live Global patch publishes final numbers." : ""}
                 </span>
               </div>
 
@@ -5365,10 +5385,10 @@ export default function App() {
                 </div>
                 <div className="space-y-3">
                   <p>
-                    <strong className="text-[#f0b400]">4. Affinity Rate (Cap 40%) & Bamboocut</strong>: Bamboocut Dust damage scales heavily with your overall break stats. Although Affinity is restricted to an absolute <strong className="text-orange-400">40%</strong> maximum cap in-game, adding Affinity attributes on Tier 91 gears (up to 4.5% per item) remains a powerful build option to convert graze hits into full-powered breaking attacks.
+                    <strong className="text-[#f0b400]">4. Affinity Rate (Cap 40%) & Bamboocut</strong>: Bamboocut Dust damage scales heavily with your overall break stats. Although Affinity is restricted to an absolute <strong className="text-orange-400">40%</strong> maximum cap in-game, adding Affinity attributes on current Global gear remains a powerful build option to convert graze hits into full-powered breaking attacks.
                   </p>
                   <p>
-                    <strong className="text-[#f0b400]">5. Substat Relaying (Inherit mechanics)</strong>: When refining Level 91 gear, always prioritize relaying/inheriting attributes that have reached diamond/gold thresholds (such as Phys Pen 9.0%, Max Atk 63.8, Crit 7.4%, etc.). A carefully put-together set can singlehandedly contribute over 40% of your graduation progression.
+                    <strong className="text-[#f0b400]">5. Substat Relaying (Inherit mechanics)</strong>: When refining current Global gear, always prioritize relaying/inheriting attributes that have reached diamond/gold thresholds (such as Phys Pen 9.0%, Max Atk 63.8, Crit 7.4%, etc.). A carefully put-together set can singlehandedly contribute over 40% of your graduation progression.
                   </p>
                 </div>
               </div>
@@ -5852,7 +5872,7 @@ export default function App() {
                   <TrendingUp className="w-4 h-4" /> Item Comparison & Graduation Deltas
                 </h2>
                 <p className="text-[12px] text-slate-500 mt-0.5">
-                  Select a slot from the left panel to compare gear items. Ranked by graduation contribution using the T91/Lv95 damage formula.
+                  Select a slot from the left panel to compare gear items. Ranked by graduation contribution using the selected tier formula.
                 </p>
               </div>
 
@@ -5889,7 +5909,7 @@ export default function App() {
                   <div className="bg-[#161310] border border-amber-500/25 rounded-xl p-4 mb-6">
                     <h3 className="text-[13px] font-extrabold text-amber-400 uppercase tracking-wider font-serif flex items-center gap-2 mb-2">
                       🔍 Upgrade Analysis
-                      <span className="text-[10px] font-mono text-slate-500 normal-case tracking-normal">(T91/Lv95 formula)</span>
+                      <span className="text-[10px] font-mono text-slate-500 normal-case tracking-normal">({activeTier.name})</span>
                     </h3>
 
                     {upgrades.length > 0 ? (
@@ -5938,7 +5958,7 @@ export default function App() {
                       )}
                     </div>
                     <p className="text-[10.5px] text-slate-600 mt-2.5 leading-snug">
-                      Gains are marginal graduation-% from this slot's substats vs your currently equipped item, using the verified T91/Lv95 (95下) damage formula. Add more items to a slot (via Gear / OCR) to compare alternatives.
+                      Gains are marginal graduation-% from this slot's substats vs your currently equipped item, using the selected tier formula. Add more items to a slot (via Gear / OCR) to compare alternatives.
                     </p>
                   </div>
                 );
@@ -6069,7 +6089,7 @@ export default function App() {
                         const MAX_ROLL_95: Record<string, string> = {
                           "Max Phys Atk": "63.8", "Min Phys Atk": "63.8",
                           "Crit Rate": "7.4%",
-                          "Phys Pen": "7.0%", "Affinity Rate": "3.6%",
+                          "Phys Pen": "9.0%", "Affinity Rate": "3.6%",
                           "Precision": "6.6%",
                           "Strength": "40.4", "Power": "40.4", "Agility": "40.4",
                           "Boss DMG%": "2.6%", "All Martial Arts": "2.6%",
@@ -6154,7 +6174,7 @@ export default function App() {
                                   🔄 Transmutation Advice
                                 </h2>
                                 <p className="text-[12px] text-slate-500 mt-0.5">
-                                  Pick a slot from the left panel, select a substat to re-roll, and see which replacement yields the best graduation improvement at T91 max rolls.
+                                  Pick a slot from the left panel, select a substat to re-roll, and see which replacement yields the best graduation improvement at current Global max rolls.
                                 </p>
                               </div>
 
@@ -6216,7 +6236,7 @@ export default function App() {
                                           Transmutation Results
                                         </h3>
                                         <p className="text-[11px] text-slate-500 mt-0.5">
-                                          Re-rolling <span className="text-slate-300 font-semibold">{equipped.subs[transmuteSubIndex].type}</span> ({equipped.subs[transmuteSubIndex].val}) — showing max T91 roll for each candidate replacement.
+                                          Re-rolling <span className="text-slate-300 font-semibold">{equipped.subs[transmuteSubIndex].type}</span> ({equipped.subs[transmuteSubIndex].val}) — showing the current Global max roll for each candidate replacement.
                                         </p>
                                       </div>
 

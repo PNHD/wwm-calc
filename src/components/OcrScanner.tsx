@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { createWorker } from "tesseract.js";
 import { runDualPassOcr, type OcrSub } from "../utils/ocrParser";
 import SearchableSelect from "./SearchableSelect";
 import {
@@ -217,6 +216,7 @@ export default function OcrScanner({ onImportGears }: OcrScannerProps) {
       return;
     }
 
+    const { createWorker } = await import("tesseract.js");
     const worker: any = await createWorker();
     if (typeof worker.loadLanguage === "function") {
       await worker.loadLanguage("chi_sim+eng");

@@ -3,27 +3,54 @@ import { WWM_DATA } from "../data/wwmData";
 import { ClassConfig, SkillData } from "../data/referenceData";
 
 const t95 = WWM_DATA.tiers["95下"];
+const t96 = WWM_DATA.tiers["95上"];
+const t90 = WWM_DATA.tiers["90"];
+const t100L = WWM_DATA.tiers["100下"];
+const t100U = WWM_DATA.tiers["100上"];
+type TierSheet = (typeof WWM_DATA.tiers)[keyof typeof WWM_DATA.tiers];
+
+const makeTier = (
+  sheet: TierSheet,
+  def: number,
+  physRes: number,
+  attrRes: number,
+  name: string,
+  source: string,
+  preview = false,
+  armoryMin = 114,
+  armoryMax = 229,
+  foodMin = 90,
+  foodMax = 180,
+  hiddenAttr = 129.2,
+): TierConstants => ({
+  def,
+  judgeRes: sheet.base.judgeRes,
+  foodMin,
+  foodMax,
+  baseMinOuter: sheet.base.minOuter,
+  baseMaxOuter: sheet.base.maxOuter,
+  baseCrit: sheet.base.crit * 100,
+  baseAff: sheet.base.aff * 100,
+  basePrec: sheet.base.precision * 100,
+  armoryMin,
+  armoryMax,
+  hiddenAttr,
+  pzPenBase: sheet.base.elemPen,
+  pzDmgBase: sheet.base.elemDmgUp * 100,
+  physRes,
+  attrRes,
+  name,
+  source,
+  preview,
+});
 
 export const TIERS: { [key: string]: TierConstants } = {
-  "350|0.45": {
-    def: 350,
-    judgeRes: t95.base.judgeRes,
-    foodMin: 90,
-    foodMax: 180,
-    baseMinOuter: t95.base.minOuter,
-    baseMaxOuter: t95.base.maxOuter,
-    baseCrit: t95.base.crit * 100, // 30.41%
-    baseAff: t95.base.aff * 100,   // 15.205%
-    basePrec: t95.base.precision * 100, // 94.0%
-    armoryMin: 114,
-    armoryMax: 229,
-    hiddenAttr: 129.2,
-    pzPenBase: t95.base.elemPen, // 10.8
-    pzDmgBase: t95.base.elemDmgUp * 100, // 5.4%
-    physRes: 20,
-    attrRes: 24,
-    name: "Tier 91 / Lv95 ★ Global (Season 3)",
-  }
+  "350|0.45": makeTier(t95, 350, 20, 24, "Tier 91 / Lv95 Global", "Excel 各等级模板: 95下"),
+  "350|0.45-t96": makeTier(t96, 350, 20, 24, "Tier 96 / Lv95 Global Preview", "Excel 各等级模板: 95上", true),
+  "307|0.3": makeTier(t90, 307, 20, 24, "Tier 86 / Lv90", "Excel 各等级模板: 90", false, 114, 229, 70, 140),
+  "405|0.65": makeTier(t100L, 405, 26, 28, "Tier 96 / Lv100 Lower CN Ref", "Excel 各等级模板: 100下", true, 131, 263, 120, 240, 150),
+  "405|0.65b": makeTier(t100U, 405, 26, 28, "Tier 96 / Lv100 Upper CN Ref", "Excel 各等级模板: 100上", true, 131, 263, 120, 240, 150),
+  "559|1.15": makeTier(t100L, 559, 26, 28, "CN Lv105 Reference", "CN class sheets / boss def 559", true, 131, 263, 120, 240, 150),
 };
 
 export const BUILD_MAP_TO_CHINESE: Record<string, string> = {
@@ -466,11 +493,9 @@ export function calcSkill(
     pGraze = 0;
   } else {
     pPrec = precEff;
-    pCrit = Math.min(critEff + dirCrit, 0.8 + dirCrit) * pPrec;
+    const critBeforePrecision = Math.min(critEff + dirCrit, 0.8 + dirCrit);
     pAff = affEff + dirAff;
-    if (pCrit + pAff > 1) {
-      pCrit = 1 - pAff;
-    }
+    pCrit = (critBeforePrecision + pAff > 1 ? Math.max(0, 1 - pAff) : critBeforePrecision) * pPrec;
     pGraze = Math.max(0, (1 - pPrec) * (1 - pAff));
   }
   const pWhite = Math.max(0, 1 - pCrit - pAff - pGraze);
@@ -642,9 +667,35 @@ const T91_GRAD_DPS: Record<string, number> = {
   "stonesplit-pure-datang": 36498,  // Might variant
 };
 
+function penMultiplier(pen: number, resistance: number): number {
+  const delta = pen - resistance;
+  return 1 + (delta >= 0 ? delta / 200 : delta / 100);
+}
+
+function tierBaselineScale(tier: TierConstants): number {
+  const t91 = TIERS["350|0.45"];
+  if (!tier || tier.name === t91.name) return 1;
+
+  const tierOuter = tier.baseMinOuter + tier.baseMaxOuter;
+  const t91Outer = t91.baseMinOuter + t91.baseMaxOuter;
+  const outerScale = t91Outer > 0 ? tierOuter / t91Outer : 1;
+
+  const tierElemDmg = 1 + tier.pzDmgBase / 100;
+  const t91ElemDmg = 1 + t91.pzDmgBase / 100;
+  const elemDmgScale = t91ElemDmg > 0 ? tierElemDmg / t91ElemDmg : 1;
+
+  const tierPen = penMultiplier(tier.pzPenBase, tier.attrRes);
+  const t91Pen = penMultiplier(t91.pzPenBase, t91.attrRes);
+  const penScale = t91Pen > 0 ? tierPen / t91Pen : 1;
+
+  return outerScale * elemDmgScale * penScale;
+}
+
 export function calcBaseline(tier: TierConstants, buildKey?: string, _refPanel?: PanelStats): number {
   const key = buildKey || "bamboocut-dust";
   const dps = T91_GRAD_DPS[key] || T91_GRAD_DPS["bamboocut-dust"];
-  // Convert DPS to total rotation damage using current rotation time.
-  return dps * getRotationTimeForBuild(key);
+  // T91 uses exact workbook DPS. Preview/reference tiers use a normalized baseline
+  // so graduation percent compares against the active tier instead of silently
+  // retaining the T91 denominator.
+  return dps * tierBaselineScale(tier) * getRotationTimeForBuild(key);
 }
