@@ -4188,11 +4188,12 @@ export default function App() {
               </span>
             </div>
             <div className="banner-footer banner-footer-content">
-              <span className="banner-footer-text">
-                DPS Expectation: <span className="text-white font-bold">{Math.round(rotationStats.dps * dpsEff).toLocaleString()}</span>
+              <div className="dps-summary">
+                Reference estimate: <span className="text-white font-bold">{Math.round(rotationStats.dps * dpsEff).toLocaleString()}</span>
                 <span className="text-[#8b949e]"> · Total DMG: </span>
                 <span className="text-white font-bold">{Math.round(rotationStats.totalDmg).toLocaleString()}</span>
-              </span>
+              </div>
+              <span className="dps-real-parse" title="The calculator cannot know your actual in-game parse. Compare this build with your recorded combat result.">In-game parse: not entered</span>
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); setIsDmgStatsOpen(true); }}
