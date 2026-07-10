@@ -51,6 +51,7 @@ import WorkspaceTabs from "./components/WorkspaceTabs";
 import ProductShell from "./product/ProductShell";
 import ArsenalWorkspace, { type ArsenalRow } from "./product/workspaces/ArsenalWorkspace";
 import BuildWorkspace from "./product/workspaces/BuildWorkspace";
+import CombatWorkspace from "./product/workspaces/CombatWorkspace";
 import { engine2Dps, BUILD_TO_WWM } from "./utils/engine2";
 import { ROTATIONS_WWM } from "./data/rotationsWWM";
 
@@ -3483,6 +3484,25 @@ export default function App() {
     const option = innerWayOptions.find((candidate) => candidate.id === id);
     return option ? { ...option, tier: innerWayTiers[id] ?? 6 } : null;
   });
+  const fmtCombatStat = (value: number | undefined, percent = false) => value === undefined ? "-" : percent ? `${value.toFixed(1)}%` : Math.round(value).toLocaleString();
+  const combatStats = [
+    { label: "Min Physical ATK", menu: fmtCombatStat(basePanel.minOuter), combat: fmtCombatStat(adjustedPanel.minOuter) },
+    { label: "Max Physical ATK", menu: fmtCombatStat(basePanel.maxOuter), combat: fmtCombatStat(adjustedPanel.maxOuter) },
+    { label: "Physical Penetration", menu: fmtCombatStat(basePanel.outerPen, true), combat: fmtCombatStat(adjustedPanel.outerPen, true) },
+    { label: "Net Physical Penetration", menu: "-", combat: fmtCombatStat(netPhysPen, true), derived: true },
+    { label: "Critical Rate", menu: fmtCombatStat(basePanel.crit, true), combat: fmtCombatStat(adjustedPanel.crit, true) },
+    { label: "Effective Critical Rate", menu: "-", combat: fmtCombatStat(effCritRate, true), derived: true },
+    { label: "Critical Damage", menu: fmtCombatStat(basePanel.critDmg, true), combat: fmtCombatStat(adjustedPanel.critDmg, true) },
+    { label: "Affinity Rate", menu: fmtCombatStat(basePanel.aff, true), combat: fmtCombatStat(adjustedPanel.aff, true) },
+    { label: "Effective Affinity Rate", menu: "-", combat: fmtCombatStat(effAffRate, true), derived: true },
+    { label: "Affinity Damage", menu: fmtCombatStat(basePanel.affDmg, true), combat: fmtCombatStat(adjustedPanel.affDmg, true) },
+    { label: "Precision", menu: fmtCombatStat(basePanel.prec, true), combat: fmtCombatStat(adjustedPanel.prec, true) },
+    { label: "Effective Precision", menu: "-", combat: fmtCombatStat(effPrecision, true), derived: true },
+    { label: `Min ${innerAttrName(selectedBuild)} ATK`, menu: fmtCombatStat(basePanel.minPz), combat: fmtCombatStat(adjustedPanel.minPz) },
+    { label: `Max ${innerAttrName(selectedBuild)} ATK`, menu: fmtCombatStat(basePanel.maxPz), combat: fmtCombatStat(adjustedPanel.maxPz) },
+    { label: `${innerAttrName(selectedBuild)} Penetration`, menu: fmtCombatStat(basePanel.pzPen, true), combat: fmtCombatStat(adjustedPanel.pzPen, true) },
+    { label: `Net ${innerAttrName(selectedBuild)} Penetration`, menu: "-", combat: fmtCombatStat(netPzPen, true), derived: true },
+  ];
 
   return (
     <div className="app-root min-h-screen font-sans antialiased" data-workspace={workspace}>
@@ -3591,6 +3611,23 @@ export default function App() {
             setSelectedInnerWays(next.filter(Boolean).slice(0, 4));
           }}
           onInnerWayTierChange={(id, tier) => setInnerWayTiers({ ...innerWayTiers, [id]: tier })}
+        />
+      )}
+
+      {workspace === "simulation" && (
+        <CombatWorkspace
+          ceiling={rotationStats.dps}
+          modeled={rotationStats.dps * dpsEff}
+          totalDamage={rotationStats.totalDmg}
+          graduation={rotationStats.gradRate}
+          duration={getRotationTimeForBuild(selectedBuild)}
+          efficiency={dpsEff}
+          food={food}
+          enemy={{ name: activeTier.name, defense: activeTier.def, physicalResistance: activeTier.physRes, attributeResistance: activeTier.attrRes }}
+          stats={combatStats}
+          skills={rotationStats.items.map((item) => ({ name: item.name, count: item.count, damage: item.total, share: rotationStats.totalDmg ? item.total / rotationStats.totalDmg * 100 : 0 })).sort((left, right) => right.damage - left.damage)}
+          onEfficiencyChange={setDpsEff}
+          onFoodChange={setFood}
         />
       )}
 
