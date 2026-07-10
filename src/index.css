@@ -885,4 +885,8 @@ header h1{font-family:var(--font-display)!important;font-weight:700!important;
 .panel-checkbox-container.workspace-simulation-group{order:1!important}
 .graduation-banner.workspace-simulation-group{order:2!important}
 #stats-display.workspace-simulation-group{order:3!important}
+.analysis-sheet{width:min(1360px,96vw)!important;max-width:none!important;border-color:var(--line2)!important;background:var(--paper)!important}
+.analysis-sheet .modal-header{background:var(--surface)!important;border-bottom-color:var(--line2)!important}
+.analysis-sheet-body{background:var(--paper)!important}.analysis-sheet-sidebar{background:var(--surface)!important;border-right-color:var(--line2)!important}
+@media(max-width:767px){.analysis-sheet{width:100vw!important;height:100dvh!important;max-height:none!important;border:0!important;border-radius:0!important}.analysis-sheet-body{flex-direction:column!important}.analysis-sheet-sidebar{width:100%!important;max-height:180px;border-right:0!important;border-bottom:1px solid var(--line2)!important}.analysis-sheet .modal-header{border-radius:0!important}}
 @media(max-width:767px){.workspace-nav{position:sticky;top:0;z-index:100;justify-content:space-between;padding:7px 8px}.workspace-nav button{flex:1;padding:9px 4px;font-size:11px}.gear-workspace-heading{padding:14px 14px 8px}.gear-workspace-heading h2{font-size:17px}}

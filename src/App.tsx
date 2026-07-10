@@ -4707,14 +4707,14 @@ export default function App() {
       {/* ── GRADUATION ANALYSIS MODAL ── */}
       {isGradModalOpen && (
         <div className="modal" onClick={() => setIsGradModalOpen(false)}>
-          <div className="modal-content modal-content-xlarge" onClick={e => e.stopPropagation()} style={{ height: '90vh', display: 'flex', flexDirection: 'column' }}>
+          <div className="modal-content modal-content-xlarge analysis-sheet" onClick={e => e.stopPropagation()} style={{ height: '90vh', display: 'flex', flexDirection: 'column' }}>
             <div className="modal-header">
               <h2>Graduation Analysis</h2>
               <span className="close-btn" onClick={() => setIsGradModalOpen(false)}>&times;</span>
             </div>
-            <div className="modal-body grad-layout-container grad-layout-container-inline" style={{ display: 'flex', flex: 1, minHeight: 0, padding: 0 }}>
+            <div className="modal-body grad-layout-container grad-layout-container-inline analysis-sheet-body" style={{ display: 'flex', flex: 1, minHeight: 0, padding: 0 }}>
               {/* Left Panel */}
-              <div className="grad-left-panel" style={{ width: '280px', flexShrink: 0, borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+              <div className="grad-left-panel analysis-sheet-sidebar" style={{ width: '280px', flexShrink: 0, borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
                 <div className="current-rate-box">
                   <div className="label">Graduation Rate</div>
                   <div className="value">{rotationStats.gradRate.toFixed(2)}%</div>
