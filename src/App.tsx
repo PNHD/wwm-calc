@@ -50,6 +50,7 @@ import SearchableSelect from "./components/SearchableSelect";
 import WorkspaceTabs from "./components/WorkspaceTabs";
 import ProductShell from "./product/ProductShell";
 import ArsenalWorkspace, { type ArsenalRow } from "./product/workspaces/ArsenalWorkspace";
+import BuildWorkspace from "./product/workspaces/BuildWorkspace";
 import { engine2Dps, BUILD_TO_WWM } from "./utils/engine2";
 import { ROTATIONS_WWM } from "./data/rotationsWWM";
 
@@ -3456,6 +3457,32 @@ export default function App() {
       if (left.score !== right.score) return right.score - left.score;
       return left.name.localeCompare(right.name);
     });
+  const buildOptions = Object.entries(BUILD_PROFILES).map(([id, build]) => ({
+    id,
+    label: build.label,
+    weapons: build.weapons,
+    tier: build.tier,
+    estimated: ESTIMATED_BUILDS.has(id),
+  }));
+  const innerWayOptions = [...INNER_WAYS]
+    .sort((left, right) => {
+      const category = BUILD_PROFILES[selectedBuild as keyof typeof BUILD_PROFILES].label.toUpperCase();
+      return Number(right.cat === category) - Number(left.cat === category) || left.name.localeCompare(right.name);
+    })
+    .map((innerWay) => ({
+      id: innerWay.id,
+      name: innerWay.name,
+      image: INNER_WAY_IMAGES[innerWay.name],
+      category: innerWay.cat,
+      trigger: formatIwTrigger(innerWay.trigger),
+      effect: innerWay.tiers.find((tier) => tier.tier === (innerWayTiers[innerWay.id] ?? 6))?.effect ?? innerWay.desc,
+    }));
+  const selectedInnerWayViews = [0, 1, 2, 3].map((index) => {
+    const id = selectedInnerWays[index];
+    if (!id) return null;
+    const option = innerWayOptions.find((candidate) => candidate.id === id);
+    return option ? { ...option, tier: innerWayTiers[id] ?? 6 } : null;
+  });
 
   return (
     <div className="app-root min-h-screen font-sans antialiased" data-workspace={workspace}>
@@ -3530,6 +3557,40 @@ export default function App() {
             if (item) openEditModal(item);
           }}
           onAdd={() => openAddModal(gearFilterSlot === "ALL" ? "Umbrella" : gearFilterSlot)}
+        />
+      )}
+
+      {workspace === "build" && (
+        <BuildWorkspace
+          builds={buildOptions}
+          selectedBuild={selectedBuild}
+          buildNotes={BUILD_PROFILES[selectedBuild as keyof typeof BUILD_PROFILES].notes}
+          weaponSet={setAllWeapon}
+          armorSet={setAllArmor}
+          weaponSets={WEAPON_SET_KEYS.map((id) => ({ id, label: getSetName(id) }))}
+          armorSets={ARMOR_SET_KEYS.map((id) => ({ id, label: getSetName(id) }))}
+          ring={bowSelect}
+          calibrated={Boolean(activeScheme?.baseOverride)}
+          equipped={arsenalRows.filter((item) => item.equipped).map((item) => ({ slot: item.slotLabel, name: item.name, image: item.image }))}
+          innerWays={selectedInnerWayViews}
+          innerWayOptions={innerWayOptions}
+          onBuildChange={setSelectedBuild}
+          onWeaponSetChange={setSetAllWeapon}
+          onArmorSetChange={setSetAllArmor}
+          onApplySets={applySetToAll}
+          onRingChange={setBowSelect}
+          onCalibrate={() => setCalibOpen(true)}
+          onInnerWayChange={(index, id) => {
+            const next = [...selectedInnerWays];
+            if (!id) next.splice(index, 1);
+            else {
+              const duplicate = next.indexOf(id);
+              if (duplicate >= 0) next.splice(duplicate, 1);
+              next[index] = id;
+            }
+            setSelectedInnerWays(next.filter(Boolean).slice(0, 4));
+          }}
+          onInnerWayTierChange={(id, tier) => setInnerWayTiers({ ...innerWayTiers, [id]: tier })}
         />
       )}
 
