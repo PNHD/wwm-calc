@@ -13,3 +13,27 @@ header h1{font:700 clamp(20px,2.2vw,30px)/1.05 Georgia,serif!important;letter-sp
 .analysis-sheet{background:#0c1114!important;border-radius:0!important}.analysis-sheet-sidebar{background:#10161b!important}.modal{background:#000b!important}.modal-header{background:#10161b!important}
 @media(max-width:767px){header{grid-template-columns:1fr!important;padding:16px 18px!important}.header-controls{justify-content:flex-start!important}.workspace-nav{padding:0 10px!important;overflow:auto}.workspace-nav button{min-width:78px;padding:13px 10px!important}.app-layout{padding:0 12px 32px!important}.gear-workspace-heading h2,.workspace-screen-heading h2{font-size:23px!important}#equipment-grid{grid-template-columns:1fr!important}.xinfa-grid{grid-template-columns:repeat(2,1fr)!important}}
 
+/* Build is a loadout workbench: configuration and Inner Ways beside equipped gear. */
+.app-root[data-workspace="build"] #simulator-panel{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(360px,.72fr)!important;gap:12px!important;align-items:start!important}
+.app-root[data-workspace="build"] .workspace-screen-heading{grid-column:1/-1!important}
+.app-root[data-workspace="build"] .sim-header,.app-root[data-workspace="build"] .scheme-controls,.app-root[data-workspace="build"] .xinfa-section{grid-column:1!important}
+.app-root[data-workspace="build"] .sim-layout-container,.app-root[data-workspace="build"] .adv-panel-toggle{grid-column:2!important}
+.app-root[data-workspace="build"] .sim-layout-container{grid-row:2/span 3!important;margin:0!important;position:sticky!important;top:18px!important}
+.app-root[data-workspace="build"] .workspace-build-group[style*="order: 3"]{grid-column:1!important}
+.app-root[data-workspace="build"] #simulator-panel>.secondary-btn{grid-column:1!important}
+
+/* Simulation reads left to right: assumptions first, output second, combat table below. */
+.app-root[data-workspace="simulation"] #simulator-panel{display:grid!important;grid-template-columns:minmax(300px,.7fr) minmax(0,1.3fr)!important;gap:12px!important;align-items:start!important}
+.app-root[data-workspace="simulation"] .workspace-screen-heading{grid-column:1/-1!important}
+.app-root[data-workspace="simulation"] .panel-checkbox-container{grid-column:1!important;grid-row:2!important;margin:0!important;position:sticky!important;top:18px!important}
+.app-root[data-workspace="simulation"] .graduation-banner{grid-column:2!important;grid-row:2!important;margin:0!important}
+.app-root[data-workspace="simulation"] #stats-display{grid-column:1/-1!important;grid-row:3!important;margin:0!important}
+.app-root[data-workspace="simulation"] .graduation-banner .banner-content{justify-content:flex-start!important;gap:16px!important}
+.app-root[data-workspace="simulation"] .banner-footer-content{justify-content:flex-start!important}
+
+/* Analysis uses the whole viewport like a dedicated tool, not a centered legacy modal. */
+.analysis-sheet{width:100vw!important;height:100dvh!important;max-height:none!important;border:0!important;border-radius:0!important}
+.analysis-sheet .modal-header{padding:18px 24px!important}.analysis-sheet .modal-header h2{font:700 26px Georgia,serif!important}
+.analysis-sheet-body{min-height:0!important}.analysis-sheet-sidebar{width:260px!important}.grad-tabs{background:var(--forge-panel)!important;border-bottom:1px solid var(--forge-line)!important}.grad-tab{border-radius:0!important}
+
+@media(max-width:900px){.app-root[data-workspace="build"] #simulator-panel,.app-root[data-workspace="simulation"] #simulator-panel{grid-template-columns:1fr!important}.app-root[data-workspace="build"] .sim-header,.app-root[data-workspace="build"] .scheme-controls,.app-root[data-workspace="build"] .xinfa-section,.app-root[data-workspace="build"] .sim-layout-container,.app-root[data-workspace="build"] .adv-panel-toggle,.app-root[data-workspace="simulation"] .panel-checkbox-container,.app-root[data-workspace="simulation"] .graduation-banner,.app-root[data-workspace="simulation"] #stats-display{grid-column:1!important;grid-row:auto!important;position:static!important}.analysis-sheet-sidebar{width:100%!important}}
