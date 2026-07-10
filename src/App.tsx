@@ -47,6 +47,7 @@ import { translateSkillName } from "./utils/skillNameEn";
 import { runDualPassOcr } from "./utils/ocrParser";
 import StatSwapSimulator from "./components/StatSwapSimulator";
 import SearchableSelect from "./components/SearchableSelect";
+import WorkspaceTabs from "./components/WorkspaceTabs";
 import { engine2Dps, BUILD_TO_WWM } from "./utils/engine2";
 import { ROTATIONS_WWM } from "./data/rotationsWWM";
 
@@ -3554,24 +3555,7 @@ export default function App() {
         </div>
       </header>
 
-      <nav className="workspace-nav" aria-label="Calculator workspace">
-        {([
-          ["gear", "Gear"],
-          ["build", "Build"],
-          ["simulation", "Simulation"],
-          ["analysis", "Analysis"]
-        ] as const).map(([key, label]) => (
-          <button
-            key={key}
-            type="button"
-            className={key === workspace ? "is-active" : ""}
-            aria-current={key === workspace ? "page" : undefined}
-            onClick={() => openWorkspace(key)}
-          >
-            {label}
-          </button>
-        ))}
-      </nav>
+      <WorkspaceTabs active={workspace} onChange={openWorkspace} />
 
       {/* ── MAIN LAYOUT ── */}
       <div className="app-layout">
