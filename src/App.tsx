@@ -47,11 +47,11 @@ import { translateSkillName } from "./utils/skillNameEn";
 import { runDualPassOcr } from "./utils/ocrParser";
 import StatSwapSimulator from "./components/StatSwapSimulator";
 import SearchableSelect from "./components/SearchableSelect";
-import WorkspaceTabs from "./components/WorkspaceTabs";
 import ProductShell from "./product/ProductShell";
 import ArsenalWorkspace, { type ArsenalRow } from "./product/workspaces/ArsenalWorkspace";
 import BuildWorkspace from "./product/workspaces/BuildWorkspace";
 import CombatWorkspace from "./product/workspaces/CombatWorkspace";
+import OptimizeWorkspace from "./product/workspaces/OptimizeWorkspace";
 import { engine2Dps, BUILD_TO_WWM } from "./utils/engine2";
 import { ROTATIONS_WWM } from "./data/rotationsWWM";
 
@@ -1221,7 +1221,7 @@ const getCustomConfig = () => {
 };
 
 export default function App() {
-  type Workspace = "gear" | "build" | "simulation";
+  type Workspace = "gear" | "build" | "simulation" | "analysis";
   const [tierKey, setTierKey] = useState<string>(() => {
     const config = getCustomConfig();
     return config?.tierKey ?? "350|0.45";
@@ -1244,13 +1244,9 @@ export default function App() {
   const [advPanelOpen, setAdvPanelOpen] = useState<boolean>(false);
   const [isGradModalOpen, setIsGradModalOpen] = useState<boolean>(false);
   const [gradModalActiveTab, setGradModalActiveTab] = useState<string>("manual");
-  const openWorkspace = (next: Workspace | "analysis") => {
-    if (next === "analysis") {
-      setGradModalActiveTab("manual");
-      setIsGradModalOpen(true);
-      return;
-    }
+  const openWorkspace = (next: Workspace) => {
     setWorkspace(next);
+    if (next !== "analysis") setIsGradModalOpen(false);
   };
   const [isDmgStatsOpen, setIsDmgStatsOpen] = useState<boolean>(false);
   const [isSimOpen, setIsSimOpen] = useState<boolean>(false);
@@ -3631,6 +3627,22 @@ export default function App() {
         />
       )}
 
+      {workspace === "analysis" && (
+        <OptimizeWorkspace
+          graduation={rotationStats.gradRate}
+          modeledDps={rotationStats.dps * dpsEff}
+          equipped={arsenalRows.filter((item) => item.equipped).length}
+          innerWays={selectedInnerWays.filter(Boolean).length}
+          calibrated={Boolean(activeScheme?.baseOverride)}
+          detailOpen={isGradModalOpen}
+          activeTool={gradModalActiveTab}
+          onToolOpen={(id) => {
+            setGradModalActiveTab(id);
+            setIsGradModalOpen(true);
+          }}
+        />
+      )}
+
       {/* ── HEADER ── */}
       <header>
         <div className="header-title-container">
@@ -3756,8 +3768,6 @@ export default function App() {
           </button>
         </div>
       </header>
-
-      <WorkspaceTabs active={workspace} onChange={openWorkspace} />
 
       {/* ── MAIN LAYOUT ── */}
       <div className="app-layout">
@@ -4892,11 +4902,11 @@ export default function App() {
 
       {/* ── GRADUATION ANALYSIS MODAL ── */}
       {isGradModalOpen && (
-        <div className="modal" onClick={() => setIsGradModalOpen(false)}>
+        <div className="modal analysis-workspace-detail" onClick={() => setIsGradModalOpen(false)}>
           <div className="modal-content modal-content-xlarge analysis-sheet" onClick={e => e.stopPropagation()} style={{ height: '90vh', display: 'flex', flexDirection: 'column' }}>
             <div className="modal-header">
-              <h2>Graduation Analysis</h2>
-              <span className="close-btn" onClick={() => setIsGradModalOpen(false)}>&times;</span>
+              <h2>Optimization detail</h2>
+              <button type="button" className="close-btn" aria-label="Close optimization detail" onClick={() => setIsGradModalOpen(false)}>&times;</button>
             </div>
             <div className="modal-body grad-layout-container grad-layout-container-inline analysis-sheet-body" style={{ display: 'flex', flex: 1, minHeight: 0, padding: 0 }}>
               {/* Left Panel */}

@@ -11,7 +11,7 @@ const NAV = [
 ] as const;
 
 interface ProductShellProps {
-  active: Exclude<ProductWorkspace, "analysis">;
+  active: ProductWorkspace;
   onNavigate: (workspace: ProductWorkspace) => void;
   roleControl: ReactNode;
   actions: ReactNode;
