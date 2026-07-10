@@ -4,6 +4,7 @@ import App from './App.tsx';
 import './index.css';
 import './workbench.css';
 import './rebuild-v2.css';
+import './product/product.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

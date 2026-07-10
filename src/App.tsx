@@ -48,6 +48,7 @@ import { runDualPassOcr } from "./utils/ocrParser";
 import StatSwapSimulator from "./components/StatSwapSimulator";
 import SearchableSelect from "./components/SearchableSelect";
 import WorkspaceTabs from "./components/WorkspaceTabs";
+import ProductShell from "./product/ProductShell";
 import { engine2Dps, BUILD_TO_WWM } from "./utils/engine2";
 import { ROTATIONS_WWM } from "./data/rotationsWWM";
 
@@ -3428,6 +3429,47 @@ export default function App() {
     <div className="app-root min-h-screen font-sans antialiased" data-workspace={workspace}>
       {/* Accent line */}
       <div className="app-accent-line" />
+
+      <ProductShell
+        active={workspace}
+        onNavigate={openWorkspace}
+        roleControl={(
+          <select
+            aria-label="Current role"
+            value={charsData.activeCharId ?? ""}
+            onChange={(event) => {
+              const activeCharId = event.target.value;
+              const character = charsData.chars.find((candidate) => candidate.id === activeCharId);
+              const nextData = {
+                ...charsData,
+                activeCharId,
+                activeSchemeId: character?.schemes[0]?.id ?? null,
+              };
+              setCharsData(nextData);
+              localStorage.setItem("wwm_chars_v3", JSON.stringify(nextData));
+            }}
+          >
+            {charsData.chars.map((character) => (
+              <option key={character.id} value={character.id}>{character.name}</option>
+            ))}
+          </select>
+        )}
+        actions={(
+          <>
+            <button type="button" onClick={() => setIsGameImportOpen(true)}>Import game</button>
+            <button type="button" onClick={() => setIsBatchOcrModalOpen(true)}>Scan gear</button>
+            <button type="button" onClick={() => setIsExportImportModalOpen(true)}>Data</button>
+            <button type="button" onClick={() => setIsHelpOpen(true)}>Help</button>
+          </>
+        )}
+        context={{
+          tier: activeTier.name,
+          build: BUILD_PROFILES[selectedBuild as keyof typeof BUILD_PROFILES]?.label ?? selectedBuild,
+          scheme: activeScheme?.name ?? "Scheme",
+          innerWays: selectedInnerWays.filter(Boolean).length,
+          estimate: Math.round(rotationStats.dps * dpsEff).toLocaleString(),
+        }}
+      />
 
       {/* ── HEADER ── */}
       <header>
