@@ -2055,10 +2055,6 @@ export default function App() {
     const config = getCustomConfig();
     return config?.innerWayTiers ?? {};
   });
-  const [innerWayUptime, setInnerWayUptime] = useState<Record<string, number>>(() => {
-    const config = getCustomConfig();
-    return config?.innerWayUptime ?? {};
-  });
   // Realistic-DPS efficiency: the rotation/DPS calc is a THEORETICAL ceiling
   // (perfect rotation + full buff uptime). A real parse loses ~10-20% to rotation
   // downtime / buff ramp / execution. realistic DPS = theoretical × dpsEff. The
@@ -2116,7 +2112,6 @@ export default function App() {
       panel,
       selectedInnerWays,
       innerWayTiers,
-      innerWayUptime,
       tierKey,
       bowSelect,
       food,
@@ -2147,7 +2142,6 @@ export default function App() {
           if (config.panel) setPanel(config.panel);
           if (config.selectedInnerWays) setSelectedInnerWays(config.selectedInnerWays);
           if (config.innerWayTiers) setInnerWayTiers(config.innerWayTiers);
-          if (config.innerWayUptime) setInnerWayUptime(config.innerWayUptime);
           if (config.tierKey) setTierKey(config.tierKey);
           if (config.bowSelect) setBowSelect(config.bowSelect);
           if (config.food !== undefined) setFood(config.food);
@@ -2166,7 +2160,6 @@ export default function App() {
       // System factory defaults
       setPanel(INITIAL_PANEL);
       setSelectedInnerWays([]);
-      setInnerWayUptime({});
       setTierKey("350|0.45");
       setBowSelect("crit");
       setFood(true);
@@ -2185,7 +2178,6 @@ export default function App() {
       setHasCustomConfig(false);
       setPanel(INITIAL_PANEL);
       setSelectedInnerWays([]);
-      setInnerWayUptime({});
       setTierKey("350|0.45");
       setBowSelect("crit");
       setFood(true);
@@ -2388,9 +2380,6 @@ export default function App() {
     localStorage.setItem("wwm_t91_profiles", JSON.stringify(list));
   };
 
-  const DEFAULT_IW_UPTIME = 0.1;
-  const innerWayDpsUptime = (id: string) => innerWayUptime[id] ?? DEFAULT_IW_UPTIME;
-
   // Compute Inner Ways bonuses
   const iwStats = useMemo(() => {
     const bonus = {
@@ -2416,26 +2405,25 @@ export default function App() {
         const activeTierObj = iw.tiers.find(t => t.tier === tierNum);
         if (activeTierObj && activeTierObj.stat) {
           const s = activeTierObj.stat;
-          const up = innerWayDpsUptime(id);
-          if (s.outerPen) bonus.outerPen += s.outerPen * up;
-          if (s.pzPen) bonus.pzPen += s.pzPen * up;
-          if (s.critDmg) bonus.critDmg += s.critDmg * up;
-          if (s.affDmg) bonus.affDmg += s.affDmg * up;
-          if (s.outerDmg) bonus.outerDmg += s.outerDmg * up;
-          if (s.generalDmg) bonus.generalDmg += s.generalDmg * up;
-          if (s.pzDmg) bonus.pzDmg += s.pzDmg * up;
-          if (s.crit) bonus.crit += s.crit * up;
-          if (s.aff) bonus.aff += s.aff * up;
-          if (s.dcrit) bonus.dcrit += s.dcrit * up;
-          if (s.daff) bonus.daff += s.daff * up;
-          if (s.prec) bonus.prec += s.prec * up;
-          if (s.minOuter) bonus.minOuter += s.minOuter * up;
-          if (s.maxOuter) bonus.maxOuter += s.maxOuter * up;
+          if (s.outerPen) bonus.outerPen += s.outerPen;
+          if (s.pzPen) bonus.pzPen += s.pzPen;
+          if (s.critDmg) bonus.critDmg += s.critDmg;
+          if (s.affDmg) bonus.affDmg += s.affDmg;
+          if (s.outerDmg) bonus.outerDmg += s.outerDmg;
+          if (s.generalDmg) bonus.generalDmg += s.generalDmg;
+          if (s.pzDmg) bonus.pzDmg += s.pzDmg;
+          if (s.crit) bonus.crit += s.crit;
+          if (s.aff) bonus.aff += s.aff;
+          if (s.dcrit) bonus.dcrit += s.dcrit;
+          if (s.daff) bonus.daff += s.daff;
+          if (s.prec) bonus.prec += s.prec;
+          if (s.minOuter) bonus.minOuter += s.minOuter;
+          if (s.maxOuter) bonus.maxOuter += s.maxOuter;
         }
       }
     });
     return bonus;
-  }, [selectedInnerWays, innerWayTiers, innerWayUptime]);
+  }, [selectedInnerWays, innerWayTiers]);
 
   // Base ("menu") panel — what the in-game Combat Attributes screen shows:
   //  - autoGearPanel ON  → DERIVED from equipped gear (naked base + summed
@@ -2831,22 +2819,21 @@ export default function App() {
       const tierNum = innerWayTiers[id] ?? 6;
       const s = iw?.tiers.find(t => t.tier === tierNum)?.stat;
       if (!iw || !s) return null;
-      const up = innerWayDpsUptime(id);
       const p: any = { ...adjustedPanel };
-      p.outerPen -= (s.outerPen || 0) * up;
-      p.pzPen -= (s.pzPen || 0) * up;
-      p.crit -= (s.crit || 0) * up;
-      p.aff -= (s.aff || 0) * up;
-      p.dcrit -= (s.dcrit || 0) * up;
-      p.daff -= (s.daff || 0) * up;
-      p.critDmg -= (s.critDmg || 0) * up;
-      p.affDmg -= (s.affDmg || 0) * up;
-      p.outerDmg -= (s.outerDmg || 0) * up;
-      p.pzDmg -= (s.pzDmg || 0) * up;
-      p.prec -= (s.prec || 0) * up;
-      p.minOuter -= (s.minOuter || 0) * up;
-      p.maxOuter -= (s.maxOuter || 0) * up;
-      p.iwGeneralDmg = (p.iwGeneralDmg || 0) - (s.generalDmg || 0) * up;
+      p.outerPen -= s.outerPen || 0;
+      p.pzPen -= s.pzPen || 0;
+      p.crit -= s.crit || 0;
+      p.aff -= s.aff || 0;
+      p.dcrit -= s.dcrit || 0;
+      p.daff -= s.daff || 0;
+      p.critDmg -= s.critDmg || 0;
+      p.affDmg -= s.affDmg || 0;
+      p.outerDmg -= s.outerDmg || 0;
+      p.pzDmg -= s.pzDmg || 0;
+      p.prec -= s.prec || 0;
+      p.minOuter -= s.minOuter || 0;
+      p.maxOuter -= s.maxOuter || 0;
+      p.iwGeneralDmg = (p.iwGeneralDmg || 0) - (s.generalDmg || 0);
       const reduced = rotate(p);
       const lossDps = (baseTotal - reduced) / rotTime;
       const lossPct = baseTotal > 0 ? ((baseTotal - reduced) / baseTotal) * 100 : 0;
@@ -2854,7 +2841,7 @@ export default function App() {
     }).filter(Boolean) as { id: string; name: string; tier: number; lossDps: number; lossPct: number }[];
     list.sort((a, b) => b.lossDps - a.lossDps);
     return list;
-  }, [selectedInnerWays, innerWayTiers, innerWayUptime, adjustedPanel, activeTier, datang, yishui, selectedBuild, rotationStats.totalDmg]);
+  }, [selectedInnerWays, innerWayTiers, adjustedPanel, activeTier, datang, yishui, selectedBuild, rotationStats.totalDmg]);
 
   // ── Best Build search ──────────────────────────────────────────────────────
   // Scans the whole gear pool (all items, equipped or not) for this scheme,
@@ -3893,30 +3880,6 @@ export default function App() {
                 );
               })}
             </div>
-            {selectedInnerWays.length > 0 && (
-              <div className="iw-uptime-list">
-                {selectedInnerWays.map(id => {
-                  const iw = INNER_WAYS.find(item => item.id === id);
-                  if (!iw) return null;
-                  const up = innerWayDpsUptime(id);
-                  return (
-                    <label key={id} className="iw-uptime-row" title="How much of this Inner Way's combat stats should count toward DPS. 10% is the conservative parse default; 100% is a theoretical full-uptime ceiling.">
-                      <span className="iw-uptime-name">{iw.name}</span>
-                      <input
-                        type="range"
-                        min={0}
-                        max={100}
-                        step={5}
-                        value={Math.round(up * 100)}
-                        onChange={e => setInnerWayUptime(prev => ({ ...prev, [id]: parseInt(e.target.value, 10) / 100 }))}
-                        aria-label={`${iw.name} DPS uptime`}
-                      />
-                      <span className="iw-uptime-val">{Math.round(up * 100)}%</span>
-                    </label>
-                  );
-                })}
-              </div>
-            )}
           </div>
 
           {/* Inner Ways — DPS loss if removed */}
