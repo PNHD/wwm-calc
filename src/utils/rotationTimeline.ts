@@ -64,15 +64,10 @@ export interface TimelineResult {
 
 const BUFF_PALETTE = ["#e0b45a", "#4fb27c", "#bd8fdb", "#5f97c6", "#e05a41", "#4fc9c0", "#d68f5f", "#9ab04f"];
 
-// Stack/duration rules for the STACKING buffs we can read from the inner-way text.
-// Anything not listed here is treated as a static (always-max) passive, which keeps
-// the full-uptime invariant with the graduation panel.
-const BUFF_RAMP: Record<string, { maxStacks: number; duration: number }> = {
-  song_of_tang:   { maxStacks: 5, duration: 4 }, // Tang Song: 4s, max 5, 1/s
-  light_anew:     { maxStacks: 5, duration: 3 }, // Candle Flicker: 3s, max 5
-  breaking_point: { maxStacks: 5, duration: 5 }, // Collapse/Disintegration: 5s, max 5
-  echoes_of_oblivion: { maxStacks: 5, duration: 4 },
-};
+// `tiers[].stat` is restricted to flat Attr Buff / breakthrough stats. Conditional
+// Basic Buffs live in text only until they have their own explicitly modelled
+// timeline source; otherwise we would ramp or pin the wrong stat and inflate DPS.
+const BUFF_RAMP: Record<string, { maxStacks: number; duration: number }> = {};
 
 /** Build the timeline buff list from the user's selected inner ways. */
 export function buildTimelineBuffs(

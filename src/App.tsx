@@ -371,17 +371,30 @@ const IW_STAT_LABEL: Record<string, [string, boolean]> = {
   affDmg: ["Aff DMG", true], outerPen: ["Phys Pen", false], pzPen: ["Formless Pen", false],
   outerDmg: ["Phys DMG", true], pzDmg: ["Attr DMG", true], crit: ["Crit", true],
   aff: ["Aff", true], generalDmg: ["DMG", true],
+  minOuter: ["Min Phys", false], maxOuter: ["Max Phys", false],
 };
 const formatIwStat = (stat: Record<string, number>): string => {
-  const order = ["dcrit", "daff", "critDmg", "affDmg", "outerPen", "pzPen", "pzDmg", "outerDmg", "crit", "aff", "generalDmg"];
+  const order = ["dcrit", "daff", "critDmg", "affDmg", "outerPen", "pzPen", "pzDmg", "outerDmg", "crit", "aff", "minOuter", "maxOuter", "generalDmg"];
   const key = order.find(k => stat[k]);
   if (!key) return "";
   const [label, isPct] = IW_STAT_LABEL[key];
   return `+${stat[key]}${isPct ? "%" : ""} ${label}`;
 };
+const formatIwTrigger = (trigger?: string): string => {
+  if (trigger === "passive") return "Passive";
+  if (trigger === "ramp") return "Ramp";
+  if (trigger === "conditional") return "Conditional";
+  return "Utility";
+};
 
 // Builds whose T91 graduation DPS is estimated (no dedicated Lv95 source row yet).
 const ESTIMATED_BUILDS = new Set(["bamboocut-kite", "stonesplit-pure-datang"]);
+const DEFAULT_DPS_EFFICIENCY = 0.88;
+const savedDpsEfficiency = () => {
+  const config = getCustomConfig();
+  if (config?.dpsEff === undefined) return DEFAULT_DPS_EFFICIENCY;
+  return config.dpsEff === 1 && !config.dpsEffUserSet ? DEFAULT_DPS_EFFICIENCY : config.dpsEff;
+};
 
 // WWM_DATA.classes uses an older naming scheme. Map each key to the canonical
 // build name (same labels as the main path dropdown) for consistent display.
@@ -2059,7 +2072,7 @@ export default function App() {
   // (perfect rotation + full buff uptime). A real parse loses ~10-20% to rotation
   // downtime / buff ramp / execution. realistic DPS = theoretical × dpsEff. The
   // user tunes it to match their in-game parse. Graduation % stays on theoretical.
-  const [dpsEff, setDpsEff] = useState<number>(() => getCustomConfig()?.dpsEff ?? 1.0);
+  const [dpsEff, setDpsEff] = useState<number>(() => savedDpsEfficiency());
   const [profiles, setProfiles] = useState<SavedProfile[]>([]);
   const [newProfileName, setNewProfileName] = useState<string>("");
   const [compareProfileIds, setCompareProfileIds] = useState<string[]>([]);
@@ -2121,7 +2134,8 @@ export default function App() {
       qianying,
       customDef,
       customRes,
-      dpsEff
+      dpsEff,
+      dpsEffUserSet: true
     };
     try {
       localStorage.setItem("wwm_t91_custom_config", JSON.stringify(config));
@@ -2151,7 +2165,7 @@ export default function App() {
           if (config.qianying !== undefined) setQianying(config.qianying);
           if (config.customDef !== undefined) setCustomDef(config.customDef);
           if (config.customRes !== undefined) setCustomRes(config.customRes);
-          if (config.dpsEff !== undefined) setDpsEff(config.dpsEff);
+          if (config.dpsEff !== undefined) setDpsEff(config.dpsEff === 1 && !config.dpsEffUserSet ? DEFAULT_DPS_EFFICIENCY : config.dpsEff);
           return;
         } catch (e) {
           console.error(e);
@@ -3869,6 +3883,7 @@ export default function App() {
                         {imageUrl && <img src={imageUrl} alt={iw.name} onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />}
                         <span className="xinfa-tier-badge">T{tierNum}</span>
                         {statSummary && <span className="xinfa-stat-badge">{statSummary}</span>}
+                        <span className={`xinfa-trigger-badge xinfa-trigger-${iw.trigger || "utility"}`}>{formatIwTrigger(iw.trigger)}</span>
                         <div className="xinfa-name">{iw.name}</div>
                       </>
                     ) : (
@@ -3891,7 +3906,7 @@ export default function App() {
               </div>
               {innerWayContrib.map(c => (
                 <div key={c.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "5px 10px", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
-                  <span style={{ fontSize: 12, color: "#c9d1d9" }}>{c.name} <span style={{ color: "#6e7681", fontSize: 10 }}>T{c.tier}</span></span>
+                  <span style={{ fontSize: 12, color: "#c9d1d9" }}>{c.name} <span style={{ color: "#6e7681", fontSize: 10 }}>T{c.tier}</span> <span style={{ color: "#8b949e", fontSize: 10 }}>· {formatIwTrigger(INNER_WAYS.find(it => it.id === c.id)?.trigger)}</span></span>
                   <span style={{ display: "flex", gap: 10, alignItems: "baseline" }}>
                     <span style={{ fontSize: 12.5, fontWeight: 700, color: "#ff7b72" }}>−{Math.round(c.lossDps).toLocaleString()}</span>
                     <span style={{ fontSize: 11, color: "#8b949e", width: 52, textAlign: "right" }}>−{c.lossPct.toFixed(2)}%</span>
@@ -4174,7 +4189,7 @@ export default function App() {
             </div>
             <div className="banner-footer banner-footer-content">
               <span className="banner-footer-text">
-                DPS Expectation: <span className="text-white font-bold">{Math.round(rotationStats.dps).toLocaleString()}</span>
+                DPS Expectation: <span className="text-white font-bold">{Math.round(rotationStats.dps * dpsEff).toLocaleString()}</span>
                 <span className="text-[#8b949e]"> · Total DMG: </span>
                 <span className="text-white font-bold">{Math.round(rotationStats.totalDmg).toLocaleString()}</span>
               </span>
@@ -4196,9 +4211,9 @@ export default function App() {
               </button>
             </div>
             <div className="banner-footer" style={{ marginTop: 2 }}>
-              <span className="banner-footer-text" title="Realistic sustained DPS ≈ theoretical × rotation efficiency (slider above). For a calibrated build this defaults to 1.0 (= theoretical); lower the slider to model your own rotation downtime / execution and match your in-game parse.">
-                Realistic DPS ≈ <span className="font-bold" style={{ color: '#7ee787' }}>{Math.round(rotationStats.dps * dpsEff).toLocaleString()}</span>
-                <span className="text-[#8b949e]"> ({Math.round(dpsEff * 100)}% efficiency)</span>
+              <span className="banner-footer-text" title="Theory ceiling is perfect rotation plus full buff uptime. DPS Expectation applies rotation efficiency so it is closer to real Global parses.">
+                Theory ceiling <span className="font-bold" style={{ color: '#c9d1d9' }}>{Math.round(rotationStats.dps).toLocaleString()}</span>
+                <span className="text-[#8b949e]"> · {Math.round(dpsEff * 100)}% efficiency applied</span>
               </span>
             </div>
             <div className="banner-arrow">›</div>
@@ -4313,8 +4328,8 @@ export default function App() {
               <h3 style={{ color: '#f0b400', margin: '14px 0 6px' }}>2 · The headline numbers</h3>
               <ul style={{ marginTop: 0, paddingLeft: 18 }}>
                 <li><b>Graduation Rate %</b> — how "finished" your gear is vs the selected tier baseline. ~100% = graduated. Your single "how good is my gear" score.</li>
-                <li><b>DPS Expectation</b> — theoretical DPS (perfect play, full buff uptime).</li>
-                <li><b>Realistic DPS ≈</b> — what a real parse looks like. Drag the <b>Rotation efficiency</b> slider to match your own play.</li>
+                <li><b>DPS Expectation</b> — estimated parse DPS after the <b>Rotation efficiency</b> slider is applied.</li>
+                <li><b>Theory ceiling</b> — perfect rotation + full buff uptime. Use it for gear comparison, not as a real parse promise.</li>
                 <li>Click the <b>Graduation Rate banner (›)</b> to open the analysis tabs — that's where the gear-improvement tools live.</li>
                 <li><b>DPS Breakdown by Gear</b> (in the panel) — "DPS lost if removed" per slot. The <i>smallest</i> number = your weakest piece = upgrade that slot first.</li>
                 <li><b>Weapon Set / Ring</b> tables (in the panel) — show DPS for each set/ring vs your current one. A big <span style={{ color: '#7ee787' }}>green +number</span> means switching there is a free upgrade.</li>

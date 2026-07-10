@@ -149,8 +149,8 @@ export interface InnerWay {
   tiers: InnerWayTier[];
   recommended?: boolean;
   note?: string;
-  // Activation type for the stat in `tiers[].stat`. The calculator applies the
-  // max-stack value as an in-combat buff; this field documents the assumption.
+  // Activation type for the inner-way effect. `tiers[].stat` should only contain
+  // flat Attr Buff / breakthrough stats that are safe to add by default.
   trigger?: InnerWayTrigger;
 }
 

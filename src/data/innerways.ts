@@ -9,11 +9,11 @@ export const INNER_WAYS: InnerWay[] = [
     desc:"Scarlet Spin's first umbrella throw summons a Phantom Umbrella. Every 3rd throw summons another Phantom. Perfect Catch or summoning a Phantom triggers Resonance on ALL Phantom Umbrellas, dealing AoE damage.",
     recommended:true, note:"Core Bamboocut-Dust AoE inner way. Synergizes with Perfect Catch mechanic.",
     tiers:[
-      {tier:1,effect:"Phantom Umbrella Resonance DMG: 30% weapon ATK",stat:{generalDmg:2}},
-      {tier:2,effect:"Phantom Resonance DMG: 50% weapon ATK",stat:{generalDmg:3}},
-      {tier:3,effect:"Phantom Resonance DMG: 70% weapon ATK, range +10%",stat:{generalDmg:5}},
-      {tier:4,effect:"Phantom Resonance DMG: 90% weapon ATK, range +15%",stat:{generalDmg:6}},
-      {tier:5,effect:"Phantom Resonance DMG: 110% weapon ATK, range +20%",stat:{generalDmg:7}},
+      {tier:1,effect:"Phantom Umbrella Resonance DMG: 30% weapon ATK (skill effect, not a flat panel stat)",stat:{}},
+      {tier:2,effect:"Phantom Resonance DMG: 50% weapon ATK (skill effect, not a flat panel stat)",stat:{}},
+      {tier:3,effect:"Phantom Resonance DMG: 70% weapon ATK, range +10% (skill effect, not a flat panel stat)",stat:{}},
+      {tier:4,effect:"Phantom Resonance DMG: 90% weapon ATK, range +15% (skill effect, not a flat panel stat)",stat:{}},
+      {tier:5,effect:"Phantom Resonance DMG: 110% weapon ATK, range +20% (skill effect, not a flat panel stat)",stat:{}},
       {tier:6,effect:"Crit Rate +8.2% + Phys DMG Bonus +2.8%. (Resonance/Phantom Chime are boss-ineffective — not credited.)",stat:{crit:8.2,outerDmg:2.8}},
     ]
   },
@@ -22,11 +22,11 @@ export const INNER_WAYS: InnerWay[] = [
     desc:"Hitting with Martial Art Skills applies Tang Song for 4s (max 5 stacks, 1/s). Above 50% HP: each stack grants +2% Critical Damage. Below 50% HP: each stack grants Life Drain capped at 2.5% Max HP/s.",
     recommended:true, note:"Strong sustained Crit DMG above 50% HP. Stacks via Martial Art Skills.",
     tiers:[
-      {tier:1,effect:"Each stack: +0.8% Crit DMG above 50% HP (max 5 stacks = +4%)",stat:{critDmg:4}},
-      {tier:2,effect:"Each stack: +1.2% Crit DMG (max +6%)",stat:{critDmg:6}},
-      {tier:3,effect:"Each stack: +1.5% Crit DMG (max +7.5%)",stat:{critDmg:7.5}},
-      {tier:4,effect:"Each stack: +1.8% Crit DMG (max +9%)",stat:{critDmg:9}},
-      {tier:5,effect:"Each stack: +2.0% Crit DMG above 50% HP (max +10%), Life Drain below 50%",stat:{critDmg:10}},
+      {tier:1,effect:"Each stack: +0.8% Crit DMG above 50% HP (max 5 stacks = +4%; conditional, not summed)",stat:{}},
+      {tier:2,effect:"Each stack: +1.2% Crit DMG (max +6%; conditional, not summed)",stat:{}},
+      {tier:3,effect:"Each stack: +1.5% Crit DMG (max +7.5%; conditional, not summed)",stat:{}},
+      {tier:4,effect:"Each stack: +1.8% Crit DMG (max +9%; conditional, not summed)",stat:{}},
+      {tier:5,effect:"Each stack: +2.0% Crit DMG above 50% HP (max +10%; conditional, not summed), Life Drain below 50%",stat:{}},
       {tier:6,effect:"Basic Buff (conditional, NOT summed): Tang Melody +3% Crit DMG/stack ×5 = +15% to MA Skills. Attr Buff: Crit DMG Bonus +4.0%, Precision +6.5%",stat:{critDmg:4,prec:6.5}},
     ]
   },
@@ -35,11 +35,11 @@ export const INNER_WAYS: InnerWay[] = [
     desc:"When hitting 3 or more enemies at once, apply Candle Flicker for 3s (max 5 stacks). Each stack: -4% enemy Movement Speed, +2% damage taken from caster. Triggers once per 0.5s, 1 stack per 0.5s per source.",
     recommended:true, note:"AoE debuff — each stack makes enemies take 2% more damage from you (max +10% at 5 stacks).",
     tiers:[
-      {tier:1,effect:"Each stack: +0.8% damage taken by enemies (max 5 stacks = +4%)",stat:{generalDmg:4}},
-      {tier:2,effect:"Each stack: +1.2% damage taken (max +6%)",stat:{generalDmg:6}},
-      {tier:3,effect:"Each stack: +1.5% damage taken (max +7.5%)",stat:{generalDmg:7.5}},
-      {tier:4,effect:"Each stack: +1.8% damage taken (max +9%)",stat:{generalDmg:9}},
-      {tier:5,effect:"Each stack: +2% damage-taken (max +10%) + Bamboocut Penetration +6.0 (v1.7 breakthrough, swapped from Towline Sweep)",stat:{generalDmg:10,pzPen:6}},
+      {tier:1,effect:"Each stack: +0.8% damage taken by enemies (max 5 stacks = +4%; needs 3+ enemies, not summed)",stat:{}},
+      {tier:2,effect:"Each stack: +1.2% damage taken (max +6%; needs 3+ enemies, not summed)",stat:{}},
+      {tier:3,effect:"Each stack: +1.5% damage taken (max +7.5%; needs 3+ enemies, not summed)",stat:{}},
+      {tier:4,effect:"Each stack: +1.8% damage taken (max +9%; needs 3+ enemies, not summed)",stat:{}},
+      {tier:5,effect:"Basic Buff (conditional, NOT summed): damage-taken max +10%. Attr Buff: Bamboocut Penetration +6.0 (v1.7 breakthrough, swapped from Towline Sweep)",stat:{pzPen:6}},
       {tier:6,effect:"Min Bamboocut Atk +36.2 + Bamboocut Pen +6.0. (Candlelight needs 3+ enemies — boss-ineffective, not credited.)",stat:{minPz:36.2,pzPen:6}},
     ]
   },
@@ -89,11 +89,11 @@ export const INNER_WAYS: InnerWay[] = [
     desc:"Dealing damage to an enemy under Spirit Depletion grants 1 stack of Collapse. Each stack: +5 Physical Penetration and +5% Critical Damage. Stacks up to 5 times, lasting 5 seconds. (game-verified)",
     recommended:true, note:"Best T91 inner way for Bamboocut-Dust. Activate on boss Exhausted/Spirit Depletion state for max stacks.",
     tiers:[
-      {tier:1,effect:"Each Collapse stack: +5 Phys Pen, +5% Crit DMG; Disintegration duration → 5s",stat:{outerPen:25,critDmg:25}},
-      {tier:2,effect:"Precision Rate +(Solo Mode)",stat:{outerPen:25,critDmg:25}},
-      {tier:3,effect:"Hitting an Exhausted enemy grants 1 Disintegration stack",stat:{outerPen:25,critDmg:25}},
-      {tier:4,effect:"Disintegration max stacks → 5",stat:{outerPen:25,critDmg:25}},
-      {tier:5,effect:"Breakthrough: Direct Critical Rate +4.1%. (Base Collapse: max 5 stacks = +25 Pen, +25% Crit DMG)",stat:{outerPen:25,critDmg:25,dcrit:4.1}},
+      {tier:1,effect:"Each Collapse stack: +5 Phys Pen, +5% Crit DMG; Disintegration duration → 5s (Spirit Depletion, not summed)",stat:{}},
+      {tier:2,effect:"Precision Rate +(Solo Mode). Collapse buff remains conditional, not summed.",stat:{}},
+      {tier:3,effect:"Hitting an Exhausted enemy grants 1 Disintegration stack (conditional, not summed)",stat:{}},
+      {tier:4,effect:"Disintegration max stacks → 5 (conditional, not summed)",stat:{}},
+      {tier:5,effect:"Breakthrough: Direct Critical Rate +4.1%. Base Collapse max +25 Pen/+25% Crit DMG is conditional, not summed.",stat:{dcrit:4.1}},
       {tier:6,effect:"Basic Buff (conditional, Spirit Depletion, NOT summed): Collapse ×5 = +25 Pen, +25% Crit DMG; Perfect Dodge → 5 Disintegration stacks (15s CD). Attr Buff: Precision +6.5%, Direct Crit +4.1%",stat:{dcrit:4.1,prec:6.5}},
     ]
   },
@@ -238,11 +238,11 @@ export const INNER_WAYS: InnerWay[] = [
     desc:"After casting a Dual-Weapon Skill, gain one of four effects: Crit Rate +10%, Phys Pen +10, Phys DMG +10%, or Min Phys ATK +200. Lasts 10s.",
     recommended:true, note:"Highly reliable for any dual-weapon build including Bamboocut-Dust.",
     tiers:[
-      {tier:1,effect:"One random buff after Dual-Weapon Skill (weaker values): ~+1% avg DMG",stat:{generalDmg:1}},
-      {tier:2,effect:"Buff values slightly higher: ~+2% avg DMG",stat:{generalDmg:2}},
-      {tier:3,effect:"~+2.5% avg DMG",stat:{generalDmg:2.5}},
-      {tier:4,effect:"~+3% avg DMG",stat:{generalDmg:3}},
-      {tier:5,effect:"One of four buffs: Crit +10%, Pen +10, Phys DMG +10%, or Min ATK +200 (~+4% avg)",stat:{generalDmg:4}},
+      {tier:1,effect:"One random buff after Dual-Weapon Skill (conditional; not summed as a flat stat)",stat:{}},
+      {tier:2,effect:"Random buff after Dual-Weapon Skill (conditional; not summed as a flat stat)",stat:{}},
+      {tier:3,effect:"Random buff after Dual-Weapon Skill (conditional; not summed as a flat stat)",stat:{}},
+      {tier:4,effect:"Random buff after Dual-Weapon Skill (conditional; not summed as a flat stat)",stat:{}},
+      {tier:5,effect:"One of four buffs: Crit +10%, Pen +10, Phys DMG +10%, or Min ATK +200 (conditional; not summed)",stat:{}},
       {tier:6,effect:"Basic Buff (conditional, NOT summed): two random buffs ~+5% avg DMG. Attr Buff: Phys DMG +2.8%, Min/Max Phys Atk +23.6/+47.2",stat:{outerDmg:2.8,minOuter:23.6,maxOuter:47.2}},
     ]
   },
@@ -251,12 +251,12 @@ export const INNER_WAYS: InnerWay[] = [
     desc:"100% chance to gain 1 stack of Yi River when attacking or healing (once per 2s): +2 Physical Penetration and +1% damage and healing for 12s, stacking up to 5 times.",
     recommended:true, note:"Best sustained inner way. At T5 max stacks: +10 Phys Pen and +5% DMG.",
     tiers:[
-      {tier:1,effect:"Max 2 stacks: +0.8 Phys Pen, +0.4% DMG per stack (max: +1.6 Pen, +0.8% DMG)",stat:{outerPen:1.6,outerDmg:0.8}},
-      {tier:2,effect:"Max 3 stacks: +1.2 Phys Pen, +0.6% DMG per stack (max: +3.6 Pen, +1.8% DMG)",stat:{outerPen:3.6,outerDmg:1.8}},
-      {tier:3,effect:"Max 4 stacks: +1.6 Phys Pen, +0.8% DMG per stack (max: +6.4 Pen, +3.2% DMG)",stat:{outerPen:6.4,outerDmg:3.2}},
-      {tier:4,effect:"Max 5 stacks: +1.8 Phys Pen, +0.9% DMG per stack (max: +9 Pen, +4.5% DMG)",stat:{outerPen:9,outerDmg:4.5}},
-      {tier:5,effect:"Breakthrough: Direct Critical Rate +4.6%. (Base max 5 stacks: +10 Pen, +5% DMG)",stat:{outerPen:10,outerDmg:5,dcrit:4.6}},
-      {tier:6,effect:"Yi River +2 Pen/stack ×5 = +10 Pen (ramp, kept). Basic Buff (conditional, NOT summed): +1% DMG/stack ×5. Attr Buff: Direct Crit +4.6%, Min/Max Phys Atk +23.6/+47.2",stat:{outerPen:10,dcrit:4.6,minOuter:23.6,maxOuter:47.2}},
+      {tier:1,effect:"Max 2 stacks: +0.8 Phys Pen, +0.4% DMG per stack (ramp, not summed as flat stat)",stat:{}},
+      {tier:2,effect:"Max 3 stacks: +1.2 Phys Pen, +0.6% DMG per stack (ramp, not summed as flat stat)",stat:{}},
+      {tier:3,effect:"Max 4 stacks: +1.6 Phys Pen, +0.8% DMG per stack (ramp, not summed as flat stat)",stat:{}},
+      {tier:4,effect:"Max 5 stacks: +1.8 Phys Pen, +0.9% DMG per stack (ramp, not summed as flat stat)",stat:{}},
+      {tier:5,effect:"Breakthrough: Direct Critical Rate +4.6%. Base max 5 stacks (+10 Pen, +5% DMG) is ramp, not summed.",stat:{dcrit:4.6}},
+      {tier:6,effect:"Basic Buff (ramp, NOT summed): Yi River +2 Pen/stack ×5 and +1% DMG/stack ×5. Attr Buff: Direct Crit +4.6%, Min/Max Phys Atk +23.6/+47.2",stat:{dcrit:4.6,minOuter:23.6,maxOuter:47.2}},
     ]
   },
   {
@@ -633,14 +633,14 @@ export const INNER_WAYS: InnerWay[] = [
   },
 ];
 
-// Trigger classification for each inner way (verified against game8.co/564726).
+// Trigger classification for each inner way.
 //  passive     = flat always-on, would show in the character-menu panel
 //  ramp        = stacks from 0 after combat starts (gained by attacking/healing)
 //  conditional = only while a condition holds (enemy exhausted, >50% HP, random
 //                proc, 3+ enemies, airborne, perfect-timing follow-up, etc.)
 //  utility     = no combat stat (endurance / mobility / resource / shield / heal)
-// The calculator applies each stat's MAX value as an in-combat buff; for ramp /
-// conditional this assumes full uptime (max stacks / condition met).
+// Important: tiers[].stat is reserved for flat Attr Buff / breakthrough stats.
+// Basic Buff / ramp / conditional effects stay in text until explicitly modelled.
 const INNER_WAY_TRIGGERS: Record<string, InnerWayTrigger> = {
   // BAMBOOCUT-DUST
   phantom_rally: "conditional", song_of_tang: "ramp", light_anew: "conditional", towline_sweep: "passive",

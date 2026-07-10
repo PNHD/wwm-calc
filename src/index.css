@@ -264,6 +264,18 @@ header h1 {
   padding: 0 4px; border-radius: 4px; line-height: 1.5; max-width: 70%;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
+.xinfa-trigger-badge {
+  position: absolute; left: 3px; right: 3px; bottom: 22px; z-index: 3;
+  font-family: var(--font-mono); font-size: 0.5rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.2px; text-align: center;
+  color: #d6c6a2; background: rgba(0,0,0,0.62);
+  border: 1px solid rgba(214,198,162,0.22); border-radius: 4px;
+  padding: 1px 2px; pointer-events: none;
+}
+.xinfa-trigger-passive { color: #7ee787; border-color: rgba(126,231,135,0.32); }
+.xinfa-trigger-ramp { color: #f0b400; border-color: rgba(240,180,0,0.35); }
+.xinfa-trigger-conditional { color: #ff9b72; border-color: rgba(255,155,114,0.35); }
+.xinfa-trigger-utility { color: #8b949e; border-color: rgba(139,148,158,0.25); }
 /* Inner-way picker modal items */
 .xinfa-select-grid { align-items: start !important; grid-auto-rows: min-content !important; }
 .xinfa-select-item { background: var(--ga-bg-tertiary) !important; border: 1px solid var(--border) !important; border-radius: 8px !important; transition: all 0.2s; display: flex !important; flex-direction: column !important; height: auto !important; min-height: 120px; }
