@@ -1,5 +1,7 @@
 node_modules/
 .claude/
+.superpowers/
+.worktrees/
 .vite/
 build/
 dist/
