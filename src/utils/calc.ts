@@ -594,24 +594,22 @@ export function calcSkill(
   const Fpz = netPenZone(totalPzPen);
 
   const pzMult = armorSet === "formbend" ? 1.05 : 1.0;
-  const minPzTot = ((panel.minPz || 0) + (panel.wuxiangMin || 0)) * pzMult;
-  const maxPzTot = Math.max(((panel.maxPz || 0) + (panel.wuxiangMax || 0)) * pzMult, minPzTot);
+  const minPzTot = (panel.minPz || 0) + (panel.wuxiangMin || 0);
+  const maxPzTot = (panel.maxPz || 0) + (panel.wuxiangMax || 0);
+  const minPz_e = Math.max(0, minPzTot * pzMult - tier.def);
+  const maxPz_e = Math.max(0, maxPzTot * pzMult - tier.def);
 
-  // Own-element damage does not subtract physical defense. It gets the hidden
-  // level bonus; off-element damage does not and uses the physical ratio.
-  const offMin = Math.min(minPzTot, (panel.offPzMin || 0) * pzMult);
-  const offMax = Math.min(maxPzTot, (panel.offPzMax || 0) * pzMult);
-  const ownMin = Math.max(0, minPzTot - offMin) + tier.hiddenAttr;
-  const ownMax = Math.max(0, maxPzTot - offMax) + tier.hiddenAttr;
+  // Global T91 calibration: off-element attribute attack uses the physical ratio.
+  const offMinFrac = minPzTot > 0 ? Math.min(1, (panel.offPzMin || 0) / minPzTot) : 0;
+  const offMaxFrac = maxPzTot > 0 ? Math.min(1, (panel.offPzMax || 0) / maxPzTot) : 0;
+  const eleRatioMin = sk.eleRatio * (1 - offMinFrac) + sk.outerRatio * offMinFrac;
+  const eleRatioMax = sk.eleRatio * (1 - offMaxFrac) + sk.outerRatio * offMaxFrac;
 
   const pzDmgBonus = (panel.pzDmg || 0) / 100;
-  const ownPzZone = (1 + Fpz) * T * (1 + pzDmgBonus);
-  const offPzZone = T;
-  const ownAvgTerm = ((ownMin + ownMax) / 2) * sk.eleRatio;
-  const offAvgTerm = ((offMin + offMax) / 2) * sk.outerRatio;
-  const dN_PZ = ownAvgTerm * ownPzZone + offAvgTerm * offPzZone;
-  const dC_PZ = ownAvgTerm * ownPzZone * critMult + offAvgTerm * offPzZone * critMult;
-  const dA_PZ = ownMax * sk.eleRatio * ownPzZone * affMult + offMax * sk.outerRatio * offPzZone * affMult;
+  const pzAvgTerm = (minPz_e * eleRatioMin + maxPz_e * eleRatioMax) / 2;
+  const dN_PZ = pzAvgTerm * (1 + Fpz) * T * (1 + pzDmgBonus);
+  const dC_PZ = pzAvgTerm * (1 + Fpz) * T * (1 + pzDmgBonus) * critMult;
+  const dA_PZ = maxPz_e * eleRatioMax * (1 + Fpz) * T * (1 + pzDmgBonus) * affMult;
   const dmgPz = (pGraze + pWhite) * dN_PZ + pCrit * dC_PZ + pAff * dA_PZ;
 
   let perHit = dmgOuter + dmgFixed + dmgPz;
@@ -668,8 +666,9 @@ const T91_GRAD_DPS: Record<string, number> = {
 };
 
 function netPenZone(delta: number): number {
-  // Workbook/Violetta: positive net pen is stronger (/100), negative net pen is mitigation (/200).
-  return delta >= 0 ? delta / 100 : delta / 200;
+  // Global T91 calibration: this matches observed parse scale better than the
+  // newer CN/public guide branch.
+  return delta >= 0 ? delta / 200 : delta / 100;
 }
 
 function penMultiplier(pen: number, resistance: number): number {

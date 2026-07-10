@@ -2095,10 +2095,6 @@ export default function App() {
     const config = getCustomConfig();
     return config?.qianying ?? true;
   });
-  const [script50, setScript50] = useState<boolean>(() => {
-    const config = getCustomConfig();
-    return config?.script50 ?? false;
-  });
   const [bowSelect, setBowSelect] = useState<string>(() => {
     const config = getCustomConfig();
     return config?.bowSelect ?? "crit";
@@ -2123,7 +2119,6 @@ export default function App() {
       yishui,
       yishuiPen,
       qianying,
-      script50,
       customDef,
       customRes,
       dpsEff
@@ -2154,7 +2149,6 @@ export default function App() {
           if (config.yishui !== undefined) setYishui(config.yishui);
           if (config.yishuiPen !== undefined) setYishuiPen(config.yishuiPen);
           if (config.qianying !== undefined) setQianying(config.qianying);
-          if (config.script50 !== undefined) setScript50(config.script50);
           if (config.customDef !== undefined) setCustomDef(config.customDef);
           if (config.customRes !== undefined) setCustomRes(config.customRes);
           if (config.dpsEff !== undefined) setDpsEff(config.dpsEff);
@@ -2173,7 +2167,6 @@ export default function App() {
       setYishui(true);
       setYishuiPen(true);
       setQianying(true);
-      setScript50(false);
       setCustomDef(350);
       setCustomRes(0.45);
     }
@@ -2192,7 +2185,6 @@ export default function App() {
       setYishui(true);
       setYishuiPen(true);
       setQianying(true);
-      setScript50(false);
       setCustomDef(350);
       setCustomRes(0.45);
       alert("Custom defaults successfully wiped. Baseline factory settings restored.");
@@ -2559,11 +2551,6 @@ export default function App() {
     else if (bowSelect === "prec") p.prec += 3.3;
     else if (bowSelect === "aff") p.aff += 1.8;
 
-    // Apply Sub-50% HP passive buff (conditional combat buff)
-    if (script50) {
-      p.dcrit += 15.0;
-    }
-
     // Determine active 4pc sets from EQUIPPED gear only (spare pieces in the bag
     // must not count). Weapon 4pc and armor 4pc are tracked separately so e.g.
     // 4×stars (weapon) + 4×stormrain (armor) BOTH apply — the game grants one of
@@ -2614,7 +2601,7 @@ export default function App() {
     // not panel/gear) left adjustedPanel — and thus the COMBAT column + graduation
     // + DPS — stale, so COMBAT could read lower than MENU and Calibrate appeared
     // to do nothing.
-  }, [basePanel, bowSelect, food, script50, activeTier, iwStats, autoGearPanel, activeScheme?.gear]);
+  }, [basePanel, bowSelect, food, activeTier, iwStats, autoGearPanel, activeScheme?.gear]);
 
   // 3. Baseline = authoritative T91/Lv95 graduated DPS per build, normalized by
   //    tier constants for preview/reference tiers. See calcBaseline / T91_GRAD_DPS.
@@ -2865,7 +2852,6 @@ export default function App() {
     if (food) { p.minOuter += activeTier.foodMin; p.maxOuter += activeTier.foodMax; }
     const bow = bowOverride ?? bowSelect;
     if (bow === "crit") p.crit += 3.7; else if (bow === "prec") p.prec += 3.3; else if (bow === "aff") p.aff += 1.8;
-    if (script50) p.dcrit += 15.0;
     const { weaponSet, armorSet } = detectSet4pc(combo);
     p.set = weaponSet;
     (p as any).armorSet = armorSet;
@@ -2935,7 +2921,7 @@ export default function App() {
     rows.sort((a, b) => b.lossDps - a.lossDps);
     return rows;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeScheme?.gear, panel, food, bowSelect, script50, iwStats, activeTier, datang, yishui, selectedBuild, baselineScore]);
+  }, [activeScheme?.gear, panel, food, bowSelect, iwStats, activeTier, datang, yishui, selectedBuild, baselineScore]);
 
   // ── Bow set comparison (crit / precision / affinity / none) ─────────────────
   const bowCompare = useMemo(() => {
@@ -2953,7 +2939,6 @@ export default function App() {
       let p = computeGearPanel(panel, equipped, activeScheme?.baseOverride, innerAttrName(selectedBuild));
       if (food) { p.minOuter += activeTier.foodMin; p.maxOuter += activeTier.foodMax; }
       if (bow === "crit") p.crit += 3.7; else if (bow === "prec") p.prec += 3.3; else if (bow === "aff") p.aff += 1.8;
-      if (script50) p.dcrit += 15.0;
       const { weaponSet, armorSet } = detectSet4pc(equipped);
       p.set = weaponSet; (p as any).armorSet = armorSet; (p as any).weaponStars = weaponSet === "stars";
       p.outerPen += iwStats.outerPen; p.pzPen += iwStats.pzPen; p.crit += iwStats.crit; p.aff += iwStats.aff;
@@ -2970,7 +2955,7 @@ export default function App() {
       return { ...o, dps, delta: dps - curDps, active: o.key === bowSelect };
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeScheme?.gear, panel, food, bowSelect, script50, iwStats, activeTier, datang, yishui, selectedBuild]);
+  }, [activeScheme?.gear, panel, food, bowSelect, iwStats, activeTier, datang, yishui, selectedBuild]);
 
   // ── Set bonus comparison (DPS sets, weapon [W] + armor [A]) ─────────────────
   // Swaps the candidate set's T91-verified 2pc stat onto the panel + the 4pc the calc
@@ -4108,17 +4093,6 @@ export default function App() {
                 />
                 <span>Food buff (+90 min / +180 max Phys Atk)</span>
               </label>
-              <label className="panel-checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={script50}
-                  onChange={(e) => setScript50(e.target.checked)}
-                  aria-label="Script under 50 percent HP"
-                  name="scriptUnder50Hp"
-                  className="panel-checkbox-input"
-                />
-                <span>Script &lt;50% HP (+15% Direct Crit)</span>
-              </label>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, fontSize: 11.5, color: '#8b949e' }}>
               <span title="DPS Expectation is a THEORETICAL ceiling (perfect rotation + full buff uptime). A real parse loses ~10-20% to rotation downtime, buff ramp-up and execution. This factor estimates your realistic sustained DPS — tune it to match your in-game parse. Graduation % is unaffected.">
@@ -4479,7 +4453,6 @@ export default function App() {
           yishui && "一水 Yishui",
           (adjustedPanel as any).weaponStars && "Stars Align",
           food && "Food Buff",
-          script50 && "Script <50% HP",
           setName && `Set: ${setName}`,
         ].filter(Boolean) as string[];
         const legend = [
