@@ -63,12 +63,12 @@ export const INNER_WAYS: InnerWay[] = [
     desc:"Infernal Twinblades normal Light Attacks apply Sin to enemies; Light Attacks under Flamelash apply Karma. When attacking targets with Sin and Karma using Light Attacks, ignore their 10% Physical Defense and 10% Bamboocut Resistance respectively.",
     recommended:false, note:"Bamboocut-Wind core (Infernal Twinblades). Not applicable to Bamboocut-Dust.",
     tiers:[
-      {tier:1,effect:"Ignore 2% Phys Def (Sin) and 2% BC Res (Karma)",stat:{outerPen:2,pzPen:2}},
-      {tier:2,effect:"Ignore 4% Phys Def and 4% BC Res",stat:{outerPen:4,pzPen:4}},
-      {tier:3,effect:"Ignore 6% Phys Def and 6% BC Res",stat:{outerPen:6,pzPen:6}},
-      {tier:4,effect:"Ignore 8% Phys Def and 8% BC Res",stat:{outerPen:8,pzPen:8}},
-      {tier:5,effect:"Ignore 10% Phys Def and 10% BC Res",stat:{outerPen:10,pzPen:10}},
-      {tier:6,effect:"Ignore 10% Phys Def & 10% BC Res + Crit DMG Bonus +4.4% + Crit Rate +8.2% (Attr Buff)",stat:{outerPen:10,pzPen:10,critDmg:4.4,crit:8.2}},
+      {tier:1,effect:"Ignore 2% Phys Def (Sin) and 2% BC Res (Karma; conditional, not summed)",stat:{}},
+      {tier:2,effect:"Ignore 4% Phys Def and 4% BC Res (conditional, not summed)",stat:{}},
+      {tier:3,effect:"Ignore 6% Phys Def and 6% BC Res (conditional, not summed)",stat:{}},
+      {tier:4,effect:"Ignore 8% Phys Def and 8% BC Res (conditional, not summed)",stat:{}},
+      {tier:5,effect:"Ignore 10% Phys Def and 10% BC Res (conditional, not summed)",stat:{}},
+      {tier:6,effect:"Basic Buff (conditional, NOT summed): ignore 10% Phys Def & 10% BC Res. Attr Buff: Crit DMG Bonus +4.4%, Crit Rate +8.2%",stat:{critDmg:4.4,crit:8.2}},
     ]
   },
   {
@@ -117,11 +117,11 @@ export const INNER_WAYS: InnerWay[] = [
     desc:"When Nameless Sword's Charged Skill (Vagrant Sword) is charged while Qi shield is present, it unleashes multiple additional sword energy attacks at 2nd stage. Each Endurance consumed increases sword energy damage by 1.5%, up to 30% (v1.7).",
     recommended:false, note:"Bellstrike-Splendor core. Requires Qi shield active.",
     tiers:[
-      {tier:1,effect:"Extra sword energies enabled at T2 charge stage. Max +8% DMG",stat:{generalDmg:8}},
-      {tier:2,effect:"Max +10% DMG from Endurance spending",stat:{generalDmg:10}},
-      {tier:3,effect:"Max +12% DMG, extra energy hits harder",stat:{generalDmg:12}},
-      {tier:4,effect:"Max +15% DMG",stat:{generalDmg:15}},
-      {tier:5,effect:"Max +30% DMG from Endurance. Each Endurance = +1.5% up to 30% (v1.7)",stat:{generalDmg:30}},
+      {tier:1,effect:"Extra sword energies enabled at T2 charge stage. Max +8% DMG (conditional, not summed)",stat:{}},
+      {tier:2,effect:"Max +10% DMG from Endurance spending (conditional, not summed)",stat:{}},
+      {tier:3,effect:"Max +12% DMG, extra energy hits harder (conditional, not summed)",stat:{}},
+      {tier:4,effect:"Max +15% DMG (conditional, not summed)",stat:{}},
+      {tier:5,effect:"Max +30% DMG from Endurance. Each Endurance = +1.5% up to 30% (conditional, not summed)",stat:{}},
       {tier:6,effect:"Basic Buff (conditional, NOT summed): Max +30% DMG. Attr Buff: Direct Affinity +2.3%, Max Phys Atk +70.8",stat:{daff:2.3,maxOuter:70.8}},
     ]
   },
@@ -130,11 +130,11 @@ export const INNER_WAYS: InnerWay[] = [
     desc:"Increases Charged Skills' damage against all bosses by 10%.",
     recommended:false, note:"Pure boss DPS for charge-heavy Bellstrike rotations.",
     tiers:[
-      {tier:1,effect:"Charged Skills +10% DMG vs all enemies (base: +10% vs bosses)",stat:{generalDmg:10}},
-      {tier:2,effect:"Increases Affinity Rate based on Solo Mode Level",stat:{generalDmg:10}},
-      {tier:3,effect:"Charged Crit/Affinity: drain 10 Endurance (player) / restore 10 (boss), 12s CD",stat:{generalDmg:10}},
-      {tier:4,effect:"Charged Skills +15% DMG vs all enemies, +10% their Endurance cost",stat:{generalDmg:15}},
-      {tier:5,effect:"Affinity DMG Bonus +5.2% (breakthrough)",stat:{generalDmg:15,affDmg:5.2}},
+      {tier:1,effect:"Charged Skills +10% DMG vs all enemies (conditional, not summed)",stat:{}},
+      {tier:2,effect:"Increases Affinity Rate based on Solo Mode Level. Charged DMG remains conditional, not summed.",stat:{}},
+      {tier:3,effect:"Charged Crit/Affinity: drain 10 Endurance (player) / restore 10 (boss), 12s CD",stat:{}},
+      {tier:4,effect:"Charged Skills +15% DMG vs all enemies, +10% their Endurance cost (conditional, not summed)",stat:{}},
+      {tier:5,effect:"Affinity DMG Bonus +5.2% (breakthrough). Charged Skill DMG is conditional, not summed.",stat:{affDmg:5.2}},
       {tier:6,effect:"Basic Buff (conditional, NOT summed): Charged Skill +2% DMG/10 Endurance up to +10% (on top of +15%). Attr Buff: Affinity DMG +5.2%, Affinity Rate +3.8%",stat:{affDmg:5.2,aff:3.8}},
     ]
   },
@@ -184,11 +184,11 @@ export const INNER_WAYS: InnerWay[] = [
     desc:"After Strategic Sword's Martial Art / Special / Charged Skill, press skill at perfect timing to cast Crisscrossing Swords (follow-up). If target has 5 Bleed stacks, remove all and deal high Bleed damage once.",
     recommended:false, note:"Core Bellstrike-Umbra. Requires precise timing input.",
     tiers:[
-      {tier:1,effect:"Crisscrossing Swords follow-up enabled. Timing window: strict. Bleed burst: 80% ATK",stat:{generalDmg:3}},
-      {tier:2,effect:"Timing window slightly wider. Bleed burst: 120% ATK",stat:{generalDmg:4}},
-      {tier:3,effect:"Bleed burst: 160% ATK",stat:{generalDmg:5}},
-      {tier:4,effect:"Bleed burst: 200% ATK, AoE splash at 5-stack burst",stat:{generalDmg:6}},
-      {tier:5,effect:"Follow-up DMG +20%. Bleed burst 200% ATK + AoE splash on 5-stack",stat:{generalDmg:7}},
+      {tier:1,effect:"Crisscrossing Swords follow-up enabled. Timing window: strict. Bleed burst: 80% ATK (skill effect, not a flat stat)",stat:{}},
+      {tier:2,effect:"Timing window slightly wider. Bleed burst: 120% ATK (skill effect, not a flat stat)",stat:{}},
+      {tier:3,effect:"Bleed burst: 160% ATK (skill effect, not a flat stat)",stat:{}},
+      {tier:4,effect:"Bleed burst: 200% ATK, AoE splash at 5-stack burst (skill effect, not a flat stat)",stat:{}},
+      {tier:5,effect:"Follow-up DMG +20%. Bleed burst 200% ATK + AoE splash on 5-stack (conditional, not summed)",stat:{}},
       {tier:6,effect:"Basic Buff (conditional, NOT summed): Follow-up +20% / Bleed burst AoE +8% DMG. Attr Buff: Direct Affinity +2.3%, Max Phys Atk +70.8",stat:{daff:2.3,maxOuter:70.8}},
     ]
   },
@@ -197,11 +197,11 @@ export const INNER_WAYS: InnerWay[] = [
     desc:"Gain a Weapon Mastery effect based on current Blade Weapon. Sword: 6s CD. Dual Blades: 10s CD. Heng Blade: 20s CD.",
     recommended:false, note:"Passive bonus based on blade weapon type equipped.",
     tiers:[
-      {tier:1,effect:"Sword: +4% ATK 3s | Dual Blades: +3% ATK 3s | Heng: +6% ATK 5s",stat:{generalDmg:3}},
-      {tier:2,effect:"Sword: +6% | Dual Blades: +5% | Heng: +8%",stat:{generalDmg:4}},
-      {tier:3,effect:"Sword: +8% | Dual Blades: +7% | Heng: +10%",stat:{generalDmg:5}},
-      {tier:4,effect:"Sword: +11% ATK 4s | Dual Blades: +9% | Heng: +14% 6s",stat:{generalDmg:6}},
-      {tier:5,effect:"Sword: +13% ATK 5s | Dual Blades: +11% | Heng: +16% 7s",stat:{generalDmg:7}},
+      {tier:1,effect:"Sword: +4% ATK 3s | Dual Blades: +3% ATK 3s | Heng: +6% ATK 5s (conditional, not summed)",stat:{}},
+      {tier:2,effect:"Sword: +6% | Dual Blades: +5% | Heng: +8% (conditional, not summed)",stat:{}},
+      {tier:3,effect:"Sword: +8% | Dual Blades: +7% | Heng: +10% (conditional, not summed)",stat:{}},
+      {tier:4,effect:"Sword: +11% ATK 4s | Dual Blades: +9% | Heng: +14% 6s (conditional, not summed)",stat:{}},
+      {tier:5,effect:"Sword: +13% ATK 5s | Dual Blades: +11% | Heng: +16% 7s (conditional, not summed)",stat:{}},
       {tier:6,effect:"Basic Buff (conditional, NOT summed): Sword +15% / Dual +13% / Heng +18% ATK. Attr Buff: Bellstrike DMG +3%, Max Bellstrike Atk +36.2",stat:{pzDmg:3,maxPz:36.2}},
     ]
   },
@@ -277,11 +277,11 @@ export const INNER_WAYS: InnerWay[] = [
     desc:"Increases all damage and healing done by 5%. Disabled for 5s after being hit. Taking a hit also grants Cage: +5% all damage taken.",
     recommended:true, note:"Strong in burst windows. Risk: getting hit disables buff AND adds Cage (you take more damage).",
     tiers:[
-      {tier:1,effect:"+2% all DMG & healing. Disabled 8s after hit. Cage: +3% DMG taken",stat:{generalDmg:2}},
-      {tier:2,effect:"+3% all DMG. Disabled 7s after hit. Cage: +4% DMG taken",stat:{generalDmg:3}},
-      {tier:3,effect:"+3.5% all DMG. Disabled 6s after hit. Cage: +5% DMG taken",stat:{generalDmg:3.5}},
-      {tier:4,effect:"+4% all DMG. Disabled 6s after hit. Cage: +5% DMG taken",stat:{generalDmg:4}},
-      {tier:5,effect:"+5% all DMG & healing. Disabled 5s after hit. Cage: +5% DMG taken",stat:{generalDmg:5}},
+      {tier:1,effect:"+2% all DMG & healing. Disabled 8s after hit. Cage: +3% DMG taken (conditional, not summed)",stat:{}},
+      {tier:2,effect:"+3% all DMG. Disabled 7s after hit. Cage: +4% DMG taken (conditional, not summed)",stat:{}},
+      {tier:3,effect:"+3.5% all DMG. Disabled 6s after hit. Cage: +5% DMG taken (conditional, not summed)",stat:{}},
+      {tier:4,effect:"+4% all DMG. Disabled 6s after hit. Cage: +5% DMG taken (conditional, not summed)",stat:{}},
+      {tier:5,effect:"+5% all DMG & healing. Disabled 5s after hit. Cage: +5% DMG taken (conditional, not summed)",stat:{}},
       {tier:6,effect:"Basic Buff (conditional, NOT summed): +8% all DMG & healing (T4). Attr Buff: Phys Pen +5.1, Min Phys Atk +63.8",stat:{outerPen:5.1,minOuter:63.8}},
     ]
   },
@@ -290,12 +290,12 @@ export const INNER_WAYS: InnerWay[] = [
     desc:"When dealing damage, 10% chance to apply Poison for 5s (1 tick/s). Poison: reduces target's Physical Defense by 0.6% for 10s, stacking up to 5 times.",
     recommended:false, note:"At max 5 stacks: enemy -3% Phys Def ≈ +3 effective pen. Inconsistent proc.",
     tiers:[
-      {tier:1,effect:"Poison: -0.2% Phys Def per stack (max 5 = -1% ≈ +1 pen equiv)",stat:{outerPen:1}},
-      {tier:2,effect:"Poison: -0.3% per stack (max -1.5%)",stat:{outerPen:1.5}},
-      {tier:3,effect:"Poison: -0.4% per stack (max -2%)",stat:{outerPen:2}},
-      {tier:4,effect:"Poison: -0.5% per stack (max -2.5%)",stat:{outerPen:2.5}},
-      {tier:5,effect:"Poison: -0.6% per stack (max 5 stacks = -3%), 10% proc chance",stat:{outerPen:3}},
-      {tier:6,effect:"At 5 stacks, Poison also reduces target's Physical Resistance by 10 (≈ +10 Phys Pen vs boss) + Phys DMG Bonus +2.5% + Precision +6.5% (game-verified T6)",stat:{outerPen:10,outerDmg:2.5,prec:6.5}},
+      {tier:1,effect:"Poison: -0.2% Phys Def per stack (10% proc, conditional, not summed)",stat:{}},
+      {tier:2,effect:"Poison: -0.3% per stack (10% proc, conditional, not summed)",stat:{}},
+      {tier:3,effect:"Poison: -0.4% per stack (10% proc, conditional, not summed)",stat:{}},
+      {tier:4,effect:"Poison: -0.5% per stack (10% proc, conditional, not summed)",stat:{}},
+      {tier:5,effect:"Poison: -0.6% per stack (max 5 stacks = -3%), 10% proc chance (not summed)",stat:{}},
+      {tier:6,effect:"Basic Buff (conditional, NOT summed): at 5 Poison stacks, target Physical Resistance -10. Attr Buff: Phys DMG Bonus +2.5%, Precision +6.5%",stat:{outerDmg:2.5,prec:6.5}},
     ]
   },
   {
@@ -329,11 +329,11 @@ export const INNER_WAYS: InnerWay[] = [
     desc:"Upon a successful deflection, gain one of three effects for 10s (once per 30s): applies to Martial Arts, Perception, Special, Charged Skills, and Varied Combos.",
     recommended:false, note:"Requires perfect deflect timing — less consistent in PvE boss fights.",
     tiers:[
-      {tier:1,effect:"One random buff (35s CD): ~+1.5% avg DMG",stat:{generalDmg:1.5}},
-      {tier:2,effect:"One random buff (32s CD): ~+2% avg DMG",stat:{generalDmg:2}},
-      {tier:3,effect:"One random buff (30s CD): ~+2.5% avg DMG",stat:{generalDmg:2.5}},
-      {tier:4,effect:"One random buff (30s CD): ~+3% avg DMG (better buff pool)",stat:{generalDmg:3}},
-      {tier:5,effect:"One random buff (30s CD), 10s duration: ~+3.5% avg DMG",stat:{generalDmg:3.5}},
+      {tier:1,effect:"One random buff (35s CD): conditional, not summed",stat:{}},
+      {tier:2,effect:"One random buff (32s CD): conditional, not summed",stat:{}},
+      {tier:3,effect:"One random buff (30s CD): conditional, not summed",stat:{}},
+      {tier:4,effect:"One random buff (30s CD): conditional, not summed",stat:{}},
+      {tier:5,effect:"One random buff (30s CD), 10s duration: conditional, not summed",stat:{}},
       {tier:6,effect:"Basic Buff (conditional, NOT summed): one random buff (25s CD, 10s) ~+4% avg DMG. Attr Buff: Phys Pen +5.1, Max Phys Atk +63.9",stat:{outerPen:5.1,maxOuter:63.9}},
     ]
   },
@@ -355,11 +355,11 @@ export const INNER_WAYS: InnerWay[] = [
     desc:"Dealing damage: 10% chance to apply 1 stack of Weeping Blood for 5s (max 5, duration refreshed). At 5 stacks: remove all and deal piercing damage once.",
     recommended:false, note:"Low priority for most builds. Small proc-based damage.",
     tiers:[
-      {tier:1,effect:"Piercing burst at 5 stacks: 50% weapon ATK. 8% proc chance",stat:{generalDmg:1}},
-      {tier:2,effect:"Piercing burst: 80% weapon ATK. 8% proc",stat:{generalDmg:1.5}},
-      {tier:3,effect:"Piercing burst: 100% ATK. 10% proc",stat:{generalDmg:2}},
-      {tier:4,effect:"Piercing burst: 120% ATK. 10% proc",stat:{generalDmg:2}},
-      {tier:5,effect:"Piercing burst: 150% ATK. 10% proc. AoE hits count toward stacking",stat:{generalDmg:2}},
+      {tier:1,effect:"Piercing burst at 5 stacks: 50% weapon ATK. 8% proc chance (not summed)",stat:{}},
+      {tier:2,effect:"Piercing burst: 80% weapon ATK. 8% proc (not summed)",stat:{}},
+      {tier:3,effect:"Piercing burst: 100% ATK. 10% proc (not summed)",stat:{}},
+      {tier:4,effect:"Piercing burst: 120% ATK. 10% proc (not summed)",stat:{}},
+      {tier:5,effect:"Piercing burst: 150% ATK. 10% proc. AoE hits count toward stacking (not summed)",stat:{}},
       {tier:6,effect:"Basic Buff (conditional, NOT summed): piercing burst 150% ATK + AoE splash +2% DMG. Attr Buff: Crit DMG +3.5%, Max Phys Atk +56.8",stat:{critDmg:3.5,maxOuter:56.8}},
     ]
   },
@@ -368,11 +368,11 @@ export const INNER_WAYS: InnerWay[] = [
     desc:"Enhances Touch of Death: range +1.5m, damage +10%. Restores HP equal to 10% of damage dealt on hit.",
     recommended:false, note:"Open world / PvP utility. Lifesteal on Touch of Death.",
     tiers:[
-      {tier:1,effect:"Touch of Death range +0.3m, +2% DMG, restore 2% HP on hit",stat:{generalDmg:2}},
-      {tier:2,effect:"Range +0.6m, +4% DMG, restore 4% HP",stat:{generalDmg:4}},
-      {tier:3,effect:"Range +0.9m, +6% DMG, restore 6% HP",stat:{generalDmg:6}},
-      {tier:4,effect:"Range +1.2m, +8% DMG, restore 8% HP",stat:{generalDmg:8}},
-      {tier:5,effect:"Range +1.5m, +10% DMG, restore 8% HP on hit",stat:{generalDmg:10}},
+      {tier:1,effect:"Touch of Death range +0.3m, +2% DMG, restore 2% HP on hit (conditional, not summed)",stat:{}},
+      {tier:2,effect:"Range +0.6m, +4% DMG, restore 4% HP (conditional, not summed)",stat:{}},
+      {tier:3,effect:"Range +0.9m, +6% DMG, restore 6% HP (conditional, not summed)",stat:{}},
+      {tier:4,effect:"Range +1.2m, +8% DMG, restore 8% HP (conditional, not summed)",stat:{}},
+      {tier:5,effect:"Range +1.5m, +10% DMG, restore 8% HP on hit (conditional, not summed)",stat:{}},
       {tier:6,effect:"Basic Buff (conditional, NOT summed): range +1.5m / +10% DMG / restore 10% HP. Attr Buff: Phys DMG +2.2%, Min Phys Atk +56.8",stat:{outerDmg:2.2,minOuter:56.8}},
     ]
   },
@@ -463,11 +463,11 @@ export const INNER_WAYS: InnerWay[] = [
     desc:"Vernal Umbrella's Spring Sorrow Martial Art Skill can hold up to 2 stacks. Hitting a target applies Combo effect: target takes +10% damage from your Ballistic Skills for 10s. Affected Skills: Let Spring Go, Everbloom, Umbrella Light Attack, Spring Away.",
     recommended:false, note:"Requires 6-tier upgrade for Silkbind-Jade core mechanic.",
     tiers:[
-      {tier:1,effect:"Spring Sorrow max stacks: 2. Combo: Ballistic Skills +2% DMG for 6s",stat:{generalDmg:2}},
-      {tier:2,effect:"Combo: Ballistic Skills +4% DMG for 7s",stat:{generalDmg:4}},
-      {tier:3,effect:"Combo: +6% DMG for 8s",stat:{generalDmg:6}},
-      {tier:4,effect:"Combo: +8% DMG for 9s",stat:{generalDmg:8}},
-      {tier:5,effect:"Combo: Ballistic Skills +10% DMG for 10s",stat:{generalDmg:10}},
+      {tier:1,effect:"Spring Sorrow max stacks: 2. Combo: Ballistic Skills +2% DMG for 6s (conditional, not summed)",stat:{}},
+      {tier:2,effect:"Combo: Ballistic Skills +4% DMG for 7s (conditional, not summed)",stat:{}},
+      {tier:3,effect:"Combo: +6% DMG for 8s (conditional, not summed)",stat:{}},
+      {tier:4,effect:"Combo: +8% DMG for 9s (conditional, not summed)",stat:{}},
+      {tier:5,effect:"Combo: Ballistic Skills +10% DMG for 10s (conditional, not summed)",stat:{}},
       {tier:6,effect:"Basic Buff (conditional, NOT summed): combo +10% DMG for 10s. Attr Buff: Crit DMG +4.4%, Crit Rate +8.2%",stat:{critDmg:4.4,crit:8.2}},
     ]
   },
@@ -476,12 +476,12 @@ export const INNER_WAYS: InnerWay[] = [
     desc:"Gain 5% Physical Attack Bonus for up to 8s after applying Lingering Bone Mark. Knocking a target Airborne increases the bonus to 10%. Gaining the bonus again refreshes duration.",
     recommended:false, note:"Airborne-combo focused Silkbind-Jade.",
     tiers:[
-      {tier:1,effect:"Lingering Bone Mark: +2% Phys ATK Bonus 4s. Airborne: +4%",stat:{outerDmg:2}},
-      {tier:2,effect:"Bone Mark: +3%, Airborne: +6% for 5s",stat:{outerDmg:3}},
-      {tier:3,effect:"Bone Mark: +3.5%, Airborne: +7% for 6s",stat:{outerDmg:3.5}},
-      {tier:4,effect:"Bone Mark: +4%, Airborne: +8% for 7s",stat:{outerDmg:4}},
-      {tier:5,effect:"Bone Mark: +5% Phys ATK Bonus 8s. Airborne: +10% Phys ATK Bonus",stat:{outerDmg:5}},
-      {tier:6,effect:"Bone Mark +5%, Airborne +10% ATK + Phys Pen +5.1 + Min/Max Phys Atk +21.2/+42.5 (Attr Buff)",stat:{outerDmg:5,outerPen:5.1,minOuter:21.2,maxOuter:42.5}},
+      {tier:1,effect:"Lingering Bone Mark: +2% Phys ATK Bonus 4s. Airborne: +4% (conditional, not summed)",stat:{}},
+      {tier:2,effect:"Bone Mark: +3%, Airborne: +6% for 5s (conditional, not summed)",stat:{}},
+      {tier:3,effect:"Bone Mark: +3.5%, Airborne: +7% for 6s (conditional, not summed)",stat:{}},
+      {tier:4,effect:"Bone Mark: +4%, Airborne: +8% for 7s (conditional, not summed)",stat:{}},
+      {tier:5,effect:"Bone Mark: +5% Phys ATK Bonus 8s. Airborne: +10% Phys ATK Bonus (conditional, not summed)",stat:{}},
+      {tier:6,effect:"Basic Buff (conditional, NOT summed): Bone Mark +5%, Airborne +10% ATK. Attr Buff: Phys Pen +5.1, Min/Max Phys Atk +21.2/+42.5",stat:{outerPen:5.1,minOuter:21.2,maxOuter:42.5}},
     ]
   },
   {
@@ -489,11 +489,11 @@ export const INNER_WAYS: InnerWay[] = [
     desc:"Moving >15m in 3s grants 3 stacks of Spring Thunder (12s): each Heavy Attack, Aerial Heavy, Light, or Light Charged Skill hit consumes 1 stack for +15% HP damage (next 1s of that skill type). Cannot stack. Once per 15s.",
     recommended:false, note:"Mobility-triggered buff. Less consistent on stationary boss fights.",
     tiers:[
-      {tier:1,effect:"Movement trigger grants 1 stack. Spring Thunder: +5% HP DMG",stat:{generalDmg:5}},
-      {tier:2,effect:"Grants 2 stacks. +8% HP DMG per stack",stat:{generalDmg:8}},
-      {tier:3,effect:"Grants 2 stacks. +10% HP DMG per stack",stat:{generalDmg:10}},
-      {tier:4,effect:"Grants 3 stacks. +12% HP DMG per stack",stat:{generalDmg:12}},
-      {tier:5,effect:"Grants 3 stacks. +15% HP DMG per stack (12s). Once per 15s",stat:{generalDmg:15}},
+      {tier:1,effect:"Movement trigger grants 1 stack. Spring Thunder: +5% HP DMG (conditional, not summed)",stat:{}},
+      {tier:2,effect:"Grants 2 stacks. +8% HP DMG per stack (conditional, not summed)",stat:{}},
+      {tier:3,effect:"Grants 2 stacks. +10% HP DMG per stack (conditional, not summed)",stat:{}},
+      {tier:4,effect:"Grants 3 stacks. +12% HP DMG per stack (conditional, not summed)",stat:{}},
+      {tier:5,effect:"Grants 3 stacks. +15% HP DMG per stack (12s). Once per 15s (conditional, not summed)",stat:{}},
       {tier:6,effect:"Basic Buff (conditional, NOT summed): 3 stacks +15% HP DMG/stack. Attr Buff: Phys DMG +2.5%, Min/Max Phys Atk +21.2/+42.5",stat:{outerDmg:2.5,minOuter:21.2,maxOuter:42.5}},
     ]
   },
@@ -558,9 +558,9 @@ export const INNER_WAYS: InnerWay[] = [
     tiers:[
       {tier:1,effect:"HP shield duration +1s",stat:{}},
       {tier:2,effect:"HP shield duration +2s",stat:{}},
-      {tier:3,effect:"HP shield duration +3s; DMG/Healing boost +5% (v1.7)",stat:{generalDmg:5}},
-      {tier:4,effect:"HP shield duration +3.5s; DMG/Healing boost +6%",stat:{generalDmg:6}},
-      {tier:5,effect:"HP shield duration +4s; DMG/Healing boost +8%",stat:{generalDmg:8}},
+      {tier:3,effect:"HP shield duration +3s; DMG/Healing boost +5% (shield condition, not summed)",stat:{}},
+      {tier:4,effect:"HP shield duration +3.5s; DMG/Healing boost +6% (shield condition, not summed)",stat:{}},
+      {tier:5,effect:"HP shield duration +4s; DMG/Healing boost +8% (shield condition, not summed)",stat:{}},
       {tier:6,effect:"Basic Buff (conditional, NOT summed): HP shield +4s; DMG/Healing +10% (+10% more on broken shield, v1.7). Attr Buff: Min/Max Stonesplit Atk +11.9/+24.1",stat:{minPz:11.9,maxPz:24.1}},
     ]
   },
@@ -589,7 +589,7 @@ export const INNER_WAYS: InnerWay[] = [
       {tier:3,effect:"Full Grave Frost + Dual-Weapon Skill triggers Finding Spring; hitting it restores 0.5 Blade Momentum",stat:{}},
       {tier:4,effect:"Inner Passion max stacks → 4; Snowbreak Spring spends 1 stack for +40% HP damage vs non-players",stat:{}},
       {tier:5,effect:"Breakthrough: Direct Critical Rate +4.6%",stat:{dcrit:4.6}},
-      {tier:6,effect:"Snowbreak Spring +10% DMG + Forgetfulness (charge-less Grave Frost 3s) + Direct Crit +4.6% + Min Phys Atk +70.8 (Attr Buff)",stat:{dcrit:4.6,minOuter:70.8}},
+      {tier:6,effect:"Basic Buff (conditional, NOT summed): Snowbreak Spring +10% DMG + Forgetfulness. Attr Buff: Direct Crit +4.6%, Min Phys Atk +70.8",stat:{dcrit:4.6,minOuter:70.8}},
     ]
   },
   {
@@ -599,10 +599,10 @@ export const INNER_WAYS: InnerWay[] = [
     tiers:[
       {tier:1,effect:"Legion Summoner cooldown → 1s",stat:{}},
       {tier:2,effect:"Increases Critical Rate based on Solo Mode Level",stat:{}},
-      {tier:3,effect:"Inner Passion: Mo Blade Anxi Soldier applies Mountain Splitter 10s (+10% Crit DMG; guaranteed Crit at ≥70% Crit Rate)",stat:{critDmg:10}},
-      {tier:4,effect:"Inner Passion: Phalanxbane Charged Skill free of Blade Momentum; Burning Heart +32% DMG vs non-players",stat:{critDmg:10}},
-      {tier:5,effect:"Breakthrough: Critical DMG Bonus +4.0%. (Base Mountain Splitter +10% Crit DMG)",stat:{critDmg:14}},
-      {tier:6,effect:"Burning Heart on Exhausted: Mountain Splitter + Charge Enhancement (full Inner Passion bonus, ≤3/30s) + Crit Rate +7.3% (Attr Buff)",stat:{critDmg:14,crit:7.3}},
+      {tier:3,effect:"Inner Passion: Mo Blade Anxi Soldier applies Mountain Splitter 10s (+10% Crit DMG; conditional, not summed)",stat:{}},
+      {tier:4,effect:"Inner Passion: Phalanxbane Charged Skill free of Blade Momentum; Burning Heart +32% DMG vs non-players (conditional, not summed)",stat:{}},
+      {tier:5,effect:"Breakthrough: Critical DMG Bonus +4.0%. Base Mountain Splitter +10% Crit DMG is conditional, not summed.",stat:{critDmg:4}},
+      {tier:6,effect:"Basic Buff (conditional, NOT summed): Burning Heart on Exhausted / Mountain Splitter. Attr Buff: Crit DMG +4.0%, Crit Rate +7.3%",stat:{critDmg:4,crit:7.3}},
     ]
   },
   {
@@ -612,10 +612,10 @@ export const INNER_WAYS: InnerWay[] = [
     tiers:[
       {tier:1,effect:"Throat-Pierced duration → 15s",stat:{}},
       {tier:2,effect:"Increases Stonesplit Attack based on Solo Mode Level",stat:{}},
-      {tier:3,effect:"Throat-Pierced: Light/Heavy Varied Combo ignores 3 Physical Resistance and +3% Crit DMG",stat:{critDmg:3}},
-      {tier:4,effect:"Throat-Pierced max stacks → 5",stat:{critDmg:3}},
-      {tier:5,effect:"Breakthrough: Stonesplit Penetration +6",stat:{critDmg:3,pzPen:6}},
-      {tier:6,effect:"Successful parry grants 5 Throat-Pierced stacks (20s CD); Assist skills also apply it + Min/Max Stonesplit Atk +11.9/+24.1 (Attr Buff)",stat:{critDmg:3,pzPen:6,minPz:11.9,maxPz:24.1}},
+      {tier:3,effect:"Throat-Pierced: Light/Heavy Varied Combo ignores 3 Physical Resistance and +3% Crit DMG (conditional, not summed)",stat:{}},
+      {tier:4,effect:"Throat-Pierced max stacks → 5 (conditional, not summed)",stat:{}},
+      {tier:5,effect:"Breakthrough: Stonesplit Penetration +6. Throat-Pierced stack bonuses are conditional, not summed.",stat:{pzPen:6}},
+      {tier:6,effect:"Basic Buff (conditional, NOT summed): Throat-Pierced stacks from parry/assist. Attr Buff: Stonesplit Pen +6, Min/Max Stonesplit Atk +11.9/+24.1",stat:{pzPen:6,minPz:11.9,maxPz:24.1}},
     ]
   },
   {
@@ -628,7 +628,7 @@ export const INNER_WAYS: InnerWay[] = [
       {tier:3,effect:"Tenacity: +4% DMG Reduction, +1% per nearby enemy in 5m (max +3%)",stat:{}},
       {tier:4,effect:"Tenacity: +3% HP Drain (capped 2% Max HP/s)",stat:{}},
       {tier:5,effect:"Breakthrough: Physical Damage Bonus +2.5%",stat:{outerDmg:2.5}},
-      {tier:6,effect:"Bonus damage/reduction per nearby enemy 1% → 1.5% (max +4.5%) + Phys DMG +2.5% + Min/Max Phys Atk +21.2/+42.5 (Attr Buff)",stat:{outerDmg:2.5,minOuter:21.2,maxOuter:42.5}},
+      {tier:6,effect:"Basic Buff (conditional, NOT summed): bonus damage/reduction per nearby enemy. Attr Buff: Phys DMG +2.5%, Min/Max Phys Atk +21.2/+42.5",stat:{outerDmg:2.5,minOuter:21.2,maxOuter:42.5}},
     ]
   },
 ];
