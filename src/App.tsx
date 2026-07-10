@@ -49,6 +49,7 @@ import StatSwapSimulator from "./components/StatSwapSimulator";
 import SearchableSelect from "./components/SearchableSelect";
 import WorkspaceTabs from "./components/WorkspaceTabs";
 import ProductShell from "./product/ProductShell";
+import ArsenalWorkspace, { type ArsenalRow } from "./product/workspaces/ArsenalWorkspace";
 import { engine2Dps, BUILD_TO_WWM } from "./utils/engine2";
 import { ROTATIONS_WWM } from "./data/rotationsWWM";
 
@@ -1905,24 +1906,25 @@ export default function App() {
     };
   };
 
-  const openAddModal = () => {
+  const openAddModal = (slot = selectedSlot) => {
     setEditingItem(null);
-    const slotLabel = getSlotLabel(selectedSlot);
-    const existingCount = getActiveGear().filter(it => it.slot === selectedSlot).length;
+    setSelectedSlot(slot);
+    const slotLabel = getSlotLabel(slot);
+    const existingCount = getActiveGear().filter(it => it.slot === slot).length;
     // First piece in a slot = bare label ("Weapon 1"); extras get "#2/#3" so the
     // counter doesn't fuse with the slot's own number ("Weapon 1 2" → "Weapon 1 #2").
     setFormName(existingCount === 0 ? slotLabel : `${slotLabel} #${existingCount + 1}`);
     setFormQuality("gold");
-    if (selectedSlot === "Umbrella" || selectedSlot === "Rope Dart" || selectedSlot === "Pendant" || selectedSlot === "Disc") {
+    if (slot === "Umbrella" || slot === "Rope Dart" || slot === "Pendant" || slot === "Disc") {
       setFormSet("stars"); // default weapon set
-    } else if (selectedSlot === "Bow/Ring") {
+    } else if (slot === "Bow/Ring") {
       setFormSet("pursuing");
     } else {
       setFormSet("stormrain"); // default armor set
     }
     setFormMastery("");
     const defaultTypes = BUILD_WEAPON_TYPES[selectedBuild] || ["Umbrella", "Rope Dart"];
-    setFormWeaponType(selectedSlot === "Umbrella" ? defaultTypes[0] : selectedSlot === "Rope Dart" ? defaultTypes[1] : "Sword");
+    setFormWeaponType(slot === "Umbrella" ? defaultTypes[0] : slot === "Rope Dart" ? defaultTypes[1] : "Sword");
     setFormSubs(Array(6).fill(null).map(() => ({ type: "Max Phys Atk", val: "", isTuned: false })));
     setIsItemModalOpen(true);
   };
@@ -3425,6 +3427,36 @@ export default function App() {
     }));
   };
 
+  const activeGear = getActiveGear();
+  const arsenalRows: ArsenalRow[] = activeGear
+    .map((item) => {
+      const score = getGearItemCompareStats(item).totalGradDelta;
+      const grade = score >= 7 ? "S" : score >= 5.5 ? "A" : score >= 4 ? "B" : score >= 2 ? "C" : "D";
+      return {
+        id: item.id,
+        slot: item.slot,
+        slotLabel: getSlotLabel(item.slot),
+        name: item.name,
+        image: (item.slot === "Umbrella" || item.slot === "Rope Dart")
+          ? getWeaponIconUrlByType(item.weaponType, item.slot, selectedBuild)
+          : SLOT_IMAGES[item.slot],
+        quality: item.quality,
+        setName: getSetName(item.set),
+        weaponType: item.weaponType,
+        subs: item.subs.map((sub) => ({ type: sub.type, value: sub.val, tuned: Boolean(sub.isTuned) })),
+        mastery: item.mastery,
+        equipped: isItemEquipped(item, activeGear),
+        grade,
+        score,
+      };
+    })
+    .sort((left, right) => {
+      if (gearSortBy === "mastery") return (right.mastery ?? 0) - (left.mastery ?? 0);
+      if (left.equipped !== right.equipped) return Number(right.equipped) - Number(left.equipped);
+      if (left.score !== right.score) return right.score - left.score;
+      return left.name.localeCompare(right.name);
+    });
+
   return (
     <div className="app-root min-h-screen font-sans antialiased" data-workspace={workspace}>
       {/* Accent line */}
@@ -3470,6 +3502,36 @@ export default function App() {
           estimate: Math.round(rotationStats.dps * dpsEff).toLocaleString(),
         }}
       />
+
+      {workspace === "gear" && (
+        <ArsenalWorkspace
+          rows={arsenalRows}
+          slots={[
+            { key: "ALL", label: "All" },
+            { key: "Umbrella", label: "Weapon 1" },
+            { key: "Rope Dart", label: "Weapon 2" },
+            { key: "Helmet", label: "Helmet" },
+            { key: "Chest", label: "Chest" },
+            { key: "Bracers", label: "Hands" },
+            { key: "Greaves", label: "Legs" },
+            { key: "Disc", label: "Disc" },
+            { key: "Pendant", label: "Pendant" },
+          ]}
+          activeSlot={gearFilterSlot}
+          sortBy={gearSortBy}
+          onSlotChange={setGearFilterSlot}
+          onSortChange={setGearSortBy}
+          onEquip={(id) => {
+            const item = activeGear.find((candidate) => candidate.id === id);
+            if (item) toggleEquip(item);
+          }}
+          onEdit={(id) => {
+            const item = activeGear.find((candidate) => candidate.id === id);
+            if (item) openEditModal(item);
+          }}
+          onAdd={() => openAddModal(gearFilterSlot === "ALL" ? "Umbrella" : gearFilterSlot)}
+        />
+      )}
 
       {/* ── HEADER ── */}
       <header>
@@ -6500,8 +6562,8 @@ export default function App() {
 
       {/* ── EDIT ITEM MODAL ── */}
       {isItemModalOpen && (
-        <div className="modal" onClick={() => setIsItemModalOpen(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ width: '500px', maxWidth: '95%' }}>
+        <div className="modal product-gear-modal" onClick={() => setIsItemModalOpen(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ width: '560px', maxWidth: '95%' }}>
             <div className="modal-header">
               <h2>{editingItem ? "Edit Gear Item" : "Add Gear Item"}</h2>
               <span className="close-btn" onClick={() => setIsItemModalOpen(false)}>&times;</span>
@@ -6608,7 +6670,7 @@ export default function App() {
                 </div>
 
                 {/* In-Modal Gear Quick OCR Zone */}
-                <div 
+                <div className="product-ocr-dropzone"
                   style={{
                     border: '1px dashed #78350f',
                     padding: '12px',
