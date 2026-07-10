@@ -1216,6 +1216,7 @@ const getCustomConfig = () => {
 };
 
 export default function App() {
+  type Workspace = "gear" | "build" | "simulation";
   const [tierKey, setTierKey] = useState<string>(() => {
     const config = getCustomConfig();
     return config?.tierKey ?? "350|0.45";
@@ -1230,6 +1231,7 @@ export default function App() {
   const autoGearPanel = true;
 
   const [activeTab, setActiveTab ] = useState<"calculator" | "priority" | "gear" | "compare" | "simulators" | "ocr" | "profiles" | "rot-sim" | "cultivate">("calculator");
+  const [workspace, setWorkspace] = useState<Workspace>("gear");
 
   // ── NEW STATES & HELPERS FOR REDESIGNED LAYOUT ──
   // Advanced gear-analysis tables (DPS breakdown / ring / set) collapse by
@@ -1237,6 +1239,14 @@ export default function App() {
   const [advPanelOpen, setAdvPanelOpen] = useState<boolean>(false);
   const [isGradModalOpen, setIsGradModalOpen] = useState<boolean>(false);
   const [gradModalActiveTab, setGradModalActiveTab] = useState<string>("manual");
+  const openWorkspace = (next: Workspace | "analysis") => {
+    if (next === "analysis") {
+      setGradModalActiveTab("manual");
+      setIsGradModalOpen(true);
+      return;
+    }
+    setWorkspace(next);
+  };
   const [isDmgStatsOpen, setIsDmgStatsOpen] = useState<boolean>(false);
   const [isSimOpen, setIsSimOpen] = useState<boolean>(false);
   const [simRuns, setSimRuns] = useState<number>(100);
@@ -3414,7 +3424,7 @@ export default function App() {
   };
 
   return (
-    <div className="app-root min-h-screen font-sans antialiased">
+    <div className="app-root min-h-screen font-sans antialiased" data-workspace={workspace}>
       {/* Accent line */}
       <div className="app-accent-line" />
 
@@ -3544,10 +3554,36 @@ export default function App() {
         </div>
       </header>
 
+      <nav className="workspace-nav" aria-label="Calculator workspace">
+        {([
+          ["gear", "Gear"],
+          ["build", "Build"],
+          ["simulation", "Simulation"],
+          ["analysis", "Analysis"]
+        ] as const).map(([key, label]) => (
+          <button
+            key={key}
+            type="button"
+            className={key === workspace ? "is-active" : ""}
+            aria-current={key === workspace ? "page" : undefined}
+            onClick={() => openWorkspace(key)}
+          >
+            {label}
+          </button>
+        ))}
+      </nav>
+
       {/* ── MAIN LAYOUT ── */}
       <div className="app-layout">
         {/* Left Column: Inventory */}
-        <div className="layout-left" id="main-content">
+        <div className="layout-left workspace-gear" id="main-content">
+          <div className="gear-workspace-heading">
+            <div>
+              <span className="section-eyebrow">Gear</span>
+              <h2>Inventory and equipped gear</h2>
+            </div>
+            <span>{getActiveGear().filter(item => isItemEquipped(item, getActiveGear())).length}/8 equipped</span>
+          </div>
           <div id="filter-bar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative' }}>
             <div className="filter-capsule">
               {[

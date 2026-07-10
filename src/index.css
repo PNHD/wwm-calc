@@ -863,3 +863,19 @@ header h1{font-family:var(--font-display)!important;font-weight:700!important;
 .dps-real-parse{display:block;color:var(--ink3);font:500 10.5px var(--font-mono);white-space:nowrap;margin-top:3px}
 .banner-footer-content{align-items:center!important;gap:6px 8px;flex-wrap:wrap!important}
 @media (max-width:768px){.banner-footer-content{align-items:stretch!important;flex-wrap:wrap}.dps-real-parse{width:100%}}
+
+/* Guided workspace: one task at a time, beginning with the gear inventory. */
+.workspace-nav{display:flex;gap:4px;padding:8px 14px;border-bottom:1px solid var(--line2);background:var(--surface)}
+.workspace-nav button{border:1px solid transparent;background:transparent;color:var(--ink2);padding:8px 12px;border-radius:6px;font:700 12px var(--font-body);cursor:pointer}
+.workspace-nav button:hover{color:var(--ink);background:var(--surface2)}
+.workspace-nav button.is-active{background:var(--verm-soft);border-color:var(--verm-line);color:var(--vermilion)}
+.workspace-nav button:focus-visible{outline:2px solid var(--muted-gold);outline-offset:2px}
+.gear-workspace-heading{display:flex;align-items:end;justify-content:space-between;gap:12px;padding:18px 14px 10px}
+.gear-workspace-heading h2{margin:2px 0 0;font:700 20px var(--font-display);color:var(--ink)}
+.gear-workspace-heading>span{color:var(--ink3);font:600 11px var(--font-mono);white-space:nowrap}
+.app-root[data-workspace="gear"] #simulator-panel{display:none!important}
+.app-root[data-workspace="gear"] .layout-left{width:100%;max-width:none}
+.app-root[data-workspace="build"] .layout-left,.app-root[data-workspace="simulation"] .layout-left{display:none!important}
+.app-root[data-workspace="build"] .app-layout,.app-root[data-workspace="simulation"] .app-layout{justify-content:center;background:var(--paper)}
+.app-root[data-workspace="build"] #simulator-panel,.app-root[data-workspace="simulation"] #simulator-panel{width:min(100%,1120px);max-width:1120px;border-left:0;padding:20px 14px 32px}
+@media(max-width:767px){.workspace-nav{position:sticky;top:0;z-index:100;justify-content:space-between;padding:7px 8px}.workspace-nav button{flex:1;padding:9px 4px;font-size:11px}.gear-workspace-heading{padding:14px 14px 8px}.gear-workspace-heading h2{font-size:17px}}
