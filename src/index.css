@@ -878,4 +878,11 @@ header h1{font-family:var(--font-display)!important;font-weight:700!important;
 .app-root[data-workspace="build"] .layout-left,.app-root[data-workspace="simulation"] .layout-left{display:none!important}
 .app-root[data-workspace="build"] .app-layout,.app-root[data-workspace="simulation"] .app-layout{justify-content:center;background:var(--paper)}
 .app-root[data-workspace="build"] #simulator-panel,.app-root[data-workspace="simulation"] #simulator-panel{width:min(100%,1120px);max-width:1120px;border-left:0;padding:20px 14px 32px}
+.workspace-screen-heading{padding:2px 0 12px}.workspace-screen-heading h2{margin:3px 0 0;color:var(--ink);font:700 20px var(--font-display)}
+.app-root[data-workspace="build"] .workspace-simulation-group,.app-root[data-workspace="simulation"] .workspace-build-group{display:none!important}
+.app-root[data-workspace="build"] .anav,.app-root[data-workspace="simulation"] .anav{display:none!important}
+.workspace-screen-heading.workspace-simulation-group{order:0}
+.panel-checkbox-container.workspace-simulation-group{order:1!important}
+.graduation-banner.workspace-simulation-group{order:2!important}
+#stats-display.workspace-simulation-group{order:3!important}
 @media(max-width:767px){.workspace-nav{position:sticky;top:0;z-index:100;justify-content:space-between;padding:7px 8px}.workspace-nav button{flex:1;padding:9px 4px;font-size:11px}.gear-workspace-heading{padding:14px 14px 8px}.gear-workspace-heading h2{font-size:17px}}

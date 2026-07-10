@@ -3764,7 +3764,11 @@ export default function App() {
 
         {/* Right Column: Simulator Panel */}
         <aside id="simulator-panel">
-          <div className="sim-header" style={{ cursor: 'default' }}>
+          <div className="workspace-screen-heading workspace-build-group">
+            <span className="section-eyebrow">Build</span>
+            <h2>Path, equipment set, and Inner Ways</h2>
+          </div>
+          <div className="sim-header workspace-build-group" style={{ cursor: 'default' }}>
             <h2>Panel Simulator</h2>
             <div className="sim-header-controls" style={{ display: 'flex', gap: '8px' }}>
               <select
@@ -3781,14 +3785,14 @@ export default function App() {
           </div>
           <button
             onClick={() => setCalibOpen(true)}
-            className="secondary-btn"
+            className="secondary-btn workspace-build-group"
             title="Match the panel to your in-game Combat Attributes (per character)"
             style={{ width: '100%', marginTop: 12, marginBottom: 0, whiteSpace: 'nowrap', order: 5, borderColor: activeScheme?.baseOverride ? '#4caf50' : undefined, color: activeScheme?.baseOverride ? '#4caf50' : undefined }}
           >
             {activeScheme?.baseOverride ? "✓ Calibrated — matches in-game" : "⚙ Calibrate panel to in-game"}
           </button>
           {activeScheme?.baseOverride && (
-            <div style={{ order: 5, fontSize: 11, color: '#8b949e', marginTop: 4, lineHeight: 1.45 }}>
+            <div className="workspace-build-group" style={{ order: 5, fontSize: 11, color: '#8b949e', marginTop: 4, lineHeight: 1.45 }}>
               Calibration sticks to your character, not to one gear set. When you swap gear (e.g. after Best Build), the panel re-computes for the new gear automatically — the numbers change but stay correct. <b style={{ color: '#7ee787' }}>No need to re-calibrate.</b>
             </div>
           )}
@@ -3828,7 +3832,7 @@ export default function App() {
             </div>
           )}
 
-          <div className="scheme-controls">
+          <div className="scheme-controls workspace-build-group">
             <label htmlFor="scheme-select" className="sim-label" style={{ margin: 0 }}>Scheme:</label>
             <select
               value={charsData.activeSchemeId ?? ""}
@@ -3896,7 +3900,7 @@ export default function App() {
           </div>
 
           {/* Xinfa (Inner Ways) Slots */}
-          <div className="xinfa-section" style={{ marginTop: '10px', order: 2 }}>
+          <div className="xinfa-section workspace-build-group" style={{ marginTop: '10px', order: 2 }}>
             <div className="xinfa-grid">
               {[0, 1, 2, 3].map(index => {
                 const iwId = selectedInnerWays[index];
@@ -3935,7 +3939,7 @@ export default function App() {
 
           {/* Inner Ways — DPS loss if removed */}
           {innerWayContrib.length > 0 && (
-            <div style={{ marginTop: 10, border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, overflow: "hidden", order: 3 }}>
+            <div className="workspace-build-group" style={{ marginTop: 10, border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, overflow: "hidden", order: 3 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 10px", background: "rgba(255,255,255,0.03)" }}>
                 <span style={{ fontSize: 11, fontWeight: 700, color: "#f0b400", textTransform: "uppercase", letterSpacing: 0.4 }}>Inner Way Contribution</span>
                 <span style={{ fontSize: 10, color: "#6e7681" }} title="DPS lost if this inner way were removed at its current tier. Bigger loss = more important to keep leveled.">DPS loss if removed ⓘ</span>
@@ -3953,7 +3957,7 @@ export default function App() {
           )}
 
           {/* Equipped Slots Grid */}
-          <div className="sim-layout-container" style={{ marginTop: '15px', order: 4 }}>
+          <div className="sim-layout-container workspace-build-group" style={{ marginTop: '15px', order: 4 }}>
             <div className="sim-slots-grid">
               {(() => {
                 const defaultTypes = BUILD_WEAPON_TYPES[selectedBuild] || ["Umbrella", "Rope Dart"];
@@ -4062,14 +4066,14 @@ export default function App() {
 
           {/* Advanced gear-analysis tables — collapsed by default to keep the rail short */}
           <button
-            className="adv-panel-toggle"
+            className="adv-panel-toggle workspace-build-group"
             style={{ order: 8 }}
             onClick={() => setAdvPanelOpen(v => !v)}
             title="DPS breakdown by gear · ring attribute · weapon set comparisons"
           >
             {advPanelOpen ? "▲ Hide gear analysis" : "▾ Gear analysis — DPS breakdown · ring · set"}
           </button>
-          {advPanelOpen && <>
+          {advPanelOpen && <div className="workspace-build-group">
           {/* Gear Contribution — DPS loss if each equipped piece were removed */}
           {gearContrib.length > 0 && (
             <div style={{ marginTop: 12, border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, overflow: "hidden", order: 8 }}>
@@ -4132,9 +4136,13 @@ export default function App() {
               </div>
             </div>
           )}
-          </>}
+          </div>}
 
-          <div className="panel-checkbox-container" style={{ flexDirection: 'column', alignItems: 'stretch', order: 7 }}>
+          <div className="workspace-screen-heading workspace-simulation-group">
+            <span className="section-eyebrow">Simulation</span>
+            <h2>Rotation assumptions and DPS reference</h2>
+          </div>
+          <div className="panel-checkbox-container workspace-simulation-group" style={{ flexDirection: 'column', alignItems: 'stretch', order: 7 }}>
             <div className="panel-checkbox-wrapper">
               <label className="panel-checkbox-label">
                 <input
@@ -4209,7 +4217,7 @@ export default function App() {
 
           {/* Graduation rate banner */}
           <div
-            className="graduation-banner"
+            className="graduation-banner workspace-simulation-group"
             id="open-grad-modal-btn"
             style={{ order: 1 }}
             onClick={() => {
@@ -4257,7 +4265,7 @@ export default function App() {
           </div>
 
           {/* Stats Display — two columns: in-game menu base vs in-combat (with Inner Ways + buffs) */}
-          <div id="stats-display" className="stats-panel" style={{ order: 6 }}>
+          <div id="stats-display" className="stats-panel workspace-simulation-group" style={{ order: 6 }}>
             {(() => {
               const fmt = (v: number | undefined, pct?: boolean, plus?: boolean) => {
                 if (v === undefined) return "—";
