@@ -47,7 +47,7 @@ import { translateSkillName } from "./utils/skillNameEn";
 import { runDualPassOcr } from "./utils/ocrParser";
 import StatSwapSimulator from "./components/StatSwapSimulator";
 import SearchableSelect from "./components/SearchableSelect";
-import ProductShell from "./product/ProductShell";
+import ProductShell, { type ProductTab } from "./product/ProductShell";
 import ArsenalWorkspace, { type ArsenalRow } from "./product/workspaces/ArsenalWorkspace";
 import BuildWorkspace from "./product/workspaces/BuildWorkspace";
 import CombatWorkspace from "./product/workspaces/CombatWorkspace";
@@ -1237,6 +1237,7 @@ export default function App() {
 
   const [activeTab, setActiveTab ] = useState<"calculator" | "priority" | "gear" | "compare" | "simulators" | "ocr" | "profiles" | "rot-sim" | "cultivate">("calculator");
   const [workspace, setWorkspace] = useState<Workspace>("gear");
+  const [activeProductTab, setActiveProductTab] = useState<ProductTab>("gear-analyzer");
 
   // ── NEW STATES & HELPERS FOR REDESIGNED LAYOUT ──
   // Advanced gear-analysis tables (DPS breakdown / ring / set) collapse by
@@ -1244,10 +1245,6 @@ export default function App() {
   const [advPanelOpen, setAdvPanelOpen] = useState<boolean>(false);
   const [isGradModalOpen, setIsGradModalOpen] = useState<boolean>(false);
   const [gradModalActiveTab, setGradModalActiveTab] = useState<string>("manual");
-  const openWorkspace = (next: Workspace) => {
-    setWorkspace(next);
-    if (next !== "analysis") setIsGradModalOpen(false);
-  };
   const [isDmgStatsOpen, setIsDmgStatsOpen] = useState<boolean>(false);
   const [isSimOpen, setIsSimOpen] = useState<boolean>(false);
   const [simRuns, setSimRuns] = useState<number>(100);
@@ -3119,23 +3116,7 @@ export default function App() {
     const bySlot: Record<string, GearItem[]> = {};
     SLOT_ORDER.forEach(s => { bySlot[s] = pool.filter(it => it.slot === s); });
 
-    // Cap combinations to keep it responsive: if a slot has many items, keep the
-    // top N by individual grad delta. ponytail: linear pre-prune, exhaustive
-    // search within the pruned set. Kept at 6 — each combo runs the full ~50-skill
-    // rotation, so 6 (≈86k combos, ~a few s) is the sweet spot; 10 (≈168k) ran
-    // ~45s. The MessageChannel yield (below) is what fixed the alt-tab freeze,
-    // independent of this cap.
-    const MAX_PER_SLOT = 6;
-    SLOT_ORDER.forEach(s => {
-      if (bySlot[s].length > MAX_PER_SLOT) {
-        bySlot[s] = [...bySlot[s]]
-          .map(it => ({ it, d: getGearItemCompareStats(it).totalGradDelta }))
-          .sort((a, b) => b.d - a.d)
-          .slice(0, MAX_PER_SLOT)
-          .map(x => x.it);
-      }
-    });
-
+    // Small inventories are exact; large inventories use a full-pool beam search.
     const totalCombos = SLOT_ORDER.reduce((n, s) => n * Math.max(1, bySlot[s].length), 1);
     let checked = 0;
     const top: { rate: number; gear: GearItem[] }[] = [];
@@ -3161,7 +3142,33 @@ export default function App() {
       for (const it of opts) { acc.push(it); await recurse(idx + 1, acc); acc.pop(); }
     };
 
-    await recurse(0, []);
+    const EXACT_LIMIT = 120_000;
+    if (totalCombos <= EXACT_LIMIT) {
+      await recurse(0, []);
+    } else {
+      // ponytail: all items enter each slot expansion; partial combinations are
+      // capped for responsiveness. Raise this only if cross-slot synergy warrants it.
+      const BEAM_WIDTH = 1_500;
+      let beam: { rate: number; gear: GearItem[] }[] = [{ rate: 0, gear: [] }];
+      for (let slotIndex = 0; slotIndex < SLOT_ORDER.length; slotIndex++) {
+        const options = bySlot[SLOT_ORDER[slotIndex]];
+        if (!options.length) continue;
+        const expanded: { rate: number; gear: GearItem[] }[] = [];
+        for (const partial of beam) {
+          for (const item of options) {
+            const gear = [...partial.gear, item];
+            expanded.push({ rate: gradRateForGearCombo(gear), gear });
+          }
+        }
+        expanded.sort((a, b) => b.rate - a.rate);
+        beam = expanded.slice(0, BEAM_WIDTH);
+        setBestBuildProgress(Math.round(((slotIndex + 1) / SLOT_ORDER.length) * 100));
+        const elapsed = (performance.now() - startedAt) / 1000;
+        setBestBuildEta(Math.ceil((elapsed / (slotIndex + 1)) * (SLOT_ORDER.length - slotIndex - 1)));
+        await yieldToEventLoop();
+      }
+      top.push(...beam.slice(0, 10));
+    }
     setBestBuildProgress(100);
     setBestBuildEta(null);
     setBestBuildResult(top);
@@ -3500,6 +3507,22 @@ export default function App() {
     { label: `${innerAttrName(selectedBuild)} Penetration`, menu: fmtCombatStat(basePanel.pzPen, true), combat: fmtCombatStat(adjustedPanel.pzPen, true) },
     { label: `Net ${innerAttrName(selectedBuild)} Penetration`, menu: "-", combat: fmtCombatStat(netPzPen, true), derived: true },
   ];
+  const openProductTab = (tab: ProductTab) => {
+    setActiveProductTab(tab);
+    setIsGradModalOpen(false);
+    setIsSimOpen(false);
+    if (tab === "gear-analyzer") setWorkspace("gear");
+    else if (tab === "details") setWorkspace("simulation");
+    else if (tab === "settings") setWorkspace("build");
+    else if (tab === "simulation") { setWorkspace("simulation"); setIsSimOpen(true); }
+    else if (tab === "profile") setIsExportImportModalOpen(true);
+    else {
+      const tool = tab === "gear-compare" ? "compare" : tab === "inventory-optimizer" ? "best-build" : tab;
+      setWorkspace("analysis");
+      setGradModalActiveTab(tool);
+      setIsGradModalOpen(true);
+    }
+  };
 
   return (
     <div className="app-root min-h-screen font-sans antialiased" data-workspace={workspace}>
@@ -3507,8 +3530,8 @@ export default function App() {
       <div className="app-accent-line" />
 
       <ProductShell
-        active={workspace}
-        onNavigate={openWorkspace}
+        active={activeProductTab}
+        onNavigate={openProductTab}
         roleControl={(
           <select
             aria-label="Current role"
@@ -6572,7 +6595,7 @@ export default function App() {
                         <div className="mb-4 border-b border-[#23262c] pb-3">
                           <h2 className="text-base font-extrabold text-[#f0b400] uppercase tracking-wider font-serif flex items-center gap-2">🏆 Best Build</h2>
                           <p className="text-[12px] text-slate-500 mt-0.5">
-                            Scans every gear piece in this scheme's pool (equipped or not), grouped by slot, and finds the combination with the highest graduation rate for the current build, set, ring and Inner Ways.
+                            Considers all <b>{getActiveGear().length} gear pieces</b> in this scheme, including unequipped inventory. Smaller pools are searched exactly; large pools use a full-pool beam search so no item is discarded before combination scoring.
                           </p>
                         </div>
                         {!bestBuildRunning && (

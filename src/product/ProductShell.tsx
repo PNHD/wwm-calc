@@ -1,18 +1,24 @@
 import type { ReactNode } from "react";
-import { BarChart3, Boxes, FlaskConical, SlidersHorizontal } from "lucide-react";
+import { BarChart3, Boxes, Dice5, FileText, FlaskConical, Layers3, Repeat2, Settings, SlidersHorizontal, Users } from "lucide-react";
 
-export type ProductWorkspace = "gear" | "build" | "simulation" | "analysis";
+export type ProductTab = "details" | "gear-analyzer" | "gear-compare" | "inventory-optimizer" | "simulation" | "team" | "rotations" | "skill-editor" | "settings" | "profile";
 
 const NAV = [
-  { key: "gear", label: "Arsenal", detail: "Gear and inventory", icon: Boxes },
-  { key: "build", label: "Build", detail: "Loadout and Inner Ways", icon: SlidersHorizontal },
-  { key: "simulation", label: "Combat", detail: "Model and attributes", icon: FlaskConical },
-  { key: "analysis", label: "Optimize", detail: "Compare and graduate", icon: BarChart3 },
+  { key: "details", label: "Details", icon: BarChart3 },
+  { key: "gear-analyzer", label: "Gear Analyzer", icon: Boxes },
+  { key: "gear-compare", label: "Gear Compare", icon: SlidersHorizontal },
+  { key: "inventory-optimizer", label: "Inventory Optimizer", icon: Layers3 },
+  { key: "simulation", label: "Simulation", icon: Dice5 },
+  { key: "team", label: "Team", icon: Users },
+  { key: "rotations", label: "Rotations", icon: Repeat2 },
+  { key: "skill-editor", label: "Skill Editor", icon: FlaskConical },
+  { key: "settings", label: "Settings", icon: Settings },
+  { key: "profile", label: "Profile", icon: FileText },
 ] as const;
 
 interface ProductShellProps {
-  active: ProductWorkspace;
-  onNavigate: (workspace: ProductWorkspace) => void;
+  active: ProductTab;
+  onNavigate: (tab: ProductTab) => void;
   roleControl: ReactNode;
   actions: ReactNode;
   context: { tier: string; build: string; scheme: string; innerWays: number; estimate: string };
@@ -30,11 +36,11 @@ export default function ProductShell({ active, onNavigate, roleControl, actions,
         <div className="product-actions">{actions}</div>
       </header>
       <nav className="product-navigation" aria-label="Product workspaces">
-        {NAV.map(({ key, label, detail, icon: Icon }) => (
+        {NAV.map(({ key, label, icon: Icon }) => (
           <button key={key} type="button" className={active === key ? "is-active" : ""}
             aria-current={active === key ? "page" : undefined} onClick={() => onNavigate(key)}>
             <Icon size={19} strokeWidth={1.7} aria-hidden="true" />
-            <span><strong>{label}</strong><small>{detail}</small></span>
+            <span><strong>{label}</strong></span>
           </button>
         ))}
       </nav>
