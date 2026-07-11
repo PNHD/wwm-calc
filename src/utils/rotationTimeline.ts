@@ -137,11 +137,12 @@ export function simulateTimeline(
   tier: TierConstants,
   opts: CalcOpts,
   window: number,
+  timingOverrides: Record<string, { castTime?: number }> = {},
 ): TimelineResult {
   // 1. Expand groups into individual casts, keeping source timing.
   const raw: { item: RotationItem; castTime: number }[] = [];
   for (const item of rotation) {
-    const timing = lookupTiming(item.name);
+    const timing = { ...lookupTiming(item.name), ...timingOverrides[item.name] };
     const ct = Math.max(0.05, timing.castTime || 0.6);
     const n = Math.max(0, Math.round(item.count));
     for (let i = 0; i < n; i++) raw.push({ item, castTime: ct });

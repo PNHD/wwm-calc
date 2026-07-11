@@ -56,6 +56,7 @@ import OptimizeWorkspace from "./product/workspaces/OptimizeWorkspace";
 import { engine2Dps, BUILD_TO_WWM } from "./utils/engine2";
 import { ROTATIONS_WWM } from "./data/rotationsWWM";
 import { lookupTiming } from "./data/skillTiming";
+import { duplicatePreset, type RotationPreset } from "./utils/rotationPresets";
 
 const downloadJson = (name: string, value: unknown) => {
   const url = URL.createObjectURL(new Blob([JSON.stringify(value, null, 2)], { type: "application/json" }));
@@ -1255,7 +1256,16 @@ export default function App() {
   // default so the right rail isn't an endless scroll.
   const [advPanelOpen, setAdvPanelOpen] = useState<boolean>(false);
   const [isGradModalOpen, setIsGradModalOpen] = useState<boolean>(false);
-  const [skillOverrides, setSkillOverrides] = useState<Record<string, Partial<SkillDefinition>>>({});
+  const [skillOverrides, setSkillOverrides] = useState<Record<string, Partial<SkillDefinition>>>(() => {
+    try { return JSON.parse(localStorage.getItem("wwm_skill_overrides") || "{}"); } catch { return {}; }
+  });
+  const [timingOverrides, setTimingOverrides] = useState<Record<string, Partial<{ castTime: number; hits: number; cooldown: number; duration: number }>>>(() => {
+    try { return JSON.parse(localStorage.getItem("wwm_timing_overrides") || "{}"); } catch { return {}; }
+  });
+  const [rotationPresets, setRotationPresets] = useState<Record<string, RotationPreset[]>>(() => {
+    try { return JSON.parse(localStorage.getItem("wwm_rotation_presets") || "{}"); } catch { return {}; }
+  });
+  const [activeRotationPresetId, setActiveRotationPresetId] = useState<string>("");
   const [gradModalActiveTab, setGradModalActiveTab] = useState<string>("manual");
   const [isDmgStatsOpen, setIsDmgStatsOpen] = useState<boolean>(false);
   const [isSimOpen, setIsSimOpen] = useState<boolean>(false);
@@ -2712,6 +2722,9 @@ export default function App() {
   const [editedRotation, setEditedRotation] = useState<RotationItem[] | null>(null);
   // Edits are build-specific — discard them when the build changes.
   useEffect(() => { setEditedRotation(null); }, [selectedBuild]);
+  useEffect(() => { localStorage.setItem("wwm_skill_overrides", JSON.stringify(skillOverrides)); }, [skillOverrides]);
+  useEffect(() => { localStorage.setItem("wwm_timing_overrides", JSON.stringify(timingOverrides)); }, [timingOverrides]);
+  useEffect(() => { localStorage.setItem("wwm_rotation_presets", JSON.stringify(rotationPresets)); }, [rotationPresets]);
 
   // Standard Rotation Guide: the reference (wherewindsmath) canonical ability
   // sequences per build/path — read-only execution guide (NOT used for DPS, since
@@ -2731,6 +2744,34 @@ export default function App() {
   useEffect(() => { setGuideVariant(""); }, [selectedBuild]);
 
   const effectiveRotation = editedRotation ?? getRotationForBuild(selectedBuild);
+  const buildRotationPresets = rotationPresets[selectedBuild] ?? [];
+  const saveRotationPreset = () => {
+    const name = prompt("Rotation preset name:");
+    if (!name?.trim()) return;
+    const preset: RotationPreset = { id: crypto.randomUUID(), name: name.trim(), rotation: effectiveRotation.map((item) => ({ ...item })) };
+    setRotationPresets((all) => ({ ...all, [selectedBuild]: [...(all[selectedBuild] ?? []), preset] }));
+    setActiveRotationPresetId(preset.id);
+  };
+  const useRotationPreset = (id: string) => {
+    const preset = buildRotationPresets.find((item) => item.id === id);
+    if (!preset) return;
+    setEditedRotation(preset.rotation.map((item) => ({ ...item })));
+    setActiveRotationPresetId(id);
+  };
+  const renameRotationPreset = () => {
+    const preset = buildRotationPresets.find((item) => item.id === activeRotationPresetId);
+    const name = preset && prompt("Rename rotation preset:", preset.name);
+    if (!preset || !name?.trim()) return;
+    setRotationPresets((all) => ({ ...all, [selectedBuild]: (all[selectedBuild] ?? []).map((item) => item.id === preset.id ? { ...item, name: name.trim() } : item) }));
+  };
+  const duplicateRotationPreset = () => {
+    const preset = buildRotationPresets.find((item) => item.id === activeRotationPresetId);
+    if (!preset) return;
+    const copy = duplicatePreset(preset, `${preset.name} copy`);
+    setRotationPresets((all) => ({ ...all, [selectedBuild]: [...(all[selectedBuild] ?? []), copy] }));
+    setEditedRotation(copy.rotation.map((item) => ({ ...item })));
+    setActiveRotationPresetId(copy.id);
+  };
 
   const rotationSim = useMemo(() => {
     const rotation = editedRotation ?? getRotationForBuild(selectedBuild);
@@ -2771,8 +2812,8 @@ export default function App() {
       weaponStars: (adjustedPanel as any).weaponStars,
       armorSet: (adjustedPanel as any).armorSet,
     } as any;
-    return simulateTimeline(rotation, simBase, buffs, activeTier, opts, getRotationTimeForBuild(selectedBuild));
-  }, [editedRotation, adjustedPanel, iwStats, selectedInnerWays, innerWayTiers, activeTier, datang, yishui, selectedBuild]);
+    return simulateTimeline(rotation, simBase, buffs, activeTier, opts, getRotationTimeForBuild(selectedBuild), timingOverrides);
+  }, [editedRotation, adjustedPanel, iwStats, selectedInnerWays, innerWayTiers, activeTier, datang, yishui, selectedBuild, timingOverrides]);
 
   // Seed from the build default on first edit, then mutate a copy.
   const editRotation = (mutate: (r: RotationItem[]) => RotationItem[]) =>
@@ -3276,7 +3317,7 @@ export default function App() {
   }, [adjustedPanel, activeTier, datang, yishui, selectedBuild, baselineScore, rotationStats.gradRate, rotationStats.totalDmg]);
 
   // Helper to dynamically calculate stats for any stored profile
-  const getDynamicProfileStats = (prof: typeof profiles[0]) => {
+  const getDynamicProfileStats = (prof: typeof profiles[0], buildKey = selectedBuild) => {
     const profPanel = { ...prof.panel };
     profPanel.iwGeneralDmg = iwStats.generalDmg;
     profPanel.iwOuterPen = iwStats.outerPen;
@@ -3284,18 +3325,18 @@ export default function App() {
     profPanel.iwPzDmg = iwStats.pzDmg;
 
     let totalDmg = 0;
-    getRotationForBuild(selectedBuild).forEach((item) => {
+    getRotationForBuild(buildKey).forEach((item) => {
       const { total } = calcSkill(item, profPanel, activeTier, {
         set: profPanel.set || "gold",
         datang,
         yishui,
-        buildKey: selectedBuild,
+        buildKey,
       });
       totalDmg += total;
     });
 
-    const dps = totalDmg / getRotationTimeForBuild(selectedBuild);
-    const gradRate = (totalDmg / baselineScore) * 100;
+    const dps = totalDmg / getRotationTimeForBuild(buildKey);
+    const gradRate = (totalDmg / calcBaseline(activeTier, buildKey)) * 100;
 
     return {
       dps,
@@ -3316,13 +3357,15 @@ export default function App() {
     dps: 0,
   }))), [charsData]);
   const [teamMemberIds, setTeamMemberIds] = useState<string[]>(["", "", "", "", ""]);
+  const [teamBuilds, setTeamBuilds] = useState<string[]>([selectedBuild, selectedBuild, selectedBuild, selectedBuild, selectedBuild]);
   const [teamVuln, setTeamVuln] = useState<boolean>(false);
   const [teamRevelry, setTeamRevelry] = useState<boolean>(false);
   const [bossHp, setBossHp] = useState<number>(3500000);
   const teamSim = useMemo(() => {
-    const active = teamMemberIds.map(id => {
+    const active = teamMemberIds.map((id, index) => {
       const prof = id ? characterProfiles.find(p => p.id === id) : undefined;
-      return prof ? { id, name: prof.name, dps: getDynamicProfileStats(prof).dps } : null;
+      const buildKey = teamBuilds[index] || selectedBuild;
+      return prof ? { id, name: prof.name, buildKey, dps: getDynamicProfileStats(prof, buildKey).dps } : null;
     }).filter(Boolean) as { id: string; name: string; dps: number }[];
     const soloSum = active.reduce((s, m) => s + m.dps, 0);
     const buffMult = 1 + (teamVuln ? 0.08 : 0) + (teamRevelry ? 0.30 : 0);
@@ -3330,7 +3373,7 @@ export default function App() {
     const killTime = teamDps > 0 ? bossHp / teamDps : 0;
     return { active, soloSum, buffMult, teamDps, killTime };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [teamMemberIds, characterProfiles, teamVuln, teamRevelry, bossHp, adjustedPanel, activeTier, datang, yishui, selectedBuild, iwStats, baselineScore]);
+  }, [teamMemberIds, teamBuilds, characterProfiles, teamVuln, teamRevelry, bossHp, adjustedPanel, activeTier, datang, yishui, selectedBuild, iwStats, baselineScore]);
 
   // Handle OCR fast load
   const handleOcrResult = (scanned: Partial<PanelStats>) => {
@@ -5047,6 +5090,10 @@ export default function App() {
                       </div>
                       <div className="analysis-file-actions" aria-label="Manage rotation">
                         <button type="button" onClick={() => setEditedRotation(getRotationForBuild(selectedBuild).map((item) => ({ ...item })))}>Create custom rotation</button>
+                        <label>Reference preset<select value={activeRotationPresetId} onChange={(event) => event.target.value ? useRotationPreset(event.target.value) : (setEditedRotation(null), setActiveRotationPresetId(""))}><option value="">Built-in reference</option>{buildRotationPresets.map((preset) => <option key={preset.id} value={preset.id}>{preset.name}</option>)}</select></label>
+                        <button type="button" onClick={saveRotationPreset}>Save preset</button>
+                        <button type="button" disabled={!activeRotationPresetId} onClick={renameRotationPreset}>Rename</button>
+                        <button type="button" disabled={!activeRotationPresetId} onClick={duplicateRotationPreset}>Duplicate</button>
                         <button type="button" onClick={() => downloadJson(`${selectedBuild}-rotation.json`, effectiveRotation)}>Export JSON</button>
                         <label>Import JSON<input type="file" accept="application/json,.json" onChange={async (event) => {
                           const file = event.target.files?.[0];
@@ -5058,7 +5105,7 @@ export default function App() {
                           } catch (error) { alert(error instanceof Error ? error.message : "Invalid rotation file"); }
                           event.target.value = "";
                         }} /></label>
-                        <button type="button" disabled={!editedRotation} onClick={() => setEditedRotation(null)}>Reset default</button>
+                        <button type="button" disabled={!editedRotation} onClick={() => { setEditedRotation(null); setActiveRotationPresetId(""); }}>Reset default</button>
                       </div>
 
                       {/* ── BUFF-UPTIME TIMELINE SIMULATOR ── */}
@@ -5308,7 +5355,7 @@ export default function App() {
                   })()}
                   {gradModalActiveTab === "skill-editor" && (() => {
                     const p = skillEditorPreview;
-                    const timing = lookupTiming(editorSkillName);
+                    const timing = { ...lookupTiming(editorSkillName), ...timingOverrides[editorSkillName] };
                     const fields: { key: keyof SkillDefinition; label: string; step: number }[] = [
                       { key: "outerRatio", label: "Physical ratio", step: 0.01 },
                       { key: "eleRatio", label: "Element ratio", step: 0.01 },
@@ -5316,6 +5363,7 @@ export default function App() {
                       { key: "exCritDmg", label: "Extra Crit DMG", step: 0.01 },
                       { key: "exDmg", label: "Extra DMG%", step: 0.01 },
                       { key: "exPen", label: "Extra Pen", step: 0.1 },
+                      { key: "csBonus", label: "Charge / set bonus", step: 0.01 },
                     ];
                     const cells = p ? [
                       { label: "Abrasion", v: p.sim.grazeHit, b: p.base.grazeHit, color: "#8b949e" },
@@ -5356,7 +5404,7 @@ export default function App() {
                             const value = JSON.parse(await file.text());
                             const definition = value?.definition ?? value;
                             if (!definition || typeof definition !== "object") throw new Error("Invalid skill file");
-                            const allowed = ["outerRatio", "eleRatio", "fixed", "exCritDmg", "exDmg", "exPen"] as const;
+                            const allowed = ["outerRatio", "eleRatio", "fixed", "exCritDmg", "exDmg", "exPen", "csBonus", "isCharge"] as const;
                             const next: Partial<SkillDefinition> = {};
                             for (const key of allowed) if (definition[key] !== undefined && Number.isFinite(Number(definition[key]))) next[key] = Number(definition[key]);
                             if (!Object.keys(next).length) throw new Error("No supported coefficients found");
@@ -5387,10 +5435,7 @@ export default function App() {
                           <div className="bg-[#141619] border border-[#23262c] rounded-xl p-4">
                             <div className="text-[11px] uppercase tracking-widest text-slate-400 font-mono mb-3">Timing</div>
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-[12px]">
-                              <span><small className="block text-slate-500">Cast time</small><b>{timing.castTime.toFixed(2)}s</b></span>
-                              <span><small className="block text-slate-500">Hits</small><b>{timing.hits ?? 1}</b></span>
-                              <span><small className="block text-slate-500">Cooldown</small><b>{timing.cooldown ? `${timing.cooldown}s` : "None"}</b></span>
-                              <span><small className="block text-slate-500">Duration</small><b>{timing.duration ? `${timing.duration}s` : "Instant"}</b></span>
+                              {([['castTime', 'Cast time', 0.05], ['hits', 'Hits', 1], ['cooldown', 'Cooldown', 0.1], ['duration', 'Duration', 0.1]] as const).map(([key, label, step]) => <label key={key}><small className="block text-slate-500">{label}</small><input type="number" min="0" step={step} value={timing[key] ?? 0} onChange={(event) => { const value = Math.max(0, Number(event.target.value) || 0); setTimingOverrides((all) => ({ ...all, [editorSkillName]: { ...all[editorSkillName], [key]: value } })); }} className="w-full bg-[#111316] border border-[#23262c] rounded px-2 py-1 text-slate-100" /></label>)}
                             </div>
                           </div>
 
@@ -5410,6 +5455,7 @@ export default function App() {
                               );
                             })}
                           </div>
+                          <label className="flex items-center gap-2 text-[11px] text-slate-300"><input type="checkbox" checked={Boolean(editorOverrides?.isCharge ?? p.orig.isCharge)} onChange={(event) => setSkillField("isCharge", event.target.checked ? 1 : 0)} /> Charged-skill flag</label>
 
                           <p className="text-[11px] text-slate-500 leading-snug">
                             Classification fields (type / weapon-type / charge / set bonus) decide how the skill is bucketed and aren't safe to edit in v1. To make an edit affect rotation DPS you'd wire an override — a later phase.
@@ -5441,6 +5487,10 @@ export default function App() {
                                 className="flex-1 bg-[#111316] border border-[#23262c] rounded px-2 py-1 text-slate-100 text-[12.5px]">
                                 <option value="">— empty —</option>
                                 {characterProfiles.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                              </select>
+                              <select aria-label={`Member ${i + 1} path`} value={teamBuilds[i] || selectedBuild} onChange={e => setTeamBuilds(prev => prev.map((value, j) => j === i ? e.target.value : value))}
+                                className="max-w-40 bg-[#111316] border border-[#23262c] rounded px-2 py-1 text-slate-100 text-[11px]">
+                                {Object.entries(BUILD_PROFILES).map(([key, build]) => <option key={key} value={key}>{build.label}</option>)}
                               </select>
                               <span className="w-28 text-right text-[12.5px] font-bold text-slate-200">{m ? Math.round(m.dps).toLocaleString() + " /s" : "—"}</span>
                             </div>
