@@ -27,6 +27,11 @@ interface ArsenalWorkspaceProps {
   onEquip: (id: string) => void;
   onEdit: (id: string) => void;
   onAdd: () => void;
+  analysis: { slot: string; slotKey: string; name: string; score: number; dpsLoss: number; lossPct: number }[];
+  modeledDps: number;
+  onOpenCompare: () => void;
+  onOpenOptimizer: () => void;
+  onOpenTransmute: () => void;
 }
 
 export default function ArsenalWorkspace({
@@ -39,6 +44,11 @@ export default function ArsenalWorkspace({
   onEquip,
   onEdit,
   onAdd,
+  analysis,
+  modeledDps,
+  onOpenCompare,
+  onOpenOptimizer,
+  onOpenTransmute,
 }: ArsenalWorkspaceProps) {
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
@@ -55,6 +65,7 @@ export default function ArsenalWorkspace({
   const pageSize = 12;
   const pageCount = Math.max(1, Math.ceil(visibleRows.length / pageSize));
   const pageRows = visibleRows.slice((page - 1) * pageSize, page * pageSize);
+  const maxLoss = Math.max(1, ...analysis.map((item) => item.dpsLoss));
   useEffect(() => setPage(1), [activeSlot, query, sortBy]);
   useEffect(() => { if (page > pageCount) setPage(pageCount); }, [page, pageCount]);
 
@@ -85,6 +96,30 @@ export default function ArsenalWorkspace({
               {item && <em data-grade={item.grade}>{item.grade}</em>}
             </button>
           ))}
+        </div>
+      </section>
+
+      <section className="arsenal-analysis" aria-label="Equipped gear analysis">
+        <div className="product-section-heading">
+          <div><h2>Equipped gear analysis</h2><p>DPS lost when each equipped piece is removed from the current build.</p></div>
+          <strong>{Math.round(modeledDps).toLocaleString()} modeled DPS</strong>
+        </div>
+        <div className="arsenal-analysis-layout">
+          <div className="arsenal-contribution-list">
+            {analysis.map((item) => (
+              <button type="button" key={item.slotKey} onClick={() => onSlotChange(item.slotKey)}>
+                <span><strong>{item.slot}</strong><small>{item.name}</small></span>
+                <i><b style={{ width: `${Math.max(3, item.dpsLoss / maxLoss * 100)}%` }} /></i>
+                <span><strong>-{Math.round(item.dpsLoss).toLocaleString()}</strong><small>{item.lossPct.toFixed(2)}% DPS</small></span>
+              </button>
+            ))}
+          </div>
+          <div className="arsenal-analysis-actions">
+            <div><small>Weakest slot</small><strong>{analysis.at(-1)?.slot ?? "-"}</strong><span>{analysis.at(-1)?.score.toFixed(2) ?? "0.00"}% graduation contribution</span></div>
+            <button type="button" onClick={onOpenCompare}>Compare one replacement</button>
+            <button type="button" onClick={onOpenTransmute}>Retune advice</button>
+            <button type="button" className="is-primary" onClick={onOpenOptimizer}>Optimize full inventory</button>
+          </div>
         </div>
       </section>
 

@@ -3461,6 +3461,20 @@ export default function App() {
       if (left.score !== right.score) return right.score - left.score;
       return left.name.localeCompare(right.name);
     });
+  const equippedGear = activeGear.filter((item) => isItemEquipped(item, activeGear));
+  const gearAnalysis = equippedGear.map((item) => {
+    const removedRate = gradRateForGearCombo(equippedGear.filter((candidate) => candidate.id !== item.id));
+    const removedDps = removedRate / 100 * baselineScore / getRotationTimeForBuild(selectedBuild);
+    const dpsLoss = Math.max(0, rotationStats.dps - removedDps);
+    return {
+      slot: getSlotLabel(item.slot),
+      slotKey: item.slot,
+      name: item.name,
+      score: getGearItemCompareStats(item).totalGradDelta,
+      dpsLoss,
+      lossPct: rotationStats.dps ? dpsLoss / rotationStats.dps * 100 : 0,
+    };
+  }).sort((left, right) => right.dpsLoss - left.dpsLoss);
   const buildOptions = Object.entries(BUILD_PROFILES).map(([id, build]) => ({
     id,
     label: build.label,
@@ -3597,6 +3611,15 @@ export default function App() {
             if (item) openEditModal(item);
           }}
           onAdd={() => openAddModal(gearFilterSlot === "ALL" ? "Umbrella" : gearFilterSlot)}
+          analysis={gearAnalysis}
+          modeledDps={rotationStats.dps * dpsEff}
+          onOpenCompare={() => openProductTab("gear-compare")}
+          onOpenOptimizer={() => openProductTab("inventory-optimizer")}
+          onOpenTransmute={() => {
+            setWorkspace("analysis");
+            setGradModalActiveTab("transmute");
+            setIsGradModalOpen(true);
+          }}
         />
       )}
 
