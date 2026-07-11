@@ -7,7 +7,7 @@ const NAV = [
   { key: "details", label: "Details", icon: BarChart3 },
   { key: "gear-analyzer", label: "Gear Analyzer", icon: Boxes },
   { key: "gear-compare", label: "Gear Compare", icon: SlidersHorizontal },
-  { key: "inventory-optimizer", label: "Inventory Optimizer", icon: Layers3 },
+  { key: "inventory-optimizer", label: "Best Build", icon: Layers3 },
   { key: "simulation", label: "Simulation", icon: Dice5 },
   { key: "team", label: "Team", icon: Users },
   { key: "rotations", label: "Rotations", icon: Repeat2 },

@@ -1,5 +1,13 @@
 import { useState } from "react";
-import { Activity, Crosshair, Timer } from "lucide-react";
+import { Activity, Crosshair, Sparkles, Target, Timer, TrendingUp } from "lucide-react";
+
+interface RankedOption {
+  name: string;
+  value: number;
+  detail: string;
+  active?: boolean;
+  verified?: boolean;
+}
 
 interface CombatWorkspaceProps {
   ceiling: number;
@@ -12,6 +20,10 @@ interface CombatWorkspaceProps {
   enemy: { name: string; defense: number; physicalResistance: number; attributeResistance: number };
   stats: { label: string; menu: string; combat: string; derived?: boolean }[];
   skills: { name: string; count: number; damage: number; share: number }[];
+  innerWays: RankedOption[];
+  sets: RankedOption[];
+  rings: RankedOption[];
+  priorities: RankedOption[];
   onEfficiencyChange: (value: number) => void;
   onFoodChange: (value: boolean) => void;
 }
@@ -57,6 +69,26 @@ export default function CombatWorkspace(props: CombatWorkspaceProps) {
         )}
         {tab === "attributes" && <div className="combat-stat-table"><div><strong>Attribute</strong><strong>Menu</strong><strong>Combat</strong></div>{props.stats.map((stat) => <div key={stat.label} className={stat.derived ? "is-derived" : ""}><span>{stat.label}</span><span>{stat.menu}</span><strong>{stat.combat}</strong></div>)}</div>}
         {tab === "skills" && <div className="combat-skill-table"><div><strong>Skill</strong><strong>Casts</strong><strong>Damage</strong><strong>Share</strong></div>{props.skills.map((skill, index) => <div key={`${skill.name}-${index}`}><span>{skill.name}</span><span>{skill.count}</span><span>{Math.round(skill.damage).toLocaleString()}</span><strong>{skill.share.toFixed(1)}%</strong></div>)}</div>}
+      </section>
+
+      <section className="details-dashboard" aria-label="Build optimization summary">
+        <article>
+          <header><Sparkles size={18} aria-hidden="true" /><div><h2>Inner Ways</h2><p>Measured contribution from active attribute effects.</p></div></header>
+          <div className="details-ranked-list">
+            {props.innerWays.length ? props.innerWays.map((item) => <span key={item.name}><strong>{item.name}</strong><small>{item.detail}</small><b>{item.value >= 0 ? "+" : ""}{Math.round(item.value).toLocaleString()} DPS</b></span>) : <em>No Inner Ways selected.</em>}
+          </div>
+        </article>
+        <article>
+          <header><Target size={18} aria-hidden="true" /><div><h2>Set and ring choices</h2><p>Current build compared with available modeled options.</p></div></header>
+          <div className="details-choice-group"><small>Weapon set</small>{props.sets.slice(0, 5).map((item) => <span key={item.name} className={item.active ? "is-active" : ""}><strong>{item.name}{item.active ? " (current)" : ""}</strong><b>{Math.round(item.value).toLocaleString()} DPS</b><em>{item.detail}</em></span>)}</div>
+          <div className="details-choice-group"><small>Ring</small>{props.rings.map((item) => <span key={item.name} className={item.active ? "is-active" : ""}><strong>{item.name}{item.active ? " (current)" : ""}</strong><b>{Math.round(item.value).toLocaleString()} DPS</b></span>)}</div>
+        </article>
+        <article>
+          <header><TrendingUp size={18} aria-hidden="true" /><div><h2>Stat priority</h2><p>Damage gained from one additional Global max roll.</p></div></header>
+          <div className="details-priority-list">
+            {props.priorities.slice(0, 10).map((item, index) => <span key={item.name}><i>{index + 1}</i><strong>{item.name}</strong><small>{item.detail}</small><b>+{Math.round(item.value).toLocaleString()}</b></span>)}
+          </div>
+        </article>
       </section>
     </main>
   );

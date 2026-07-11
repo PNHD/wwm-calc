@@ -54,6 +54,7 @@ import CombatWorkspace from "./product/workspaces/CombatWorkspace";
 import OptimizeWorkspace from "./product/workspaces/OptimizeWorkspace";
 import { engine2Dps, BUILD_TO_WWM } from "./utils/engine2";
 import { ROTATIONS_WWM } from "./data/rotationsWWM";
+import { lookupTiming } from "./data/skillTiming";
 
 // Constants
 const PATH_ICONS: Record<string, string> = {
@@ -3311,59 +3312,6 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [teamMemberIds, profiles, teamVuln, teamRevelry, bossHp, adjustedPanel, activeTier, datang, yishui, selectedBuild, iwStats, baselineScore]);
 
-  const statPriorities = useMemo(() => {
-    const baseDmg = rotationStats.totalDmg;
-    if (baseDmg <= 0) return [];
-
-    // Define increments for testing marginal gains
-    const increments = [
-      { key: "maxOuter", label: "Physical Atk (Phys Atk)", value: 10, bonusLabel: "+10 Atk", color: "from-[#e6c200] to-[#f0b400]" },
-      { key: "outerPen", label: "Physical Penetration (Phys Pen %)", value: 1.0, bonusLabel: "+1.0%", color: "from-red-600 to-rose-500" },
-      { key: "crit", label: "Critical Rate (Crit Rate %)", value: 1.0, bonusLabel: "+1.0%", color: "from-orange-500 to-orange-400" },
-      { key: "critDmg", label: "Critical Damage (Crit DMG %)", value: 1.0, bonusLabel: "+1.0%", color: "from-yellow-600 to-yellow-500" },
-      { key: "aff", label: "Affinity Rate (Affinity %)", value: 1.0, bonusLabel: "+1.0%", color: "from-indigo-500 to-indigo-400" },
-      { key: "maxPz", label: "Bamboocut Atk (Bamboocut Atk)", value: 10, bonusLabel: "+10 Atk", color: "from-emerald-600 to-emerald-500" },
-      { key: "pzPen", label: "Bamboocut Penetration (Bamboocut Pen %)", value: 1.0, bonusLabel: "+1.0%", color: "from-teal-500 to-teal-400" },
-      { key: "pzDmg", label: "Bamboocut DMG Boost (Bamboocut DMG %)", value: 1.0, bonusLabel: "+1.0%", color: "from-cyan-500 to-cyan-400" },
-    ];
-
-    const results = increments.map((inc) => {
-      const cloned = { ...adjustedPanel };
-      
-      if (inc.key === "maxOuter") {
-        cloned.maxOuter += inc.value;
-        cloned.minOuter += inc.value / 2;
-      } else if (inc.key === "maxPz") {
-        cloned.maxPz += inc.value;
-        cloned.minPz += inc.value / 2;
-      } else {
-        (cloned as any)[inc.key] += inc.value;
-      }
-
-      const newDmg = computeTotalDamage(cloned);
-      const gain = Math.max(0, newDmg - baseDmg);
-      const gainPerUnit = gain / inc.value;
-
-      return {
-        ...inc,
-        gain,
-        gainPerUnit,
-      };
-    });
-
-    const maxGain = Math.max(...results.map((r) => r.gainPerUnit));
-
-    return results
-      .map((r) => {
-        const relative = maxGain > 0 ? (r.gainPerUnit / maxGain) * 100 : 0;
-        return {
-          ...r,
-          relative,
-        };
-      })
-      .sort((a, b) => b.gainPerUnit - a.gainPerUnit);
-  }, [adjustedPanel, activeTier, datang, yishui, rotationStats.totalDmg]);
-
   // Handle OCR fast load
   const handleOcrResult = (scanned: Partial<PanelStats>) => {
     setPanel((prev) => ({
@@ -3525,6 +3473,11 @@ export default function App() {
     setActiveProductTab(tab);
     setIsGradModalOpen(false);
     setIsSimOpen(false);
+    setIsExportImportModalOpen(false);
+    setIsHelpOpen(false);
+    setIsGameImportOpen(false);
+    setIsBatchOcrModalOpen(false);
+    setIsXinfaModalOpen(false);
     if (tab === "gear-analyzer") setWorkspace("gear");
     else if (tab === "details") setWorkspace("simulation");
     else if (tab === "settings") setWorkspace("build");
@@ -3669,6 +3622,10 @@ export default function App() {
           enemy={{ name: activeTier.name, defense: activeTier.def, physicalResistance: activeTier.physRes, attributeResistance: activeTier.attrRes }}
           stats={combatStats}
           skills={rotationStats.items.map((item) => ({ name: translateSkillName(item.name), count: item.count, damage: item.total, share: rotationStats.totalDmg ? item.total / rotationStats.totalDmg * 100 : 0 })).sort((left, right) => right.damage - left.damage)}
+          innerWays={innerWayContrib.map((item) => ({ name: `${item.name} T${item.tier}`, value: item.lossDps, detail: `${item.lossPct.toFixed(2)}% of total` }))}
+          sets={armorSetCompare.map((item) => ({ name: item.name, value: item.dps, detail: item.modeled ? "Modeled" : "2-piece only", active: item.active, verified: item.modeled }))}
+          rings={bowCompare.map((item) => ({ name: item.label, value: item.dps, detail: `${item.delta >= 0 ? "+" : ""}${Math.round(item.delta).toLocaleString()} vs current`, active: item.active }))}
+          priorities={statPriorityList.gains.map((item) => ({ name: item.label, value: item.gainDps, detail: `One ${item.roll}${item.unit} roll` }))}
           onEfficiencyChange={setDpsEff}
           onFoodChange={setFood}
         />
@@ -5276,6 +5233,7 @@ export default function App() {
                   })()}
                   {gradModalActiveTab === "skill-editor" && (() => {
                     const p = skillEditorPreview;
+                    const timing = lookupTiming(editorSkillName);
                     const fields: { key: keyof SkillDefinition; label: string; step: number }[] = [
                       { key: "outerRatio", label: "Physical ratio", step: 0.01 },
                       { key: "eleRatio", label: "Element ratio", step: 0.01 },
@@ -5312,6 +5270,7 @@ export default function App() {
 
                       {p ? (
                         <>
+                          <div className="text-[11px] uppercase tracking-widest text-slate-400 font-mono">Damage preview <span className="normal-case tracking-normal">(per hit)</span></div>
                           <div className="grid grid-cols-4 gap-3">
                             {cells.map(c => {
                               const d = c.v - c.b;
@@ -5327,7 +5286,18 @@ export default function App() {
                             })}
                           </div>
 
+                          <div className="bg-[#141619] border border-[#23262c] rounded-xl p-4">
+                            <div className="text-[11px] uppercase tracking-widest text-slate-400 font-mono mb-3">Timing</div>
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-[12px]">
+                              <span><small className="block text-slate-500">Cast time</small><b>{timing.castTime.toFixed(2)}s</b></span>
+                              <span><small className="block text-slate-500">Hits</small><b>{timing.hits ?? 1}</b></span>
+                              <span><small className="block text-slate-500">Cooldown</small><b>{timing.cooldown ? `${timing.cooldown}s` : "None"}</b></span>
+                              <span><small className="block text-slate-500">Duration</small><b>{timing.duration ? `${timing.duration}s` : "Instant"}</b></span>
+                            </div>
+                          </div>
+
                           <div className="bg-[#141619] border border-[#23262c] rounded-xl p-4 grid grid-cols-2 gap-3">
+                            <div className="col-span-2 text-[11px] uppercase tracking-widest text-slate-400 font-mono">Coefficients &amp; modifiers</div>
                             {fields.map(f => {
                               const val = (editorOverrides?.[f.key] ?? p.orig[f.key]) as number;
                               const changed = !!editorOverrides && editorOverrides[f.key] !== undefined && editorOverrides[f.key] !== p.orig[f.key];
