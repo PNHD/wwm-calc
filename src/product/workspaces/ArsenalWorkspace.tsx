@@ -29,6 +29,7 @@ interface ArsenalWorkspaceProps {
   onAdd: () => void;
   analysis: { slot: string; slotKey: string; name: string; score: number; dpsLoss: number; lossPct: number }[];
   modeledDps: number;
+  priorities: { name: string; dps: number }[];
   onOpenCompare: () => void;
   onOpenOptimizer: () => void;
   onOpenTransmute: () => void;
@@ -46,6 +47,7 @@ export default function ArsenalWorkspace({
   onAdd,
   analysis,
   modeledDps,
+  priorities,
   onOpenCompare,
   onOpenOptimizer,
   onOpenTransmute,
@@ -66,6 +68,17 @@ export default function ArsenalWorkspace({
   const pageCount = Math.max(1, Math.ceil(visibleRows.length / pageSize));
   const pageRows = visibleRows.slice((page - 1) * pageSize, page * pageSize);
   const maxLoss = Math.max(1, ...analysis.map((item) => item.dpsLoss));
+  const advisedItem = rows.find((row) => row.equipped && row.slot === activeSlot) ?? rows.find((row) => row.equipped);
+  const rank = (name: string) => {
+    const key = name.toLowerCase().replace(/[^a-z]/g, "");
+    const index = priorities.findIndex((item) => {
+      const candidate = item.name.toLowerCase().replace(/[^a-z]/g, "");
+      return candidate.includes(key) || key.includes(candidate);
+    });
+    return index < 0 ? priorities.length + 1 : index;
+  };
+  const weakestSub = advisedItem?.subs.filter((sub) => !sub.tuned).sort((a, b) => rank(b.type) - rank(a.type))[0];
+  const bestMissing = priorities.find((priority) => !advisedItem?.subs.some((sub) => rank(sub.type) === priorities.indexOf(priority)));
   useEffect(() => setPage(1), [activeSlot, query, sortBy]);
   useEffect(() => { if (page > pageCount) setPage(pageCount); }, [page, pageCount]);
 
@@ -116,6 +129,8 @@ export default function ArsenalWorkspace({
           </div>
           <div className="arsenal-analysis-actions">
             <div><small>Weakest slot</small><strong>{analysis.at(-1)?.slot ?? "-"}</strong><span>{analysis.at(-1)?.score.toFixed(2) ?? "0.00"}% graduation contribution</span></div>
+            {advisedItem && <div><small>Reroll advisor</small><strong>{advisedItem.name}</strong><span>{weakestSub && bestMissing ? `${weakestSub.type} -> ${bestMissing.name} (about +${Math.round(bestMissing.dps).toLocaleString()} DPS/roll)` : "No clear reroll upgrade from current priority data."}</span></div>}
+            {advisedItem && <button type="button" onClick={() => onEdit(advisedItem.id)}>Edit selected gear</button>}
             <button type="button" onClick={onOpenCompare}>Compare one replacement</button>
             <button type="button" onClick={onOpenTransmute}>Retune advice</button>
             <button type="button" className="is-primary" onClick={onOpenOptimizer}>Optimize full inventory</button>

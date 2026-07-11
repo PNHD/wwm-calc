@@ -15,6 +15,10 @@ interface BuildWorkspaceProps {
   armorSets: { id: string; label: string }[];
   ring: string;
   calibrated: boolean;
+  food: boolean;
+  efficiency: number;
+  tier: string;
+  tiers: { id: string; label: string }[];
   equipped: { slot: string; name: string; image: string }[];
   innerWays: (SelectedInnerWay | null)[];
   innerWayOptions: InnerWayOption[];
@@ -24,6 +28,9 @@ interface BuildWorkspaceProps {
   onApplySets: () => void;
   onRingChange: (id: string) => void;
   onCalibrate: () => void;
+  onFoodChange: (value: boolean) => void;
+  onEfficiencyChange: (value: number) => void;
+  onTierChange: (value: string) => void;
   onInnerWayChange: (index: number, id: string) => void;
   onInnerWayTierChange: (id: string, tier: number) => void;
 }
@@ -60,6 +67,16 @@ export default function BuildWorkspace(props: BuildWorkspaceProps) {
           <section className="build-summary-band">
             <div><small>Selected path</small><strong>{current.label}</strong><span>{current.weapons}</span></div>
             <p>{props.buildNotes}</p>
+          </section>
+
+          <section className="build-config-section">
+            <div className="product-section-heading"><div><h2>Combat settings</h2><p>Global assumptions used by Details, Simulation, Team and optimization.</p></div></div>
+            <div className="build-control-grid">
+              <label><span>Target tier</span><select value={props.tier} onChange={(event) => props.onTierChange(event.target.value)}>{props.tiers.map((tier) => <option key={tier.id} value={tier.id}>{tier.label}</option>)}</select></label>
+              <label className="product-switch"><input type="checkbox" checked={props.food} onChange={(event) => props.onFoodChange(event.target.checked)} /><span aria-hidden="true" /><strong>Food bonus<small>Uses the selected tier's verified ATK values</small></strong></label>
+              <label className="combat-efficiency"><span>Execution efficiency <strong>{Math.round(props.efficiency * 100)}%</strong></span><input type="range" min="50" max="100" value={Math.round(props.efficiency * 100)} onChange={(event) => props.onEfficiencyChange(Number(event.target.value) / 100)} /></label>
+              <button type="button" onClick={props.onCalibrate}><Gauge size={16} aria-hidden="true" /> {props.calibrated ? "Recalibrate panel" : "Calibrate from game"}</button>
+            </div>
           </section>
 
           <section className="build-config-section">

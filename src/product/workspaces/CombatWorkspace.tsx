@@ -26,6 +26,7 @@ interface CombatWorkspaceProps {
   priorities: RankedOption[];
   onEfficiencyChange: (value: number) => void;
   onFoodChange: (value: boolean) => void;
+  onConfigure: () => void;
 }
 
 export default function CombatWorkspace(props: CombatWorkspaceProps) {
@@ -73,13 +74,13 @@ export default function CombatWorkspace(props: CombatWorkspaceProps) {
 
       <section className="details-dashboard" aria-label="Build optimization summary">
         <article>
-          <header><Sparkles size={18} aria-hidden="true" /><div><h2>Inner Ways</h2><p>Measured contribution from active attribute effects.</p></div></header>
+          <header><Sparkles size={18} aria-hidden="true" /><div><h2>Inner Ways</h2><p>Measured contribution from active attribute effects.</p></div><button type="button" onClick={props.onConfigure}>Configure</button></header>
           <div className="details-ranked-list">
             {props.innerWays.length ? props.innerWays.map((item) => <span key={item.name}><strong>{item.name}</strong><small>{item.detail}</small><b>{item.value >= 0 ? "+" : ""}{Math.round(item.value).toLocaleString()} DPS</b></span>) : <em>No Inner Ways selected.</em>}
           </div>
         </article>
         <article>
-          <header><Target size={18} aria-hidden="true" /><div><h2>Set and ring choices</h2><p>Current build compared with available modeled options.</p></div></header>
+          <header><Target size={18} aria-hidden="true" /><div><h2>Set and ring choices</h2><p>Current build compared with available modeled options.</p></div><button type="button" onClick={props.onConfigure}>Configure</button></header>
           <div className="details-choice-group"><small>Weapon set</small>{props.sets.slice(0, 5).map((item) => <span key={item.name} className={item.active ? "is-active" : ""}><strong>{item.name}{item.active ? " (current)" : ""}</strong><b>{Math.round(item.value).toLocaleString()} DPS</b><em>{item.detail}</em></span>)}</div>
           <div className="details-choice-group"><small>Ring</small>{props.rings.map((item) => <span key={item.name} className={item.active ? "is-active" : ""}><strong>{item.name}{item.active ? " (current)" : ""}</strong><b>{Math.round(item.value).toLocaleString()} DPS</b></span>)}</div>
         </article>

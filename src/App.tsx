@@ -56,6 +56,15 @@ import { engine2Dps, BUILD_TO_WWM } from "./utils/engine2";
 import { ROTATIONS_WWM } from "./data/rotationsWWM";
 import { lookupTiming } from "./data/skillTiming";
 
+const downloadJson = (name: string, value: unknown) => {
+  const url = URL.createObjectURL(new Blob([JSON.stringify(value, null, 2)], { type: "application/json" }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = name;
+  link.click();
+  URL.revokeObjectURL(url);
+};
+
 // Constants
 const PATH_ICONS: Record<string, string> = {
   "bellstrike-splendor": "https://static0.fextralifeimages.com/file/wherewindsmeet/8/8a/Bellstrike-splendor.png",
@@ -3522,6 +3531,15 @@ export default function App() {
         )}
         actions={(
           <>
+            <button type="button" onClick={() => {
+              const name = prompt("New profile name:");
+              if (!name?.trim()) return;
+              const now = Date.now();
+              const character: Character = { id: `char-${now}`, name: name.trim(), schemes: [{ id: `scheme-${now}`, name: "Scheme 1", panel: { ...panel }, gear: DEFAULT_GEAR.map((item) => ({ ...item })) }] };
+              const next = { ...charsData, chars: [...charsData.chars, character], activeCharId: character.id, activeSchemeId: character.schemes[0].id };
+              setCharsData(next);
+              localStorage.setItem("wwm_chars_v3", JSON.stringify(next));
+            }}>New profile</button>
             <button type="button" onClick={() => setIsGameImportOpen(true)}>Import game</button>
             <button type="button" onClick={() => setIsBatchOcrModalOpen(true)}>Scan gear</button>
             <button type="button" onClick={() => setIsExportImportModalOpen(true)}>Data</button>
@@ -3566,6 +3584,7 @@ export default function App() {
           onAdd={() => openAddModal(gearFilterSlot === "ALL" ? "Umbrella" : gearFilterSlot)}
           analysis={gearAnalysis}
           modeledDps={rotationStats.dps * dpsEff}
+          priorities={statPriorityList.gains.map((item) => ({ name: item.label, dps: item.gainDps }))}
           onOpenCompare={() => openProductTab("gear-compare")}
           onOpenOptimizer={() => openProductTab("inventory-optimizer")}
           onOpenTransmute={() => {
@@ -3587,6 +3606,10 @@ export default function App() {
           armorSets={ARMOR_SET_KEYS.map((id) => ({ id, label: getSetName(id) }))}
           ring={bowSelect}
           calibrated={Boolean(activeScheme?.baseOverride)}
+          food={food}
+          efficiency={dpsEff}
+          tier={tierKey}
+          tiers={Object.entries(TIERS).map(([id, tier]) => ({ id, label: tier.name }))}
           equipped={arsenalRows.filter((item) => item.equipped).map((item) => ({ slot: item.slotLabel, name: item.name, image: item.image }))}
           innerWays={selectedInnerWayViews}
           innerWayOptions={innerWayOptions}
@@ -3596,6 +3619,9 @@ export default function App() {
           onApplySets={applySetToAll}
           onRingChange={setBowSelect}
           onCalibrate={() => setCalibOpen(true)}
+          onFoodChange={setFood}
+          onEfficiencyChange={setDpsEff}
+          onTierChange={setTierKey}
           onInnerWayChange={(index, id) => {
             const next = [...selectedInnerWays];
             if (!id) next.splice(index, 1);
@@ -3628,6 +3654,7 @@ export default function App() {
           priorities={statPriorityList.gains.map((item) => ({ name: item.label, value: item.gainDps, detail: `One ${item.roll}${item.unit} roll` }))}
           onEfficiencyChange={setDpsEff}
           onFoodChange={setFood}
+          onConfigure={() => openProductTab("settings")}
         />
       )}
 
@@ -4985,6 +5012,21 @@ export default function App() {
                           Optional theorycraft only. Change cast <b>count</b> if you want to test a custom <b className="text-[#f0b400]">{buildLabel}</b> rotation; the default counts already drive the headline DPS. Window is fixed at <b>{rotWindow.toFixed(1)}s</b>.
                         </p>
                       </div>
+                      <div className="analysis-file-actions" aria-label="Manage rotation">
+                        <button type="button" onClick={() => setEditedRotation(getRotationForBuild(selectedBuild).map((item) => ({ ...item })))}>Create custom rotation</button>
+                        <button type="button" onClick={() => downloadJson(`${selectedBuild}-rotation.json`, effectiveRotation)}>Export JSON</button>
+                        <label>Import JSON<input type="file" accept="application/json,.json" onChange={async (event) => {
+                          const file = event.target.files?.[0];
+                          if (!file) return;
+                          try {
+                            const value = JSON.parse(await file.text());
+                            if (!Array.isArray(value) || value.some((item) => typeof item?.name !== "string" || !Number.isFinite(Number(item?.count)))) throw new Error("Invalid rotation file");
+                            setEditedRotation(value.map((item) => ({ ...item, count: Math.max(0, Number(item.count)) })));
+                          } catch (error) { alert(error instanceof Error ? error.message : "Invalid rotation file"); }
+                          event.target.value = "";
+                        }} /></label>
+                        <button type="button" disabled={!editedRotation} onClick={() => setEditedRotation(null)}>Reset default</button>
+                      </div>
 
                       {/* ── BUFF-UPTIME TIMELINE SIMULATOR ── */}
                       {(() => {
@@ -5267,6 +5309,25 @@ export default function App() {
                         <button onClick={() => setEditorOverrides(null)} disabled={!editorOverrides}
                           className="text-[12px] px-3 py-1.5 rounded border border-[#23262c] text-slate-300 disabled:opacity-40 hover:border-[#f0b400]/50">Reset coefficients</button>
                       </div>
+                      <div className="analysis-file-actions" aria-label="Manage skill">
+                        <button type="button" onClick={() => setEditorOverrides({})}>Create editable copy</button>
+                        <button type="button" disabled={!p} onClick={() => p && downloadJson(`${translateSkillName(editorSkillName)}.json`, { name: editorSkillName, definition: p.edited })}>Export JSON</button>
+                        <label>Import JSON<input type="file" accept="application/json,.json" onChange={async (event) => {
+                          const file = event.target.files?.[0];
+                          if (!file) return;
+                          try {
+                            const value = JSON.parse(await file.text());
+                            const definition = value?.definition ?? value;
+                            if (!definition || typeof definition !== "object") throw new Error("Invalid skill file");
+                            const allowed = ["outerRatio", "eleRatio", "fixed", "exCritDmg", "exDmg", "exPen"] as const;
+                            const next: Partial<SkillDefinition> = {};
+                            for (const key of allowed) if (definition[key] !== undefined && Number.isFinite(Number(definition[key]))) next[key] = Number(definition[key]);
+                            if (!Object.keys(next).length) throw new Error("No supported coefficients found");
+                            setEditorOverrides(next);
+                          } catch (error) { alert(error instanceof Error ? error.message : "Invalid skill file"); }
+                          event.target.value = "";
+                        }} /></label>
+                      </div>
 
                       {p ? (
                         <>
@@ -5380,6 +5441,17 @@ export default function App() {
                           <div className="text-[10px] uppercase tracking-widest text-[#a19683] font-mono">Kill time</div>
                           <div className="text-[20px] font-bold text-slate-100 leading-tight">{teamSim.killTime > 0 ? teamSim.killTime.toFixed(1) + "s" : "—"}</div>
                           <div className="text-[11px] text-slate-400">boss {(bossHp / 1e6).toFixed(2)}M</div>
+                        </div>
+                      </div>
+
+                      <div className="team-timeline">
+                        <div><strong>Team damage over time</strong><small>Cumulative damage against the selected boss</small></div>
+                        <div className="team-timeline-bars">
+                          {[0, .2, .4, .6, .8, 1].map((point) => {
+                            const seconds = teamSim.killTime * point;
+                            const damage = Math.min(bossHp, teamSim.teamDps * seconds);
+                            return <span key={point}><i style={{ height: `${Math.max(2, point * 100)}%` }} /><b>{seconds.toFixed(1)}s</b><small>{(damage / 1e6).toFixed(2)}M</small></span>;
+                          })}
                         </div>
                       </div>
 
@@ -6953,6 +7025,27 @@ export default function App() {
               <span className="close-btn" onClick={() => setIsExportImportModalOpen(false)}>&times;</span>
             </div>
             <div className="modal-body export-import-body" style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+              <div className="profile-manager">
+                <label><span>Active profile</span><select value={charsData.activeCharId ?? ""} onChange={(event) => {
+                  const character = charsData.chars.find((item) => item.id === event.target.value);
+                  const next = { ...charsData, activeCharId: character?.id ?? null, activeSchemeId: character?.schemes[0]?.id ?? null };
+                  setCharsData(next); localStorage.setItem("wwm_chars_v3", JSON.stringify(next));
+                }}>{charsData.chars.map((character) => <option key={character.id} value={character.id}>{character.name}</option>)}</select></label>
+                <button type="button" onClick={() => {
+                  if (!activeChar) return;
+                  const now = Date.now();
+                  const copy: Character = { ...activeChar, id: `char-${now}`, name: `${activeChar.name} Copy`, schemes: activeChar.schemes.map((scheme, index) => ({ ...scheme, id: `scheme-${now}-${index}`, gear: scheme.gear.map((item) => ({ ...item })) })) };
+                  const next = { ...charsData, chars: [...charsData.chars, copy], activeCharId: copy.id, activeSchemeId: copy.schemes[0]?.id ?? null };
+                  setCharsData(next); localStorage.setItem("wwm_chars_v3", JSON.stringify(next));
+                }}>Duplicate</button>
+                <button type="button" disabled={charsData.chars.length <= 1} onClick={() => {
+                  if (!activeChar || charsData.chars.length <= 1 || !confirm(`Delete ${activeChar.name}?`)) return;
+                  const chars = charsData.chars.filter((item) => item.id !== activeChar.id);
+                  const next = { ...charsData, chars, activeCharId: chars[0].id, activeSchemeId: chars[0].schemes[0]?.id ?? null };
+                  setCharsData(next); localStorage.setItem("wwm_chars_v3", JSON.stringify(next));
+                }}>Delete</button>
+                <small>Changes save automatically on this device.</small>
+              </div>
               <div style={{ marginBottom: 10, padding: "8px 12px", background: "rgba(88,166,255,0.08)", border: "1px solid rgba(88,166,255,0.25)", borderRadius: 8, fontSize: 12, color: "#adbac7", lineHeight: 1.55 }}>
                 <b style={{ color: "#58a6ff" }}>How to share your build</b><br />
                 1. Click <b>Export Data</b> — your full build (gear, stats, inner ways) is copied to the clipboard as text.<br />
