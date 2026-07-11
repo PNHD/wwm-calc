@@ -3473,6 +3473,7 @@ export default function App() {
       category: innerWay.cat,
       trigger: formatIwTrigger(innerWay.trigger),
       effect: innerWay.tiers.find((tier) => tier.tier === (innerWayTiers[innerWay.id] ?? 6))?.effect ?? innerWay.desc,
+      recommended: Boolean(innerWay.recommended),
     }));
   const selectedInnerWayViews = [0, 1, 2, 3].map((index) => {
     const id = selectedInnerWays[index];
@@ -3621,7 +3622,7 @@ export default function App() {
           food={food}
           enemy={{ name: activeTier.name, defense: activeTier.def, physicalResistance: activeTier.physRes, attributeResistance: activeTier.attrRes }}
           stats={combatStats}
-          skills={rotationStats.items.map((item) => ({ name: item.name, count: item.count, damage: item.total, share: rotationStats.totalDmg ? item.total / rotationStats.totalDmg * 100 : 0 })).sort((left, right) => right.damage - left.damage)}
+          skills={rotationStats.items.map((item) => ({ name: translateSkillName(item.name), count: item.count, damage: item.total, share: rotationStats.totalDmg ? item.total / rotationStats.totalDmg * 100 : 0 })).sort((left, right) => right.damage - left.damage)}
           onEfficiencyChange={setDpsEff}
           onFoodChange={setFood}
         />
@@ -3944,7 +3945,7 @@ export default function App() {
                         <div className="ga-card__badges">
                           {hasTuned && <span className="ga-card__badge ga-card__badge--tuned">Tuned</span>}
                           {item.mastery !== undefined && (
-                            <span className="ga-card__badge" style={{ background: 'rgba(255,215,0,0.12)', color: '#d4b24a', borderColor: 'rgba(255,215,0,0.3)' }} title="Martial Mastery (武学修为)">MM {item.mastery}</span>
+                            <span className="ga-card__badge" style={{ background: 'rgba(255,215,0,0.12)', color: '#d4b24a', borderColor: 'rgba(255,215,0,0.3)' }} title="Martial Mastery">MM {item.mastery}</span>
                           )}
                         </div>
                         <span className={`ga-card__delta ${totalGradDelta >= 0 ? "is-up" : "is-down"}`}>
@@ -4591,7 +4592,7 @@ export default function App() {
 
               <h3 style={{ color: '#f0b400', margin: '14px 0 6px' }}>6 · More tools</h3>
               <ul style={{ marginTop: 0, paddingLeft: 18 }}>
-                <li><b>Transmute Advice</b> — per-slot best main + sub config to raise graduation via transmute (转律).</li>
+                <li><b>Transmute Advice</b> — per-slot best primary and additional substat configuration.</li>
                 <li><b>BiS Gear</b> — per-slot ideal set + main-stat + top substats for your build.</li>
                 <li><b>Cultivate</b> — substat summary, which tuned (✦) lines to upgrade, next 8 substats to invest in.</li>
                 <li><b>Damage Statistics</b> / <b>Simulate</b> — damage split by hit type, and a Monte-Carlo parse showing DPS variance.</li>
@@ -4708,8 +4709,8 @@ export default function App() {
         const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
         const setName = (adjustedPanel.set && adjustedPanel.set !== "none") ? cap(adjustedPanel.set) : null;
         const buffChips = [
-          datang && "大唐 Datang",
-          yishui && "一水 Yishui",
+          datang && "Datang",
+          yishui && "Yishui",
           (adjustedPanel as any).weaponStars && "Stars Align",
           food && "Food Buff",
           setName && `Set: ${setName}`,
@@ -4768,8 +4769,8 @@ export default function App() {
 
                 <p style={{ marginTop: 16, fontSize: 11.5, color: "#6e7681", lineHeight: 1.5 }}>
                   Expected damage split over one rotation by hit outcome. <b style={{ color: "#8b949e" }}>Critical</b> = crit hits,
-                  <b style={{ color: "#8b949e" }}> Affinity</b> = 会心 hits, <b style={{ color: "#8b949e" }}>Normal</b> = ordinary hits,
-                  <b style={{ color: "#8b949e" }}> Abrasion</b> = graze (擦伤) hits. Chips show the buffs this calculation assumes active.
+                  <b style={{ color: "#8b949e" }}> Affinity</b> = affinity hits, <b style={{ color: "#8b949e" }}>Normal</b> = ordinary hits,
+                  <b style={{ color: "#8b949e" }}> Abrasion</b> = graze hits. Chips show the buffs this calculation assumes active.
                 </p>
 
                 <details style={{ marginTop: 14 }}>
@@ -4942,9 +4943,9 @@ export default function App() {
                   {[
                     { key: "manual", label: "Manual Sheet", tip: "View and manually edit the full combat-attribute panel. Inputs are read-only when panel auto-computes from gear." },
                     { key: "priority", label: "Stat Priority", tip: "Which stats to add or drop to graduate fastest — shows the DPS gained per stat point." },
-                    { key: "cultivate", label: "Cultivate (beta)", tip: "Substat (条) summary, which tuned (✦) lines to upgrade, and the next 8 substats worth investing in." },
+                    { key: "cultivate", label: "Cultivate (beta)", tip: "Substat summary, tuned lines to upgrade, and the next 8 rolls worth investing in." },
                     { key: "compare", label: "Compare", tip: "Compare each equipped gear piece to see which one raises your graduation rate the most." },
-                    { key: "transmute", label: "Transmute Advice", tip: "Per-slot transmute (转律) suggestions: the optimal main + sub substat config to raise graduation." },
+                    { key: "transmute", label: "Transmute Advice", tip: "Per-slot suggestions for the best primary and additional substat configuration." },
                     { key: "bis", label: "BiS Gear", tip: "Per-slot ideal config for this build: recommended weapon set (updates live with your panel), main-stat, and the top substats to prioritise." },
                     { key: "best-build", label: "Best Build", tip: "Tries every combination of the gear you entered (equipped or spare), finds the highest-graduation set, and recommends the best ring for it." },
                     { key: "rotations", label: "Custom Rotation", tip: "Advanced: edit per-skill cast counts to theorycraft a custom rotation. Normal users can leave this alone." },
@@ -5230,8 +5231,8 @@ export default function App() {
                   {gradModalActiveTab === "skill-editor" && (() => {
                     const p = skillEditorPreview;
                     const fields: { key: keyof SkillDefinition; label: string; step: number }[] = [
-                      { key: "outerRatio", label: "Phys ratio (外攻倍率)", step: 0.01 },
-                      { key: "eleRatio", label: "Element ratio (元素倍率)", step: 0.01 },
+                      { key: "outerRatio", label: "Physical ratio", step: 0.01 },
+                      { key: "eleRatio", label: "Element ratio", step: 0.01 },
                       { key: "fixed", label: "Fixed damage", step: 1 },
                       { key: "exCritDmg", label: "Extra Crit DMG", step: 0.01 },
                       { key: "exDmg", label: "Extra DMG%", step: 0.01 },
@@ -5385,9 +5386,9 @@ export default function App() {
                           <b className="text-[#f0b400]/90">What the other tabs do:</b>
                           <ul className="list-disc pl-5 mt-1 space-y-0.5">
                             <li><b>Stat Priority</b> — which stats to add/drop to graduate fastest (shows DPS gained per stat).</li>
-                            <li><b>Cultivate</b> — substat (条) summary, which tuned (✦) lines to upgrade, and the next 8 substats worth investing in.</li>
+                            <li><b>Cultivate</b> — substat summary, tuned lines to upgrade, and the next 8 rolls worth investing in.</li>
                             <li><b>Compare</b> — compare each gear piece to see which raises graduation the most.</li>
-                            <li><b>Transmute Advice</b> — per-slot transmute (转律) suggestions: the optimal main + sub substat config to raise graduation.</li>
+                            <li><b>Transmute Advice</b> — per-slot suggestions for the best primary and additional substat configuration.</li>
                             <li><b>BiS Gear</b> — per-slot ideal config for the selected build: recommended weapon set (updates live with your panel), main-stat, and the top substats to prioritise.</li>
                             <li><b>Best Build</b> — tries every combination of the gear you entered (equipped or spare) and finds the set with the highest graduation rate, then lets you equip it.</li>
                             <li><b>Rotations</b> — edit per-skill cast counts and recompute DPS through the timeline engine (verified formula, only the cast mix changes).</li>
@@ -5643,7 +5644,7 @@ export default function App() {
                     Compare your current in-combat panel against the fully-graduated target panel.
                   </p>
                   <p className="text-amber-500/70 text-[11.5px] mt-1">
-                    ⓘ Caps = the verified 95下 (Global T91) graduated panel from the official sheet. Progress over 100% means you already exceed the graduated target for that stat. Five-attribute (Strength/Power/Agility) tiles track gear substats.
+                    Caps use the verified Global T91 graduated panel from the official sheet. Progress over 100% means you already exceed the target for that stat. Attribute tiles track gear substats.
                   </p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
@@ -5800,11 +5801,11 @@ export default function App() {
                   .reduce((s, [, v]) => s + (v || 0), 0);
                 const COUNT_CATS: { key: string; label: string; roll: number; sum: number }[] = [
                   { key: "maxOuter",  label: "Max Phys Atk",     roll: 63.8, sum: currentSubsSum["Max Phys Atk"] || 0 },
-                  { key: "strength",  label: "Strength (劲)",     roll: 40.4, sum: currentSubsSum["Strength"] || 0 },
+                  { key: "strength",  label: "Strength",     roll: 40.4, sum: currentSubsSum["Strength"] || 0 },
                   { key: "crit",      label: "Crit Rate",        roll: 7.4,  sum: currentSubsSum["Crit Rate"] || 0 },
-                  { key: "agility",   label: "Agility (敏)",      roll: 40.4, sum: currentSubsSum["Agility"] || 0 },
+                  { key: "agility",   label: "Agility",      roll: 40.4, sum: currentSubsSum["Agility"] || 0 },
                   { key: "prec",      label: "Precision",        roll: 6.6,  sum: currentSubsSum["Precision"] || 0 },
-                  { key: "power",     label: "Power (势)",        roll: 40.4, sum: currentSubsSum["Power"] || 0 },
+                  { key: "power",     label: "Power",        roll: 40.4, sum: currentSubsSum["Power"] || 0 },
                   { key: "aff",       label: "Affinity Rate",    roll: 3.6,  sum: currentSubsSum["Affinity Rate"] || 0 },
                   { key: "minOuter",  label: "Min Phys Atk",     roll: 63.8, sum: currentSubsSum["Min Phys Atk"] || 0 },
                   { key: "boss",      label: "Boss DMG",         roll: 2.6,  sum: currentSubsSum["Boss DMG%"] || 0 },
@@ -5952,7 +5953,7 @@ export default function App() {
                         </span>
                         <div className="text-3xl font-extrabold text-[#f0b400] font-serif mt-1 flex items-baseline gap-1.5">
                           <span>{totalProgressVal.toFixed(1)}</span>
-                          <span className="text-base font-sans font-normal text-slate-500">/ {totalTargetCount} 条</span>
+                          <span className="text-base font-sans font-normal text-slate-500">/ {totalTargetCount} rolls</span>
                         </div>
                       </div>
                       <div className="bg-[#181512] border border-[#23262c] rounded-xl p-5 flex flex-col justify-center">
@@ -5984,10 +5985,10 @@ export default function App() {
 
                             <div className="flex justify-between items-baseline font-mono text-base">
                               <span className="text-slate-250 font-bold">
-                                {tile.currentCount.toFixed(2)} 条
+                                {tile.currentCount.toFixed(2)} rolls
                               </span>
                               <span className="text-slate-500 font-medium">
-                                / {tile.targetCount} 条
+                                / {tile.targetCount} rolls
                               </span>
                             </div>
 
@@ -6010,14 +6011,14 @@ export default function App() {
 
                     {/* Note at bottom */}
                     <div className="bg-[#141619]/30 border border-[#23262c]/40 rounded-xl p-4 text-sm text-slate-500 leading-relaxed font-mono">
-                      Counts are in 条 (substat units): current = your gear's summed value ÷ the 95下 max roll; target = the verified 95下 (Global T91) graduated substat count for this path. Penetration is tuned/attuned (定音) — tracked separately.
+                      Counts are shown as substat units: current = your gear's summed value divided by the Global T91 maximum roll; target = the verified Global T91 graduation count for this path. Tuned penetration is tracked separately.
                     </div>
 
                     {/* ── STEP 2: 定音词条总结 (Tuned Substat Summary) ── */}
                     <div className="bg-[#181512] border border-[#23262c] rounded-xl p-5">
                       <div className="flex items-center justify-between mb-4 border-b border-[#23262c]/50 pb-3">
                         <h3 className="text-base font-bold font-serif text-slate-100">
-                          🎵 Tuned (定音) Substat Summary
+                          Tuned Substat Summary
                         </h3>
                         <div className="text-right">
                           <span className="text-[11px] uppercase tracking-wider text-slate-500 font-mono block">% of max</span>
@@ -6025,10 +6026,10 @@ export default function App() {
                         </div>
                       </div>
                       {dingyinRows.length === 0 ? (
-                        <p className="text-sm text-slate-500 font-mono">No tuned (定音) substats on equipped gear yet. Mark a substat as ✦ Tuned to track its upgrade potential.</p>
+                        <p className="text-sm text-slate-500 font-mono">No tuned substats on equipped gear yet. Mark one line as Tuned to track its upgrade potential.</p>
                       ) : (
                         <>
-                          <p className="text-[12px] text-slate-500 mb-3 font-mono">Tuned lines ranked by graduation-% gained if upgraded to the 95下 cap:</p>
+                          <p className="text-[12px] text-slate-500 mb-3 font-mono">Tuned lines ranked by graduation gained if upgraded to the Global T91 cap:</p>
                           <div className="flex flex-col gap-2">
                             {dingyinRows.map((row, idx) => (
                               <div key={idx} className="flex items-center justify-between gap-3 p-3 bg-white/[0.03] rounded-lg border-l-[3px] border-[#f0b400]">
@@ -6055,7 +6056,7 @@ export default function App() {
                     <div className="bg-[#141c16]/40 border border-emerald-950/40 rounded-xl p-5">
                       <div className="flex items-center justify-between mb-4 border-b border-emerald-900/40 pb-3">
                         <h3 className="text-base font-bold font-serif text-emerald-300">
-                          💡 Cultivation Advice — best next {CULT_BUDGET} 条
+                          Cultivation Advice — best next {CULT_BUDGET} rolls
                         </h3>
                         <div className="text-right">
                           <span className="text-[11px] uppercase tracking-wider text-slate-500 font-mono block">Reachable</span>
@@ -6081,7 +6082,7 @@ export default function App() {
                             ))}
                           </div>
                           <p className="text-[11px] text-slate-600 mt-3 font-mono">
-                            Each 条 = one max substat roll at 95下. Gains are diminishing (crit/affinity caps, pen breakpoints), so the allocation reflects real marginal value.
+                            Each unit is one maximum Global T91 substat roll. Diminishing returns and penetration breakpoints are included in the marginal value.
                           </p>
                         </>
                       )}
@@ -6529,7 +6530,7 @@ export default function App() {
                       <div className="text-[13px] text-[#8b949e] mb-3">
                         Ideal gear per slot for <b className="text-[#f0b400]">{cultivateClass}</b>.
                         Set is the current top DPS weapon set (updates with your panel); main-stat and
-                        substat priority come from the verified 95下 graduated build.
+                        substat priority come from the verified Global T91 graduated build.
                       </div>
                       <table className="w-full text-[13px]" style={{ borderCollapse: 'collapse' }}>
                         <thead>
@@ -6841,9 +6842,9 @@ export default function App() {
                   <div className="flex-column-gap8">
                     {formSubs.map((sub, sidx) => (
                       <React.Fragment key={sidx}>
-                        {sidx === 0 && <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Main Substat · 主词条</div>}
-                        {sidx === 1 && <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 6 }}>Sub Substats · 副词条</div>}
-                        {sidx === 5 && <div style={{ fontSize: 11, fontWeight: 700, color: '#f0b400', textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 6 }}>Tuned Substat · 定音 (tick ✦ on the tuned line)</div>}
+                        {sidx === 0 && <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Primary substat</div>}
+                        {sidx === 1 && <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 6 }}>Additional substats</div>}
+                        {sidx === 5 && <div style={{ fontSize: 11, fontWeight: 700, color: '#f0b400', textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 6 }}>Tuned substat (select one line)</div>}
                       <div className="flex-row" style={{ gap: '8px', alignItems: 'center' }}>
                         <SearchableSelect
                           value={sub.type}

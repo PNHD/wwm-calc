@@ -1,5 +1,5 @@
-import { Check, Pencil, Plus, Search } from "lucide-react";
-import { useState } from "react";
+import { Check, ChevronLeft, ChevronRight, Pencil, Plus, Search } from "lucide-react";
+import { useEffect, useState } from "react";
 
 export interface ArsenalRow {
   id: string;
@@ -41,6 +41,7 @@ export default function ArsenalWorkspace({
   onAdd,
 }: ArsenalWorkspaceProps) {
   const [query, setQuery] = useState("");
+  const [page, setPage] = useState(1);
   const equipped = slots
     .filter((slot) => slot.key !== "ALL")
     .map((slot) => ({ ...slot, item: rows.find((row) => row.slot === slot.key && row.equipped) }));
@@ -51,6 +52,11 @@ export default function ArsenalWorkspace({
       .includes(query.toLowerCase());
     return matchesSlot && matchesQuery;
   });
+  const pageSize = 12;
+  const pageCount = Math.max(1, Math.ceil(visibleRows.length / pageSize));
+  const pageRows = visibleRows.slice((page - 1) * pageSize, page * pageSize);
+  useEffect(() => setPage(1), [activeSlot, query, sortBy]);
+  useEffect(() => { if (page > pageCount) setPage(pageCount); }, [page, pageCount]);
 
   return (
     <main className="arsenal-workspace" id="main-content">
@@ -87,7 +93,7 @@ export default function ArsenalWorkspace({
           <div className="arsenal-slot-filter" role="group" aria-label="Filter by gear slot">
             {slots.map((slot) => (
               <button key={slot.key} type="button" className={activeSlot === slot.key ? "is-active" : ""} onClick={() => onSlotChange(slot.key)}>
-                {slot.label}
+                {slot.label}<small>{slot.key === "ALL" ? rows.length : rows.filter((row) => row.slot === slot.key).length}</small>
               </button>
             ))}
           </div>
@@ -101,47 +107,39 @@ export default function ArsenalWorkspace({
           </select>
         </div>
 
-        <div className="arsenal-table" role="table" aria-label="Gear inventory">
-          <div className="arsenal-table-head" role="row">
-            <span role="columnheader">Item</span>
-            <span role="columnheader">Set</span>
-            <span role="columnheader">Substats</span>
-            <span role="columnheader">Mastery</span>
-            <span role="columnheader">Grade</span>
-            <span role="columnheader"><span className="sr-only">Actions</span></span>
-          </div>
+        <div className="arsenal-results-heading"><span>{visibleRows.length} gear pieces</span><span>Page {page} of {pageCount}</span></div>
+        <div className="arsenal-card-grid" aria-label="Gear inventory">
           {visibleRows.length === 0 ? (
             <div className="arsenal-empty"><strong>No gear in this slot</strong><span>Add a piece or choose another slot.</span></div>
-          ) : visibleRows.map((row) => (
-            <div
+          ) : pageRows.map((row) => (
+            <article
               key={row.id}
-              className={`arsenal-table-row ${row.equipped ? "is-equipped" : ""}`}
-              role="row"
+              className={`arsenal-gear-card is-${row.quality} ${row.equipped ? "is-equipped" : ""}`}
               tabIndex={0}
               onClick={() => onEquip(row.id)}
               onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") onEquip(row.id); }}
             >
-              <span className="arsenal-item-cell" role="cell">
-                <span className={`arsenal-item-image is-${row.quality}`}><img src={row.image} alt="" /></span>
-                <span><strong>{row.name}</strong><small>{row.slotLabel}{row.weaponType ? ` / ${row.weaponType}` : ""}</small></span>
-                {row.equipped && <i><Check size={12} aria-hidden="true" /> Equipped</i>}
-              </span>
-              <span className="arsenal-set-cell" role="cell">{row.setName}</span>
-              <span className="arsenal-substats" role="cell">
+              <header>
+                <span className="arsenal-card-image"><img src={row.image} alt="" /></span>
+                <span><strong>{row.name}</strong><small>{row.slotLabel}{row.weaponType ? ` / ${row.weaponType}` : ""}</small><em>{row.setName}</em></span>
+                <span className="arsenal-card-grade"><strong>{row.grade}</strong><small>{row.score.toFixed(2)}%</small></span>
+              </header>
+              <div className="arsenal-card-substats">
                 {row.subs.slice(0, 4).map((sub, index) => (
                   <span key={`${sub.type}-${index}`}><small>{sub.type}{sub.tuned ? " *" : ""}</small><strong>{sub.value}</strong></span>
                 ))}
-              </span>
-              <span className="arsenal-mastery" role="cell">{row.mastery ?? "-"}</span>
-              <span className="arsenal-grade" role="cell" data-grade={row.grade}><strong>{row.grade}</strong><small>{row.score.toFixed(2)}%</small></span>
-              <span className="arsenal-row-actions" role="cell">
+              </div>
+              <footer>
+                <span>{row.equipped ? <><Check size={13} aria-hidden="true" /> Equipped</> : "Click to equip"}</span>
+                {row.mastery !== undefined && <span>MM {row.mastery}</span>}
                 <button type="button" title={`Edit ${row.name}`} aria-label={`Edit ${row.name}`} onClick={(event) => { event.stopPropagation(); onEdit(row.id); }}>
                   <Pencil size={16} aria-hidden="true" />
                 </button>
-              </span>
-            </div>
+              </footer>
+            </article>
           ))}
         </div>
+        {pageCount > 1 && <nav className="arsenal-pagination" aria-label="Gear pages"><button type="button" aria-label="Previous page" disabled={page === 1} onClick={() => setPage((value) => value - 1)}><ChevronLeft size={17} /></button><span>Page {page} / {pageCount}</span><button type="button" aria-label="Next page" disabled={page === pageCount} onClick={() => setPage((value) => value + 1)}><ChevronRight size={17} /></button></nav>}
       </section>
     </main>
   );
