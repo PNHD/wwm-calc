@@ -7068,6 +7068,11 @@ export default function App() {
                   const next = { ...charsData, activeCharId: character?.id ?? null, activeSchemeId: character?.schemes[0]?.id ?? null };
                   setCharsData(next); localStorage.setItem("wwm_chars_v3", JSON.stringify(next));
                 }}>{charsData.chars.map((character) => <option key={character.id} value={character.id}>{character.name}</option>)}</select></label>
+                <label><span>Profile name</span><input value={activeChar?.name ?? ""} onChange={(event) => {
+                  if (!activeChar || !event.target.value.trim()) return;
+                  const next = { ...charsData, chars: charsData.chars.map((character) => character.id === activeChar.id ? { ...character, name: event.target.value } : character) };
+                  setCharsData(next); localStorage.setItem("wwm_chars_v3", JSON.stringify(next));
+                }} /></label>
                 <button type="button" onClick={() => {
                   if (!activeChar) return;
                   const now = Date.now();
@@ -7081,6 +7086,7 @@ export default function App() {
                   const next = { ...charsData, chars, activeCharId: chars[0].id, activeSchemeId: chars[0].schemes[0]?.id ?? null };
                   setCharsData(next); localStorage.setItem("wwm_chars_v3", JSON.stringify(next));
                 }}>Delete</button>
+                <button type="button" onClick={() => localStorage.setItem("wwm_chars_v3", JSON.stringify(charsData))}>Save profile</button>
                 <small>Changes save automatically on this device.</small>
               </div>
               <div style={{ marginBottom: 10, padding: "8px 12px", background: "rgba(88,166,255,0.08)", border: "1px solid rgba(88,166,255,0.25)", borderRadius: 8, fontSize: 12, color: "#adbac7", lineHeight: 1.55 }}>
