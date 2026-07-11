@@ -49,6 +49,7 @@ import StatSwapSimulator from "./components/StatSwapSimulator";
 import SearchableSelect from "./components/SearchableSelect";
 import ProductShell, { type ProductTab } from "./product/ProductShell";
 import ArsenalWorkspace, { type ArsenalRow } from "./product/workspaces/ArsenalWorkspace";
+import GearCompareWorkspace, { type GearCompareRow } from "./product/workspaces/GearCompareWorkspace";
 import BuildWorkspace from "./product/workspaces/BuildWorkspace";
 import CombatWorkspace from "./product/workspaces/CombatWorkspace";
 import OptimizeWorkspace from "./product/workspaces/OptimizeWorkspace";
@@ -1231,7 +1232,7 @@ const getCustomConfig = () => {
 };
 
 export default function App() {
-  type Workspace = "gear" | "build" | "simulation" | "analysis";
+  type Workspace = "gear" | "build" | "simulation" | "analysis" | "compare";
   const [tierKey, setTierKey] = useState<string>(() => {
     const config = getCustomConfig();
     return config?.tierKey ?? "350|0.45";
@@ -1254,6 +1255,7 @@ export default function App() {
   // default so the right rail isn't an endless scroll.
   const [advPanelOpen, setAdvPanelOpen] = useState<boolean>(false);
   const [isGradModalOpen, setIsGradModalOpen] = useState<boolean>(false);
+  const [skillOverrides, setSkillOverrides] = useState<Record<string, Partial<SkillDefinition>>>({});
   const [gradModalActiveTab, setGradModalActiveTab] = useState<string>("manual");
   const [isDmgStatsOpen, setIsDmgStatsOpen] = useState<boolean>(false);
   const [isSimOpen, setIsSimOpen] = useState<boolean>(false);
@@ -2654,6 +2656,7 @@ export default function App() {
         buildKey: selectedBuild,
         weaponStars: (adjustedPanel as any).weaponStars,
         armorSet: (adjustedPanel as any).armorSet,
+        skillOverride: skillOverrides[item.name],
       } as any);
       totalDmg += total;
       comp.crit += breakdown.crit;
@@ -2687,7 +2690,7 @@ export default function App() {
       composition: comp,
       compositionPct: compPct,
     };
-  }, [adjustedPanel, activeTier, datang, yishui, selectedBuild, baselineScore]);
+  }, [adjustedPanel, activeTier, datang, yishui, selectedBuild, baselineScore, skillOverrides]);
 
   // ── Skill Damage Preview (read-only): per-cast damage by outcome ────────────
   const skillPreview = useMemo(() => {
@@ -3304,13 +3307,21 @@ export default function App() {
   // Team DPS = sum of each member's solo DPS (their saved profile panel run through
   // the current build's rotation) × optional team-wide buff multipliers. Kill time =
   // boss HP / team DPS. Placed AFTER getDynamicProfileStats (TDZ).
+  const characterProfiles = useMemo<SavedProfile[]>(() => charsData.chars.flatMap((character) => character.schemes.map((scheme) => ({
+    id: `${character.id}:${scheme.id}`,
+    name: `${character.name} / ${scheme.name}`,
+    timestamp: "Local character scheme",
+    panel: scheme.panel,
+    gradRate: 0,
+    dps: 0,
+  }))), [charsData]);
   const [teamMemberIds, setTeamMemberIds] = useState<string[]>(["", "", "", "", ""]);
   const [teamVuln, setTeamVuln] = useState<boolean>(false);
   const [teamRevelry, setTeamRevelry] = useState<boolean>(false);
   const [bossHp, setBossHp] = useState<number>(3500000);
   const teamSim = useMemo(() => {
     const active = teamMemberIds.map(id => {
-      const prof = id ? profiles.find(p => p.id === id) : undefined;
+      const prof = id ? characterProfiles.find(p => p.id === id) : undefined;
       return prof ? { id, name: prof.name, dps: getDynamicProfileStats(prof).dps } : null;
     }).filter(Boolean) as { id: string; name: string; dps: number }[];
     const soloSum = active.reduce((s, m) => s + m.dps, 0);
@@ -3319,7 +3330,7 @@ export default function App() {
     const killTime = teamDps > 0 ? bossHp / teamDps : 0;
     return { active, soloSum, buffMult, teamDps, killTime };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [teamMemberIds, profiles, teamVuln, teamRevelry, bossHp, adjustedPanel, activeTier, datang, yishui, selectedBuild, iwStats, baselineScore]);
+  }, [teamMemberIds, characterProfiles, teamVuln, teamRevelry, bossHp, adjustedPanel, activeTier, datang, yishui, selectedBuild, iwStats, baselineScore]);
 
   // Handle OCR fast load
   const handleOcrResult = (scanned: Partial<PanelStats>) => {
@@ -3419,6 +3430,12 @@ export default function App() {
       return left.name.localeCompare(right.name);
     });
   const equippedGear = activeGear.filter((item) => isItemEquipped(item, activeGear));
+  const compareRows: GearCompareRow[] = activeGear.map((item) => {
+    const score = getGearItemCompareStats(item).totalGradDelta;
+    const current = activeGear.find((candidate) => candidate.slot === item.slot && isItemEquipped(candidate, activeGear));
+    const currentScore = current ? getGearItemCompareStats(current).totalGradDelta : 0;
+    return { id: item.id, slot: item.slot, slotLabel: getSlotLabel(item.slot), name: item.name, image: (item.slot === "Umbrella" || item.slot === "Rope Dart") ? getWeaponIconUrlByType(item.weaponType, item.slot, selectedBuild) : SLOT_IMAGES[item.slot], setName: getSetName(item.set), subs: item.subs.map((sub) => ({ type: sub.type, value: sub.val, tuned: Boolean(sub.isTuned) })), score, delta: score - currentScore, equipped: current?.id === item.id };
+  });
   const gearAnalysis = equippedGear.map((item) => {
     const removedRate = gradRateForGearCombo(equippedGear.filter((candidate) => candidate.id !== item.id));
     const removedDps = removedRate / 100 * baselineScore / getRotationTimeForBuild(selectedBuild);
@@ -3487,13 +3504,14 @@ export default function App() {
     setIsGameImportOpen(false);
     setIsBatchOcrModalOpen(false);
     setIsXinfaModalOpen(false);
-    if (tab === "gear-analyzer") setWorkspace("gear");
+      if (tab === "gear-analyzer") setWorkspace("gear");
+    else if (tab === "gear-compare") setWorkspace("compare");
     else if (tab === "details") setWorkspace("simulation");
     else if (tab === "settings") setWorkspace("build");
     else if (tab === "simulation") { setWorkspace("simulation"); setIsSimOpen(true); }
     else if (tab === "profile") setIsExportImportModalOpen(true);
     else {
-      const tool = tab === "gear-compare" ? "compare" : tab === "inventory-optimizer" ? "best-build" : tab;
+      const tool = tab === "inventory-optimizer" ? "best-build" : tab;
       setWorkspace("analysis");
       setGradModalActiveTab(tool);
       setIsGradModalOpen(true);
@@ -3595,6 +3613,17 @@ export default function App() {
         />
       )}
 
+      {workspace === "compare" && (
+        <GearCompareWorkspace
+          rows={compareRows}
+          slots={[{ key: "Umbrella", label: "Weapon 1" }, { key: "Rope Dart", label: "Weapon 2" }, { key: "Helmet", label: "Helmet" }, { key: "Chest", label: "Chest" }, { key: "Bracers", label: "Hands" }, { key: "Greaves", label: "Legs" }, { key: "Disc", label: "Disc" }, { key: "Pendant", label: "Pendant" }]}
+          activeSlot={gearFilterSlot === "ALL" ? "Umbrella" : gearFilterSlot}
+          onSlotChange={setGearFilterSlot}
+          onEquip={(id) => { const item = activeGear.find((candidate) => candidate.id === id); if (item) toggleEquip(item); }}
+          onEdit={(id) => { const item = activeGear.find((candidate) => candidate.id === id); if (item) openEditModal(item); }}
+        />
+      )}
+
       {workspace === "build" && (
         <BuildWorkspace
           builds={buildOptions}
@@ -3609,7 +3638,9 @@ export default function App() {
           food={food}
           efficiency={dpsEff}
           tier={tierKey}
-          tiers={Object.entries(TIERS).map(([id, tier]) => ({ id, label: tier.name }))}
+          tiers={[...Object.entries(TIERS).map(([id, tier]) => ({ id, label: tier.name })), { id: "custom", label: "Custom target" }]}
+          customDef={customDef}
+          customRes={customRes}
           equipped={arsenalRows.filter((item) => item.equipped).map((item) => ({ slot: item.slotLabel, name: item.name, image: item.image }))}
           innerWays={selectedInnerWayViews}
           innerWayOptions={innerWayOptions}
@@ -3622,6 +3653,8 @@ export default function App() {
           onFoodChange={setFood}
           onEfficiencyChange={setDpsEff}
           onTierChange={setTierKey}
+          onCustomDefChange={setCustomDef}
+          onCustomResChange={setCustomRes}
           onInnerWayChange={(index, id) => {
             const next = [...selectedInnerWays];
             if (!id) next.splice(index, 1);
@@ -5308,6 +5341,10 @@ export default function App() {
                         </select>
                         <button onClick={() => setEditorOverrides(null)} disabled={!editorOverrides}
                           className="text-[12px] px-3 py-1.5 rounded border border-[#23262c] text-slate-300 disabled:opacity-40 hover:border-[#f0b400]/50">Reset coefficients</button>
+                        <button onClick={() => { if (editorSkillName && editorOverrides) setSkillOverrides((current) => ({ ...current, [editorSkillName]: editorOverrides })); }} disabled={!editorSkillName || !editorOverrides}
+                          className="text-[12px] px-3 py-1.5 rounded border border-emerald-500/40 text-emerald-300 disabled:opacity-40">Apply to rotation DPS</button>
+                        <button onClick={() => { if (editorSkillName) setSkillOverrides(({ [editorSkillName]: _removed, ...rest }) => rest); }} disabled={!skillOverrides[editorSkillName]}
+                          className="text-[12px] px-3 py-1.5 rounded border border-rose-500/40 text-rose-300 disabled:opacity-40">Remove rotation override</button>
                       </div>
                       <div className="analysis-file-actions" aria-label="Manage skill">
                         <button type="button" onClick={() => setEditorOverrides({})}>Create editable copy</button>
@@ -5403,7 +5440,7 @@ export default function App() {
                               <select value={id} onChange={e => setTeamMemberIds(prev => prev.map((x, j) => j === i ? e.target.value : x))}
                                 className="flex-1 bg-[#111316] border border-[#23262c] rounded px-2 py-1 text-slate-100 text-[12.5px]">
                                 <option value="">— empty —</option>
-                                {profiles.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                {characterProfiles.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                               </select>
                               <span className="w-28 text-right text-[12.5px] font-bold text-slate-200">{m ? Math.round(m.dps).toLocaleString() + " /s" : "—"}</span>
                             </div>

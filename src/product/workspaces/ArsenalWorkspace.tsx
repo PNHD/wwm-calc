@@ -54,6 +54,8 @@ export default function ArsenalWorkspace({
 }: ArsenalWorkspaceProps) {
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [rerollPath, setRerollPath] = useState("build");
   const equipped = slots
     .filter((slot) => slot.key !== "ALL")
     .map((slot) => ({ ...slot, item: rows.find((row) => row.slot === slot.key && row.equipped) }));
@@ -69,6 +71,7 @@ export default function ArsenalWorkspace({
   const pageRows = visibleRows.slice((page - 1) * pageSize, page * pageSize);
   const maxLoss = Math.max(1, ...analysis.map((item) => item.dpsLoss));
   const advisedItem = rows.find((row) => row.equipped && row.slot === activeSlot) ?? rows.find((row) => row.equipped);
+  const selectedItem = rows.find((row) => row.id === selectedId) ?? advisedItem;
   const rank = (name: string) => {
     const key = name.toLowerCase().replace(/[^a-z]/g, "");
     const index = priorities.findIndex((item) => {
@@ -111,6 +114,20 @@ export default function ArsenalWorkspace({
           ))}
         </div>
       </section>
+
+      {selectedItem && <section className="gear-inspector" aria-label="Selected gear analyzer">
+        <header><div><span className="product-kicker">Selected gear</span><h2>{selectedItem.name}</h2><p>{selectedItem.slotLabel} / {selectedItem.setName} / {selectedItem.quality}</p></div><strong>{selectedItem.grade}<small>{selectedItem.score.toFixed(2)}%</small></strong></header>
+        <div className="gear-inspector-layout">
+          <div className="gear-inspector-stats">{selectedItem.subs.slice(0, 6).map((sub, index) => <span key={`${sub.type}-${index}`}><i>{index + 1}</i><strong>{sub.type}{sub.tuned ? " (tuned)" : ""}</strong><b>{sub.value}</b></span>)}</div>
+          <div className="gear-inspector-advice"><small>Reroll calculator</small><label><span>Path</span><select value={rerollPath} onChange={(event) => setRerollPath(event.target.value)}><option value="build">{selectedItem.slotLabel} path</option><option value="bamboocut">Bamboocut path</option><option value="general">General path</option></select></label><strong>{weakestSub && bestMissing ? `${weakestSub.type} -> ${bestMissing.name}` : "No verified upgrade found"}</strong><span>{bestMissing ? `About +${Math.round(bestMissing.dps).toLocaleString()} DPS for one Global max roll.` : "Current lines already cover the ranked priorities."}</span></div>
+          <div className="gear-inspector-actions">
+            <button type="button" onClick={() => onEdit(selectedItem.id)}>Edit 6 stat lines</button>
+            <button type="button" onClick={() => onEquip(selectedItem.id)}>{selectedItem.equipped ? "Unequip" : "Equip this gear"}</button>
+            <button type="button" onClick={onOpenTransmute}>Retune / re-attune</button>
+            <button type="button" onClick={onOpenCompare}>Compare slot</button>
+          </div>
+        </div>
+      </section>}
 
       <section className="arsenal-analysis" aria-label="Equipped gear analysis">
         <div className="product-section-heading">
@@ -164,10 +181,10 @@ export default function ArsenalWorkspace({
           ) : pageRows.map((row) => (
             <article
               key={row.id}
-              className={`arsenal-gear-card is-${row.quality} ${row.equipped ? "is-equipped" : ""}`}
+              className={`arsenal-gear-card is-${row.quality} ${row.equipped ? "is-equipped" : ""} ${selectedItem?.id === row.id ? "is-selected" : ""}`}
               tabIndex={0}
-              onClick={() => onEquip(row.id)}
-              onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") onEquip(row.id); }}
+              onClick={() => setSelectedId(row.id)}
+              onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") setSelectedId(row.id); }}
             >
               <header>
                 <span className="arsenal-card-image"><img src={row.image} alt="" /></span>
@@ -175,12 +192,12 @@ export default function ArsenalWorkspace({
                 <span className="arsenal-card-grade"><strong>{row.grade}</strong><small>{row.score.toFixed(2)}%</small></span>
               </header>
               <div className="arsenal-card-substats">
-                {row.subs.slice(0, 4).map((sub, index) => (
+                {row.subs.slice(0, 6).map((sub, index) => (
                   <span key={`${sub.type}-${index}`}><small>{sub.type}{sub.tuned ? " *" : ""}</small><strong>{sub.value}</strong></span>
                 ))}
               </div>
               <footer>
-                <span>{row.equipped ? <><Check size={13} aria-hidden="true" /> Equipped</> : "Click to equip"}</span>
+                <button type="button" className="arsenal-equip-command" onClick={(event) => { event.stopPropagation(); onEquip(row.id); }}>{row.equipped ? <><Check size={13} aria-hidden="true" /> Equipped</> : "Equip"}</button>
                 {row.mastery !== undefined && <span>MM {row.mastery}</span>}
                 <button type="button" title={`Edit ${row.name}`} aria-label={`Edit ${row.name}`} onClick={(event) => { event.stopPropagation(); onEdit(row.id); }}>
                   <Pencil size={16} aria-hidden="true" />

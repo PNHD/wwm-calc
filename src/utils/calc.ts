@@ -428,7 +428,7 @@ export function calcSkill(
   rot: RotationItem,
   panel: PanelStats,
   tier: TierConstants,
-  opts: { set: string; datang: boolean; yishui: boolean; buildKey?: string; armorSet?: string; weaponStars?: boolean }
+  opts: { set: string; datang: boolean; yishui: boolean; buildKey?: string; armorSet?: string; weaponStars?: boolean; skillOverride?: Partial<SkillDefinition> }
 ) {
   let sk = SKILL_DB[rot.name];
   if (!sk) {
@@ -459,6 +459,7 @@ export function calcSkill(
   }
 
   if (!sk) return { perHit: 0, total: 0, breakdown: { crit: 0, aff: 0, normal: 0, abrasion: 0 }, sim: { pCrit: 0, pAff: 0, pWhite: 0, pGraze: 0, critHit: 0, affHit: 0, normHit: 0, grazeHit: 0, casts: 0 } };
+  if (opts.skillOverride) sk = { ...sk, ...opts.skillOverride };
 
   const set = opts.set;
   // Armor 4pc applies ALONGSIDE the weapon 4pc (the game allows one of each). When
