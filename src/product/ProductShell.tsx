@@ -4,16 +4,16 @@ import { BarChart3, Boxes, Dice5, FileText, FlaskConical, Layers3, Repeat2, Sett
 export type ProductTab = "details" | "gear-analyzer" | "gear-compare" | "inventory-optimizer" | "simulation" | "team" | "rotations" | "skill-editor" | "settings" | "profile";
 
 const NAV = [
-  { key: "details", label: "Details", icon: BarChart3 },
-  { key: "gear-analyzer", label: "Gear Analyzer", icon: Boxes },
-  { key: "gear-compare", label: "Gear Compare", icon: SlidersHorizontal },
-  { key: "inventory-optimizer", label: "Best Build", icon: Layers3 },
-  { key: "simulation", label: "Simulation", icon: Dice5 },
-  { key: "team", label: "Team", icon: Users },
-  { key: "rotations", label: "Rotations", icon: Repeat2 },
-  { key: "skill-editor", label: "Skill Editor", icon: FlaskConical },
-  { key: "settings", label: "Settings", icon: Settings },
-  { key: "profile", label: "Profile", icon: FileText },
+  { key: "details", label: "Details", hint: "Damage model", icon: BarChart3 },
+  { key: "gear-analyzer", label: "Gear Analyzer", hint: "Inventory", icon: Boxes },
+  { key: "gear-compare", label: "Gear Compare", hint: "Side by side", icon: SlidersHorizontal },
+  { key: "inventory-optimizer", label: "Best Build", hint: "Optimize", icon: Layers3 },
+  { key: "simulation", label: "Simulation", hint: "Combat output", icon: Dice5 },
+  { key: "team", label: "Team", hint: "Party plan", icon: Users },
+  { key: "rotations", label: "Rotations", hint: "Execution", icon: Repeat2 },
+  { key: "skill-editor", label: "Skill Editor", hint: "Theorycraft", icon: FlaskConical },
+  { key: "settings", label: "Settings", hint: "Assumptions", icon: Settings },
+  { key: "profile", label: "Profile", hint: "Import & save", icon: FileText },
 ] as const;
 
 interface ProductShellProps {
@@ -36,11 +36,11 @@ export default function ProductShell({ active, onNavigate, roleControl, actions,
         <div className="product-actions">{actions}</div>
       </header>
       <nav className="product-navigation" aria-label="Product workspaces">
-        {NAV.map(({ key, label, icon: Icon }) => (
+        {NAV.map(({ key, label, hint, icon: Icon }) => (
           <button key={key} type="button" className={active === key ? "is-active" : ""}
             aria-current={active === key ? "page" : undefined} onClick={() => onNavigate(key)}>
             <Icon size={19} strokeWidth={1.7} aria-hidden="true" />
-            <span><strong>{label}</strong></span>
+            <span><strong>{label}</strong><small>{hint}</small></span>
           </button>
         ))}
       </nav>
