@@ -57,6 +57,7 @@ import { engine2Dps, BUILD_TO_WWM } from "./utils/engine2";
 import { ROTATIONS_WWM } from "./data/rotationsWWM";
 import { lookupTiming } from "./data/skillTiming";
 import { duplicatePreset, type RotationPreset } from "./utils/rotationPresets";
+import { applyTeamModifiers, qiBreakBonus } from "./utils/teamModifiers.js";
 
 const downloadJson = (name: string, value: unknown) => {
   const url = URL.createObjectURL(new Blob([JSON.stringify(value, null, 2)], { type: "application/json" }));
@@ -3360,20 +3361,24 @@ export default function App() {
   const [teamBuilds, setTeamBuilds] = useState<string[]>([selectedBuild, selectedBuild, selectedBuild, selectedBuild, selectedBuild]);
   const [teamVuln, setTeamVuln] = useState<boolean>(false);
   const [teamRevelry, setTeamRevelry] = useState<boolean>(false);
+  const [teamRevelryUptime, setTeamRevelryUptime] = useState<number>(0.4);
+  const [teamPoisonQi, setTeamPoisonQi] = useState<boolean>(false);
   const [bossHp, setBossHp] = useState<number>(3500000);
   const teamSim = useMemo(() => {
     const active = teamMemberIds.map((id, index) => {
       const prof = id ? characterProfiles.find(p => p.id === id) : undefined;
       const buildKey = teamBuilds[index] || selectedBuild;
       return prof ? { id, name: prof.name, buildKey, dps: getDynamicProfileStats(prof, buildKey).dps } : null;
-    }).filter(Boolean) as { id: string; name: string; dps: number }[];
+    }).filter(Boolean) as { id: string; name: string; buildKey: string; dps: number }[];
     const soloSum = active.reduce((s, m) => s + m.dps, 0);
-    const buffMult = 1 + (teamVuln ? 0.08 : 0) + (teamRevelry ? 0.30 : 0);
-    const teamDps = soloSum * buffMult;
+    const modifiers = applyTeamModifiers(active, { vulnerability: teamVuln, revelryUptime: teamRevelry ? teamRevelryUptime : 0 });
+    const teamDps = modifiers.total;
+    const buffMult = soloSum > 0 ? teamDps / soloSum : 1;
     const killTime = teamDps > 0 ? bossHp / teamDps : 0;
-    return { active, soloSum, buffMult, teamDps, killTime };
+    const qiBreak = qiBreakBonus(active.map((member) => member.buildKey), teamPoisonQi);
+    return { active: modifiers.members, soloSum, buffMult, teamDps, killTime, qiBreak };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [teamMemberIds, teamBuilds, characterProfiles, teamVuln, teamRevelry, bossHp, adjustedPanel, activeTier, datang, yishui, selectedBuild, iwStats, baselineScore]);
+  }, [teamMemberIds, teamBuilds, characterProfiles, teamVuln, teamRevelry, teamRevelryUptime, teamPoisonQi, bossHp, adjustedPanel, activeTier, datang, yishui, selectedBuild, iwStats, baselineScore]);
 
   // Handle OCR fast load
   const handleOcrResult = (scanned: Partial<PanelStats>) => {
@@ -5500,8 +5505,11 @@ export default function App() {
 
                       <div className="bg-[#141619] border border-[#23262c] rounded-xl p-4 space-y-2">
                         <span className="text-[10px] uppercase tracking-widest text-[#a19683] font-mono">Team buffs <span className="text-slate-500 normal-case">(idealized full-uptime — don't double-count with per-member settings)</span></span>
-                        <label className="flex items-center gap-2 text-[12.5px] text-slate-300"><input type="checkbox" checked={teamVuln} onChange={e => setTeamVuln(e.target.checked)} /> Vulnerability +8% (teammate debuff on boss)</label>
-                        <label className="flex items-center gap-2 text-[12.5px] text-slate-300"><input type="checkbox" checked={teamRevelry} onChange={e => setTeamRevelry(e.target.checked)} /> Revelry Script +30% (HP &lt; 30%)</label>
+                        <label className="flex items-center gap-2 text-[12.5px] text-slate-300"><input type="checkbox" checked={teamVuln} onChange={e => setTeamVuln(e.target.checked)} /> Vulnerability +8% (Stonesplit-Might receives +16%)</label>
+                        <label className="flex items-center gap-2 text-[12.5px] text-slate-300"><input type="checkbox" checked={teamRevelry} onChange={e => setTeamRevelry(e.target.checked)} /> Revelry Script +20% for 12s / 30s</label>
+                        {teamRevelry && <label className="flex items-center gap-2 text-[12px] text-slate-300">Revelry uptime <input type="number" min="0" max="100" value={Math.round(teamRevelryUptime * 100)} onChange={e => setTeamRevelryUptime(Math.min(1, Math.max(0, Number(e.target.value) / 100 || 0)))} className="w-16 bg-[#111316] border border-[#23262c] rounded px-2 py-1 text-slate-100" />%</label>}
+                        <label className="flex items-center gap-2 text-[12.5px] text-slate-300"><input type="checkbox" checked={teamPoisonQi} onChange={e => setTeamPoisonQi(e.target.checked)} /> Divinecraft poison: +5% Qi break</label>
+                        <small className="block text-slate-500">Team Qi break: +{teamSim.qiBreak}% (Dust +5%, Nameless +10%, poison +5%).</small>
                       </div>
 
                       <div className="bg-[#141619] border border-[#23262c] rounded-xl p-4 flex flex-wrap items-center gap-3">
