@@ -58,6 +58,7 @@ import { ROTATIONS_WWM } from "./data/rotationsWWM";
 import { lookupTiming } from "./data/skillTiming";
 import { duplicatePreset, type RotationPreset } from "./utils/rotationPresets";
 import { applyTeamModifiers, qiBreakBonus } from "./utils/teamModifiers.js";
+import { SPEEDRUN_BOSSES, SPEEDRUN_PLAYBOOK } from "./data/speedrunGuide";
 
 const downloadJson = (name: string, value: unknown) => {
   const url = URL.createObjectURL(new Blob([JSON.stringify(value, null, 2)], { type: "application/json" }));
@@ -2731,6 +2732,7 @@ export default function App() {
   // sequences per build/path — read-only execution guide (NOT used for DPS, since
   // the app doesn't carry the reference's per-ability coefficients).
   const [guideVariant, setGuideVariant] = useState<string>("");
+  const [speedrunBossId, setSpeedrunBossId] = useState<string>("wolf-maiden");
   const guideData = useMemo(() => {
     const wwmKey = BUILD_TO_WWM[selectedBuild];
     const variants = wwmKey && ROTATIONS_WWM[wwmKey] ? Object.keys(ROTATIONS_WWM[wwmKey]) : [];
@@ -5225,6 +5227,23 @@ export default function App() {
                           </div>
                         </details>
                       )}
+
+                      {(() => {
+                        const playbook = SPEEDRUN_PLAYBOOK[selectedBuild];
+                        const boss = SPEEDRUN_BOSSES.find((item) => item.id === speedrunBossId) ?? SPEEDRUN_BOSSES[0];
+                        if (!playbook) return null;
+                        return <details className="rotguide">
+                          <summary><span className="rotguide-title">Speedrun Playbook</span><span className="rotguide-src">Ultimate WWM Speedrun Guide · 2026-07-10</span></summary>
+                          <p className="rotguide-desc">Execution guidance from the supplied guide. It is intentionally separate from the verified Global damage formula: boss AI, ping, cancels and perfect-dodge outcomes are not fixed coefficients.</p>
+                          <div className="rotguide-controls"><label>Boss context</label><select value={speedrunBossId} onChange={(event) => setSpeedrunBossId(event.target.value)}>{SPEEDRUN_BOSSES.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select><span className="rotguide-meta">{playbook.role}</span></div>
+                          <div className="grid gap-3 text-[12px] text-slate-300 sm:grid-cols-2">
+                            <div><b className="text-[#f0b400]">Gear</b><p>{playbook.gear}</p><b className="text-[#f0b400]">Inner Ways</b><p>{playbook.innerWays}</p></div>
+                            <div><b className="text-[#f0b400]">Boss: {boss.name}</b><ul className="list-disc pl-4">{boss.notes.map((note) => <li key={note}>{note}</li>)}</ul></div>
+                            <div><b className="text-[#f0b400]">Prepull</b><ul className="list-disc pl-4">{playbook.prepull.map((note) => <li key={note}>{note}</li>)}</ul><b className="text-[#f0b400]">Team</b><ul className="list-disc pl-4">{playbook.team.map((note) => <li key={note}>{note}</li>)}</ul></div>
+                            <div><b className="text-[#f0b400]">Rotation priorities</b><ul className="list-disc pl-4">{playbook.rotation.map((note) => <li key={note}>{note}</li>)}</ul><b className="text-[#f0b400]">Cautions</b><ul className="list-disc pl-4">{playbook.cautions.map((note) => <li key={note}>{note}</li>)}</ul></div>
+                          </div>
+                        </details>;
+                      })()}
 
                       <div className="flex flex-wrap items-center gap-4 bg-[#141619] border border-[#23262c] rounded-xl p-4">
                         <div>
