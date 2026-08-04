@@ -8,34 +8,16 @@ on:
     branches:
       - main
 
-permissions:
-  contents: write
-
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.head_ref || github.ref_name }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Generate and commit patched PostCSS lock
-        if: github.event_name == 'pull_request'
-        run: |
-          npm install postcss@8.5.23 --save-exact --ignore-scripts
-          if git diff --quiet -- package.json package-lock.json; then
-            echo "PostCSS lock is already current."
-          else
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add package.json package-lock.json
-            git commit -m "fix: update PostCSS to 8.5.23"
-            git push origin HEAD:${{ github.head_ref }}
-          fi
       - name: Audit production dependencies
         run: npm audit --omit=dev --audit-level=high
       - run: npm run lint
