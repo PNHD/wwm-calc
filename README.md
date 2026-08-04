@@ -10,6 +10,8 @@ The current Global T96 stat model is mapped to the repository's Lv100 Upper (`10
 
 See `docs/GLOBAL_2_T96_UPDATE.md` for the audit, observed gear values, remaining Inner Way work, and boss-dummy calibration requirements.
 
+The branch is intentionally kept as a draft PR until temporary-buff status, current Inner Way tooltips, expanded set effects, and a 60-second dummy parse are verified.
+
 ## Commands
 
 ```bash
