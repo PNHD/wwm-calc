@@ -4,43 +4,101 @@ Updated: 2026-08-04
 
 ## Source of truth
 
-Primary source: official Where Winds Meet Version 2.0 optimization and fixes notes published July 23–24, 2026.
+Primary public source: official Where Winds Meet Version 2.0 optimization and fixes notes published July 23–24, 2026.
 
-Official notes confirm:
+Primary numeric calibration source: user-provided Global in-game screenshots captured on 2026-08-04. The structured transcription is stored in `src/data/globalT96Observed.ts`.
 
-- Tier 96 gear is live on Global.
-- Food attribute boosts are added to character-progression base attributes before percentage-based buffs scale Effective Attributes.
-- DoT Qi damage was standardized; Strategic Sword Bleeding/High Bleeding gained baseline Qi damage, while several other DoTs had Qi damage reduced.
-- Exhaustion universal vulnerability and Qi Imbalance bonus vulnerability moved into the boss Mechanism-Based DMG Boost multiplier zone.
+## Critical tier correction
+
+The screenshots prove that current Global Tier 96 does **not** use the old `95上` preview constants.
+
+Current Global T96 matches the repository's `100上` / Lv100 Upper sheet:
+
+- Judgment Resistance: **65.0%**
+- Panel Affinity: **17.8%** with no visible Affinity gear rolls
+- Attribute Attack Penetration: **22.0**
+- Attribute Attack DMG Bonus: **11.0%**
+- Effective-rate checks:
+  - `132.5 / 1.65 = 80.3%`, capped to the displayed **80.0% Critical Rate**
+  - `17.8 / 1.65 = 10.8% Affinity Rate`
+  - `65 + (122.1 - 65) / 1.65 = 99.6% Precision Rate`
+
+Therefore:
+
+- `405|0.65b` / `100上` is the current Global T96 default.
+- `350|0.45-t96` / `95上` is retained only as a legacy reference and must not be presented as current Global T96.
+- Approximate current panel thresholds are 132% Crit for the 80% cap, 66% Affinity for the 40% cap, and 122.8% Precision for the 100% cap.
+
+## Observed Bamboocut-Dust panel
+
+Full equipped panel from the supplied screenshots:
+
+- Martial Mastery: 34,710
+- Five Attributes: Constitution 153, Power 417, Defense 153, Agility 198, Momentum 153
+- Physical Attack: 1,614–2,777
+- Attribute Attack: 327–835
+- Precision: 122.1% → 99.6% effective
+- Critical: 132.5% → 80.0% effective
+- Affinity: 17.8% → 10.8% effective
+- Direct Critical: 4.6%
+- Critical DMG Bonus: 54.0%
+- Physical Penetration: 43.5
+- Physical DMG Bonus: 2.8%
+- Attribute Penetration: 22.0
+- Attribute DMG Bonus: 11.0%
+- All Martial Art Skill DMG Boost: 5.6%
+- Specified Weapon Martial Art Boost: 5.8%
+- Combat Boost Against Boss Units: 5.3%
+
+Cross-checks from the visible gear rolls:
+
+- Physical Pen gear: `8.9 + 10.0 + 9.9 + 9.6 = 38.4`; panel difference is **5.1**, likely a static Inner Way contribution pending tooltip verification.
+- All Martial Arts: `3.0 + 2.6 = 5.6%` exactly.
+- Boss Boost: `2.3 + 3.0 = 5.3%` exactly.
+- Visible Power rolls total `264.3`; plus base 153 gives approximately the displayed 417.
+- Visible Agility roll 44.8 plus base 153 gives approximately the displayed 198.
+- Four visible Everspring Umbrella attunements total **20.0%**.
+
+## Representative T96 gear captured
+
+- Vanguard Nightstar, Rope Dart, 65–151 base Physical Attack
+- Vanguard Cloudshade, Umbrella, 59–136 base Physical Attack
+- Vanguard Charm, Disc, 86 Min Physical Attack
+- Mirage Ward, Pendant, 129 Max Physical Attack
+- Nightfarer Helm
+- Nightfarer Armor
+- Mistridge Greaves
+- Nightfarer Bracers
+- Dragonshadow Bow + Dragonshadow Ring: Fletchlodge 2/2, Precision +4.0%
+- Weapon/accessory set name shown in Global: **Starweave**
+
+## Official Global 2.0 mechanics already covered
+
+- Food attribute boosts are added to progression base attributes before percentage scaling.
+- DoT Qi damage was standardized.
+- Exhaustion and Qi Imbalance vulnerability moved into the boss Mechanism-Based DMG Boost multiplier zone.
 - Seasonal Edge, Wolfchaser's Art, Sword Horizon, Blossom Barrage, Exquisite Scenery, Frost-Clad Night, Steadfast Devotion, Echoes of Oblivion, and Phantom Rally received documented changes.
 - Multiple path talents and skills changed, including Nameless Sword, Bellstrike-Umbra, Silkbind-Jade, Stonesplit-Might, Stonesplit-Strength, Bamboocut-Wind, and Bamboocut-Dust.
 
 ## Implemented in this branch
 
-- T96 (`95上`) becomes the default current Global tier.
-- T91 remains available as a legacy comparison and is explicitly marked preview/legacy.
-- Product title and metadata identify Global 2.0 / T96.
-- Official Inner Way descriptions and notes are updated without inventing unpublished coefficients.
-- The old T91 graduation table is retained only as a legacy normalized estimate; the UI/code no longer calls it authoritative for T96.
-- Build and development commands run an idempotent migration before Vite.
+- `100上` becomes the current Global T96 default.
+- `95上` is explicitly marked as a non-current legacy reference.
+- Product metadata identifies Global 2.0 / T96.
+- Current Crit/Affinity/Precision threshold guidance uses the verified 65% resistance model.
+- Legacy T91 presets and graduation tables are labeled as legacy rather than silently renamed to T96.
+- The observed panel and gear are stored as an auditable fixture.
+- Build and development commands run both idempotent migrations before Vite.
 - CI validates TypeScript, production build, and migration idempotence.
 
-## Known data gap
+## Remaining data gap
 
-The official patch notes do not publish a complete numeric T96 table for every gear slot, attunement range, breakthrough level, class graduation panel, or real 60-second rotation benchmark. Therefore:
+Still required before the PR is ready to merge:
 
-- No fabricated T96 graduation DPS values are introduced.
-- The existing T96 dataset in the repository is activated, but legacy/CN-derived graduation references remain labeled as estimates.
-- A verified user-side T96 character panel, representative T96 gear screenshots, and boss dummy parse are still required to calibrate default profiles and authoritative graduation targets.
+1. Explicit confirmation whether the captured panel had food, party, medicine, guild, or other temporary buffs active.
+2. Screenshots of the equipped Inner Ways at their exact Realm/Tier, so static attributes can be separated from the gear/base panel without double-counting.
+3. Expanded Starweave and armor-set tooltips to replace legacy T91 2pc/4pc values.
+4. A 60-second Boss Dummy parse with skill breakdown and active conditions.
+5. Additional T96 builds before replacing every legacy class graduation target.
 
-## Required validation evidence
-
-For each supported build, ideally collect:
-
-1. Naked/base Combat Attributes at the current character cap.
-2. Full equipped T96 Combat Attributes with no temporary food or party buffs.
-3. Screenshots of representative T96 weapon and armor attunement ranges.
-4. Inner Way realm/tier screenshots for changed effects.
-5. 60-second Boss Dummy parse with skill breakdown and active buffs.
-
-These measurements should be stored separately from the official patch-note mechanics so future patches remain auditable.
+No unpublished T96 graduation DPS or encounter resistance value should be presented as authoritative until those measurements are available.
