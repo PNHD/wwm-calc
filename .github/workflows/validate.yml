@@ -18,8 +18,11 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Audit production dependencies
-        run: npm audit --omit=dev --audit-level=high
+      - name: Verify patched PostCSS dependency
+        run: |
+          npm install postcss@8.5.23 --save-exact --ignore-scripts
+          git diff -- package.json package-lock.json
+          npm audit --omit=dev --audit-level=high
       - run: npm run lint
       - run: npm run build
       - name: Ensure migration is deterministic
