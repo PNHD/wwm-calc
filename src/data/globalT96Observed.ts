@@ -145,4 +145,8 @@ export const GLOBAL_T96_OBSERVED = {
     visibleCritFromGear: 78.9,
     attunedUmbrellaMartialTotal: 20.0,
   },
+  mappingNotes: {
+    starweave: "Current Global display name. The calculator's internal 'stars' key remains provisional until the expanded 2pc/4pc tooltip is captured.",
+    fletchlodge: "Observed current 2pc effect: Precision Rate +4.0%.",
+  },
 } as const;
