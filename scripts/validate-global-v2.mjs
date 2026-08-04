@@ -26,8 +26,10 @@ requireText("index.html", indexHtml, "Global 2.0 · Tier 96", "Global T96 docume
 
 requireText("src/utils/calc.ts", calc, 'const t96 = TIERS["405|0.65b"]', "current 100-upper tier baseline");
 requireText("src/utils/calc.ts", calc, "GLOBAL_V2_SKILL_OUTCOME_RULES", "current skill outcome rules");
-requireText("src/utils/calc.ts", calc, "const critBase = Math.min((panel.crit / resFactor) / 100, 0.8)", "base Crit cap before Direct Crit");
-requireText("src/utils/calc.ts", calc, "const critEff = Math.max(0, critBase + panel.dcrit / 100)", "Direct Crit after base cap");
+requireText("src/utils/calc.ts", calc, "let critEff = Math.min(0.8, critRateInput / 100 / jR);", "base Crit cap before Direct Crit");
+requireText("src/utils/calc.ts", calc, "let dirCrit = (panel.dcrit || 0) / 100;", "separate Direct Crit input");
+requireText("src/utils/calc.ts", calc, "const critBeforePrecision = Math.min(critEff + dirCrit, 0.8 + dirCrit);", "Direct Crit added after the base cap");
+requireText("src/utils/calc.ts", calc, "* pPrec", "Precision gate after Crit/Affinity resolution");
 
 requireText("src/data/innerways.ts", innerWays, "GLOBAL_V2_INNER_WAY_OVERRIDES", "current Global Inner Way overlay");
 requireText("src/data/globalV2CombatEvidence.ts", evidence, "Burn and Bury", "dummy skill fixture");
@@ -43,7 +45,8 @@ requireText("src/App.tsx", app, "scoreGlobalT96Gear(item.subs, selectedBuild, co
 requireText("src/components/OcrScanner.tsx", ocr, "validateGlobalT96GearLines", "batch OCR validation");
 requireText("src/components/OcrScanner.tsx", ocr, "filterGlobalT96StatOptions", "batch OCR slot filtering");
 requireText("src/components/OcrScanner.tsx", ocr, "Gear slot / stat pool", "visible slot selector");
-requireText("src/components/OcrScanner.tsx", ocr, "Native T96 weapon", "native/relaid source feedback");
+requireText("src/components/OcrScanner.tsx", ocr, "validation.label", "dynamic native/relaid source feedback");
+requireText("src/components/OcrScanner.tsx", ocr, 'validation.origin === "relaid"', "Relaid visual state");
 requireText("src/components/SearchableSelect.tsx", select, "spaceBelow", "vertical dropdown positioning");
 requireText("src/components/SearchableSelect.tsx", select, "window.addEventListener('scroll', reposition, true)", "dropdown scroll tracking");
 
