@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "apply:global-v2": "node scripts/apply-global-v2.mjs",
+    "apply:global-v2": "node scripts/apply-global-v2.mjs && node scripts/apply-global-t96-live.mjs",
     "predev": "npm run apply:global-v2",
     "dev": "vite",
     "prebuild": "npm run apply:global-v2",
