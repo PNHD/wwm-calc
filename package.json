@@ -4,14 +4,17 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "apply:global-v2": "node scripts/apply-global-v2.mjs && node scripts/apply-global-t96-live.mjs && node scripts/apply-global-v2-innerways.mjs && node scripts/apply-global-t96-ocr.mjs",
+    "apply:global-v2": "node scripts/apply-global-v2.mjs && node scripts/apply-global-t96-live.mjs && node scripts/apply-global-v2-innerways.mjs && node scripts/apply-global-t96-ocr.mjs && node scripts/apply-global-v2-finalize.mjs && node scripts/validate-global-v2.mjs",
+    "audit:global-v2": "npm run apply:global-v2",
     "predev": "npm run apply:global-v2",
     "dev": "vite",
-    "prebuild": "npm run apply:global-v2",
+    "prebuild": "npm run apply:global-v2 && node scripts/write-build-info.mjs",
     "build": "vite build",
     "preview": "npm run build && wrangler dev",
     "lint": "tsc --noEmit",
-    "deploy": "npm run build && wrangler deploy"
+    "deploy": "npm run deploy:pages",
+    "deploy:pages": "npm run build && wrangler pages deploy dist --project-name wonton-wwm",
+    "deploy:worker": "npm run build && wrangler deploy"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.14",
