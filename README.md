@@ -1,9 +1,24 @@
-# GEMINI_API_KEY: Required for Gemini AI API calls.
-# AI Studio automatically injects this at runtime from user secrets.
-# Users configure this via the Secrets panel in the AI Studio UI.
-GEMINI_API_KEY="MY_GEMINI_API_KEY"
+# WWM Build Lab
 
-# APP_URL: The URL where this applet is hosted.
-# AI Studio automatically injects this at runtime with the Cloud Run service URL.
-# Used for self-referential links, OAuth callbacks, and API endpoints.
-APP_URL="MY_APP_URL"
+Where Winds Meet Global gear and combat calculator.
+
+## Current update branch
+
+`update/global-v2-t96` updates the calculator for Global 2.0 and Tier 96.
+
+The current Global T96 stat model is mapped to the repository's Lv100 Upper (`100上`) constants, verified from an in-game panel showing 65% Judgment Resistance, 17.8% base Affinity, 22 Attribute Penetration, and 11% Attribute DMG Bonus.
+
+See `docs/GLOBAL_2_T96_UPDATE.md` for the audit, observed gear values, remaining Inner Way work, and boss-dummy calibration requirements.
+
+The branch is intentionally kept as a draft PR until temporary-buff status, current Inner Way tooltips, expanded set effects, and a 60-second dummy parse are verified.
+
+## Commands
+
+```bash
+npm ci
+npm run lint
+npm run build
+npm run dev
+```
+
+The build/dev pre-scripts apply the audited Global 2.0 migrations before Vite runs.

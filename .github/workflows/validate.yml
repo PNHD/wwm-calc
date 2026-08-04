@@ -1,0 +1,30 @@
+name: Validate
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
+      - name: Ensure migration is deterministic
+        run: |
+          git checkout -- src
+          npm run apply:global-v2
+          cp -R src "$RUNNER_TEMP/src-first"
+          git checkout -- src
+          npm run apply:global-v2
+          diff -ru "$RUNNER_TEMP/src-first" src
