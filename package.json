@@ -4,7 +4,10 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
+    "apply:global-v2": "node scripts/apply-global-v2.mjs",
+    "predev": "npm run apply:global-v2",
     "dev": "vite",
+    "prebuild": "npm run apply:global-v2",
     "build": "vite build",
     "preview": "npm run build && wrangler dev",
     "lint": "tsc --noEmit",
