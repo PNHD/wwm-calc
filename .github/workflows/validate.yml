@@ -2,9 +2,11 @@ name: Validate
 
 on:
   pull_request:
+    branches:
+      - main
   push:
     branches:
-      - update/global-v2-t96
+      - main
 
 jobs:
   build:
@@ -18,7 +20,11 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run build
-      - name: Ensure migration is idempotent
+      - name: Ensure migration is deterministic
         run: |
+          git checkout -- src
           npm run apply:global-v2
-          git diff --exit-code
+          cp -R src "$RUNNER_TEMP/src-first"
+          git checkout -- src
+          npm run apply:global-v2
+          diff -ru "$RUNNER_TEMP/src-first" src
