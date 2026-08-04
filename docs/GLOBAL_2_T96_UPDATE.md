@@ -95,7 +95,7 @@ Cross-checks from the visible gear rolls:
 
 Still required before the PR is ready to merge:
 
-1. Explicit confirmation whether the captured panel had food, party, medicine, guild, or other temporary buffs active.
+1. Explicit confirmation whether the captured panel had food, party, medicine, guild, or other temporary buffs active. Until confirmed, the screenshot is evidence for tier constants and item rolls, but is not promoted to the factory default panel.
 2. Screenshots of the equipped Inner Ways at their exact Realm/Tier, so static attributes can be separated from the gear/base panel without double-counting.
 3. Expanded Starweave and armor-set tooltips to replace legacy T91 2pc/4pc values.
 4. A 60-second Boss Dummy parse with skill breakdown and active conditions.
