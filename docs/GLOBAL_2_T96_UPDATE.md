@@ -70,7 +70,7 @@ Cross-checks from the visible gear rolls:
 - Mistridge Greaves
 - Nightfarer Bracers
 - Dragonshadow Bow + Dragonshadow Ring: Fletchlodge 2/2, Precision +4.0%
-- Weapon/accessory set name shown in Global: **Starweave**
+- Weapon/accessory set name shown in Global: **Starweave**. The calculator's older `stars` key is retained internally until the expanded current tooltip confirms whether only the localized name changed or the set effect also changed.
 
 ## Official Global 2.0 mechanics already covered
 
