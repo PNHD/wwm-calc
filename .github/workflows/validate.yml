@@ -22,6 +22,30 @@ jobs:
         run: npm audit --omit=dev --audit-level=high
       - run: npm run lint
       - run: npm run build
+      - name: Install browser smoke-test runtime
+        run: |
+          npm install --no-save --package-lock=false @playwright/test@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Smoke-test the production bundle in Chromium
+        run: |
+          npx vite preview --host 127.0.0.1 --port 4173 > "$RUNNER_TEMP/wwm-preview.log" 2>&1 &
+          PREVIEW_PID=$!
+          trap 'kill $PREVIEW_PID || true' EXIT
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:4173/ > /dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          npx playwright test scripts/runtime-smoke.spec.mjs --reporter=line --workers=1
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: runtime-smoke
+          path: |
+            runtime-smoke.png
+            test-results/
+          if-no-files-found: ignore
       - name: Ensure migration is deterministic
         run: |
           git checkout -- src
