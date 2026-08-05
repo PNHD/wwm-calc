@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "apply:global-v2": "node scripts/apply-global-v2.mjs && node scripts/apply-global-t96-live.mjs && node scripts/apply-global-v2-innerways.mjs && node scripts/apply-global-t96-ocr.mjs && node scripts/apply-global-v2-finalize.mjs && node scripts/apply-panel-first-optimizer.mjs && node scripts/apply-video-evidence.mjs && node scripts/apply-runtime-fixes.mjs && node scripts/validate-global-v2.mjs && node scripts/validate-panel-first.mjs && node scripts/validate-video-evidence.mjs",
+    "apply:global-v2": "node scripts/apply-global-v2.mjs && node scripts/apply-global-t96-live.mjs && node scripts/apply-global-v2-innerways.mjs && node scripts/apply-global-t96-ocr.mjs && node scripts/apply-global-v2-finalize.mjs && node scripts/apply-panel-first-optimizer.mjs && node scripts/apply-video-evidence.mjs && node scripts/apply-runtime-fixes.mjs && node scripts/apply-model-assumptions.mjs && node scripts/validate-global-v2.mjs && node scripts/validate-panel-first.mjs && node scripts/validate-video-evidence.mjs && node scripts/validate-model-assumptions.mjs",
     "audit:global-v2": "npm run apply:global-v2",
     "predev": "npm run apply:global-v2",
     "dev": "vite",
