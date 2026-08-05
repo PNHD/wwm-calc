@@ -16,6 +16,8 @@ interface BuildWorkspaceProps {
   ring: string;
   calibrated: boolean;
   food: boolean;
+  foodMin?: number;
+  foodMax?: number;
   efficiency: number;
   tier: string;
   tiers: { id: string; label: string }[];
@@ -44,12 +46,14 @@ export default function BuildWorkspace(props: BuildWorkspaceProps) {
   const [query, setQuery] = useState("");
   const current = props.builds.find((build) => build.id === props.selectedBuild) ?? props.builds[0];
   const pickerOptions = props.innerWayOptions.filter((option) => option.name.toLowerCase().includes(query.toLowerCase()));
+  const foodMin = props.foodMin ?? 120;
+  const foodMax = props.foodMax ?? 240;
   const openPicker = (index: number) => { setPickerIndex(index); setQuery(""); };
 
   return (
     <main className="build-workspace" id="main-content">
       <header className="product-page-heading">
-        <div><span className="product-kicker">Build</span><h1>Loadout configuration</h1><p>Define the path and effects used by every calculation.</p></div>
+        <div><span className="product-kicker">Build</span><h1>Loadout configuration</h1><p>Define the path and verified effects used by every calculation.</p></div>
         <button className="product-secondary-button" type="button" title="Calibrate panel from in-game Combat Attributes" onClick={props.onCalibrate}>
           <Gauge size={17} aria-hidden="true" /> {props.calibrated ? "Calibrated" : "Calibrate panel"}
         </button>
@@ -74,14 +78,20 @@ export default function BuildWorkspace(props: BuildWorkspaceProps) {
           </section>
 
           <section className="build-config-section">
-            <div className="product-section-heading"><div><h2>Combat settings</h2><p>Global assumptions used by Details, Simulation, Team and optimization.</p></div></div>
+            <div className="product-section-heading"><div><h2>Combat settings</h2><p>Panel and target assumptions used by comparison and optimization.</p></div></div>
             <div className="build-control-grid">
               <label><span>Target tier</span><select value={props.tier} onChange={(event) => props.onTierChange(event.target.value)}>{props.tiers.map((tier) => <option key={tier.id} value={tier.id}>{tier.label}</option>)}</select></label>
-              <label className="product-switch"><input type="checkbox" checked={props.food} onChange={(event) => props.onFoodChange(event.target.checked)} /><span aria-hidden="true" /><strong>Food bonus<small>Uses the selected tier's verified ATK values</small></strong></label>
-              <label className="combat-efficiency"><span>Execution efficiency <strong>{Math.round(props.efficiency * 100)}%</strong></span><input type="range" min="50" max="100" value={Math.round(props.efficiency * 100)} onChange={(event) => props.onEfficiencyChange(Number(event.target.value) / 100)} /></label>
+              <label className="product-switch"><input type="checkbox" checked={props.food} onChange={(event) => props.onFoodChange(event.target.checked)} /><span aria-hidden="true" /><strong>Attack-Boosting Food<small>+{foodMin} Min / +{foodMax} Max Physical Attack</small></strong></label>
               {props.tier === "custom" && <><label><span>Enemy DEF</span><input type="number" min="0" value={props.customDef} onChange={(event) => props.onCustomDefChange(Math.max(0, Number(event.target.value) || 0))} /></label><label><span>Judgment resistance %</span><input type="number" min="0" step="0.01" value={Math.round(props.customRes * 100)} onChange={(event) => props.onCustomResChange(Math.max(0, Number(event.target.value) || 0) / 100)} /></label></>}
               <button type="button" onClick={props.onCalibrate}><Gauge size={16} aria-hidden="true" /> {props.calibrated ? "Recalibrate panel" : "Calibrate from game"}</button>
             </div>
+            <details className="parse-projection-control">
+              <summary>Advanced parse projection <strong>{Math.round(props.efficiency * 100)}%</strong></summary>
+              <div>
+                <p>This presentation-only scale estimates an imperfect recorded parse. It does not change panel stats, Gear Compare, Stat Priority or Best Build ranking.</p>
+                <label><span>Execution scaling</span><input type="range" min="50" max="100" value={Math.round(props.efficiency * 100)} onChange={(event) => props.onEfficiencyChange(Number(event.target.value) / 100)} /></label>
+              </div>
+            </details>
           </section>
 
           <section className="build-config-section">

@@ -17,6 +17,8 @@ interface CombatWorkspaceProps {
   duration: number;
   efficiency: number;
   food: boolean;
+  foodMin?: number;
+  foodMax?: number;
   enemy: { name: string; defense: number; physicalResistance: number; attributeResistance: number };
   stats: { label: string; menu: string; combat: string; derived?: boolean }[];
   skills: { name: string; count: number; damage: number; share: number }[];
@@ -33,27 +35,36 @@ export default function CombatWorkspace(props: CombatWorkspaceProps) {
   const [tab, setTab] = useState<"overview" | "attributes" | "skills">("overview");
   const [recorded, setRecorded] = useState("");
   const parsed = Number(recorded) || 0;
+  const foodMin = props.foodMin ?? 120;
+  const foodMax = props.foodMax ?? 240;
+  const parseProjection = props.modeled;
 
   return (
-    <main className="combat-workspace" id="main-content">
+    <main className="combat-workspace product-combat-workspace" id="main-content">
       <header className="product-page-heading">
-        <div><span className="product-kicker">Combat</span><h1>Damage model</h1><p>Inspect the assumptions and output without changing the reference rotation.</p></div>
+        <div><span className="product-kicker">Combat</span><h1>Damage model</h1><p>Panel-derived rotation output, active conditions and optional parse comparison.</p></div>
       </header>
 
       <section className="combat-metrics" aria-label="Damage estimates">
-        <div><span><Crosshair size={16} aria-hidden="true" /> Formula ceiling</span><strong>{Math.round(props.ceiling).toLocaleString()}<small>/s</small></strong><p>Perfect reference rotation and full modeled uptime.</p></div>
-        <div className="is-primary"><span><Activity size={16} aria-hidden="true" /> Modeled estimate</span><strong>{Math.round(props.modeled).toLocaleString()}<small>/s</small></strong><p>Formula ceiling at {Math.round(props.efficiency * 100)}% execution efficiency.</p></div>
-        <div><span><Timer size={16} aria-hidden="true" /> Recorded parse</span><label><input inputMode="numeric" value={recorded} onChange={(event) => setRecorded(event.target.value.replace(/\D/g, ""))} placeholder="Enter DPS" /><small>/s</small></label><p>{parsed ? `${Math.round((parsed / props.modeled) * 100)}% of modeled estimate` : "Optional comparison; never changes the formula."}</p></div>
+        <div className="is-primary"><span><Crosshair size={16} aria-hidden="true" /> Modeled rotation DPS</span><strong>{Math.round(props.ceiling).toLocaleString()}<small>/s</small></strong><p>This unscaled value drives Gear Compare, Stat Priority and Best Build.</p></div>
+        <div><span><Activity size={16} aria-hidden="true" /> Parse projection</span><strong>{Math.round(parseProjection).toLocaleString()}<small>/s</small></strong><p>Presentation only: modeled DPS × {Math.round(props.efficiency * 100)}% execution scaling.</p></div>
+        <div><span><Timer size={16} aria-hidden="true" /> Recorded parse</span><label><input inputMode="numeric" value={recorded} onChange={(event) => setRecorded(event.target.value.replace(/\D/g, ""))} placeholder="Enter DPS" /><small>/s</small></label><p>{parsed ? `${Math.round((parsed / Math.max(1, props.ceiling)) * 100)}% of modeled rotation DPS` : "Optional comparison; never changes the optimizer."}</p></div>
       </section>
 
-      <section className="combat-assumptions">
-        <div className="product-section-heading"><div><h2>Model assumptions</h2><p>Every active modifier is visible here.</p></div></div>
-        <div className="combat-assumption-grid">
-          <label className="product-switch"><input type="checkbox" checked={props.food} onChange={(event) => props.onFoodChange(event.target.checked)} /><span aria-hidden="true" /><strong>Food buff<small>+90 min / +180 max Physical ATK</small></strong></label>
-          <label className="combat-efficiency"><span>Execution efficiency <strong>{Math.round(props.efficiency * 100)}%</strong></span><input type="range" min="50" max="100" step="1" value={Math.round(props.efficiency * 100)} onChange={(event) => props.onEfficiencyChange(Number(event.target.value) / 100)} /></label>
+      <section className="combat-assumptions product-assumption-panel">
+        <div className="product-section-heading"><div><h2>Active combat assumptions</h2><p>Only game-state inputs belong in the primary model.</p></div><button type="button" className="product-secondary-button" onClick={props.onConfigure}>Configure build</button></div>
+        <div className="combat-assumption-grid is-compact">
+          <label className="product-switch"><input type="checkbox" checked={props.food} onChange={(event) => props.onFoodChange(event.target.checked)} /><span aria-hidden="true" /><strong>Attack-Boosting Food<small>+{foodMin} Min / +{foodMax} Max Physical Attack</small></strong></label>
           <div className="combat-enemy"><span>Target profile</span><strong>{props.enemy.name}</strong><small>DEF {props.enemy.defense} / Physical RES {props.enemy.physicalResistance}% / Attribute RES {props.enemy.attributeResistance}%</small></div>
-          <div className="combat-rotation"><span>Reference window</span><strong>{props.duration}s</strong><small>{Math.round(props.totalDamage).toLocaleString()} total damage / {props.graduation.toFixed(2)}% graduation</small></div>
+          <div className="combat-rotation"><span>Reference window</span><strong>{props.duration}s</strong><small>{Math.round(props.totalDamage).toLocaleString()} modeled damage</small></div>
         </div>
+        <details className="parse-projection-control">
+          <summary>Advanced parse projection <strong>{Math.round(props.efficiency * 100)}%</strong></summary>
+          <div>
+            <p>Execution scaling approximates missed inputs, movement and imperfect uptime in a personal parse. It is not an in-game stat and is excluded from panel calculation, gear ranking and optimization.</p>
+            <label><span>Execution scaling</span><input type="range" min="50" max="100" step="1" value={Math.round(props.efficiency * 100)} onChange={(event) => props.onEfficiencyChange(Number(event.target.value) / 100)} /></label>
+          </div>
+        </details>
       </section>
 
       <section className="combat-results">
@@ -65,7 +76,7 @@ export default function CombatWorkspace(props: CombatWorkspaceProps) {
         {tab === "overview" && (
           <div className="combat-overview-grid">
             <div><h2>Damage distribution</h2>{props.skills.slice(0, 6).map((skill, index) => <span key={`${skill.name}-${index}`}><small>{skill.name}</small><i><b style={{ width: `${Math.max(2, skill.share)}%` }} /></i><strong>{skill.share.toFixed(1)}%</strong></span>)}</div>
-            <div><h2>Read this result</h2><dl><dt>Ceiling</dt><dd>Uses the verified skill coefficients and reference cast mix.</dd><dt>Modeled</dt><dd>Applies only the execution slider to the ceiling.</dd><dt>Recorded</dt><dd>Your in-game parse for comparison only. It is not reverse-engineered into the formula.</dd></dl></div>
+            <div><h2>Read this result</h2><dl><dt>Modeled rotation DPS</dt><dd>Uses the panel, verified coefficients, set/Inner Way conditions and selected cast mix. This is the optimizer reference.</dd><dt>Parse projection</dt><dd>Applies only the optional execution scale for presentation.</dd><dt>Recorded parse</dt><dd>Your in-game result for comparison. It never reverse-calibrates or changes gear ranking.</dd></dl></div>
           </div>
         )}
         {tab === "attributes" && <div className="combat-stat-table"><div><strong>Attribute</strong><strong>Menu</strong><strong>Combat</strong></div>{props.stats.map((stat) => <div key={stat.label} className={stat.derived ? "is-derived" : ""}><span>{stat.label}</span><span>{stat.menu}</span><strong>{stat.combat}</strong></div>)}</div>}

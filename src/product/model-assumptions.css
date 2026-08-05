@@ -1,0 +1,204 @@
+/* Product workspaces replace the legacy two-column simulator. Keeping the old
+   layout mounted is useful for modal state, but it must never bleed into the
+   product workspace underneath the active page. */
+.app-root[data-workspace] > .app-layout {
+  display: none !important;
+}
+
+.product-combat-workspace,
+.build-workspace {
+  width: min(1480px, 100%);
+  margin: 0 auto;
+  padding: 28px clamp(18px, 3vw, 42px) 64px;
+}
+
+.product-combat-workspace .combat-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.product-combat-workspace .combat-metrics > div {
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid var(--product-rule);
+  border-radius: 8px;
+  background: var(--product-surface);
+}
+
+.product-combat-workspace .combat-metrics > div.is-primary {
+  border-color: color-mix(in srgb, var(--product-jade) 55%, var(--product-rule));
+  background: linear-gradient(135deg, color-mix(in srgb, var(--product-jade) 9%, var(--product-surface)), var(--product-surface));
+}
+
+.product-combat-workspace .combat-metrics span,
+.product-combat-workspace .combat-metrics strong,
+.product-combat-workspace .combat-metrics p {
+  display: block;
+}
+
+.product-combat-workspace .combat-metrics > div > span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--product-muted);
+  font: 700 10px system-ui;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.product-combat-workspace .combat-metrics > div > strong {
+  margin-top: 11px;
+  color: var(--product-text);
+  font: 700 clamp(25px, 3vw, 38px) Georgia, serif;
+}
+
+.product-combat-workspace .combat-metrics > div > strong small,
+.product-combat-workspace .combat-metrics label small {
+  display: inline;
+  margin-left: 4px;
+  color: var(--product-muted);
+  font: 600 11px ui-monospace, monospace;
+}
+
+.product-combat-workspace .combat-metrics p {
+  min-height: 32px;
+  margin: 8px 0 0;
+  color: var(--product-muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.product-combat-workspace .combat-metrics label {
+  display: flex;
+  align-items: baseline;
+  margin-top: 10px;
+}
+
+.product-combat-workspace .combat-metrics input {
+  width: min(190px, 100%);
+  border: 0;
+  border-bottom: 1px solid var(--product-rule);
+  background: transparent;
+  color: var(--product-text);
+  font: 700 clamp(23px, 3vw, 36px) Georgia, serif;
+  outline: 0;
+}
+
+.product-assumption-panel,
+.build-config-section,
+.combat-results,
+.details-dashboard > article {
+  border: 1px solid var(--product-rule);
+  border-radius: 8px;
+  background: var(--product-surface);
+}
+
+.product-assumption-panel,
+.build-config-section {
+  margin-top: 16px;
+  padding: 18px;
+}
+
+.combat-assumption-grid.is-compact {
+  display: grid;
+  grid-template-columns: minmax(260px, .9fr) minmax(300px, 1.35fr) minmax(190px, .7fr);
+  gap: 10px;
+}
+
+.combat-assumption-grid.is-compact > * {
+  min-height: 78px;
+  padding: 13px 14px;
+  border: 1px solid var(--product-rule);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--product-canvas) 62%, var(--product-surface));
+}
+
+.combat-enemy span,
+.combat-enemy strong,
+.combat-enemy small,
+.combat-rotation span,
+.combat-rotation strong,
+.combat-rotation small {
+  display: block;
+}
+
+.combat-enemy span,
+.combat-rotation span {
+  color: var(--product-muted);
+  font: 700 9px system-ui;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+
+.combat-enemy strong,
+.combat-rotation strong {
+  margin-top: 8px;
+  color: var(--product-text);
+  font: 700 17px Georgia, serif;
+}
+
+.combat-enemy small,
+.combat-rotation small {
+  margin-top: 5px;
+  color: var(--product-muted);
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.parse-projection-control {
+  margin-top: 12px;
+  border: 1px solid var(--product-rule);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--product-canvas) 68%, var(--product-surface));
+}
+
+.parse-projection-control summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 13px;
+  color: var(--product-muted);
+  font: 700 11px system-ui;
+  cursor: pointer;
+  list-style: none;
+}
+
+.parse-projection-control summary::-webkit-details-marker { display: none; }
+.parse-projection-control summary strong { color: var(--product-info); }
+
+.parse-projection-control > div {
+  padding: 12px 13px 14px;
+  border-top: 1px solid var(--product-rule);
+}
+
+.parse-projection-control p {
+  margin: 0 0 12px;
+  color: var(--product-muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.parse-projection-control label {
+  display: grid;
+  grid-template-columns: 150px minmax(180px, 420px);
+  align-items: center;
+  gap: 12px;
+  color: var(--product-text);
+  font-size: 11px;
+}
+
+.parse-projection-control input[type="range"] { width: 100%; }
+
+.product-combat-workspace .combat-results { margin-top: 18px; overflow: hidden; }
+.product-combat-workspace .details-dashboard { margin-top: 18px; }
+
+@media (max-width: 900px) {
+  .product-combat-workspace .combat-metrics,
+  .combat-assumption-grid.is-compact {
+    grid-template-columns: 1fr;
+  }
+  .parse-projection-control label { grid-template-columns: 1fr; }
+}
