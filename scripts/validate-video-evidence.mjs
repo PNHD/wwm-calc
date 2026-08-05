@@ -47,10 +47,10 @@ for (const text of [
   "physicalDefense: 39",
 ]) requireText("src/data/globalV2VideoEvidence.ts", evidence, text, text);
 
-const dps1129 = Number(evidence.match(/chest1129:\s*\{[\s\S]*?displayedDps:\s*(\d+)/)?.[1]);
-const dps1106 = Number(evidence.match(/chest1106:\s*\{[\s\S]*?displayedDps:\s*(\d+)/)?.[1]);
-const storedDelta = Number(evidence.match(/observedDpsDelta1129Minus1106:\s*(\d+)/)?.[1]);
-if (!dps1129 || !dps1106 || dps1129 - dps1106 !== storedDelta) {
+const dummyBlock = evidence.match(/GLOBAL_T96_VIDEO_DUMMY_RESULTS\s*=\s*\{([\s\S]*?)\n\} as const;/)?.[1] ?? "";
+const displayedDps = [...dummyBlock.matchAll(/displayedDps:\s*(\d+)/g)].map((match) => Number(match[1]));
+const storedDelta = Number(dummyBlock.match(/observedDpsDelta1129Minus1106:\s*(\d+)/)?.[1]);
+if (displayedDps.length !== 2 || displayedDps[0] - displayedDps[1] !== storedDelta) {
   failures.push("src/data/globalV2VideoEvidence.ts: A/B dummy DPS delta is inconsistent");
 }
 
