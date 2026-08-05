@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { BarChart3, Boxes, Dice5, FileText, FlaskConical, Layers3, Repeat2, Settings, SlidersHorizontal, Users } from "lucide-react";
+import "./model-assumptions.css";
 
 export type ProductTab = "details" | "gear-analyzer" | "gear-compare" | "inventory-optimizer" | "simulation" | "team" | "rotations" | "skill-editor" | "settings" | "profile";
 
@@ -49,7 +50,7 @@ export default function ProductShell({ active, onNavigate, roleControl, actions,
         <span><small>Build</small><strong>{context.build}</strong></span>
         <span><small>Scheme</small><strong>{context.scheme}</strong></span>
         <span><small>Inner Ways</small><strong>{context.innerWays}/4</strong></span>
-        <span className="product-context-metric"><small>Modeled estimate</small><strong>{context.estimate}/s</strong></span>
+        <span className="product-context-metric"><small>Modeled rotation</small><strong>{context.estimate}/s</strong></span>
       </section>
     </>
   );
