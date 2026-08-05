@@ -3,20 +3,27 @@ import fs from "node:fs";
 const path = "src/App.tsx";
 let source = fs.readFileSync(path, "utf8");
 
-function replaceAllRequired(from, to, label) {
-  if (!source.includes(from)) {
-    if (source.includes(to)) return;
-    throw new Error(`[model-assumptions] Missing anchor: ${label}`);
-  }
-  source = source.replaceAll(from, to);
-}
-
 function replaceRegexRequired(pattern, replacement, label) {
   if (!pattern.test(source)) {
     if (source.includes(replacement)) return;
     throw new Error(`[model-assumptions] Missing regex anchor: ${label}`);
   }
   source = source.replace(pattern, replacement);
+}
+
+function addTierFoodProps(componentName) {
+  const start = source.indexOf(`<${componentName}`);
+  if (start < 0) throw new Error(`[model-assumptions] Missing component: ${componentName}`);
+  const end = source.indexOf("/>", start);
+  if (end < 0) throw new Error(`[model-assumptions] Unterminated component: ${componentName}`);
+  const block = source.slice(start, end + 2);
+  if (block.includes("foodMin={activeTier.foodMin}")) return;
+  if (!block.includes("food={food}")) throw new Error(`[model-assumptions] Missing food prop in ${componentName}`);
+  const patched = block.replace(
+    "food={food}",
+    "food={food}\n              foodMin={activeTier.foodMin}\n              foodMax={activeTier.foodMax}",
+  );
+  source = source.slice(0, start) + patched + source.slice(end + 2);
 }
 
 replaceRegexRequired(
@@ -48,12 +55,8 @@ source = source.replaceAll(
 );
 
 source = source.replaceAll("foodMin: 90, foodMax: 180", "foodMin: 120, foodMax: 240");
-
-replaceAllRequired(
-  "food={food}\n              efficiency={dpsEff}",
-  "food={food}\n              foodMin={activeTier.foodMin}\n              foodMax={activeTier.foodMax}\n              efficiency={dpsEff}",
-  "tier-aware food props",
-);
+addTierFoodProps("BuildWorkspace");
+addTierFoodProps("CombatWorkspace");
 
 source = source.replaceAll(
   "estimate: Math.round(rotationStats.dps * dpsEff).toLocaleString(),",
