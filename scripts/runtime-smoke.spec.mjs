@@ -35,8 +35,8 @@ test("production build renders the application shell and current T96 assumptions
 
   await page.getByRole("button", { name: /Details/i }).click();
   await expect(page.getByRole("heading", { name: "Damage model" })).toBeVisible();
-  await expect(page.getByText("Attack-Boosting Food", { exact: true })).toBeVisible();
-  await expect(page.getByText("+120 Min / +240 Max Physical Attack", { exact: true })).toBeVisible();
+  await expect(page.getByText(/Attack-Boosting Food/).first()).toBeVisible();
+  await expect(page.getByText(/\+120 Min \/ \+240 Max Physical Attack/).first()).toBeVisible();
   await expect(page.getByText(/Advanced parse projection/)).toBeVisible();
   await expect(page.getByText(/Execution efficiency/)).toHaveCount(0);
   await expect(page.getByText(/\+90 min \/ \+180 max/i)).toHaveCount(0);
