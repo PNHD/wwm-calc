@@ -14,7 +14,7 @@ const rejectText = (source, text, label) => {
 };
 
 requireText(app, "const DEFAULT_DPS_EFFICIENCY = 1;", "execution default");
-requireText(app, "const EXECUTION_SCALING_VERSION = 2;", "execution migration");
+requireText(app, "const EXECUTION_SCALING_STORAGE_KEY = \"wwm_execution_scaling_v2\";", "execution projection storage");
 requireText(app, "foodMin={activeTier.foodMin}", "dynamic food minimum");
 requireText(app, "foodMax={activeTier.foodMax}", "dynamic food maximum");
 rejectText(app, "estimate: Math.round(rotationStats.dps * dpsEff)", "product modeled estimate");
