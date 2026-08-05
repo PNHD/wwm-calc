@@ -3,12 +3,6 @@ import fs from "node:fs";
 const path = "src/App.tsx";
 let source = fs.readFileSync(path, "utf8");
 
-function replaceRequired(from, to, label) {
-  if (source.includes(to)) return;
-  if (!source.includes(from)) throw new Error(`[model-assumptions] Missing anchor: ${label}`);
-  source = source.replace(from, to);
-}
-
 function replaceAllRequired(from, to, label) {
   if (!source.includes(from)) {
     if (source.includes(to)) return;
@@ -28,15 +22,15 @@ function replaceRegexRequired(pattern, replacement, label) {
 replaceRegexRequired(
   /const DEFAULT_DPS_EFFICIENCY = 0\.88;\nconst savedDpsEfficiency = \(\) => \{[\s\S]*?\n\};/,
   `const DEFAULT_DPS_EFFICIENCY = 1;
-const EXECUTION_SCALING_VERSION = 2;
+const EXECUTION_SCALING_STORAGE_KEY = "wwm_execution_scaling_v2";
 const savedDpsEfficiency = () => {
   try {
-    const config = JSON.parse(localStorage.getItem("wwm_calc_config") || "{}");
-    // Version 1 stored 88% as a global default and silently scaled every modeled
-    // number. Version 2 treats execution as an optional parse projection only.
-    if (config?.executionScalingVersion !== EXECUTION_SCALING_VERSION) return DEFAULT_DPS_EFFICIENCY;
-    const value = Number(config?.dpsEff);
-    return Number.isFinite(value) ? Math.max(0.5, Math.min(1, value)) : DEFAULT_DPS_EFFICIENCY;
+    // Legacy configuration stored 88% as a global default and silently scaled
+    // modeled output. The v2 key is opt-in and controls parse projection only.
+    const value = Number(localStorage.getItem(EXECUTION_SCALING_STORAGE_KEY));
+    return Number.isFinite(value) && value > 0
+      ? Math.max(0.5, Math.min(1, value))
+      : DEFAULT_DPS_EFFICIENCY;
   } catch {
     return DEFAULT_DPS_EFFICIENCY;
   }
@@ -44,15 +38,13 @@ const savedDpsEfficiency = () => {
   "execution scaling default and migration",
 );
 
-replaceAllRequired(
-  "dpsEffUserSet: true,",
-  "dpsEffUserSet: true, executionScalingVersion: EXECUTION_SCALING_VERSION,",
-  "execution scaling config version",
-);
-
 source = source.replaceAll(
   "if (config.dpsEff !== undefined) setDpsEff(config.dpsEff === 1 && !config.dpsEffUserSet ? DEFAULT_DPS_EFFICIENCY : config.dpsEff);",
-  "setDpsEff(config.executionScalingVersion === EXECUTION_SCALING_VERSION && Number.isFinite(Number(config.dpsEff)) ? Math.max(0.5, Math.min(1, Number(config.dpsEff))) : DEFAULT_DPS_EFFICIENCY);",
+  "setDpsEff(savedDpsEfficiency());",
+);
+source = source.replaceAll(
+  "onEfficiencyChange={setDpsEff}",
+  "onEfficiencyChange={(value) => { setDpsEff(value); localStorage.setItem(EXECUTION_SCALING_STORAGE_KEY, String(value)); }}",
 );
 
 source = source.replaceAll("foodMin: 90, foodMax: 180", "foodMin: 120, foodMax: 240");
@@ -85,10 +77,7 @@ source = source.replaceAll(
   "Adjusts the theoretical rotation to a realistic parse estimate.",
   "Presentation-only estimate for missed inputs and imperfect uptime; excluded from gear ranking.",
 );
-source = source.replaceAll(
-  "efficiency applied",
-  "optional parse scaling",
-);
+source = source.replaceAll("efficiency applied", "optional parse scaling");
 
 if (source.includes("Food buff (+90 min / +180 max")) {
   throw new Error("[model-assumptions] Stale T91 food copy remains in generated App.tsx");
@@ -98,6 +87,9 @@ if (source.includes("estimate: Math.round(rotationStats.dps * dpsEff)")) {
 }
 if (source.includes("modeledDps={rotationStats.dps * dpsEff}")) {
   throw new Error("[model-assumptions] Optimizer-facing modeled DPS still uses parse scaling");
+}
+if (!source.includes("EXECUTION_SCALING_STORAGE_KEY")) {
+  throw new Error("[model-assumptions] Parse projection persistence was not generated");
 }
 
 fs.writeFileSync(path, source, "utf8");
