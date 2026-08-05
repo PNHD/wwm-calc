@@ -25,18 +25,24 @@ jobs:
       - name: Install browser smoke-test runtime
         run: |
           npm install --no-save --package-lock=false @playwright/test@1.55.0
-          npx playwright install --with-deps chromium
+          npx playwright install chromium
       - name: Smoke-test the production bundle in Chromium
         run: |
-          npx vite preview --host 127.0.0.1 --port 4173 > "$RUNNER_TEMP/wwm-preview.log" 2>&1 &
+          python3 -m http.server 4173 --bind 127.0.0.1 --directory dist > "$RUNNER_TEMP/wwm-preview.log" 2>&1 &
           PREVIEW_PID=$!
           trap 'kill $PREVIEW_PID || true' EXIT
+          READY=0
           for attempt in {1..30}; do
             if curl --fail --silent http://127.0.0.1:4173/ > /dev/null; then
+              READY=1
               break
             fi
             sleep 1
           done
+          if [ "$READY" -ne 1 ]; then
+            cat "$RUNNER_TEMP/wwm-preview.log"
+            exit 1
+          fi
           npx playwright test scripts/runtime-smoke.spec.mjs --reporter=line --workers=1
       - uses: actions/upload-artifact@v4
         if: always()
