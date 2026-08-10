@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "apply:global-v2": "node scripts/apply-global-v2.mjs && node scripts/apply-global-t96-live.mjs && node scripts/apply-global-v2-innerways.mjs && node scripts/apply-global-t96-ocr.mjs && node scripts/apply-global-v2-finalize.mjs && node scripts/apply-panel-first-optimizer.mjs && node scripts/apply-video-evidence.mjs && node scripts/apply-runtime-fixes.mjs && node scripts/apply-model-assumptions.mjs && node scripts/apply-ocr-regression-fixes.mjs && node scripts/validate-global-v2.mjs && node scripts/validate-panel-first.mjs && node scripts/validate-video-evidence.mjs && node scripts/validate-model-assumptions.mjs && node scripts/validate-ocr-regression.mjs",
+    "apply:global-v2": "node scripts/apply-global-v2.mjs && node scripts/apply-global-t96-live.mjs && node scripts/apply-global-v2-innerways.mjs && node scripts/apply-global-t96-ocr.mjs && node scripts/apply-global-v2-finalize.mjs && node scripts/apply-panel-first-optimizer.mjs && node scripts/apply-video-evidence.mjs && node scripts/apply-runtime-fixes.mjs && node scripts/apply-model-assumptions.mjs && node scripts/apply-ocr-regression-fixes.mjs && node scripts/apply-ocr-structured-import.mjs && node scripts/validate-global-v2.mjs && node scripts/validate-panel-first.mjs && node scripts/validate-video-evidence.mjs && node scripts/validate-model-assumptions.mjs && node scripts/validate-ocr-regression.mjs && node scripts/validate-ocr-structured-import.mjs",
     "audit:global-v2": "npm run apply:global-v2",
     "predev": "npm run apply:global-v2",
     "dev": "vite",
@@ -22,7 +22,7 @@
     "lucide-react": "^0.546.0",
     "postcss": "8.5.23",
     "react": "^19.0.1",
-    "react-dom": "^19.0.1",
+    "react-dom": "^19.0.3",
     "tesseract.js": "^7.0.0",
     "vite": "^6.2.3"
   },
