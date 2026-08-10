@@ -21,13 +21,13 @@ function replaceRegexRequired(source, pattern, to, label) {
   return source.replace(pattern, to);
 }
 
-// ── 1. Prefer exact Global-English stat spans before fuzzy line parsing -------
+// ── 1. Hybrid Global-English rows before broad fuzzy fallback -----------------
 let parser = read(files.parser);
 parser = replaceRequired(
   parser,
   "export interface OcrSub {",
-  'import { parseGlobalEnglishStatSpans } from "./ocrGlobalEnglish.ts";\n\nexport interface OcrSub {',
-  "Global English span parser import",
+  'import { parseHybridGlobalEnglishRows } from "./ocrGlobalEnglish.ts";\n\nexport interface OcrSub {',
+  "Global English hybrid row parser import",
 );
 parser = replaceRequired(
   parser,
@@ -35,23 +35,19 @@ parser = replaceRequired(
   `export const parseSubStats = (text: string): OcrSub[] => {
   console.log("[OCR] Raw text:\\n", text);
 
-  // The English Global client uses stable labels even when Tesseract changes
-  // line breaks. Parse those labels as ordered spans first so a wrapped Boss or
-  // Everspring label cannot borrow the next row's value. This also repairs the
-  // common dropped-decimal OCR form (5.2 -> 52) only for percentage-like stats.
-  const exactGlobalRows = parseGlobalEnglishStatSpans(text);
-  if (exactGlobalRows.length >= 6) {
-    const exact: OcrSub[] = exactGlobalRows.slice(0, 6).map(({ type, val, isTuned }) => ({ type, val, isTuned }));
-    let tunedSeen = false;
-    exact.forEach((row) => {
-      if (!row.isTuned) return;
-      if (tunedSeen) row.isTuned = false;
-      else tunedSeen = true;
-    });
-    console.log("[OCR] Exact Global English rows:", exact);
-    return exact;
+  // Lock every confidently recognized Global-English label/value span, recover
+  // only unresolved numeric rows from local non-numeric continuation context,
+  // then merge by source order. Unlike the old all-or-nothing exact parser,
+  // five correct rows are never discarded just because the sixth label is OCR-
+  // damaged. Numeric row anchors prevent a wrapped Boss label from consuming
+  // the following Power value. Decimal repair remains percentage-family scoped.
+  const hybridGlobalRows = parseHybridGlobalEnglishRows(text);
+  if (hybridGlobalRows.length >= 6) {
+    const hybrid: OcrSub[] = hybridGlobalRows.slice(0, 6).map(({ type, val, isTuned }) => ({ type, val, isTuned }));
+    console.log("[OCR] Hybrid Global English rows:", hybrid);
+    return hybrid;
   }`,
-  "exact Global English parser priority",
+  "hybrid Global English parser priority",
 );
 write(files.parser, parser);
 
@@ -136,4 +132,4 @@ app = replaceRequired(
 );
 write(files.app, app);
 
-console.log("[ocr-structured] Exact English rows, safe slot inference, and lossless structured import applied.");
+console.log("[ocr-structured] Hybrid English rows, safe slot inference, and lossless structured import applied.");
