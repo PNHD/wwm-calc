@@ -27,7 +27,7 @@ assert(!trust.includes("confidencePct") && !trust.includes("probabilityOfWinning
 // while Everspring Attunement changes only the combat-only aggregate.
 assert(/"1106"[\s\S]*umbMartial: 5\.8[\s\S]*attunedBonus: 20\.0/.test(trust), "1106 fixture contract missing");
 assert(/"1129"[\s\S]*umbMartial: 5\.8[\s\S]*attunedBonus: 20\.2/.test(trust), "1129 attunement fixture contract missing");
-assert(app.includes('semanticRole === "attunement" || sub.type === "Attuned Bonus"'), "normalized/legacy attunement guard missing from generated App");
+assert(app.includes('sub.type === "Attuned Bonus"') && app.includes('(sub as any).role === "attunement"'), "normalized/legacy attunement guard missing from generated App");
 assert(app.includes("next.attunedBonus = Number(gearSum.attunedBonus)"), "combat-only attunement aggregate is not recomputed from candidate gear");
 
 assert(app.includes("factorDeltas,"), "Gear Compare marginal DPS payload missing");
@@ -43,10 +43,15 @@ assert(trust.includes('{ source: "Scarlet Spin", outcome: "standard-roll", marti
 assert(trust.includes('{ source: "Resonance", outcome: "standard-roll", martialArt: true, starweave: true, everspring: true'), "Resonance eligibility contract missing");
 assert(trust.includes('{ source: "Burn and Bury", outcome: "guaranteed-critical"'), "Burn and Bury forced-critical contract missing");
 assert(trust.includes('{ source: "Soulbreak", outcome: "special-resolution"') && trust.includes('evidence: "UNKNOWN"'), "Soulbreak special-resolution uncertainty must stay explicit");
-assert(combatEvidence.includes('outcomeRule: "guaranteed-critical"') && combatEvidence.includes('outcomeRule: "special-resolution"'), "upstream combat evidence outcome rules missing");
+const guaranteedEvidence = combatEvidence.includes('rule: "guaranteed-critical"') || combatEvidence.includes('outcomeRule: "guaranteed-critical"');
+const specialEvidence = combatEvidence.includes('rule: "special-resolution"') || combatEvidence.includes('outcomeRule: "special-resolution"');
+assert(guaranteedEvidence && specialEvidence, "upstream combat evidence outcome rules missing");
 
-// Existing observed evidence remains calibration evidence only.
-assert(videoEvidence.includes("47_224") && videoEvidence.includes("45_825"), "observed 1129/1106 parse evidence missing");
+// Existing observed evidence remains calibration evidence only. Accept formatting
+// differences in numeric literals without weakening the semantic fixture check.
+const has1129Parse = videoEvidence.includes("47224") || videoEvidence.includes("47_224");
+const has1106Parse = videoEvidence.includes("45825") || videoEvidence.includes("45_825");
+assert(has1129Parse && has1106Parse, "observed 1129/1106 parse evidence missing");
 assert(model.includes("OBSERVED_PANEL_1106") && model.includes("OBSERVED_PANEL_1129"), "client panel fixtures missing from product model");
 assert(!app.includes("DPS_CALIBRATION_FACTOR") && !app.includes("parseCalibrationMultiplier"), "parse-to-model force-fit introduced");
 
