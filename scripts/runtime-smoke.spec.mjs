@@ -49,8 +49,6 @@ test("production build renders and completes the observed T96 decision flow", as
   await expect(navCompare).toBeVisible();
   await expect(navBestBuild).toBeVisible();
 
-  // The committed 1106 fixture must be directly loadable: no owner re-entry and
-  // no manual OCR acceptance are required for this product acceptance pass.
   const loadObserved = page.getByRole("button", { name: /Load observed T96/i });
   await expect(loadObserved).toBeVisible();
   await loadObserved.click();
@@ -58,6 +56,16 @@ test("production build renders and completes the observed T96 decision flow", as
   await expect(page.getByRole("region", { name: "Current build context" }).getByText("4/4")).toBeVisible();
 
   await navCombat.click();
+  await page.waitForTimeout(150);
+  const workspaceAfterCombat = await page.locator(".app-root").getAttribute("data-workspace");
+  const combatTextPreview = (await root.innerText()).replace(/\s+/g, " ").slice(0, 1000);
+  console.log(`[runtime-smoke] after Combat click: workspace=${workspaceAfterCombat}`);
+  console.log(`[runtime-smoke] after Combat text: ${combatTextPreview}`);
+  if (pageErrors.length) console.log(`[runtime-smoke] page errors before Combat assertion:\n${pageErrors.join("\n---\n")}`);
+  if (consoleErrors.length) console.log(`[runtime-smoke] console errors before Combat assertion:\n${consoleErrors.join("\n---\n")}`);
+  expect(workspaceAfterCombat, "Combat navigation must select the product combat workspace").toBe("simulation");
+  expect(pageErrors, "Combat workspace must render without a React/runtime exception").toEqual([]);
+
   await expect(page.getByRole("heading", { name: "Damage model" })).toBeVisible();
   await expect(page.getByText(/Attack-Boosting Food/).first()).toBeVisible();
   await expect(page.getByText(/\+120 Min \/ \+240 Max Physical Attack/).first()).toBeVisible();
@@ -72,8 +80,6 @@ test("production build renders and completes the observed T96 decision flow", as
   expect(Number.isFinite(baselineDps) && baselineDps > 0, "observed 1106 fixture must produce modeled DPS").toBeTruthy();
   console.log(`[runtime-smoke] observed 1106 modeled DPS: ${baselineDps}`);
 
-  // MENU PANEL must reproduce the supplied 1106 snapshot; food lives only in the
-  // COMBAT column and therefore cannot alter these menu values.
   await page.getByRole("button", { name: /^Attributes$/i }).click();
   const statTableText = await page.locator(".combat-stat-table").innerText();
   expect(statTableText).toMatch(/1,?614/);
@@ -84,7 +90,6 @@ test("production build renders and completes the observed T96 decision flow", as
   console.log("[runtime-smoke] observed 1106 menu panel verified: 1614–2777 / Prec 122.1 / Crit 132.5 / Aff 17.8");
   await page.getByRole("button", { name: /^Overview$/i }).click();
 
-  // Scenario inputs must affect the same modeled-DPS path used by Compare/Best Build.
   const cinderLabel = page.locator("label.product-switch").filter({ hasText: "Cinder Ash" });
   const cinderCheckbox = cinderLabel.locator('input[type="checkbox"]');
   await expect(cinderCheckbox).toBeChecked();
@@ -104,8 +109,6 @@ test("production build renders and completes the observed T96 decision flow", as
   await distanceSelect.selectOption("near");
   await page.waitForTimeout(100);
 
-  // Complete-build Gear Compare acceptance: same 1106 build, replace Chest only
-  // with the committed 1129 candidate and expose modeled result + deterministic why.
   await navCompare.click();
   const chestTab = page.locator(".compare-slot-tabs").getByRole("button", { name: /^Chest\b/i });
   if (await chestTab.count()) await chestTab.first().click();
@@ -134,7 +137,6 @@ test("production build renders and completes the observed T96 decision flow", as
   fs.writeFileSync("runtime-smoke-report.json", `${JSON.stringify(report, null, 2)}\n`, "utf8");
 
   await page.screenshot({ path: "runtime-smoke.png", fullPage: true });
-
   if (consoleErrors.length) console.log(`[runtime-smoke] console errors:\n${consoleErrors.join("\n---\n")}`);
   if (pageErrors.length) console.log(`[runtime-smoke] page errors:\n${pageErrors.join("\n---\n")}`);
   expect(pageErrors, "the production bundle must not throw during render, scenario changes, or Gear Compare").toEqual([]);
