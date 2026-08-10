@@ -83,9 +83,8 @@ export interface SemanticGearSubLike {
 export const applyGearRowSemantics = <T extends SemanticGearSubLike>(rows: T[]): T[] => {
   let normalIndex = 0;
   return rows.map((row, index) => {
-    const definition = getWeaponAttunementById(row.attunementId)
-      ?? (isAttunementStatKey(row.type) ? getDefaultWeaponAttunementForStatKey(row.type) : undefined);
-    const attunement = row.role === "attunement" || Boolean(definition);
+    const definition = getWeaponAttunementById(row.attunementId);
+    const attunement = row.role === "attunement" || isAttunementStatKey(row.type);
     const role: GearSubRole = attunement ? "attunement" : normalIndex++ === 0 ? "primary" : "additional";
     const isRetuned = attunement ? false : Boolean(row.isRetuned ?? row.isTuned);
     return {
@@ -96,7 +95,9 @@ export const applyGearRowSemantics = <T extends SemanticGearSubLike>(rows: T[]):
       // Keep the legacy field synchronized so existing calculation/import code
       // can remain untouched while saved profiles migrate non-destructively.
       isTuned: isRetuned,
-      attunementId: attunement ? row.attunementId ?? definition?.id : undefined,
+      // Never guess a specific weapon for legacy family-level stat keys. Exact
+      // player-facing identity is retained only when OCR/manual input provided it.
+      attunementId: attunement ? row.attunementId : undefined,
       displayName: attunement ? row.displayName ?? definition?.displayName : row.displayName,
     };
   });
