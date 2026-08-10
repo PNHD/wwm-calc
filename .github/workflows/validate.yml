@@ -26,6 +26,10 @@ jobs:
         run: npm audit --omit=dev --audit-level=high
       - run: npm run lint
       - run: npm run build
+      - name: Validate Cloudflare Pages dist
+        run: |
+          npm run validate:pages-dist
+          find dist -maxdepth 2 -type f | sort
       - name: Re-run production OCR parser regressions
         run: npm run validate:ocr-runtime
       - name: Install browser smoke-test runtime
