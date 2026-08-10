@@ -48,14 +48,11 @@ jobs:
           npx playwright test scripts/runtime-t96-acceptance.spec.mjs --reporter=line --workers=1
           STATUS=$?
           set -e
-          if [ -f runtime-smoke-diagnostic.txt ]; then
+          if [ "$STATUS" -ne 0 ] && [ -f runtime-smoke-diagnostic.txt ]; then
             python3 - <<'PY'
           from pathlib import Path
-          import os
-          p=Path('runtime-smoke-diagnostic.txt')
-          text=p.read_text()[:7000].replace('%','%25').replace('\r','%0D').replace('\n','%0A')
-          level='error' if int(os.environ.get('STATUS_FOR_ANNOTATION','1')) else 'notice'
-          print(f'::{level} file=scripts/runtime-t96-acceptance.spec.mjs,line=1,title=T96 runtime diagnostic::{text}')
+          text=Path('runtime-smoke-diagnostic.txt').read_text()[:7000].replace('%','%25').replace('\r','%0D').replace('\n','%0A')
+          print(f'::error file=scripts/runtime-t96-acceptance.spec.mjs,line=1,title=T96 runtime diagnostic::{text}')
           PY
           fi
           if [ "$STATUS" -eq 0 ] && [ -f runtime-smoke-report.json ]; then
