@@ -1,5 +1,6 @@
 import { ArrowRightLeft, Check, Pencil, Search } from "lucide-react";
 import { useState } from "react";
+import { PATH_MODEL_MATURITY } from "../../data/modelTrust";
 
 export interface GearComparePanelDelta {
   label: string;
@@ -34,9 +35,7 @@ export interface GearCompareRow {
   deltaDps?: number;
   deltaPct?: number;
   panelDelta?: GearComparePanelDelta[];
-  /** Leave-one-factor-out marginal DPS effects; interactions are intentionally not disguised as additive weights. */
   factorDeltas?: GearCompareFactorDelta[];
-  /** Deterministic evidence-based category, not a statistical percentage. */
   confidence?: "HIGH" | "MEDIUM" | "CLOSE CALL" | "EXPERIMENTAL";
   confidenceWhy?: string;
   unknowns?: readonly string[];
@@ -44,7 +43,6 @@ export interface GearCompareRow {
   setChange?: string;
   attunementChange?: string;
   reason?: string;
-  /** Legacy pre-migration values, accepted only so source lint can run before build migrations. */
   score?: number;
   delta?: number;
   equipped: boolean;
@@ -54,6 +52,7 @@ interface Props {
   rows: GearCompareRow[];
   slots: { key: string; label: string }[];
   activeSlot: string;
+  pathKey?: string;
   onSlotChange: (slot: string) => void;
   onEquip: (id: string) => void;
   onEdit: (id: string) => void;
@@ -64,15 +63,16 @@ const candidateDeltaPct = (row: GearCompareRow): number => row.deltaPct ?? row.d
 const candidateDeltaDps = (row: GearCompareRow): number => row.deltaDps ?? 0;
 const formatDelta = (value: number, digits = 1) => `${value >= 0 ? "+" : ""}${value.toFixed(digits)}`;
 
-export default function GearCompareWorkspace({ rows, slots, activeSlot, onSlotChange, onEquip, onEdit }: Props) {
+export default function GearCompareWorkspace({ rows, slots, activeSlot, pathKey, onSlotChange, onEquip, onEdit }: Props) {
   const [query, setQuery] = useState("");
+  const maturity = pathKey ? PATH_MODEL_MATURITY[pathKey] : undefined;
   const candidates = rows
     .filter((row) => (activeSlot === "ALL" || row.slot === activeSlot) && `${row.name} ${row.setName}`.toLowerCase().includes(query.toLowerCase()))
     .sort((a, b) => candidateDps(b) - candidateDps(a));
   const current = candidates.find((row) => row.equipped) ?? rows.find((row) => row.slot === activeSlot && row.equipped);
 
   return <main className="compare-workspace" id="main-content">
-    <header className="product-page-heading"><div><span className="product-kicker">Gear Compare</span><h1>Current → Candidate</h1><p>BUILD → GEAR → COMPARE → BEST BUILD. Each candidate rebuilds the menu panel, set/attunement ownership and the same combat timeline before ranking.</p></div></header>
+    <header className="product-page-heading"><div><span className="product-kicker">Gear Compare</span><h1>Current → Candidate</h1><p>BUILD → GEAR → COMPARE → BEST BUILD. Each candidate rebuilds the menu panel, set/attunement ownership and the same combat timeline before ranking.</p>{maturity && <p><strong>{maturity.label}: {maturity.ownership} · {maturity.maturity}</strong> · Evidence: {maturity.evidence.join(" + ")}. {maturity.summary}</p>}</div></header>
     <nav className="compare-slot-tabs" aria-label="Compare gear slots">{slots.filter((slot) => slot.key !== "ALL").map((slot) => <button type="button" key={slot.key} className={activeSlot === slot.key ? "is-active" : ""} onClick={() => onSlotChange(slot.key)}>{slot.label}<small>{rows.filter((row) => row.slot === slot.key).length}</small></button>)}</nav>
     <section className="compare-summary"><div><small>Current</small><strong>{current?.name ?? "No gear selected"}</strong></div><ArrowRightLeft size={20} aria-hidden="true" /><div><small>Combat evaluation</small><strong>Menu panel → eligibility → timeline → DPS</strong></div><label><Search size={16} aria-hidden="true" /><input type="search" placeholder="Filter candidates" value={query} onChange={(event) => setQuery(event.target.value)} /></label></section>
     <section className="compare-grid" aria-label="Gear comparison candidates">{candidates.map((row) => {
