@@ -27,7 +27,7 @@
     "lucide-react": "^0.546.0",
     "postcss": "8.5.23",
     "react": "^19.0.1",
-    "react-dom": "^19.0.3",
+    "react-dom": "^19.0.1",
     "tesseract.js": "^7.0.0",
     "vite": "^6.2.3"
   },
