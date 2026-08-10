@@ -1,4 +1,4 @@
-export const T96_PRODUCT_MODEL_VERSION = 3;
+export const T96_PRODUCT_MODEL_VERSION = 4;
 
 // Keep the earlier community measurements as provenance. They are useful priors,
 // but they do not reproduce the supplied Global Lv96 1106 -> 1129 client swap.
