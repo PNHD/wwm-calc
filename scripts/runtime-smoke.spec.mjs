@@ -14,12 +14,8 @@ test("production build renders and completes the observed T96 decision flow", as
   const pageErrors = [];
   const consoleErrors = [];
 
-  page.on("pageerror", (error) => {
-    pageErrors.push(error.stack || error.message);
-  });
-  page.on("console", (message) => {
-    if (message.type() === "error") consoleErrors.push(message.text());
-  });
+  page.on("pageerror", (error) => pageErrors.push(error.stack || error.message));
+  page.on("console", (message) => { if (message.type() === "error") consoleErrors.push(message.text()); });
 
   const response = await page.goto("http://127.0.0.1:4173/", { waitUntil: "networkidle" });
   await page.waitForTimeout(500);
@@ -27,19 +23,21 @@ test("production build renders and completes the observed T96 decision flow", as
   const root = page.locator("#root");
   const rootHtml = await root.innerHTML();
   const rootText = (await root.innerText()).trim();
-
-  console.log(`[runtime-smoke] HTTP ${response?.status() ?? "no-response"}`);
-  console.log(`[runtime-smoke] root HTML length: ${rootHtml.length}`);
-  console.log(`[runtime-smoke] root text preview: ${rootText.slice(0, 300)}`);
+  writeDiagnostic("initial-render", {
+    http: response?.status() ?? null,
+    rootHtmlLength: rootHtml.length,
+    rootTextLength: rootText.length,
+    textPreview: rootText.replace(/\s+/g, " ").slice(0, 1000),
+    pageErrors,
+    consoleErrors,
+  });
 
   expect(response?.ok(), "preview server must return a successful document response").toBeTruthy();
   expect(rootHtml.length, "#root must contain the rendered application").toBeGreaterThan(100);
   expect(rootText.length, "the application shell must expose visible text").toBeGreaterThan(20);
 
   const legacyLayout = page.locator(".app-layout").first();
-  if (await legacyLayout.count()) {
-    await expect(legacyLayout, "legacy simulator must not bleed into product workspaces").toBeHidden();
-  }
+  if (await legacyLayout.count()) await expect(legacyLayout, "legacy simulator must not bleed into product workspaces").toBeHidden();
 
   const productNav = page.getByRole("navigation", { name: "Product workspaces" });
   const navBuild = productNav.getByRole("button", { name: /^Build\b/i });
@@ -47,6 +45,16 @@ test("production build renders and completes the observed T96 decision flow", as
   const navCompare = productNav.getByRole("button", { name: /^Compare\b/i });
   const navBestBuild = productNav.getByRole("button", { name: /^Best Build\b/i });
   const navCombat = productNav.getByRole("button", { name: /^Combat\b/i });
+  writeDiagnostic("before-nav-assertions", {
+    productNavCount: await productNav.count(),
+    buildCount: await navBuild.count(),
+    gearCount: await navGear.count(),
+    compareCount: await navCompare.count(),
+    bestBuildCount: await navBestBuild.count(),
+    combatCount: await navCombat.count(),
+    pageErrors,
+    consoleErrors,
+  });
 
   await expect(navBuild).toBeVisible();
   await expect(navGear).toBeVisible();
@@ -54,10 +62,26 @@ test("production build renders and completes the observed T96 decision flow", as
   await expect(navBestBuild).toBeVisible();
 
   const loadObserved = page.getByRole("button", { name: /Load observed T96/i });
+  writeDiagnostic("before-load-observed", {
+    loadObservedCount: await loadObserved.count(),
+    activeNavText: await productNav.locator("button.is-active").allInnerTexts(),
+    pageErrors,
+    consoleErrors,
+  });
   await expect(loadObserved).toBeVisible();
   await loadObserved.click();
   await page.waitForTimeout(150);
-  await expect(page.getByRole("region", { name: "Current build context" }).getByText("4/4")).toBeVisible();
+  const currentContext = page.getByRole("region", { name: "Current build context" });
+  writeDiagnostic("after-load-observed", {
+    contextCount: await currentContext.count(),
+    contextText: await currentContext.count() ? await currentContext.innerText() : "",
+    fourOfFourCount: await currentContext.getByText("4/4").count(),
+    activeNavText: await productNav.locator("button.is-active").allInnerTexts(),
+    workspace: await page.locator(".app-root").getAttribute("data-workspace"),
+    pageErrors,
+    consoleErrors,
+  });
+  await expect(currentContext.getByText("4/4")).toBeVisible();
 
   await navCombat.click();
   await page.waitForTimeout(150);
@@ -75,11 +99,8 @@ test("production build renders and completes the observed T96 decision flow", as
     consoleErrors,
   };
   writeDiagnostic("after-combat-click", diagnostic);
-  console.log(`[runtime-smoke] after Combat click: workspace=${workspaceAfterCombat}`);
-  console.log(`[runtime-smoke] after Combat text: ${combatTextPreview}`);
   expect(workspaceAfterCombat, `Combat navigation diagnostic: ${JSON.stringify(diagnostic)}`).toBe("simulation");
   expect(pageErrors, `Combat render diagnostic: ${JSON.stringify(diagnostic)}`).toEqual([]);
-
   await expect(page.getByRole("heading", { name: "Damage model" }), `Combat heading diagnostic: ${JSON.stringify(diagnostic)}`).toBeVisible();
   await expect(page.getByText(/Attack-Boosting Food/).first()).toBeVisible();
   await expect(page.getByText(/\+120 Min \/ \+240 Max Physical Attack/).first()).toBeVisible();
@@ -92,7 +113,6 @@ test("production build renders and completes the observed T96 decision flow", as
   const modeledDpsStrong = page.locator(".combat-metrics .is-primary strong").first();
   const baselineDps = parseFirstDps(await modeledDpsStrong.innerText());
   expect(Number.isFinite(baselineDps) && baselineDps > 0, "observed 1106 fixture must produce modeled DPS").toBeTruthy();
-  console.log(`[runtime-smoke] observed 1106 modeled DPS: ${baselineDps}`);
 
   await page.getByRole("button", { name: /^Attributes$/i }).click();
   const statTableText = await page.locator(".combat-stat-table").innerText();
@@ -101,7 +121,6 @@ test("production build renders and completes the observed T96 decision flow", as
   expect(statTableText).toMatch(/122\.1/);
   expect(statTableText).toMatch(/132\.5/);
   expect(statTableText).toMatch(/17\.8/);
-  console.log("[runtime-smoke] observed 1106 menu panel verified: 1614–2777 / Prec 122.1 / Crit 132.5 / Aff 17.8");
   await page.getByRole("button", { name: /^Overview$/i }).click();
 
   const cinderLabel = page.locator("label.product-switch").filter({ hasText: "Cinder Ash" });
@@ -119,7 +138,6 @@ test("production build renders and completes the observed T96 decision flow", as
   await page.waitForTimeout(100);
   const farDps = parseFirstDps(await modeledDpsStrong.innerText());
   expect(farDps).not.toBe(baselineDps);
-  console.log(`[runtime-smoke] scenario DPS: no-Cinder=${noCinderDps}; Starweave-far=${farDps}`);
   await distanceSelect.selectOption("near");
   await page.waitForTimeout(100);
 
@@ -146,11 +164,8 @@ test("production build renders and completes the observed T96 decision flow", as
     starweaveFarDps: farDps,
     candidateText: candidateText.replace(/\s+/g, " ").trim(),
   };
-  console.log(`[runtime-smoke] observed 1129 compare card: ${report.candidateText.slice(0, 1200)}`);
-  console.log(JSON.stringify(report));
   fs.writeFileSync("runtime-smoke-report.json", `${JSON.stringify(report, null, 2)}\n`, "utf8");
   writeDiagnostic("completed", report);
-
   await page.screenshot({ path: "runtime-smoke.png", fullPage: true });
   expect(pageErrors, "the production bundle must not throw during render, scenario changes, or Gear Compare").toEqual([]);
 });
