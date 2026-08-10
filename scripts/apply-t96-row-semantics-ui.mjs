@@ -10,14 +10,22 @@ const replaceRegexOnce = (regex, replacement, label) => {
   source = source.replace(regex, replacement);
 };
 
-// Prior migrations can leave one or more modal resets in their original shape.
+// `apply-global-v2-finalize` makes the initial row type slot-aware. The semantic
+// form instead always starts with five unresolved normal rolls + one unresolved
+// Attunement row; slot compatibility is still enforced by the ordinary selector.
+source = source.replace(
+  /\s*const defaultSubStat = slot === "Umbrella" \|\| slot === "Rope Dart" \? "Max Void Atk" : "Max Phys Atk";\s*setFormSubs\(Array\(6\)\.fill\(null\)\.map\(\(\) => \(\{ type: defaultSubStat, val: "", isTuned: false \}\)\)\);/g,
+  "\n    setFormSubs(toGearFormRows([]) as GearSub[]);",
+);
 source = source.replace(
   /setFormSubs\(Array\(6\)\.fill\(null\)\.map\(\(\) => \(\{\s*type:\s*"Max Phys Atk",\s*val:\s*"",\s*isTuned:\s*false\s*\}\)\)\);/g,
   "setFormSubs(toGearFormRows([]) as GearSub[]);",
 );
 
+// Match the Add Gear selector after all earlier migrations, regardless of which
+// ordinary slot-filter helper they installed.
 replaceRegexOnce(
-  /<SearchableSelect\s+value=\{sub\.type\}[\s\S]*?options=\{SUB_STAT_OPTIONS\}\s+placeholder="Search stat\.\.\."\s+\/>/,
+  /<SearchableSelect\s+value=\{sub\.type\}[\s\S]*?placeholder="Search stat\.\.\."[\s\S]*?\/>/,
   `<SearchableSelect
                           value={sub.role === "attunement" ? (sub.attunementId ?? "") : sub.type}
                           onChange={val => {
@@ -48,7 +56,7 @@ replaceRegexOnce(
                           }}
                           options={sub.role === "attunement"
                             ? [{ value: "", label: "Select Attunement / Empty" }, ...ATTUNEMENT_SELECT_OPTIONS]
-                            : SUB_STAT_OPTIONS.filter((option) => !isAttunementStatKey(option.value))}
+                            : subStatOptionsForSlot(selectedSlot).filter((option) => !isAttunementStatKey(option.value))}
                           placeholder={sub.role === "attunement" ? "Search weapon Attunement..." : "Search stat..."}
                         />`,
   "manual Attunement selector",
