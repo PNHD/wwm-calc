@@ -4,16 +4,19 @@ import "./model-assumptions.css";
 
 export type ProductTab = "details" | "gear-analyzer" | "gear-compare" | "inventory-optimizer" | "simulation" | "team" | "rotations" | "skill-editor" | "settings" | "profile";
 
+// Primary journey is intentionally ordered by the decision the product must help
+// the player make: configure build -> enter gear -> compare -> optimize -> inspect
+// combat details. Advanced theorycraft surfaces come afterward.
 const NAV = [
-  { key: "details", label: "Details", hint: "Damage model", icon: BarChart3 },
-  { key: "gear-analyzer", label: "Gear Analyzer", hint: "Inventory", icon: Boxes },
-  { key: "gear-compare", label: "Gear Compare", hint: "Side by side", icon: SlidersHorizontal },
-  { key: "inventory-optimizer", label: "Best Build", hint: "Optimize", icon: Layers3 },
-  { key: "simulation", label: "Simulation", hint: "Combat output", icon: Dice5 },
-  { key: "team", label: "Team", hint: "Party plan", icon: Users },
+  { key: "settings", label: "Build", hint: "Path & assumptions", icon: Settings },
+  { key: "gear-analyzer", label: "Gear", hint: "Inventory", icon: Boxes },
+  { key: "gear-compare", label: "Compare", hint: "Full-build swap", icon: SlidersHorizontal },
+  { key: "inventory-optimizer", label: "Best Build", hint: "DPS ranking", icon: Layers3 },
+  { key: "details", label: "Combat", hint: "Panel & DPS", icon: BarChart3 },
+  { key: "simulation", label: "Simulation", hint: "Distribution", icon: Dice5 },
   { key: "rotations", label: "Rotations", hint: "Execution", icon: Repeat2 },
   { key: "skill-editor", label: "Skill Editor", hint: "Theorycraft", icon: FlaskConical },
-  { key: "settings", label: "Settings", hint: "Assumptions", icon: Settings },
+  { key: "team", label: "Team", hint: "Party plan", icon: Users },
   { key: "profile", label: "Profile", hint: "Import & save", icon: FileText },
 ] as const;
 
