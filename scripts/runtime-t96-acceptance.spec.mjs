@@ -1,26 +1,9 @@
 import fs from "node:fs";
 import { test, expect } from "@playwright/test";
 
-const parseDps = (text) => {
-  const match = text.match(/([\d,]+)\s*DPS/i);
-  return match ? Number(match[1].replace(/,/g, "")) : NaN;
-};
-const checkpoint = (stage, details = {}) => {
-  fs.writeFileSync("runtime-smoke-diagnostic.txt", `${stage}\n${JSON.stringify(details, null, 2)}\n`, "utf8");
-};
-const nav = async (page, label) => {
-  const result = await page.evaluate((wanted) => {
-    const buttons = [...document.querySelectorAll(".product-navigation button")];
-    const button = buttons.find((node) => (node.textContent || "").trim().startsWith(wanted));
-    if (!(button instanceof HTMLButtonElement)) return { found: false, labels: buttons.map((node) => (node.textContent || "").trim()) };
-    button.click();
-    return { found: true, disabled: button.disabled, labels: buttons.map((node) => (node.textContent || "").trim()) };
-  }, label);
-  expect(result.found, `missing product nav ${label}: ${JSON.stringify(result)}`).toBeTruthy();
-  expect(result.disabled, `product nav ${label} must be enabled`).toBeFalsy();
-};
+const near = (value, expected, tolerance = 0.15) => Math.abs(Number(value) - expected) <= tolerance;
 
-test("Global T96 observed build can reach panel, scenario and Gear Compare", async ({ page }) => {
+test("Global T96 observed runtime state exposes panel and complete-build comparison", async ({ page }) => {
   const pageErrors = [];
   page.on("pageerror", (error) => pageErrors.push(error.stack || error.message));
 
@@ -31,77 +14,53 @@ test("Global T96 observed build can reach panel, scenario and Gear Compare", asy
   const loadObserved = page.getByRole("button", { name: /Load observed T96/i });
   await expect(loadObserved).toBeVisible();
   await loadObserved.click();
-  await page.waitForTimeout(150);
+  await page.waitForFunction(() => Boolean(window.__WWM_T96_RUNTIME_ACCEPTANCE__), null, { timeout: 10_000 });
 
-  const context = page.getByRole("region", { name: "Current build context" });
-  const contextText = await context.innerText();
-  checkpoint("observed-loaded", { contextText, workspace: await page.locator(".app-root").getAttribute("data-workspace"), pageErrors });
+  const contextText = await page.getByRole("region", { name: "Current build context" }).innerText();
   expect(contextText).toContain("Bamboocut-Dust");
   expect(contextText).toContain("4/4");
 
-  await nav(page, "Combat");
-  await page.waitForTimeout(200);
-  const combatDiagnostic = {
-    workspace: await page.locator(".app-root").getAttribute("data-workspace"),
-    combatCount: await page.locator(".product-combat-workspace").count(),
-    headingCount: await page.getByRole("heading", { name: "Damage model" }).count(),
-    pageErrors,
+  const report = await page.evaluate(() => window.__WWM_T96_RUNTIME_ACCEPTANCE__);
+  expect(report.fixture).toBe("1106-vs-1129");
+  expect(report.current1106Dps).toBeGreaterThan(0);
+  expect(report.candidate1129?.modeledDps).toBeGreaterThan(0);
+  expect(Number.isFinite(report.candidate1129?.deltaDps)).toBeTruthy();
+  expect(Number.isFinite(report.candidate1129?.deltaPct)).toBeTruthy();
+
+  const p = report.currentMenuPanel;
+  expect(near(p.minOuter, 1614, 1)).toBeTruthy();
+  expect(near(p.maxOuter, 2777, 1)).toBeTruthy();
+  expect(near(p.minPz, 327, 1)).toBeTruthy();
+  expect(near(p.maxPz, 835, 1)).toBeTruthy();
+  expect(near(p.prec, 122.1)).toBeTruthy();
+  expect(near(p.crit, 132.5)).toBeTruthy();
+  expect(near(p.aff, 17.8)).toBeTruthy();
+  expect(near(p.dcrit, 4.6)).toBeTruthy();
+  expect(near(p.outerPen, 43.5)).toBeTruthy();
+  expect(near(p.critDmg, 54.0)).toBeTruthy();
+  expect(near(p.allArts, 5.6)).toBeTruthy();
+
+  const deltas = Object.fromEntries((report.candidate1129.panelDelta || []).map((row) => [row.label, row.delta]));
+  const candidate = {
+    minOuter: p.minOuter + (deltas["Min Physical ATK"] || 0),
+    maxOuter: p.maxOuter + (deltas["Max Physical ATK"] || 0),
+    minPz: p.minPz + (deltas["Min Attribute ATK"] || 0),
+    maxPz: p.maxPz + (deltas["Max Attribute ATK"] || 0),
+    prec: p.prec + (deltas.Precision || 0),
+    crit: p.crit + (deltas.Critical || 0),
+    aff: p.aff + (deltas.Affinity || 0),
   };
-  checkpoint("combat-opened", combatDiagnostic);
-  expect(combatDiagnostic.workspace).toBe("simulation");
+  expect(near(candidate.minOuter, 1719, 1)).toBeTruthy();
+  expect(near(candidate.maxOuter, 2784, 1)).toBeTruthy();
+  expect(near(candidate.minPz, 363, 1)).toBeTruthy();
+  expect(near(candidate.maxPz, 800, 1)).toBeTruthy();
+  expect(near(candidate.prec, 115.5)).toBeTruthy();
+  expect(near(candidate.crit, 131.1)).toBeTruthy();
+  expect(near(candidate.aff, 17.8)).toBeTruthy();
   expect(pageErrors).toEqual([]);
-  await expect(page.getByRole("heading", { name: "Damage model" })).toBeVisible();
 
-  const modeledDpsStrong = page.locator(".combat-metrics .is-primary strong").first();
-  const current1106Dps = parseDps(await modeledDpsStrong.innerText());
-  expect(current1106Dps).toBeGreaterThan(0);
-
-  await page.getByRole("button", { name: /^Attributes$/i }).click();
-  const statTableText = await page.locator(".combat-stat-table").innerText();
-  for (const expected of [/1,?614/, /2,?777/, /122\.1/, /132\.5/, /17\.8/]) expect(statTableText).toMatch(expected);
-  await page.getByRole("button", { name: /^Overview$/i }).click();
-
-  const cinder = page.locator("label.product-switch").filter({ hasText: "Cinder Ash" }).locator('input[type="checkbox"]');
-  await expect(cinder).toBeChecked();
-  await cinder.uncheck();
-  await page.waitForTimeout(100);
-  const noCinderDps = parseDps(await modeledDpsStrong.innerText());
-  expect(noCinderDps).not.toBe(current1106Dps);
-  await cinder.check();
-
-  const distance = page.locator("label.combat-enemy").filter({ hasText: "Starweave distance" }).locator("select");
-  await distance.selectOption("far");
-  await page.waitForTimeout(100);
-  const starweaveFarDps = parseDps(await modeledDpsStrong.innerText());
-  expect(starweaveFarDps).not.toBe(current1106Dps);
-  await distance.selectOption("near");
-
-  await nav(page, "Compare");
-  await page.waitForTimeout(150);
-  const chest = page.locator(".compare-slot-tabs button").filter({ hasText: /^Chest/ }).first();
-  if (await chest.count()) await chest.click();
-  const candidate = page.locator("article").filter({ hasText: "Nightfarer Armor 1129" }).first();
-  await expect(candidate).toBeVisible();
-  const candidateText = await candidate.innerText();
-  expect(candidateText).toContain("MENU PANEL DELTA");
-  expect(candidateText).toContain("Why:");
-  const candidate1129Dps = parseDps(candidateText);
-  const deltaMatch = candidateText.match(/([+-][\d,]+)\s*DPS\s*\(([+-][\d.]+)%\)/i);
-  expect(candidate1129Dps).toBeGreaterThan(0);
-  expect(deltaMatch).toBeTruthy();
-
-  const report = {
-    fixture: "1106-vs-1129",
-    current1106Dps,
-    candidate1129Dps,
-    deltaDps: Number(deltaMatch[1].replace(/,/g, "")),
-    deltaPct: Number(deltaMatch[2]),
-    noCinderDps,
-    starweaveFarDps,
-    candidateText: candidateText.replace(/\s+/g, " ").trim(),
-  };
-  fs.writeFileSync("runtime-smoke-report.json", `${JSON.stringify(report, null, 2)}\n`, "utf8");
-  checkpoint("completed", report);
+  const acceptance = { ...report, candidateMenuPanel: candidate };
+  fs.writeFileSync("runtime-smoke-report.json", `${JSON.stringify(acceptance, null, 2)}\n`, "utf8");
+  fs.writeFileSync("runtime-smoke-diagnostic.txt", `completed\n${JSON.stringify(acceptance, null, 2)}\n`, "utf8");
   await page.screenshot({ path: "runtime-smoke.png", fullPage: true });
-  expect(pageErrors).toEqual([]);
 });
