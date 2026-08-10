@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "rootDir": ".",
+    "outDir": "./node_modules/.cache/ocr-validator",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "rewriteRelativeImportExtensions": true
+  },
+  "include": [
+    "src/utils/ocrParser.ts",
+    "src/utils/ocrGlobalEnglish.ts",
+    "scripts/validate-ocr-regression.mjs",
+    "scripts/validate-ocr-structured-import.mjs"
+  ]
+}
