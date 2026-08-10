@@ -30,13 +30,17 @@ requireText("src/App.tsx", app, "panelModelVersion: PANEL_MODEL_VERSION", "versi
 requireText("src/App.tsx", app, "s.panelModelVersion !== PANEL_MODEL_VERSION", "legacy calibration invalidation");
 requireText("src/App.tsx", app, "starweavePieces >= 2", "T96 Starweave static 2pc rebuild");
 requireText("src/App.tsx", app, "const candidateCombo = [", "complete replacement comparison");
-requireText("src/App.tsx", app, "comboInCombat(candidateCombo).total", "replacement panel and rotation evaluation");
+if (!(app.includes("comboInCombat(candidateCombo).total") || (app.includes("const candidateCombat = comboInCombat(candidateCombo)") && app.includes("candidateCombat.total")))) {
+  failures.push("src/App.tsx: missing replacement panel and rotation evaluation");
+}
 requireText("src/App.tsx", app, "deltaDps", "absolute replacement DPS delta");
 requireText("src/App.tsx", app, "timelineResult.total", "timeline-driven optimizer ranking");
 
 requireText("src/utils/globalT96Gear.ts", scorer, "const overall = modeledContribution * 0.85 + buildFit * 0.15", "cap-independent item diagnostic score");
 forbidText("src/utils/globalT96Gear.ts", scorer, "rollQuality * 0.5", "roll cap used in build ranking");
-requireText("src/product/workspaces/GearCompareWorkspace.tsx", compare, "Menu panel + combat timeline + rotation", "full-build comparison label");
+if (!(compare.includes("Menu panel + combat timeline + rotation") || compare.includes("Menu panel → eligibility → timeline → DPS"))) {
+  failures.push("src/product/workspaces/GearCompareWorkspace.tsx: missing full-build comparison label");
+}
 requireText("src/product/workspaces/GearCompareWorkspace.tsx", compare, "modeledDps", "modeled DPS comparison field");
 requireText("src/product/workspaces/GearCompareWorkspace.tsx", compare, "MENU PANEL DELTA", "deterministic menu-panel delta UI");
 requireText("src/product/workspaces/OptimizeWorkspace.tsx", optimize, "Panel-first build optimizer", "panel-first optimizer heading");
