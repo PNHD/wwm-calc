@@ -6,6 +6,10 @@ const parseFirstDps = (text) => {
   return match ? Number(match[1].replace(/,/g, "")) : NaN;
 };
 
+const writeDiagnostic = (stage, details) => {
+  fs.writeFileSync("runtime-smoke-diagnostic.txt", `${stage}\n${JSON.stringify(details, null, 2)}\n`, "utf8");
+};
+
 test("production build renders and completes the observed T96 decision flow", async ({ page }) => {
   const pageErrors = [];
   const consoleErrors = [];
@@ -57,16 +61,26 @@ test("production build renders and completes the observed T96 decision flow", as
 
   await navCombat.click();
   await page.waitForTimeout(150);
-  const workspaceAfterCombat = await page.locator(".app-root").getAttribute("data-workspace");
-  const combatTextPreview = (await root.innerText()).replace(/\s+/g, " ").slice(0, 1000);
+  const appRoot = page.locator(".app-root");
+  const workspaceAfterCombat = await appRoot.getAttribute("data-workspace");
+  const combatTextPreview = (await root.innerText()).replace(/\s+/g, " ").slice(0, 1800);
+  const diagnostic = {
+    workspaceAfterCombat,
+    activeNavText: await productNav.locator("button.is-active").allInnerTexts(),
+    damageHeadingCount: await page.getByRole("heading", { name: "Damage model" }).count(),
+    combatWorkspaceCount: await page.locator(".product-combat-workspace").count(),
+    legacyLayoutVisible: await legacyLayout.count() ? await legacyLayout.isVisible() : false,
+    textPreview: combatTextPreview,
+    pageErrors,
+    consoleErrors,
+  };
+  writeDiagnostic("after-combat-click", diagnostic);
   console.log(`[runtime-smoke] after Combat click: workspace=${workspaceAfterCombat}`);
   console.log(`[runtime-smoke] after Combat text: ${combatTextPreview}`);
-  if (pageErrors.length) console.log(`[runtime-smoke] page errors before Combat assertion:\n${pageErrors.join("\n---\n")}`);
-  if (consoleErrors.length) console.log(`[runtime-smoke] console errors before Combat assertion:\n${consoleErrors.join("\n---\n")}`);
-  expect(workspaceAfterCombat, "Combat navigation must select the product combat workspace").toBe("simulation");
-  expect(pageErrors, "Combat workspace must render without a React/runtime exception").toEqual([]);
+  expect(workspaceAfterCombat, `Combat navigation diagnostic: ${JSON.stringify(diagnostic)}`).toBe("simulation");
+  expect(pageErrors, `Combat render diagnostic: ${JSON.stringify(diagnostic)}`).toEqual([]);
 
-  await expect(page.getByRole("heading", { name: "Damage model" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Damage model" }), `Combat heading diagnostic: ${JSON.stringify(diagnostic)}`).toBeVisible();
   await expect(page.getByText(/Attack-Boosting Food/).first()).toBeVisible();
   await expect(page.getByText(/\+120 Min \/ \+240 Max Physical Attack/).first()).toBeVisible();
   await expect(page.getByText(/Advanced parse projection/)).toBeVisible();
@@ -135,9 +149,8 @@ test("production build renders and completes the observed T96 decision flow", as
   console.log(`[runtime-smoke] observed 1129 compare card: ${report.candidateText.slice(0, 1200)}`);
   console.log(JSON.stringify(report));
   fs.writeFileSync("runtime-smoke-report.json", `${JSON.stringify(report, null, 2)}\n`, "utf8");
+  writeDiagnostic("completed", report);
 
   await page.screenshot({ path: "runtime-smoke.png", fullPage: true });
-  if (consoleErrors.length) console.log(`[runtime-smoke] console errors:\n${consoleErrors.join("\n---\n")}`);
-  if (pageErrors.length) console.log(`[runtime-smoke] page errors:\n${pageErrors.join("\n---\n")}`);
   expect(pageErrors, "the production bundle must not throw during render, scenario changes, or Gear Compare").toEqual([]);
 });
