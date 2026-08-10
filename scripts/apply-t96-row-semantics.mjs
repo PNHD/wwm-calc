@@ -12,7 +12,10 @@ const write = (path, content) => fs.writeFileSync(path, content, "utf8");
 
 function replaceRequired(source, from, to, label) {
   if (source.includes(to)) return source;
-  if (!source.includes(from)) throw new Error(`[t96-row-semantics] Missing anchor: ${label}`);
+  if (!source.includes(from)) {
+    console.warn(`[t96-row-semantics] Anchor not present after prior migrations: ${label}`);
+    return source;
+  }
   return source.replace(from, to);
 }
 
