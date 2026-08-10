@@ -33,7 +33,11 @@ test("production build renders the application shell and current T96 assumptions
     await expect(legacyLayout, "legacy simulator must not bleed into product workspaces").toBeHidden();
   }
 
-  await page.getByRole("button", { name: /Details/i }).click();
+  await expect(page.getByRole("button", { name: /^Build\b/i })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^Gear\b/i })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^Compare\b/i })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^Best Build\b/i })).toBeVisible();
+  await page.getByRole("button", { name: /^Combat\b/i }).click();
   await expect(page.getByRole("heading", { name: "Damage model" })).toBeVisible();
   await expect(page.getByText(/Attack-Boosting Food/).first()).toBeVisible();
   await expect(page.getByText(/\+120 Min \/ \+240 Max Physical Attack/).first()).toBeVisible();
