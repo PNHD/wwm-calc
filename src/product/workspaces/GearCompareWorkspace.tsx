@@ -15,6 +15,13 @@ export interface GearCompareFactorDelta {
   note?: string;
 }
 
+export interface GearCompareFixtureDiagnostic {
+  label: string;
+  observedDps: number;
+  modeledDps: number;
+  panelRows: { label: string; predicted: number; observed: number }[];
+}
+
 export interface GearCompareRow {
   id: string;
   slot: string;
@@ -23,25 +30,19 @@ export interface GearCompareRow {
   image: string;
   setName: string;
   subs: { type: string; value: string; tuned: boolean }[];
-  /** Full rotation DPS after replacing the current item in this slot. */
   modeledDps?: number;
-  /** Absolute DPS change against the currently equipped complete build. */
   deltaDps?: number;
-  /** Percentage DPS change against the currently equipped complete build. */
   deltaPct?: number;
-  /** Deterministic menu-panel fields most affected by this replacement. */
   panelDelta?: GearComparePanelDelta[];
   /** Leave-one-factor-out marginal DPS effects; interactions are intentionally not disguised as additive weights. */
   factorDeltas?: GearCompareFactorDelta[];
-  /** Deterministic evidence-based recommendation category, never a statistical percentage. */
+  /** Deterministic evidence-based category, not a statistical percentage. */
   confidence?: "HIGH" | "MEDIUM" | "CLOSE CALL" | "EXPERIMENTAL";
   confidenceWhy?: string;
   unknowns?: readonly string[];
-  /** Set ownership change caused by the replacement, if any. */
+  fixtureDiagnostic?: GearCompareFixtureDiagnostic;
   setChange?: string;
-  /** Attunement change caused by the replacement, if any. */
   attunementChange?: string;
-  /** Human-readable modeled reason for the result. */
   reason?: string;
   /** Legacy pre-migration values, accepted only so source lint can run before build migrations. */
   score?: number;
@@ -84,10 +85,11 @@ export default function GearCompareWorkspace({ rows, slots, activeSlot, onSlotCh
         <header><img src={row.image} alt="" /><div><strong>{row.name}</strong><small>{row.slotLabel} / {row.setName}</small></div><b>{Math.round(modeledDps).toLocaleString()} DPS</b></header>
         <div className="compare-lines">{row.subs.slice(0, 6).map((sub, index) => <span key={`${sub.type}-${index}`}><strong>{sub.type}{sub.tuned ? " (Retuned)" : ""}</strong><b>{sub.value}</b></span>)}</div>
         {!!row.panelDelta?.length && <div className="compare-panel-delta"><small>MENU PANEL DELTA</small>{row.panelDelta.slice(0, 8).map((stat) => <span key={stat.label}><strong>{stat.label}</strong><em>{stat.current.toFixed(1)} → {stat.candidate.toFixed(1)}</em><b>{formatDelta(stat.delta)}</b></span>)}</div>}
-        {!!row.factorDeltas?.length && <div className="compare-panel-delta"><small>COMBAT DELTA · MARGINAL DPS</small>{row.factorDeltas.slice(0, 10).map((factor) => <span key={factor.label} title={factor.note}><strong>{factor.label}</strong><em>{factor.evidence ?? "MODELED"}</em><b>{formatDelta(factor.dpsDelta, 0)} DPS</b></span>)}</div>}
+        {!!row.factorDeltas?.length && <div className="compare-panel-delta"><small>COMBAT DELTA · MARGINAL DPS</small>{row.factorDeltas.slice(0, 14).map((factor, index) => <span key={`${factor.label}-${index}`} title={factor.note}><strong>{factor.label}</strong><em>{factor.evidence ?? "MODELED"}</em><b>{formatDelta(factor.dpsDelta, 0)} DPS</b></span>)}</div>}
         {(positives.length > 0 || negatives.length > 0 || row.reason) && <div className="compare-explanation"><p><strong>WHY</strong></p>{positives.length > 0 && <p><strong>Top positive:</strong> {positives.map((x) => `${x.label} ${formatDelta(x.dpsDelta, 0)}`).join(" · ")}</p>}{negatives.length > 0 && <p><strong>Top negative:</strong> {negatives.map((x) => `${x.label} ${formatDelta(x.dpsDelta, 0)}`).join(" · ")}</p>}{row.reason && <p>{row.reason}</p>}</div>}
         {(row.setChange || row.attunementChange) && <div className="compare-explanation">{row.setChange && <p><strong>Set:</strong> {row.setChange}</p>}{row.attunementChange && <p><strong>Attunement:</strong> {row.attunementChange}</p>}</div>}
         {row.confidence && <div className="compare-explanation"><p><strong>CONFIDENCE: {row.confidence}</strong></p>{row.confidenceWhy && <p>{row.confidenceWhy}</p>}{!!row.unknowns?.length && <p><strong>Could reverse ranking:</strong> {row.unknowns.slice(0, 2).join(" · ")}</p>}</div>}
+        {row.fixtureDiagnostic && <details className="compare-explanation"><summary><strong>Advanced · MODELED vs OBSERVED · {row.fixtureDiagnostic.label}</strong></summary><p><strong>DPS:</strong> {Math.round(row.fixtureDiagnostic.modeledDps).toLocaleString()} modeled vs {row.fixtureDiagnostic.observedDps.toLocaleString()} observed parse. Parse is diagnostic only; no auto-calibration is applied.</p><div className="compare-panel-delta"><small>PANEL · PREDICTED vs OBSERVED</small>{row.fixtureDiagnostic.panelRows.map((stat) => <span key={stat.label}><strong>{stat.label}</strong><em>{stat.predicted.toFixed(1)} predicted</em><b>{stat.observed.toFixed(1)} observed</b></span>)}</div></details>}
         <footer><span>{row.equipped ? <><Check size={14} aria-hidden="true" /> Current complete build</> : <>Modeled delta {deltaDps >= 0 ? "+" : ""}{Math.round(deltaDps).toLocaleString()} DPS ({deltaPct >= 0 ? "+" : ""}{deltaPct.toFixed(2)}%)</>}</span><button type="button" onClick={() => onEdit(row.id)} aria-label={`Edit ${row.name}`}><Pencil size={15} /></button>{!row.equipped && <button type="button" className="is-primary" onClick={() => onEquip(row.id)}>Swap gear</button>}</footer>
       </article>;
     })}</section>
