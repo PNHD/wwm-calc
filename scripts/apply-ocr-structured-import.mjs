@@ -26,7 +26,7 @@ let parser = read(files.parser);
 parser = replaceRequired(
   parser,
   "export interface OcrSub {",
-  'import { parseGlobalEnglishStatSpans } from "./ocrGlobalEnglish";\n\nexport interface OcrSub {',
+  'import { parseGlobalEnglishStatSpans } from "./ocrGlobalEnglish.ts";\n\nexport interface OcrSub {',
   "Global English span parser import",
 );
 parser = replaceRequired(
