@@ -36,8 +36,9 @@ requireText("src/App.tsx", app, "timelineResult.total", "timeline-driven optimiz
 
 requireText("src/utils/globalT96Gear.ts", scorer, "const overall = modeledContribution * 0.85 + buildFit * 0.15", "cap-independent item diagnostic score");
 forbidText("src/utils/globalT96Gear.ts", scorer, "rollQuality * 0.5", "roll cap used in build ranking");
-requireText("src/product/workspaces/GearCompareWorkspace.tsx", compare, "Full panel + rotation", "full-build comparison label");
+requireText("src/product/workspaces/GearCompareWorkspace.tsx", compare, "Menu panel + combat timeline + rotation", "full-build comparison label");
 requireText("src/product/workspaces/GearCompareWorkspace.tsx", compare, "modeledDps", "modeled DPS comparison field");
+requireText("src/product/workspaces/GearCompareWorkspace.tsx", compare, "MENU PANEL DELTA", "deterministic menu-panel delta UI");
 requireText("src/product/workspaces/OptimizeWorkspace.tsx", optimize, "Panel-first build optimizer", "panel-first optimizer heading");
 requireText("src/product/workspaces/OptimizeWorkspace.tsx", optimize, "not by proximity to a roll cap", "cap diagnostic positioning");
 forbidText("src/data/panelOptimizationEvidence.ts", evidence, "0 Precision / 0 Crit", "Bellstrike distribution leaking into active Bamboocut model");
