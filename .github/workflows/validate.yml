@@ -26,6 +26,8 @@ jobs:
         run: npm audit --omit=dev --audit-level=high
       - run: npm run lint
       - run: npm run build
+      - name: Validate Global T96 product model
+        run: npm run validate:t96-product
       - name: Validate Cloudflare Pages dist
         run: |
           npm run validate:pages-dist
