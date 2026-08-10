@@ -1,54 +1,43 @@
-export const PANEL_MODEL_VERSION = 2 as const;
+import {
+  ATTRIBUTE_CONVERSION_CONFIDENCE,
+  COMMUNITY_ATTRIBUTE_CONVERSIONS,
+  GLOBAL_T96_ATTRIBUTE_CONVERSIONS as CLIENT_T96_ATTRIBUTE_CONVERSIONS,
+  T96_PRODUCT_MODEL_VERSION,
+} from "../utils/t96ProductModel.mjs";
+
+export const PANEL_MODEL_VERSION = T96_PRODUCT_MODEL_VERSION;
 
 /**
- * Community-measured attribute conversions used to project a calibrated menu
- * panel after gear swaps. These are not roll caps and never grade an item.
- * The one-time in-game panel calibration absorbs character-level, breakthrough,
- * talent, armory, and other static contributions that are not represented here.
+ * Active Global T96 panel projection.
+ *
+ * The prior community coefficients remain exported below for provenance, but
+ * the supplied 1106 -> 1129 Global Lv96 client swap shows that the old Agility
+ * and Power conversions do not reproduce the current menu panel. The active
+ * coefficients therefore use the identifiable client-calibrated conversion
+ * model from t96ProductModel.mjs. This is a conversion model, not a roll-cap
+ * grade and not a set of arbitrary per-field corrections.
  */
-export const GLOBAL_ATTRIBUTE_CONVERSIONS = {
-  power: {
-    minOuterPerPoint: 0.225,
-    maxOuterPerPoint: 1.36,
-  },
-  momentum: {
-    maxOuterPerPoint: 0.9,
-    affinityRatePerPoint: 0.038,
-  },
-  agility: {
-    minOuterPerPoint: 0.9,
-    critRatePerPoint: 0.076,
-  },
-} as const;
+export const GLOBAL_ATTRIBUTE_CONVERSIONS = CLIENT_T96_ATTRIBUTE_CONVERSIONS;
+export const GLOBAL_ATTRIBUTE_CONVERSIONS_COMMUNITY_PRIOR = COMMUNITY_ATTRIBUTE_CONVERSIONS;
+export const GLOBAL_ATTRIBUTE_CONVERSION_CONFIDENCE = ATTRIBUTE_CONVERSION_CONFIDENCE;
 
-export type OptimizationObjective = "average-dps" | "high-ceiling";
+export type OptimizationObjective = "sustained-dps" | "burst-dps";
 
 /**
- * Source-derived Bellstrike-Splendor constraints. These are optimizer context,
- * not universal stat weights. The combat engine still evaluates every complete
- * gear combination from its resulting panel and selected rotation.
+ * Bamboocut-Dust is the active product model. Bellstrike-specific distributions
+ * such as 0P0C / 2P1C are intentionally not exported into this optimizer path.
+ * Stat priority is evaluated from the current complete build by modeled DPS.
  */
-export const BELLSTRIKE_SPLENDOR_OPTIMIZATION = {
-  targetAffinityEffective: 40,
-  chargeDamageShareApprox: 0.9,
-  objectives: {
-    "high-ceiling": {
-      label: "High ceiling",
-      distribution: "0 Precision / 0 Crit; maximize Max Physical Attack",
-      varianceApprox: 30,
-    },
-    "average-dps": {
-      label: "Balanced average DPS",
-      distribution: "2 Precision + 1 Crit or 1 Precision + 2 Crit",
-      varianceApprox: 25,
-    },
-  },
+export const BAMBOOCUT_DUST_OPTIMIZATION = {
+  defaultObjective: "sustained-dps" as OptimizationObjective,
+  objectiveLabel: "Sustained boss DPS",
+  rankingMetric: "modeled-rotation-dps",
   constraints: [
-    "Meet the Momentum requirement for weapon talents.",
-    "When choosing the balanced distribution, trade Precision or Crit for Max Physical Attack rather than Power or Momentum.",
-    "Evaluate All Martial Arts, weapon-art damage, and Boss Damage through the full rotation instead of a fixed item weight.",
-    "Rotation conditions include Qi Imbalance, Endless Gale, Jadeware uptime, endurance, and phase duration.",
+    "Evaluate the complete equipped build after every replacement.",
+    "Rebuild set ownership and Attunement semantics before rotation scoring.",
+    "Treat roll cap and roll quality as diagnostics only.",
+    "Keep conditional Inner Way and Starweave effects out of the menu panel.",
+    "Use current Global client evidence ahead of legacy CN/T91 references.",
   ],
-  source: "The Ultimate WWM Speedrun Guide · Bellstrike - Splendor tab",
-  evidenceLevel: "community-guide",
+  evidenceLevel: "confirmed-client-plus-modeled-calibration",
 } as const;
