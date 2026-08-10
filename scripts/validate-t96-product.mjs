@@ -55,7 +55,10 @@ assert.ok(Math.abs(CHEST_SWAP_1129_MINUS_1106.precDirect + 6.6) < 1e-9);
 
 // Full-build replacement and optimizer objective must use modeled timeline damage.
 assert.ok(app.includes("const candidateCombo = ["), "Gear Compare must construct the full replacement build");
-assert.ok(app.includes("comboInCombat(candidateCombo).total"), "Gear Compare must rerun the complete build");
+assert.ok(
+  app.includes("comboInCombat(candidateCombo).total") || (app.includes("const candidateCombat = comboInCombat(candidateCombo)") && app.includes("candidateCombat.total")),
+  "Gear Compare must rerun the complete build",
+);
 assert.ok(app.includes("timelineResult.total"), "Bamboocut ranking must consume timeline total damage");
 assert.ok(app.includes("return baselineScore > 0 ? (totalDmg / baselineScore) * 100 : 0;"), "Best Build internal rank must be monotonic modeled damage");
 assert.ok(!app.includes("Subtract a tiny penalty per overcap point"), "Best Build must not use a hidden Crit-overcap tie penalty");
