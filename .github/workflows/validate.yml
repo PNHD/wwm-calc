@@ -26,6 +26,8 @@ jobs:
         run: npm audit --omit=dev --audit-level=high
       - run: npm run lint
       - run: npm run build
+      - name: Validate Global T96 product model
+        run: npm run validate:t96-product
       - name: Validate Cloudflare Pages dist
         run: |
           npm run validate:pages-dist
@@ -41,25 +43,34 @@ jobs:
           python3 -m http.server 4173 --bind 127.0.0.1 --directory dist > "$RUNNER_TEMP/wwm-preview.log" 2>&1 &
           PREVIEW_PID=$!
           trap 'kill $PREVIEW_PID || true' EXIT
-          READY=0
-          for attempt in {1..30}; do
-            if curl --fail --silent http://127.0.0.1:4173/ > /dev/null; then
-              READY=1
-              break
-            fi
-            sleep 1
-          done
-          if [ "$READY" -ne 1 ]; then
-            cat "$RUNNER_TEMP/wwm-preview.log"
-            exit 1
+          for attempt in {1..30}; do curl --fail --silent http://127.0.0.1:4173/ > /dev/null && break; sleep 1; done
+          set +e
+          npx playwright test scripts/runtime-t96-acceptance.spec.mjs --reporter=line --workers=1
+          STATUS=$?
+          set -e
+          if [ "$STATUS" -ne 0 ] && [ -f runtime-smoke-diagnostic.txt ]; then
+            python3 - <<'PY'
+          from pathlib import Path
+          text=Path('runtime-smoke-diagnostic.txt').read_text()[:7000].replace('%','%25').replace('\r','%0D').replace('\n','%0A')
+          print(f'::error file=scripts/runtime-t96-acceptance.spec.mjs,line=1,title=T96 runtime diagnostic::{text}')
+          PY
           fi
-          npx playwright test scripts/runtime-smoke.spec.mjs --reporter=line --workers=1
+          if [ "$STATUS" -eq 0 ] && [ -f runtime-smoke-report.json ]; then
+            python3 - <<'PY'
+          from pathlib import Path
+          text=Path('runtime-smoke-report.json').read_text()[:7000].replace('%','%25').replace('\r','%0D').replace('\n','%0A')
+          print(f'::notice file=scripts/runtime-t96-acceptance.spec.mjs,line=1,title=T96 runtime acceptance::{text}')
+          PY
+          fi
+          exit "$STATUS"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: runtime-smoke
           path: |
             runtime-smoke.png
+            runtime-smoke-report.json
+            runtime-smoke-diagnostic.txt
             test-results/
           if-no-files-found: ignore
       - name: Ensure migration is deterministic

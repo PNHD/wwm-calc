@@ -19,6 +19,8 @@ interface CombatWorkspaceProps {
   food: boolean;
   foodMin?: number;
   foodMax?: number;
+  cinderAsh?: boolean;
+  starweaveDistance?: "near" | "far";
   enemy: { name: string; defense: number; physicalResistance: number; attributeResistance: number };
   stats: { label: string; menu: string; combat: string; derived?: boolean }[];
   skills: { name: string; count: number; damage: number; share: number }[];
@@ -28,6 +30,8 @@ interface CombatWorkspaceProps {
   priorities: RankedOption[];
   onEfficiencyChange: (value: number) => void;
   onFoodChange: (value: boolean) => void;
+  onCinderAshChange?: (value: boolean) => void;
+  onStarweaveDistanceChange?: (value: "near" | "far") => void;
   onConfigure: () => void;
 }
 
@@ -37,6 +41,8 @@ export default function CombatWorkspace(props: CombatWorkspaceProps) {
   const parsed = Number(recorded) || 0;
   const foodMin = props.foodMin ?? 120;
   const foodMax = props.foodMax ?? 240;
+  const cinderAsh = props.cinderAsh ?? true;
+  const starweaveDistance = props.starweaveDistance ?? "near";
   const parseProjection = props.modeled;
 
   return (
@@ -52,11 +58,14 @@ export default function CombatWorkspace(props: CombatWorkspaceProps) {
       </section>
 
       <section className="combat-assumptions product-assumption-panel">
-        <div className="product-section-heading"><div><h2>Active combat assumptions</h2><p>Only game-state inputs belong in the primary model.</p></div><button type="button" className="product-secondary-button" onClick={props.onConfigure}>Configure build</button></div>
+        <div className="product-section-heading"><div><h2>Active combat assumptions</h2><p>These inputs are shared by current DPS, Gear Compare, Stat Priority and Best Build.</p></div><button type="button" className="product-secondary-button" onClick={props.onConfigure}>Configure build</button></div>
         <div className="combat-assumption-grid is-compact">
           <label className="product-switch"><input type="checkbox" checked={props.food} onChange={(event) => props.onFoodChange(event.target.checked)} /><span aria-hidden="true" /><strong>Attack-Boosting Food<small>+{foodMin} Min / +{foodMax} Max Physical Attack</small></strong></label>
-          <div className="combat-enemy"><span>Target profile</span><strong>{props.enemy.name}</strong><small>DEF {props.enemy.defense} / Physical RES {props.enemy.physicalResistance}% / Attribute RES {props.enemy.attributeResistance}%</small></div>
-          <div className="combat-rotation"><span>Reference window</span><strong>{props.duration}s</strong><small>{Math.round(props.totalDamage).toLocaleString()} modeled damage</small></div>
+          <label className="product-switch"><input type="checkbox" checked={cinderAsh} disabled={!props.onCinderAshChange} onChange={(event) => props.onCinderAshChange?.(event.target.checked)} /><span aria-hidden="true" /><strong>Cinder Ash<small>Includes observed Divinecraft / Fire sources; never blanket +4% Physical damage</small></strong></label>
+          <label className="combat-enemy"><span>Starweave distance</span><select value={starweaveDistance} disabled={!props.onStarweaveDistanceChange} onChange={(event) => props.onStarweaveDistanceChange?.(event.target.value as "near" | "far")}><option value="near">Near · ≤4m · +0% distance component</option><option value="far">Far · ≥8m · +1% max tooltip component</option></select><small>No interpolation is assumed between 4m and 8m.</small></label>
+          <div className="combat-enemy"><span>Target profile</span><strong>{props.enemy.name}</strong><small>Boss · single target · DEF {props.enemy.defense} / Physical RES {props.enemy.physicalResistance}% / Attribute RES {props.enemy.attributeResistance}%</small></div>
+          <div className="combat-rotation"><span>Reference window</span><strong>{props.duration}s sustained</strong><small>{Math.round(props.totalDamage).toLocaleString()} modeled damage · Infinite Vitality ON</small></div>
+          <div className="combat-enemy"><span>Fixture state</span><strong>Boss attacks OFF · Controlled OFF</strong><small>Party buffs OFF. These remain locked until a deterministic cadence/controlled-target model is supported.</small></div>
         </div>
         <details className="parse-projection-control">
           <summary>Advanced parse projection <strong>{Math.round(props.efficiency * 100)}%</strong></summary>
@@ -96,7 +105,7 @@ export default function CombatWorkspace(props: CombatWorkspaceProps) {
           <div className="details-choice-group"><small>Ring</small>{props.rings.map((item) => <span key={item.name} className={item.active ? "is-active" : ""}><strong>{item.name}{item.active ? " (current)" : ""}</strong><b>{Math.round(item.value).toLocaleString()} DPS</b></span>)}</div>
         </article>
         <article>
-          <header><TrendingUp size={18} aria-hidden="true" /><div><h2>Stat priority</h2><p>Damage gained from one additional Global max roll.</p></div></header>
+          <header><TrendingUp size={18} aria-hidden="true" /><div><h2>Stat priority</h2><p>Marginal modeled DPS from one additional Global max roll on the current complete build/scenario.</p></div></header>
           <div className="details-priority-list">
             {props.priorities.slice(0, 10).map((item, index) => <span key={item.name}><i>{index + 1}</i><strong>{item.name}</strong><small>{item.detail}</small><b>+{Math.round(item.value).toLocaleString()}</b></span>)}
           </div>
