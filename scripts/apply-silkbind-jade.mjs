@@ -18,7 +18,6 @@ function replaceRegexRequired(source,re,to,label){
   return source.replace(re,to);
 }
 
-// ---- Imports / path-owned UI ------------------------------------------------
 app=replaceRequired(app,
   'import { SPEEDRUN_BOSSES, SPEEDRUN_PLAYBOOK } from "./data/speedrunGuide";',
   `import { SPEEDRUN_BOSSES, SPEEDRUN_PLAYBOOK } from "./data/speedrunGuide";
@@ -32,7 +31,6 @@ import {
 } from "./pathModels/silkbindJade.mjs";`,
   'Jade path-model imports');
 
-// Remove stale Jade static-priority copy. Best Build/stat priority are now modeled.
 app=replaceRequired(app,
   `  "silkbind-jade": {
     label: "Silkbind-Jade", weapons: "Vernal Umbrella + Inkwell Fan",
@@ -51,7 +49,6 @@ app=replaceRequired(app,
   'Jade profile copy');
 app=app.replaceAll('Ninefold Spring: Special Skill DMG Bonus (Attuned Weapon Bonus)','Vernal Umbrella: T96 semantic Attunement (family-aware)');
 
-// ---- Scenario state ---------------------------------------------------------
 const scenarioAnchor='  const starweaveDistanceBonusPct = starweaveDistance === "far" ? 1 : 0;';
 const scenarioState=`  const starweaveDistanceBonusPct = starweaveDistance === "far" ? 1 : 0;
   const [jadeObjective, setJadeObjective] = useState<string>(JADE_OBJECTIVES.EXPECTED_DPS);
@@ -73,8 +70,6 @@ const scenarioState=`  const starweaveDistanceBonusPct = starweaveDistance === "
   }), [jadeScenarioOverrides, selectedInnerWays]);`;
 app=replaceRequired(app,scenarioAnchor,scenarioState,'Jade scenario state');
 
-// Helpers intentionally inspect raw Attunement rows so current T96 semantic
-// families can coexist with old profiles whose family-level keys are preserved.
 const helperAnchor='  // ponytail: single source for "gear combo → in-combat panel → rotation total".';
 const helperBlock=`  const jadeAttunementsForCombo = (combo: GearItem[]) => {
     const bonuses: Record<string, number> = {};
@@ -112,8 +107,6 @@ const helperBlock=`  const jadeAttunementsForCombo = (combo: GearItem[]) => {
   // ponytail: single source for "gear combo → in-combat panel → rotation total".`;
 app=replaceRequired(app,helperAnchor,helperBlock,'Jade complete-build helpers');
 
-// Jade branch inside the complete-build evaluator. This automatically routes
-// Gear Compare, contribution analysis and Best Build through the same planner.
 if(!app.includes('const jadeResult = evaluateSilkbindJadeCached(')){
   app=replaceRegexRequired(app,
     /(  const comboInCombat = \(combo: GearItem\[\], bowOverride\?: string\): \{ total: number; crit: number \} => \{[\s\S]*?return \{ total: timelineResult\.total, crit: p\.crit \+ iwStats\.crit \};\n    \}\n\n)(    p\.outerPen \+= iwStats\.outerPen;)/,
@@ -130,7 +123,6 @@ $2`,
     'Jade combo evaluator branch');
 }
 
-// Current-build DPS/skill table uses the exact same Jade evaluation.
 if(!app.includes('const jadeCurrent = evaluateSilkbindJadeCached(')){
   const marker='    let totalDmg = 0;\n    const items = rotation.map((item) => {';
   const jadeCurrent=`    if (selectedBuild === "silkbind-jade") {
@@ -152,7 +144,6 @@ if(!app.includes('const jadeCurrent = evaluateSilkbindJadeCached(')){
   app=replaceRequired(app,marker,jadeCurrent,'Jade current-build DPS branch');
 }
 
-// Dynamic Stat Priority must perturb the panel and rerun Jade, not the legacy fixed rotation.
 if(!app.includes('if (selectedBuild === "silkbind-jade") {\n        return evaluateSilkbindJadeCached')){
   const marker=`      let total = 0;
       getScenarioRotationForBuild(selectedBuild).forEach((item) => {`;
@@ -170,7 +161,6 @@ if(!app.includes('if (selectedBuild === "silkbind-jade") {\n        return evalu
   app=replaceRequired(app,marker,branch,'Jade stat-priority evaluator');
 }
 
-// Ensure memos react to Jade objective/scenario changes.
 app=app.replace(
   'iwStats, cinderAsh, starweaveDistanceBonusPct]);',
   'iwStats, cinderAsh, starweaveDistanceBonusPct, jadeObjective, jadeScenario]);',
@@ -180,8 +170,6 @@ app=app.replace(
   'selectedInnerWays, innerWayTiers, cinderAsh, starweaveDistanceBonusPct, jadeObjective, jadeScenario]);',
 );
 
-// Current diagnostics/advice live immediately before the Analysis workspace so the
-// default screen remains compact and advanced scenario controls stay collapsed.
 if(!app.includes('onObjectiveChange={setJadeObjective}')){
   const uiAnchor='      {workspace === "analysis" && (';
   const ui=`      {selectedBuild === "silkbind-jade" && (() => {
@@ -201,10 +189,8 @@ if(!app.includes('onObjectiveChange={setJadeObjective}')){
   app=replaceRequired(app,uiAnchor,ui,'Jade health UI');
 }
 
-// Jade compare reasoning: keep the existing full-build panel/set/attunement WHY,
-// and add rate-saturation/objective context instead of a generic gear score.
 if(!app.includes('const jadeReason = selectedBuild === "silkbind-jade"')){
-  app=replace(
+  app=app.replace(
     'const reason = item.id === current?.id\n      ? "Current complete-build baseline."',
     'const jadeReason = selectedBuild === "silkbind-jade"\n      ? (candidateMenu.prec >= 115 ? " Precision remains near/at effective cap; excess Precision has low marginal value." : " Precision is still below the Jade target and remains valuable.")\n        + (jadeObjective === JADE_OBJECTIVES.SPEEDRUN_CEILING && candidateMenu.maxOuter > currentMenuPanel.maxOuter ? " +Max Physical is favored by the community Speedrun Ceiling endpoint." : "")\n      : "";\n    const reason = item.id === current?.id\n      ? "Current complete-build baseline."',
   );
@@ -214,7 +200,6 @@ if(!app.includes('const jadeReason = selectedBuild === "silkbind-jade"')){
   );
 }
 
-// ---- Inner Way corrections -------------------------------------------------
 inner=replaceRequired(inner,
   'desc:"Vernal Umbrella\'s Spring Sorrow Martial Art Skill can hold up to 2 stacks. Hitting a target applies Combo effect: target takes +10% damage from your Ballistic Skills for 10s. Affected Skills: Let Spring Go, Everbloom, Umbrella Light Attack, Spring Away.",',
   'desc:"Global 2.0: Blossom Barrage is projectile-focused. Tier 5 changes the former Critical DMG breakthrough to Direct Critical Rate. Spring Away / Unfading Flower gain an own-Combo damage bonus, increased while the target is Exhausted. Exact current Direct Crit numeric value is intentionally not fabricated.",',
@@ -228,7 +213,6 @@ inner=replaceRequired(inner,
   'desc:"Official 1.7: completing Martial Art Skills activates Spring Thunder. Eligible attack/ballistic events consume charges for the temporary damage effect; low-Qi/Qi-break rules are modeled as event state rather than a permanent average.",\n    recommended:false, note:"Global 1.7+ event-driven trigger. Legacy movement-distance behavior is not used by the Jade optimizer.",',
   'Thunderous Bloom current description');
 
-// ---- T96 semantic Attunement families -------------------------------------
 const attInsert=`  { id: "vernal-high-frequency-ballistic", family: "umbrella", statKey: "Vernal Frequent Ballistic DMG Boost", weaponName: "Vernal Umbrella", aliases: ["vernal umbrella frequent ballistic dmg boost", "vernal umbrella frequent projectile dmg boost", "frequent ballistic dmg boost", "frequent projectile dmg boost"], displayName: "Vernal Umbrella — Frequent Ballistic DMG Boost" },
   { id: "vernal-special-t96", family: "umbrella", statKey: "Vernal Special Skill DMG Boost", weaponName: "Vernal Umbrella", aliases: ["vernal umbrella special skill dmg boost", "ninefold spring special skill dmg bonus"], displayName: "Vernal Umbrella — Special Skill DMG Boost" },
   { id: "vernal-charged-t96", family: "umbrella", statKey: "Vernal Charged Skill DMG Boost", weaponName: "Vernal Umbrella", aliases: ["vernal umbrella charged skill dmg boost"], displayName: "Vernal Umbrella — Charged Skill DMG Boost" },
