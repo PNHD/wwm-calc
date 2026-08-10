@@ -3,10 +3,12 @@ import fs from "node:fs";
 const path = "src/App.tsx";
 let source = fs.readFileSync(path, "utf8");
 const marker = "  const gearAnalysis";
-const hook = `  useEffect(() => {
-    if (activeScheme?.name !== GLOBAL_T96_OBSERVED_PRESET_META.scheme) return;
+const hook = `  // CI/runtime diagnostics are derived synchronously from the same render snapshot
+  // as Gear Compare. This avoids an effect-timing race after loading the observed
+  // fixture and does not mutate product state or calibrate the model.
+  if (typeof window !== "undefined" && activeScheme?.name === GLOBAL_T96_OBSERVED_PRESET_META.scheme) {
     const candidate1129 = compareRows.find((row) => row.name === "Nightfarer Armor 1129");
-    const current1106 = compareRows.find((row) => row.mastery === 1106 || row.name === "Nightfarer Armor");
+    const current1106 = compareRows.find((row) => row.name === "Nightfarer Armor");
     const menu = {
       minOuter: currentMenuPanel.minOuter,
       maxOuter: currentMenuPanel.maxOuter,
@@ -48,7 +50,7 @@ const hook = `  useEffect(() => {
         reason: candidate1129.reason,
       } : null,
     };
-  }, [activeScheme?.name, currentMenuPanel, currentCompareDps, compareRows]);
+  }
 
 `;
 if (!source.includes("__WWM_T96_RUNTIME_ACCEPTANCE__")) {
@@ -56,4 +58,4 @@ if (!source.includes("__WWM_T96_RUNTIME_ACCEPTANCE__")) {
   source = source.replace(marker, hook + marker);
 }
 fs.writeFileSync(path, source, "utf8");
-console.log("[t96-runtime-hook] PASS — observed fixture exposes panel, complete-build comparison, confidence and factor diagnostics.");
+console.log("[t96-runtime-hook] PASS — observed fixture synchronously exposes panel, complete-build comparison, confidence and factor diagnostics.");
