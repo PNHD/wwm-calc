@@ -9,9 +9,11 @@
     "rewriteRelativeImportExtensions": true
   },
   "include": [
+    "src/data/gearAttunement.ts",
     "src/utils/ocrParser.ts",
     "src/utils/ocrGlobalEnglish.ts",
     "scripts/validate-ocr-regression.mjs",
-    "scripts/validate-ocr-structured-import.mjs"
+    "scripts/validate-ocr-structured-import.mjs",
+    "scripts/validate-t96-row-semantics.mjs"
   ]
 }
