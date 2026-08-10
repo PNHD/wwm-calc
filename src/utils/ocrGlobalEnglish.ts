@@ -215,7 +215,11 @@ const linesWithOffsets = (text: string): SourceLine[] => {
   const lines: SourceLine[] = [];
   let offset = 0;
   for (const line of normalized.split("\n")) {
-    const valueMatch = line.match(/\d{1,3}(?:[.,]\d+)?%?/);
+    // OCR damage can introduce digits inside a label (e.g. P0wer). The game
+    // value is the trailing numeric token on the visual row, so anchor on the
+    // last token instead of the first digit-like token in the line.
+    const valueMatches = [...line.matchAll(/\d{1,3}(?:[.,]\d+)?%?/g)];
+    const valueMatch = valueMatches[valueMatches.length - 1];
     const numericStart = valueMatch?.index === undefined ? undefined : offset + valueMatch.index;
     lines.push({
       text: line.trim(),
