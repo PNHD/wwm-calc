@@ -24,7 +24,7 @@ const newPool = `    const rawPool = getActiveGear();
     SLOT_ORDER.forEach(s => { bySlot[s] = pool.filter(it => it.slot === s); });
     const missingSlots = SLOT_ORDER.filter((slot) => bySlot[slot].length === 0);
     if (missingSlots.length) {
-      console.warn(`[best-build] No valid complete build: missing ${missingSlots.join(", ")}`);
+      console.warn("[best-build] No valid complete build: missing " + missingSlots.join(", "));
       setBestBuildResult([]);
       setBestBuildProgress(100);
       setBestBuildEta(null);
