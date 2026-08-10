@@ -55,7 +55,15 @@ jobs:
             cat "$RUNNER_TEMP/wwm-preview.log"
             exit 1
           fi
+          set +e
           npx playwright test scripts/runtime-smoke.spec.mjs --reporter=line --workers=1
+          SMOKE_STATUS=$?
+          set -e
+          if [ "$SMOKE_STATUS" -ne 0 ] && [ -f runtime-smoke-diagnostic.txt ]; then
+            DIAGNOSTIC=$(tr '\n' ' ' < runtime-smoke-diagnostic.txt | cut -c1-7000)
+            echo "::error title=Runtime smoke diagnostic::$DIAGNOSTIC"
+          fi
+          exit "$SMOKE_STATUS"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -63,6 +71,7 @@ jobs:
           path: |
             runtime-smoke.png
             runtime-smoke-report.json
+            runtime-smoke-diagnostic.txt
             test-results/
           if-no-files-found: ignore
       - name: Ensure migration is deterministic
