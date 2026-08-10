@@ -16,12 +16,12 @@ function replaceRequired(source, from, to, label) {
   return source.replace(from, to);
 }
 
-// ── 1. Global English OCR: generic weapon Attunement + semantic roles --------
+// ── 1. Global English OCR: semantic roles + generic weapon allowlist ----------
 let globalOcr = read(files.globalOcr);
 globalOcr = replaceRequired(
   globalOcr,
   "export interface GlobalEnglishOcrSub {",
-  `import {\n  WEAPON_ATTUNEMENTS,\n  applyGearRowSemantics,\n  matchWeaponAttunementText,\n  type GearSubRole,\n} from "../data/gearAttunement.ts";\n\nexport interface GlobalEnglishOcrSub {`,
+  `import {\n  applyGearRowSemantics,\n  matchWeaponAttunementText,\n  type GearSubRole,\n} from "../data/gearAttunement.ts";\n\nexport interface GlobalEnglishOcrSub {`,
   "attunement metadata import",
 );
 globalOcr = replaceRequired(
@@ -38,15 +38,9 @@ globalOcr = replaceRequired(
 );
 globalOcr = replaceRequired(
   globalOcr,
-  `  for (const rule of RULES) {\n    rule.regex.lastIndex = 0;\n    for (const match of normalized.matchAll(rule.regex)) {\n      const rawValue = match[rule.valueGroup] ?? "";\n      const val = normalizeNumber(rule.type, rawValue, rule.percentLike);\n      if (!val) continue;\n      const sourceIndex = match.index ?? 0;\n      matches.push({\n        type: rule.type,\n        val,\n        isTuned: rule.turnGroup ? Boolean(match[rule.turnGroup]) : false,\n        sourceIndex,\n        sourceEnd: sourceIndex + match[0].length,\n      });\n    }\n  }\n\n  matches.sort`,
-  `  for (const rule of RULES) {\n    rule.regex.lastIndex = 0;\n    for (const match of normalized.matchAll(rule.regex)) {\n      const rawValue = match[rule.valueGroup] ?? "";\n      const val = normalizeNumber(rule.type, rawValue, rule.percentLike);\n      if (!val) continue;\n      const sourceIndex = match.index ?? 0;\n      matches.push({\n        type: rule.type,\n        val,\n        isTuned: rule.turnGroup ? Boolean(match[rule.turnGroup]) : false,\n        sourceIndex,\n        sourceEnd: sourceIndex + match[0].length,\n      });\n    }\n  }\n\n  const escapeRegex = (value: string): string => value.replace(/[.*+?^$\\{\\}()|[\\]\\\\]/g, "\\\\$&");\n  for (const definition of WEAPON_ATTUNEMENTS) {\n    for (const alias of definition.aliases) {\n      const escaped = escapeRegex(alias);\n      const patterns = [\n        new RegExp(`${escaped}\\\\s*[-–—:]?\\\\s*martial\\\\s+art\\\\s+skill\\\\s+dmg(?:\\\\s+boost)?\\\\s*[:\\\\-]?\\\\s*(\\\\d{1,3}(?:[.,]\\\\d+)?)\\\\s*%?`, "gi"),\n        new RegExp(`${escaped}\\\\s*[-–—:]?\\\\s*(\\\\d{1,3}(?:[.,]\\\\d+)?)\\\\s*%?[\\\\s\\\\S]{0,72}?martial\\\\s+art\\\\s+skill\\\\s+dmg(?:\\\\s+boost)?`, "gi"),\n      ];\n      for (const regex of patterns) {\n        for (const match of normalized.matchAll(regex)) {\n          const val = normalizeNumber(definition.statKey, match[1] ?? "", true);\n          if (!val) continue;\n          const sourceIndex = match.index ?? 0;\n          matches.push({\n            type: definition.statKey,\n            val,\n            isTuned: false,\n            isRetuned: false,\n            role: "attunement",\n            attunementId: definition.id,\n            displayName: definition.displayName,\n            sourceIndex,\n            sourceEnd: sourceIndex + match[0].length,\n          });\n        }\n      }\n    }\n  }\n\n  matches.sort`,
-  "generic attunement exact spans",
-);
-globalOcr = replaceRequired(
-  globalOcr,
-  `    const duplicate = deduped.some((existing) =>\n      existing.type === candidate.type\n      && existing.val === candidate.val\n      && Math.abs(existing.sourceIndex - candidate.sourceIndex) < 12,\n    );\n    if (!duplicate) deduped.push(candidate);\n  }\n  return deduped;`,
-  `    const duplicate = deduped.find((existing) =>\n      existing.type === candidate.type\n      && existing.val === candidate.val\n      && Math.abs(existing.sourceIndex - candidate.sourceIndex) < 12,\n    );\n    if (!duplicate) deduped.push(candidate);\n    else if (candidate.role === "attunement") Object.assign(duplicate, candidate);\n  }\n  return applyGearRowSemantics(deduped) as GlobalEnglishOcrSub[];`,
-  "merge semantic exact duplicates",
+  `  return deduped;\n};\n\ntype SourceLine = {`,
+  `  const semantic = applyGearRowSemantics(deduped) as GlobalEnglishOcrSub[];\n  semantic.forEach((row, index) => {\n    row.sourceOrder = index;\n    if (row.role !== "attunement") return;\n    row.isRetuned = false;\n    row.isTuned = false;\n    const context = normalized.slice(row.sourceIndex, Math.min(normalized.length, row.sourceEnd + 96));\n    const definition = matchWeaponAttunementText(context);\n    if (definition) {\n      row.attunementId = definition.id;\n      row.displayName = definition.displayName;\n    }\n  });\n  return semantic;\n};\n\ntype SourceLine = {`,
+  "semantic exact row output",
 );
 globalOcr = replaceRequired(
   globalOcr,
@@ -106,14 +100,8 @@ scanner = replaceRequired(
 );
 scanner = replaceRequired(
   scanner,
-  `  const handleStatEdit = (id: string, index: number, key: 'type' | 'val' | 'isTuned', val: any) => {`,
-  `  const handleStatEdit = (id: string, index: number, key: 'type' | 'val' | 'isTuned', val: any) => {`,
-  "scanner edit anchor",
-);
-scanner = replaceRequired(
-  scanner,
   `          if (key === 'isTuned' && val === true) {\n            // Uncheck other tuned\n            nextSubs.forEach((sub, sidx) => {\n              sub.isTuned = sidx === index;\n            });\n          } else {\n            nextSubs[index] = {\n              ...nextSubs[index],\n              [key]: val\n            };\n          }`,
-  `          if (key === 'isTuned' && val === true) {\n            // Retuning belongs only to ordinary rolls; Attunement is independent.\n            nextSubs.forEach((sub, sidx) => {\n              const isAttunement = sub.role === "attunement" || isAttunementStatKey(sub.type);\n              sub.isTuned = !isAttunement && sidx === index;\n              sub.isRetuned = sub.isTuned;\n            });\n          } else {\n            nextSubs[index] = {\n              ...nextSubs[index],\n              [key]: val\n            };\n            if (key === "type") {\n              const isAttunement = isAttunementStatKey(String(val));\n              nextSubs[index].role = isAttunement ? "attunement" : nextSubs[index].role === "attunement" ? "additional" : nextSubs[index].role;\n              if (isAttunement) { nextSubs[index].isTuned = false; nextSubs[index].isRetuned = false; }\n            } else if (key === "isTuned") {\n              nextSubs[index].isRetuned = Boolean(val);\n            }\n          }`,
+  `          if (key === 'isTuned' && val === true) {\n            nextSubs.forEach((sub, sidx) => {\n              const isAttunement = sub.role === "attunement" || isAttunementStatKey(sub.type);\n              sub.isTuned = !isAttunement && sidx === index;\n              sub.isRetuned = sub.isTuned;\n            });\n          } else {\n            nextSubs[index] = { ...nextSubs[index], [key]: val };\n            if (key === "type") {\n              const isAttunement = isAttunementStatKey(String(val));\n              nextSubs[index].role = isAttunement ? "attunement" : nextSubs[index].role === "attunement" ? "additional" : nextSubs[index].role;\n              if (isAttunement) { nextSubs[index].isTuned = false; nextSubs[index].isRetuned = false; }\n            } else if (key === "isTuned") {\n              nextSubs[index].isRetuned = Boolean(val);\n            }\n          }`,
   "scanner independent retuning",
 );
 scanner = replaceRequired(
@@ -129,13 +117,13 @@ let app = read(files.app);
 app = replaceRequired(
   app,
   `import { runDualPassOcr } from "./utils/ocrParser";`,
-  `import { runDualPassOcr } from "./utils/ocrParser";\nimport {\n  ATTUNEMENT_SELECT_OPTIONS,\n  applyGearRowSemantics,\n  getDefaultWeaponAttunementForStatKey,\n  getWeaponAttunementById,\n  isAttunementStatKey,\n  toGearFormRows,\n  type GearSubRole,\n} from "./data/gearAttunement";`,
+  `import { runDualPassOcr } from "./utils/ocrParser";\nimport {\n  ATTUNEMENT_SELECT_OPTIONS,\n  applyGearRowSemantics,\n  getWeaponAttunementById,\n  isAttunementStatKey,\n  toGearFormRows,\n  type GearSubRole,\n} from "./data/gearAttunement";`,
   "App semantic imports",
 );
 app = replaceRequired(
   app,
   `export interface GearSub {\n  type: string;\n  val: string;\n  isTuned?: boolean;\n}`,
-  `export interface GearSub {\n  type: string;\n  val: string;\n  role?: GearSubRole;\n  isRetuned?: boolean;\n  isTuned?: boolean; // legacy alias, kept for saved-profile compatibility\n  sourceOrder?: number;\n  attunementId?: string;\n  displayName?: string;\n}`,
+  `export interface GearSub {\n  type: string;\n  val: string;\n  role?: GearSubRole;\n  isRetuned?: boolean;\n  isTuned?: boolean;\n  sourceOrder?: number;\n  attunementId?: string;\n  displayName?: string;\n}`,
   "GearSub semantic model",
 );
 app = replaceRequired(
@@ -170,8 +158,8 @@ app = replaceRequired(
 );
 app = replaceRequired(
   app,
-  `                  setFormSubs([\n                  { type: "Other", val: "" },\n                  { type: "Other", val: "" },\n                  { type: "Other", val: "" },\n                  { type: "Other", val: "" },\n                  { type: "Other", val: "" },\n                  { type: "Other", val: "" },\n                ]);`,
-  `                  setFormSubs(toGearFormRows([]) as GearSub[]);`,
+  `                setFormSubs([\n                  { type: "Other", val: "" },\n                  { type: "Other", val: "" },\n                  { type: "Other", val: "" },\n                  { type: "Other", val: "" },\n                  { type: "Other", val: "" },\n                  { type: "Other", val: "" },\n                ]);`,
+  `                setFormSubs(toGearFormRows([]) as GearSub[]);`,
   "secondary manual form reset",
 );
 app = replaceRequired(
@@ -183,7 +171,7 @@ app = replaceRequired(
 app = replaceRequired(
   app,
   `                        <SearchableSelect\n                          value={sub.type}\n                          onChange={val => {\n                            const next = [...formSubs];\n                            next[sidx].type = val;\n                            setFormSubs(next);\n                          }}\n                          options={SUB_STAT_OPTIONS}\n                          placeholder="Search stat..."\n                        />`,
-  `                        <SearchableSelect\n                          value={sub.role === "attunement"\n                            ? (sub.attunementId ?? getDefaultWeaponAttunementForStatKey(sub.type)?.id ?? "")\n                            : sub.type}\n                          onChange={val => {\n                            const next = [...formSubs];\n                            if (sub.role === "attunement") {\n                              const definition = getWeaponAttunementById(val);\n                              next[sidx] = definition ? {\n                                ...next[sidx],\n                                type: definition.statKey,\n                                role: "attunement",\n                                attunementId: definition.id,\n                                displayName: definition.displayName,\n                                isRetuned: false,\n                                isTuned: false,\n                              } : { ...next[sidx], type: "Other", attunementId: undefined, displayName: undefined };\n                            } else {\n                              next[sidx].type = val;\n                            }\n                            setFormSubs(next);\n                          }}\n                          options={sub.role === "attunement"\n                            ? [{ value: "", label: "Select Attunement / Empty" }, ...ATTUNEMENT_SELECT_OPTIONS]\n                            : SUB_STAT_OPTIONS.filter((option) => !isAttunementStatKey(option.value))}\n                          placeholder={sub.role === "attunement" ? "Search weapon Attunement..." : "Search stat..."}\n                        />`,
+  `                        <SearchableSelect\n                          value={sub.role === "attunement" ? (sub.attunementId ?? "") : sub.type}\n                          onChange={val => {\n                            const next = [...formSubs];\n                            if (sub.role === "attunement") {\n                              const definition = getWeaponAttunementById(val);\n                              next[sidx] = definition ? {\n                                ...next[sidx],\n                                type: definition.statKey,\n                                role: "attunement",\n                                attunementId: definition.id,\n                                displayName: definition.displayName,\n                                isRetuned: false,\n                                isTuned: false,\n                              } : { ...next[sidx], type: "Other", attunementId: undefined, displayName: undefined };\n                            } else {\n                              next[sidx].type = val;\n                            }\n                            setFormSubs(next);\n                          }}\n                          options={sub.role === "attunement"\n                            ? [{ value: "", label: "Select Attunement / Empty" }, ...ATTUNEMENT_SELECT_OPTIONS]\n                            : SUB_STAT_OPTIONS.filter((option) => !isAttunementStatKey(option.value))}\n                          placeholder={sub.role === "attunement" ? "Search weapon Attunement..." : "Search stat..."}\n                        />`,
   "manual Attunement selector",
 );
 app = replaceRequired(
