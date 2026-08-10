@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import { test, expect } from "@playwright/test";
 
 const parseFirstDps = (text) => {
@@ -36,10 +37,17 @@ test("production build renders and completes the observed T96 decision flow", as
     await expect(legacyLayout, "legacy simulator must not bleed into product workspaces").toBeHidden();
   }
 
-  await expect(page.getByRole("button", { name: /^Build\b/i })).toBeVisible();
-  await expect(page.getByRole("button", { name: /^Gear\b/i })).toBeVisible();
-  await expect(page.getByRole("button", { name: /^Compare\b/i })).toBeVisible();
-  await expect(page.getByRole("button", { name: /^Best Build\b/i })).toBeVisible();
+  const productNav = page.getByRole("navigation", { name: "Product workspaces" });
+  const navBuild = productNav.getByRole("button", { name: /^Build\b/i });
+  const navGear = productNav.getByRole("button", { name: /^Gear\b/i });
+  const navCompare = productNav.getByRole("button", { name: /^Compare\b/i });
+  const navBestBuild = productNav.getByRole("button", { name: /^Best Build\b/i });
+  const navCombat = productNav.getByRole("button", { name: /^Combat\b/i });
+
+  await expect(navBuild).toBeVisible();
+  await expect(navGear).toBeVisible();
+  await expect(navCompare).toBeVisible();
+  await expect(navBestBuild).toBeVisible();
 
   // The committed 1106 fixture must be directly loadable: no owner re-entry and
   // no manual OCR acceptance are required for this product acceptance pass.
@@ -47,8 +55,9 @@ test("production build renders and completes the observed T96 decision flow", as
   await expect(loadObserved).toBeVisible();
   await loadObserved.click();
   await page.waitForTimeout(150);
+  await expect(page.getByRole("region", { name: "Current build context" }).getByText("4/4")).toBeVisible();
 
-  await page.getByRole("button", { name: /^Combat\b/i }).click();
+  await navCombat.click();
   await expect(page.getByRole("heading", { name: "Damage model" })).toBeVisible();
   await expect(page.getByText(/Attack-Boosting Food/).first()).toBeVisible();
   await expect(page.getByText(/\+120 Min \/ \+240 Max Physical Attack/).first()).toBeVisible();
@@ -72,7 +81,7 @@ test("production build renders and completes the observed T96 decision flow", as
   expect(statTableText).toMatch(/122\.1/);
   expect(statTableText).toMatch(/132\.5/);
   expect(statTableText).toMatch(/17\.8/);
-  console.log(`[runtime-smoke] observed 1106 menu panel verified: 1614–2777 / Prec 122.1 / Crit 132.5 / Aff 17.8`);
+  console.log("[runtime-smoke] observed 1106 menu panel verified: 1614–2777 / Prec 122.1 / Crit 132.5 / Aff 17.8");
   await page.getByRole("button", { name: /^Overview$/i }).click();
 
   // Scenario inputs must affect the same modeled-DPS path used by Compare/Best Build.
@@ -97,8 +106,8 @@ test("production build renders and completes the observed T96 decision flow", as
 
   // Complete-build Gear Compare acceptance: same 1106 build, replace Chest only
   // with the committed 1129 candidate and expose modeled result + deterministic why.
-  await page.getByRole("button", { name: /^Compare\b/i }).click();
-  const chestTab = page.getByRole("button", { name: /^Chest\b/i });
+  await navCompare.click();
+  const chestTab = page.locator(".compare-slot-tabs").getByRole("button", { name: /^Chest\b/i });
   if (await chestTab.count()) await chestTab.first().click();
   const candidate1129 = page.locator("article").filter({ hasText: "Nightfarer Armor 1129" }).first();
   await expect(candidate1129).toBeVisible();
@@ -109,14 +118,20 @@ test("production build renders and completes the observed T96 decision flow", as
   const deltaMatch = candidateText.match(/([+-][\d,]+)\s*DPS\s*\(([+-][\d.]+)%\)/i);
   expect(Number.isFinite(candidateDps) && candidateDps > 0, "1129 candidate must have modeled DPS").toBeTruthy();
   expect(deltaMatch, "1129 candidate must expose absolute and percentage DPS delta").toBeTruthy();
-  console.log(`[runtime-smoke] observed 1129 compare card: ${candidateText.replace(/\s+/g, " ").slice(0, 1200)}`);
-  console.log(JSON.stringify({
+
+  const report = {
     fixture: "1106-vs-1129",
     current1106Dps: baselineDps,
     candidate1129Dps: candidateDps,
     deltaDps: Number(deltaMatch[1].replace(/,/g, "")),
     deltaPct: Number(deltaMatch[2]),
-  }));
+    noCinderDps,
+    starweaveFarDps: farDps,
+    candidateText: candidateText.replace(/\s+/g, " ").trim(),
+  };
+  console.log(`[runtime-smoke] observed 1129 compare card: ${report.candidateText.slice(0, 1200)}`);
+  console.log(JSON.stringify(report));
+  fs.writeFileSync("runtime-smoke-report.json", `${JSON.stringify(report, null, 2)}\n`, "utf8");
 
   await page.screenshot({ path: "runtime-smoke.png", fullPage: true });
 
