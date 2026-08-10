@@ -76,7 +76,6 @@ const missingNormalFixture = [
   "Agility 46.4",
   "Min Physical Attack 68.4",
   "[Turn]Max Physical Attack 73.1",
-  // Min Bamboocut Attack intentionally missing.
   "Everspring Umbrella -",
   "Martial Art Skill DMG",
   "Boost 5.2%",
@@ -123,7 +122,11 @@ const parser = fs.readFileSync("src/utils/ocrParser.ts", "utf8");
 expect(app.includes("Attunement · Weapon Martial Art Skill DMG Boost"), "Add Gear must expose a separate Attunement section");
 expect(app.includes("Retuned ✦"), "Add Gear ordinary-row checkbox must use Retuned terminology");
 expect(!app.includes("Tuned substat (select one line)"), "legacy Tuned-substat heading must be removed");
+expect(app.includes('options={sub.role === "attunement"'), "manual Add Gear must switch the selector by semantic role");
 expect(app.includes("ATTUNEMENT_SELECT_OPTIONS"), "manual Add Gear must provide repository-backed weapon Attunement options");
+expect(app.includes('display: sub.role === "attunement" ? \'none\' : \'flex\''), "manual Add Gear must not render a Retuned checkbox beside Attunement");
+expect(app.includes('title="Retuned ([Turn])'), "manual Add Gear must explain Retuned using the explicit [Turn] mechanic");
+expect(!app.includes('title="Attuned / Tuned (Dingyin)'), "legacy conflated Attuned/Tuned checkbox tooltip must be removed");
 expect(scanner.includes("ATTUNEMENT"), "batch review must label Attunement independently");
 expect(scanner.includes("RETUNED"), "batch review must label ordinary [Turn] rows Retuned");
 expect(parser.includes("hybridGlobalRows.length >= 5"), "production parser must preserve one-missing-row semantic OCR instead of falling back/padding");
