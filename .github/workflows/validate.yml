@@ -62,6 +62,7 @@ jobs:
           name: runtime-smoke
           path: |
             runtime-smoke.png
+            runtime-smoke-report.json
             test-results/
           if-no-files-found: ignore
       - name: Ensure migration is deterministic
