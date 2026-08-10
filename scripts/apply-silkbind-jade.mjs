@@ -201,7 +201,7 @@ if(!app.includes('const jadeReason = selectedBuild === "silkbind-jade"')){
 }
 
 inner=replaceRequired(inner,
-  'desc:"Vernal Umbrella\'s Spring Sorrow Martial Art Skill can hold up to 2 stacks. Hitting a target applies Combo effect: target takes +10% damage from your Ballistic Skills for 10s. Affected Skills: Let Spring Go, Everbloom, Umbrella Light Attack, Spring Away.",',
+  'desc:"Vernal Umbrella\'s Spring Sorrow can hold up to 2 stacks and applies Combo. Global 2.0: Tier 4 Spring Away and Unfading Flower deal +5% damage to Combo-marked non-Arena targets, increased to +10% while Exhausted; Tier 5 was changed from Critical DMG Bonus to Direct Critical Rate.",',
   'desc:"Global 2.0: Blossom Barrage is projectile-focused. Tier 5 changes the former Critical DMG breakthrough to Direct Critical Rate. Spring Away / Unfading Flower gain an own-Combo damage bonus, increased while the target is Exhausted. Exact current Direct Crit numeric value is intentionally not fabricated.",',
   'Blossom Barrage description');
 inner=replaceRequired(inner,
