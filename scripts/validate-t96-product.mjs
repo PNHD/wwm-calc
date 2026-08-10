@@ -16,6 +16,7 @@ import {
 
 const app = fs.readFileSync("src/App.tsx", "utf8");
 const timeline = fs.readFileSync("src/utils/rotationTimeline.ts", "utf8");
+const combatWorkspace = fs.readFileSync("src/product/workspaces/CombatWorkspace.tsx", "utf8");
 const evidence = fs.readFileSync("src/data/panelOptimizationEvidence.ts", "utf8");
 const combatEvidence = fs.readFileSync("src/data/globalV2CombatEvidence.ts", "utf8");
 const videoEvidence = fs.readFileSync("src/data/globalV2VideoEvidence.ts", "utf8");
@@ -60,6 +61,13 @@ assert.ok(app.includes("return baselineScore > 0 ? (totalDmg / baselineScore) * 
 assert.ok(!app.includes("Subtract a tiny penalty per overcap point"), "Best Build must not use a hidden Crit-overcap tie penalty");
 assert.ok(!app.includes("rollQuality * 0.5"), "roll quality must not decide a build winner");
 
+// Stat Priority must perturb the current complete panel and rerun the same T96
+// conditional timeline instead of falling back to a universal static weight table.
+assert.ok(app.includes("conditionalBuffs = buildTimelineBuffs"), "Stat Priority must rebuild conditional timeline effects");
+assert.ok(app.includes("getScenarioRotationForBuild(selectedBuild)"), "Stat Priority/current DPS must consume the shared scenario rotation");
+assert.ok(app.includes("starweaveDistanceBonusPct"), "distance assumption must reach timeline callers");
+assert.ok(combatWorkspace.includes("Marginal modeled DPS from one additional Global max roll"));
+
 // Morale: a 60s timeline may approach max after ramping, but cannot be equivalent
 // to permanent 5 stacks from t=0.
 const dense60 = Array.from({ length: 121 }, (_, i) => i * 0.5);
@@ -77,16 +85,32 @@ assert.ok(!timeline.includes("every buff static at max"), "timeline must not des
 // Phantom Chime is a Resonance-driven 5s stack rather than permanent +10 pen.
 assert.ok(timeline.includes('trigger: "resonance"'), "Phantom Chime must use Resonance events");
 assert.ok(timeline.includes("duration: 5"), "Phantom Chime / Starweave TTL must remain 5s");
-assert.ok(timeline.includes("physical resistance".replace("physical", "Physical")) || timeline.includes("Physical Resistance"));
+assert.ok(timeline.includes("Physical Resistance"));
 
-// Starweave: T96 +78 2pc and event-ramped +3%/stack 4pc. Distance remains explicit
-// zero by default instead of inventing an unsupported permanent amount.
+// Starweave: T96 +78 2pc, event-ramped +3%/stack 4pc, and only the two
+// exact tooltip distance endpoints. No interpolation is invented.
 assert.ok(app.includes("starweavePieces >= 2"), "Starweave 2pc ownership must be rebuilt from gear");
 assert.ok(app.includes("+ 78"), "Starweave T96 2pc must grant +78 Min Physical Attack");
 assert.ok(timeline.includes("Starweave · Martial Art Skill Damage"));
 assert.equal(BAMBOOCUT_T96_EFFECTS.starweave.martialDamagePctPerStack, 3);
 assert.equal(DEFAULT_BAMBOOCUT_T96_SCENARIO.starweaveDistanceBonusPct, 0);
 assert.equal(DEFAULT_BAMBOOCUT_T96_SCENARIO.bossAttacksPlayer, false);
+assert.ok(timeline.includes("Math.min(1, distanceBonusPct)"), "Starweave distance must clamp to verified +1% max");
+assert.ok(combatWorkspace.includes("≤4m · +0% distance component"));
+assert.ok(combatWorkspace.includes("≥8m · +1% max tooltip component"));
+assert.ok(combatWorkspace.includes("No interpolation is assumed between 4m and 8m"));
+
+// Cinder is a real scenario toggle: the off state removes the observed Fire
+// sources, but never applies +4% as a blanket Physical multiplier.
+assert.ok(app.includes("const [cinderAsh, setCinderAsh] = useState(true)"));
+assert.ok(app.includes('!["Divinecraft - Fire", "Fire - Solid Foundation"].includes(item.name)'));
+assert.ok(app.includes("onCinderAshChange={setCinderAsh}"));
+assert.ok(combatWorkspace.includes("never blanket +4% Physical damage"));
+
+// Locked fixture assumptions remain visible rather than silently modeled with
+// invented boss-hit cadence or controlled-target timing.
+assert.ok(combatWorkspace.includes("Boss attacks OFF · Controlled OFF"));
+assert.ok(combatWorkspace.includes("Party buffs OFF"));
 
 // Burn and Bury is the one confirmed forced-Crit source. Settlement/Divinecraft
 // sources remain special-resolution instead of being forced through the same roll.
