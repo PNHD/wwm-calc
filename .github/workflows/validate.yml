@@ -60,8 +60,20 @@ jobs:
           SMOKE_STATUS=$?
           set -e
           if [ "$SMOKE_STATUS" -ne 0 ] && [ -f runtime-smoke-diagnostic.txt ]; then
-            DIAGNOSTIC=$(tr '\n' ' ' < runtime-smoke-diagnostic.txt | cut -c1-7000)
-            echo "::error title=Runtime smoke diagnostic::$DIAGNOSTIC"
+            python3 - <<'PY'
+          from pathlib import Path
+          text = Path("runtime-smoke-diagnostic.txt").read_text(encoding="utf-8")[:7000]
+          text = text.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+          print(f"::error file=scripts/runtime-smoke.spec.mjs,line=1,title=Runtime smoke diagnostic::{text}")
+          PY
+          fi
+          if [ "$SMOKE_STATUS" -eq 0 ] && [ -f runtime-smoke-report.json ]; then
+            python3 - <<'PY'
+          from pathlib import Path
+          text = Path("runtime-smoke-report.json").read_text(encoding="utf-8")[:7000]
+          text = text.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+          print(f"::notice file=scripts/runtime-smoke.spec.mjs,line=1,title=T96 runtime acceptance::{text}")
+          PY
           fi
           exit "$SMOKE_STATUS"
       - uses: actions/upload-artifact@v4
