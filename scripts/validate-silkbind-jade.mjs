@@ -5,7 +5,7 @@ import {
   jadeAttunementCovers, getSilkbindJadeCacheKey, clearSilkbindJadeCache,
 } from '../src/pathModels/silkbindJade.mjs';
 import { getPathModel } from '../src/pathModels/index.mjs';
-import { OBSERVED_GLOBAL_T96_FIXTURES } from '../src/utils/t96ProductModel.mjs';
+import { OBSERVED_PANEL_1106, OBSERVED_PANEL_1129 } from '../src/utils/t96ProductModel.mjs';
 
 const basePanel = {
   minOuter: 1900, maxOuter: 3350, outerPen: 58, minPz: 900, maxPz: 1300, pzPen: 21, pzDmg: 8,
@@ -14,9 +14,8 @@ const basePanel = {
   fanSpecial: 2, fanCharged: 2, allArts: 5, attunedBonus: 0, power: 120, agility: 30, momentum: 20, set: 'none',
 };
 
-// Lightweight stand-in for calcSkill used only by this Node validator. It mirrors
-// the rate saturation and min/avg/max objective sensitivities needed to test the
-// path model contract; production pricing is delegated to the real calcSkill.
+// Lightweight stand-in for calcSkill used only by this Node validator. Production
+// Jade event pricing is delegated to the real shared calcSkill outcome engine.
 function testPricer(event, panel) {
   const rates = deriveJadeRates(panel, 0.45, 0);
   const pPrec = rates.precision / 100;
@@ -122,14 +121,14 @@ assert.equal(jadeAttunementCovers('Vernal Umbrella Frequent Ballistic DMG Boost'
 assert.equal(jadeAttunementCovers('Vernal Umbrella Frequent Ballistic DMG Boost','fan-pursuit'),false);
 assert.equal(resolveJadeAttunementFamily('Ninefold Spring: Special Skill DMG Bonus')?.id,'vernal-special');
 
-// 19. Existing T96 product evidence fixtures remain present and exact in source model.
-assert.equal(OBSERVED_GLOBAL_T96_FIXTURES.menuPanel.minOuter,1106);
-assert.equal(OBSERVED_GLOBAL_T96_FIXTURES.menuPanel.maxOuter,1129);
+// 19. Existing Bamboocut 1106/1129 observed fixtures remain exact.
+assert.equal(OBSERVED_PANEL_1106.minOuter,1614);
+assert.equal(OBSERVED_PANEL_1106.maxOuter,2777);
+assert.equal(OBSERVED_PANEL_1129.minOuter,1719);
+assert.equal(OBSERVED_PANEL_1129.maxOuter,2784);
 
-// 20–23 are exercised by the existing CI jobs: OCR runtime, Pages dist, Chromium
-// smoke, and deterministic migration. This validator runs inside the same chain.
-
-// Performance/cache-key smoke over a realistic candidate count.
+// 20–23 are exercised by existing CI: OCR runtime, Pages dist, Chromium smoke,
+// and deterministic migration. This validator runs inside the same chain.
 clearSilkbindJadeCache();
 const start=performance.now();
 const keys=new Set();
