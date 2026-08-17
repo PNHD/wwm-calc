@@ -41,7 +41,7 @@ test("Library routing, filtering, trust labels, favorites and old workspace deep
   await expect(page.locator(".library-card")).toHaveCount(2);
   await page.getByLabel("Search Library").fill("Mun");
   await expect(page.locator(".library-card")).toHaveCount(1);
-  await expect(page.getByText("Silkbind-Jade", { exact: true })).toBeVisible();
+  await expect(page.locator(".library-card").getByRole("heading", { name: "Silkbind-Jade", exact: true })).toBeVisible();
   await expect(page.getByText("COMMUNITY REFERENCE")).toBeVisible();
   await expect(page.getByText("MODELED", { exact: true })).toBeVisible();
   await page.getByLabel("Search Library").fill("");
@@ -78,7 +78,10 @@ test("Read-only detail, clone isolation, reference compare and full build-to-bui
     localStorage.setItem("wwm_selected_build", "bamboocut-dust");
   });
   await page.setViewportSize({ width: 1440, height: 1000 });
-  await page.goto(`${BASE}#library/build/${BAMB}`, { waitUntil: "networkidle" });
+  await page.goto(`${BASE}#library/pve`, { waitUntil: "networkidle" });
+  await expect(page.getByTestId("library-landing")).toBeVisible();
+  const bambCard = page.locator(".library-card").filter({ has: page.getByRole("heading", { name: "Bamboocut-Dust", exact: true }) });
+  await bambCard.getByRole("button", { name: /^View$/ }).click();
   await expect(page.getByTestId("library-build-detail")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Bamboocut-Dust" })).toBeVisible();
   await expect(page.getByText("61,266", { exact: true })).toBeVisible();
@@ -194,14 +197,15 @@ test("Recently Updated is freshness-based and progressive filters cover weapon t
   await expect(page.locator(".library-card")).toHaveCount(5);
   await page.getByRole("button", { name: "Filters" }).click();
   await page.getByRole("button", { name: /More filters/ }).click();
-  await page.getByLabel("Weapon").selectOption({ label: "Vernal Umbrella" });
+  const filters = page.getByRole("region", { name: "Library filters" });
+  await filters.getByLabel("Weapon").selectOption({ label: "Vernal Umbrella" });
   await expect(page.locator(".library-card")).toHaveCount(1);
-  await expect(page.getByText("Silkbind-Jade", { exact: true })).toBeVisible();
-  await page.getByLabel("Weapon").selectOption("");
-  await page.getByLabel("Tier").selectOption({ label: "T96" });
+  await expect(page.locator(".library-card").getByRole("heading", { name: "Silkbind-Jade", exact: true })).toBeVisible();
+  await filters.getByLabel("Weapon").selectOption("");
+  await filters.getByLabel("Tier").selectOption({ label: "T96" });
   await expect(page.locator(".library-card")).toHaveCount(1);
-  await page.getByLabel("Tier").selectOption("");
-  await page.getByLabel("Objective").selectOption({ label: "Healing denial and zone control" });
+  await filters.getByLabel("Tier").selectOption("");
+  await filters.getByLabel("Objective").selectOption({ label: "Healing denial and zone control" });
   await expect(page.locator(".library-card")).toHaveCount(1);
 });
 
