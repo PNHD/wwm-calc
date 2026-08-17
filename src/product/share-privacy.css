@@ -1,3 +1,4 @@
+.product-shell-root[data-shell-workspace="gvg"]>.library-page{margin-left:var(--workspace-nav-width)}
 .library-share-privacy-options{display:grid;gap:8px;margin-top:12px}
 .library-share-privacy-options label{display:flex;align-items:flex-start;gap:10px;padding:10px;border:1px solid #2e3d55;border-radius:8px;background:#0f1725;cursor:pointer}
 .library-share-privacy-options input{width:16px;height:16px;margin:1px 0 0;accent-color:#738fe8;flex:none}
