@@ -367,7 +367,7 @@ export default function LibraryWorkspace({ context, onOpenPve, onOpenGvg, onExit
     if (section === "pve") return entry.workspace === "PVE";
     if (section === "gvg-builds") return entry.workspace === "GVG" && (entry.type === "GVG_BUILD" || entry.type === "COMMUNITY_BUILD" || entry.type === "REFERENCE_BUILD");
     if (section === "gvg-plans") return entry.type === "GUILD_WAR_ROSTER" || entry.type === "GUILD_WAR_STRATEGY";
-    if (section === "recent") return recent.includes(entry.id);
+    if (section === "recent") return true;
     return favorites.includes(entry.id);
   };
 
@@ -386,8 +386,7 @@ export default function LibraryWorkspace({ context, onOpenPve, onOpenGvg, onExit
       if (sourceFilter === "reference" && entry.source.kind === "COMMUNITY_GUIDE") return false;
       return true;
     });
-    if (section === "recent") result.sort((a, b) => recent.indexOf(a.id) - recent.indexOf(b.id));
-    else result.sort((a, b) => b.lastReviewedDate.localeCompare(a.lastReviewedDate));
+    result.sort((a, b) => b.lastReviewedDate.localeCompare(a.lastReviewedDate));
     return result;
   }, [items, route, search, pathFilter, maturityFilter, patchFilter, roleFilter, sourceFilter, recent, favorites]);
 
