@@ -381,10 +381,10 @@ export default function LibraryWorkspace({ context, onOpenPve, onOpenGvg, onExit
   const exportEntry = (entry: LibraryEntry) => {
     const blob = new Blob([`${JSON.stringify({ schemaVersion: entry.buildSchemaVersion, exportedAt: new Date().toISOString(), entry }, null, 2)}\n`], { type: "application/json" });
     const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
+    const anchor = window.document.createElement("a");
     anchor.href = url;
     anchor.download = `${entry.id}.json`;
-    document.body.appendChild(anchor);
+    window.document.body.appendChild(anchor);
     anchor.click();
     anchor.remove();
     URL.revokeObjectURL(url);
@@ -434,7 +434,7 @@ export default function LibraryWorkspace({ context, onOpenPve, onOpenGvg, onExit
     trackLibraryEvent("shared_build_opened", { itemId: entry.id, workspace: entry.workspace });
     return <main className="library-page library-shared" data-testid="shared-build-landing">
       <button type="button" className="library-back" onClick={() => navigate({ kind: "landing", section: "featured" }, "#library")}><ArrowLeft size={16} /> Library</button>
-      <section className="library-shared-hero"><span className="library-eyebrow">{entry.workspace === "PVE" ? "SHARED PVE BUILD" : "SHARED GUILD WAR PLAN"}</span><h1>{entry.title}</h1><p>{entry.region} {entry.patch} · {entry.tier}</p><MaturityChips entry={entry} currentPatch={currentPatch} /><div className="library-shared-metrics"><div><small>Source</small><strong>{decoded.envelope.source === "LIBRARY" ? entry.source.label : "Shared by another player"}</strong></div>{entry.build.modeledDps != null && <div><small>Modeled DPS</small><strong>{formatDps(entry.build.modeledDps)}</strong></div>}<div><small>Confidence</small><strong>{entry.build.confidence || "Reference"}</strong></div></div>{decoded.migrated && <p className="library-notice">This legacy share was safely migrated to the current read-only schema.</p>}{decoded.envelope.privacy && <p className="library-notice">Privacy: player names {decoded.envelope.privacy.playerNamesRedacted ? "redacted" : "included"}; notes {decoded.envelope.privacy.notesRedacted ? "redacted" : "included"}.</p>}<div className="library-detail-actions"><button type="button" onClick={() => document.getElementById("shared-build-details")?.scrollIntoView({ behavior: "smooth", block: "start" })}>View Build</button><button type="button" className="is-primary" onClick={() => clone(entry, true)}>Clone to My Workspace</button><button type="button" onClick={() => compareWithMyBuild(entry)}>Compare with My Build</button></div></section>
+      <section className="library-shared-hero"><span className="library-eyebrow">{entry.workspace === "PVE" ? "SHARED PVE BUILD" : "SHARED GUILD WAR PLAN"}</span><h1>{entry.title}</h1><p>{entry.region} {entry.patch} · {entry.tier}</p><MaturityChips entry={entry} currentPatch={currentPatch} /><div className="library-shared-metrics"><div><small>Source</small><strong>{decoded.envelope.source === "LIBRARY" ? entry.source.label : "Shared by another player"}</strong></div>{entry.build.modeledDps != null && <div><small>Modeled DPS</small><strong>{formatDps(entry.build.modeledDps)}</strong></div>}<div><small>Confidence</small><strong>{entry.build.confidence || "Reference"}</strong></div></div>{decoded.migrated && <p className="library-notice">This legacy share was safely migrated to the current read-only schema.</p>}{decoded.envelope.privacy && <p className="library-notice">Privacy: player names {decoded.envelope.privacy.playerNamesRedacted ? "redacted" : "included"}; notes {decoded.envelope.privacy.notesRedacted ? "redacted" : "included"}.</p>}<div className="library-detail-actions"><button type="button" onClick={() => window.document.getElementById("shared-build-details")?.scrollIntoView({ behavior: "smooth", block: "start" })}>View Build</button><button type="button" className="is-primary" onClick={() => clone(entry, true)}>Clone to My Workspace</button><button type="button" onClick={() => compareWithMyBuild(entry)}>Compare with My Build</button></div></section>
       <div id="shared-build-details"><SourceBlock entry={entry} /><DetailSections entry={entry} /></div>{status && <div className="library-toast" role="status">{status}</div>}
     </main>;
   }
