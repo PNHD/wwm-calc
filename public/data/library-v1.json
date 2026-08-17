@@ -1,0 +1,296 @@
+{
+  "schemaVersion": 1,
+  "currentPatch": "2.0",
+  "currentRegion": "Global",
+  "generatedAt": "2026-08-17T00:00:00.000Z",
+  "items": [
+    {
+      "id": "bamboocut-dust-global-t96-calibrated",
+      "type": "REFERENCE_BUILD",
+      "workspace": "PVE",
+      "title": "Bamboocut-Dust",
+      "subtitle": "Global T96 calibrated reference",
+      "path": "Bamboocut-Dust",
+      "weapons": ["Everspring Umbrella", "Unfettered Rope Dart"],
+      "objective": "Expected modeled DPS",
+      "region": "Global",
+      "patch": "2.0",
+      "tier": "T96",
+      "createdDate": "2026-08-17",
+      "lastReviewedDate": "2026-08-17",
+      "maturity": ["CALIBRATED", "CLIENT_VERIFIED", "MODELED"],
+      "source": {
+        "label": "WWM Calc calibrated T96 fixture 1106",
+        "kind": "WWM_CALC",
+        "note": "Reference snapshot is pinned to the current calibrated production fixture and must not be treated as a universal best build."
+      },
+      "buildSchemaVersion": 1,
+      "librarySchemaVersion": 1,
+      "featured": true,
+      "tags": ["calibrated", "reference", "T96", "umbrella", "rope dart"],
+      "build": {
+        "buildKey": "bamboocut-dust",
+        "path": "Bamboocut-Dust",
+        "weapons": ["Everspring Umbrella", "Unfettered Rope Dart"],
+        "modeledDps": 61266,
+        "confidence": "CALIBRATED FIXTURE",
+        "objective": "Expected modeled DPS",
+        "scenario": "Global T96 observed 1106 fixture",
+        "panel": {
+          "minOuter": 1614,
+          "maxOuter": 2777,
+          "outerPen": 43.5,
+          "prec": 122.1,
+          "crit": 132.5,
+          "aff": 17.8,
+          "attunedBonus": 20,
+          "set": "stars"
+        },
+        "gear": [
+          { "slot": "Reference fixture", "name": "Observed T96 1106 complete-build state", "note": "Use the in-product observed fixture loader for exact item lines." }
+        ],
+        "sets": ["Stars weapon set", "Calmwaters armor set"],
+        "attunements": ["Everspring attunement: 20.0% in the pinned menu-panel fixture"],
+        "innerWays": ["4/4 calibrated fixture configuration"],
+        "why": [
+          "The production model evaluates the complete observed T96 fixture at approximately 61,266 modeled DPS.",
+          "The calibrated menu panel is preserved as reference evidence; it is not a raw Mastery or Graduation ranking.",
+          "Use Compare with My Build before cloning if your inventory or scenario differs."
+        ],
+        "assumptions": [
+          "Global Version 2.0 / T96 data context.",
+          "Expected modeled DPS uses the current production model and its existing confidence/unknown-mechanic handling.",
+          "This reference does not claim to be optimal for another player's inventory."
+        ],
+        "evidence": [
+          "Current T96 Chromium acceptance fixture 1106.",
+          "Client-verified menu-panel values used by existing production regression tests.",
+          "Existing Bamboocut formulas are unchanged by the Library."
+        ]
+      }
+    },
+    {
+      "id": "silkbind-jade-mun-patch-2-community",
+      "type": "COMMUNITY_BUILD",
+      "workspace": "PVE",
+      "title": "Silkbind-Jade",
+      "subtitle": "Mun Patch 2.0 community reference",
+      "path": "Silkbind-Jade",
+      "weapons": ["Vernal Umbrella", "Inkwell Fan"],
+      "objective": "Expected DPS / ranged projectile uptime",
+      "region": "Global",
+      "patch": "2.0",
+      "tier": "Patch 2.0",
+      "createdDate": "2026-08-17",
+      "lastReviewedDate": "2026-08-17",
+      "maturity": ["COMMUNITY_REFERENCE", "MODELED"],
+      "source": {
+        "label": "Ultimate Umbrella Guide — Mun",
+        "kind": "COMMUNITY_GUIDE",
+        "note": "Source attribution retained as a named community reference. Recommendations are summarized; no long guide text is copied."
+      },
+      "buildSchemaVersion": 1,
+      "librarySchemaVersion": 1,
+      "featured": true,
+      "tags": ["community", "jade", "umbrella", "fan", "projectile"],
+      "build": {
+        "buildKey": "silkbind-jade",
+        "path": "Silkbind-Jade",
+        "weapons": ["Vernal Umbrella", "Inkwell Fan"],
+        "confidence": "COMMUNITY REFERENCE + MODELED",
+        "objective": "Expected DPS",
+        "scenario": "Patch 2.0 projectile uptime reference",
+        "gear": [
+          { "slot": "Priority", "name": "Max Physical ATK / Precision to useful saturation", "note": "Model-specific value depends on the active scenario." },
+          { "slot": "Secondary", "name": "Critical / Affinity / relevant weapon damage", "note": "Do not reduce the build to one generic attack-only comparator." }
+        ],
+        "sets": ["Use the source-recommended Patch 2.0 set package; verify exact set revision before cloning."],
+        "attunements": ["Vernal Umbrella ballistic/special families are modeled semantically, not as a blanket all-skill multiplier."],
+        "innerWays": ["Maintain projectile/Drone uptime assumptions", "Preserve scenario-specific Qi-break and Combo interactions"],
+        "why": [
+          "The current Silkbind-Jade model treats Precision saturation, Direct Crit budget, Affinity, projectile coverage and scenario timing as separate mechanics.",
+          "Community guidance is retained as provenance, while calculator outputs remain MODELED rather than promoted to official truth.",
+          "Exact item-line recommendations should be checked against the current source revision."
+        ],
+        "assumptions": [
+          "Redrone delay, Combo, Jadebreak and Qi-break timing can change modeled value.",
+          "Expected DPS and Speedrun Ceiling are different objectives.",
+          "Community-reference maturity is not a ranking."
+        ],
+        "evidence": [
+          "Named community source: Ultimate Umbrella Guide — Mun.",
+          "Current production Silkbind-Jade path model and regression suite.",
+          "No Bamboocut formulas are reused as Jade truth."
+        ]
+      }
+    },
+    {
+      "id": "bamboocut-dust-gvg-anti-heal-zone",
+      "type": "GVG_BUILD",
+      "workspace": "GVG",
+      "title": "Bamboocut-Dust GvG",
+      "subtitle": "Anti-Heal / Zone Pressure",
+      "path": "Bamboocut-Dust",
+      "weapons": ["Everspring Umbrella", "Unfettered Rope Dart"],
+      "role": "Anti-escort / Flex pressure",
+      "objective": "Healing denial and zone control",
+      "region": "Global",
+      "patch": "2.0",
+      "tier": "Guild War",
+      "createdDate": "2026-08-17",
+      "lastReviewedDate": "2026-08-17",
+      "maturity": ["EXPERIMENTAL", "MODELED"],
+      "source": {
+        "label": "WWM Calc GvG role model",
+        "kind": "WWM_CALC",
+        "note": "Experimental role reference. Role suitability is contextual and must not be read as a universal GvG winner."
+      },
+      "buildSchemaVersion": 1,
+      "librarySchemaVersion": 1,
+      "featured": true,
+      "tags": ["gvg", "anti-heal", "zone", "anti-escort", "experimental"],
+      "build": {
+        "buildKey": "bamboocut-dust-zone",
+        "path": "Bamboocut-Dust",
+        "weapons": ["Everspring Umbrella", "Unfettered Rope Dart"],
+        "confidence": "EXPERIMENTAL ROLE MODEL",
+        "objective": "Anti-heal / zone pressure",
+        "scenario": "Global Guild War",
+        "sets": ["GvG role profile; exact PvE set ranking is intentionally not reused"],
+        "attunements": ["Everspring EX healing-reduction zone", "Unfettered EX radius utility"],
+        "innerWays": ["Choose for role survivability/control context; no universal GvG score"],
+        "roleScores": {
+          "MAIN_BALL": 73,
+          "FRONTLINE_TANK": 59,
+          "HEALER": 35,
+          "FLEX_ASSASSIN": 74,
+          "JUNGLER_OBJECTIVE": 65,
+          "DUELIST": 67,
+          "ESCORT": 49,
+          "ANTI_ESCORT": 80
+        },
+        "why": [
+          "Everspring EX supplies the existing official 45% / Lv3 65% Healing Reduction zone reference.",
+          "Unfettered EX supplies the existing official 12m radius reference.",
+          "Role score is a weighted suitability model, not a win probability."
+        ],
+        "assumptions": [
+          "GvG role differs from PvE DPS objective.",
+          "Compare builds by the role you need; do not declare a universal winner."
+        ],
+        "evidence": ["Existing Global Guild War model and GvG acceptance suite."]
+      }
+    },
+    {
+      "id": "balanced-guild-war-roster-template",
+      "type": "GUILD_WAR_ROSTER",
+      "workspace": "GVG",
+      "title": "Balanced Guild War Roster Template",
+      "subtitle": "30-slot planning template",
+      "role": "Balanced coverage",
+      "objective": "Start a roster without overwriting an existing plan",
+      "region": "Global",
+      "patch": "2.0",
+      "tier": "Guild War",
+      "createdDate": "2026-08-17",
+      "lastReviewedDate": "2026-08-17",
+      "maturity": ["COMMUNITY_REFERENCE"],
+      "source": {
+        "label": "Balanced Global Community synthesis",
+        "kind": "TEMPLATE",
+        "note": "Broad coverage envelope only. It is intentionally not an exact authoritative composition."
+      },
+      "buildSchemaVersion": 1,
+      "librarySchemaVersion": 1,
+      "featured": true,
+      "tags": ["gvg", "roster", "template", "30-player"],
+      "build": {
+        "confidence": "COMMUNITY TEMPLATE",
+        "objective": "Balanced role coverage",
+        "scenario": "30-player Guild War planning",
+        "roster": [
+          { "id": "slot-01", "name": "Slot 01", "role": "HEALER", "team": "Main Ball" },
+          { "id": "slot-02", "name": "Slot 02", "role": "HEALER", "team": "Main Ball" },
+          { "id": "slot-03", "name": "Slot 03", "role": "HEALER", "team": "Main Ball" },
+          { "id": "slot-04", "name": "Slot 04", "role": "HEALER", "team": "Flex A" },
+          { "id": "slot-05", "name": "Slot 05", "role": "HEALER", "team": "Flex B" },
+          { "id": "slot-06", "name": "Slot 06", "role": "HEALER", "team": "Objective" },
+          { "id": "slot-07", "name": "Slot 07", "role": "FRONTLINE_TANK", "team": "Main Ball" },
+          { "id": "slot-08", "name": "Slot 08", "role": "FRONTLINE_TANK", "team": "Main Ball" },
+          { "id": "slot-09", "name": "Slot 09", "role": "FRONTLINE_TANK", "team": "Flex A" },
+          { "id": "slot-10", "name": "Slot 10", "role": "FRONTLINE_TANK", "team": "Flex B" },
+          { "id": "slot-11", "name": "Slot 11", "role": "MAIN_BALL", "team": "Main Ball" },
+          { "id": "slot-12", "name": "Slot 12", "role": "MAIN_BALL", "team": "Main Ball" },
+          { "id": "slot-13", "name": "Slot 13", "role": "MAIN_BALL", "team": "Main Ball" },
+          { "id": "slot-14", "name": "Slot 14", "role": "MAIN_BALL", "team": "Main Ball" },
+          { "id": "slot-15", "name": "Slot 15", "role": "MAIN_BALL", "team": "Main Ball" },
+          { "id": "slot-16", "name": "Slot 16", "role": "MAIN_BALL", "team": "Main Ball" },
+          { "id": "slot-17", "name": "Slot 17", "role": "MAIN_BALL", "team": "Main Ball" },
+          { "id": "slot-18", "name": "Slot 18", "role": "MAIN_BALL", "team": "Main Ball" },
+          { "id": "slot-19", "name": "Slot 19", "role": "FLEX_ASSASSIN", "team": "Flex A" },
+          { "id": "slot-20", "name": "Slot 20", "role": "FLEX_ASSASSIN", "team": "Flex A" },
+          { "id": "slot-21", "name": "Slot 21", "role": "FLEX_ASSASSIN", "team": "Flex B" },
+          { "id": "slot-22", "name": "Slot 22", "role": "FLEX_ASSASSIN", "team": "Flex B" },
+          { "id": "slot-23", "name": "Slot 23", "role": "JUNGLER_OBJECTIVE", "team": "Objective" },
+          { "id": "slot-24", "name": "Slot 24", "role": "JUNGLER_OBJECTIVE", "team": "Objective" },
+          { "id": "slot-25", "name": "Slot 25", "role": "DUELIST", "team": "Duel" },
+          { "id": "slot-26", "name": "Slot 26", "role": "DUELIST", "team": "Duel" },
+          { "id": "slot-27", "name": "Slot 27", "role": "ESCORT", "team": "Objective" },
+          { "id": "slot-28", "name": "Slot 28", "role": "ESCORT", "team": "Objective" },
+          { "id": "slot-29", "name": "Slot 29", "role": "ANTI_ESCORT", "team": "Flex A" },
+          { "id": "slot-30", "name": "Slot 30", "role": "ANTI_ESCORT", "team": "Flex B" }
+        ],
+        "why": [
+          "Starts with broad coverage instead of a fake Top Meta composition.",
+          "All names are neutral template slots; cloning never exposes real player identities."
+        ],
+        "assumptions": ["Adjust role counts for your guild, opponent and strategy."],
+        "evidence": ["Balanced Global Community envelope from the existing GvG model."]
+      }
+    },
+    {
+      "id": "example-guild-war-strategy-template",
+      "type": "GUILD_WAR_STRATEGY",
+      "workspace": "GVG",
+      "title": "Example Guild War Strategy",
+      "subtitle": "Reference planning template",
+      "role": "Commander / full roster",
+      "objective": "Outpost opening → boss windows → objective pressure",
+      "region": "Global",
+      "patch": "2.0",
+      "tier": "Guild War",
+      "createdDate": "2026-08-17",
+      "lastReviewedDate": "2026-08-17",
+      "maturity": ["COMMUNITY_REFERENCE", "MODELED"],
+      "source": {
+        "label": "WWM Calc Guild War strategy template",
+        "kind": "TEMPLATE",
+        "note": "Planning scaffold using already modeled Guild War events. Unknown timings remain configurable rather than asserted as official."
+      },
+      "buildSchemaVersion": 1,
+      "librarySchemaVersion": 1,
+      "featured": false,
+      "tags": ["gvg", "strategy", "template", "commander"],
+      "build": {
+        "confidence": "REFERENCE TEMPLATE",
+        "objective": "Structured Guild War plan",
+        "scenario": "Global Guild War",
+        "strategy": {
+          "name": "Balanced opening reference",
+          "readiness": "Template — clone before editing",
+          "doctrine": "Secure opening outposts, keep role coverage flexible, then adapt to observed opponent pressure.",
+          "phases": [
+            "Opening: prepare for the 3:00 outpost spawn.",
+            "Control: respect the 60s ownership lock after capture.",
+            "Objective windows: treat neutral-boss base times as configurable when not independently established.",
+            "Pressure: assign anti-heal / zone tools by role rather than PvE DPS rank."
+          ],
+          "notes": ["No universal winner is declared; exact response depends on roster roles and opponent behavior."]
+        },
+        "why": ["Turns known Guild War mechanics into a starting plan without inventing unsupported timers."],
+        "assumptions": ["Unknown or league-dependent timings stay editable after clone."],
+        "evidence": ["Existing Guild War official constants + modeled planning surfaces."]
+      }
+    }
+  ]
+}

@@ -27,6 +27,8 @@ jobs:
       - run: npm run lint
       - name: Validate Global Guild War model
         run: node scripts/validate-gvg-model.mjs
+      - name: Validate curated Community Library
+        run: node scripts/validate-library.mjs
       - run: npm run build
       - name: Validate Global T96 product model
         run: npm run validate:t96-product
@@ -53,8 +55,10 @@ jobs:
           GVG_STATUS=$?
           npx playwright test scripts/runtime-workspace-ux.spec.mjs --reporter=line --workers=1 --timeout=120000
           UX_STATUS=$?
+          npx playwright test scripts/runtime-library-acceptance.spec.mjs --reporter=line --workers=1 --timeout=120000
+          LIBRARY_STATUS=$?
           set -e
-          STATUS=$(( T96_STATUS != 0 || GVG_STATUS != 0 || UX_STATUS != 0 ))
+          STATUS=$(( T96_STATUS != 0 || GVG_STATUS != 0 || UX_STATUS != 0 || LIBRARY_STATUS != 0 ))
           if [ "$T96_STATUS" -ne 0 ] && [ -f runtime-smoke-diagnostic.txt ]; then
             python3 - <<'PY'
           from pathlib import Path
@@ -82,6 +86,11 @@ jobs:
             echo "::error file=scripts/runtime-workspace-ux.spec.mjs,line=1,title=Workspace UX diagnostic::Responsive workspace acceptance or visual QA failed"
           else
             echo "::notice file=scripts/runtime-workspace-ux.spec.mjs,line=1,title=Workspace UX acceptance::PvE/Guild War IA, state preservation, responsive layouts, keyboard focus and representative screenshots passed"
+          fi
+          if [ "$LIBRARY_STATUS" -ne 0 ]; then
+            echo "::error file=scripts/runtime-library-acceptance.spec.mjs,line=1,title=Library runtime diagnostic::Library routing, clone isolation, build compare, sharing, security or responsive acceptance failed"
+          else
+            echo "::notice file=scripts/runtime-library-acceptance.spec.mjs,line=1,title=Library runtime acceptance::Curated Library, read-only detail/share, safe clone, PvE/GvG comparison, favorites and responsive QA passed"
           fi
           exit "$STATUS"
       - uses: actions/upload-artifact@v4
