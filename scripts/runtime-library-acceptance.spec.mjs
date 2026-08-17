@@ -60,8 +60,10 @@ test("Library routing, filtering, trust labels, favorites and old workspace deep
   await expect(page.locator(".library-card")).toHaveCount(1);
 
   await page.goto(`${BASE}#pve/build`, { waitUntil: "networkidle" });
+  await page.reload({ waitUntil: "networkidle" });
   await expect(page.getByLabel("PvE navigation").getByRole("button", { name: /^Build/ })).toHaveAttribute("aria-current", "page");
   await page.goto(`${BASE}#gvg/roster`, { waitUntil: "networkidle" });
+  await page.reload({ waitUntil: "networkidle" });
   await expect(page.getByLabel("Guild War navigation").getByRole("button", { name: /^Roster/ })).toHaveAttribute("aria-current", "page");
 });
 
@@ -150,7 +152,7 @@ test("Versioned share landing, legacy migration, malformed rejection and legacy 
   expect(link).toContain("#shared-build=");
   await page.goto(link, { waitUntil: "networkidle" });
   await expect(page.getByTestId("shared-build-landing")).toBeVisible();
-  await expect(page.getByText("SHARED PVE BUILD")).toBeVisible();
+  await expect(page.getByText("SHARED PVE BUILD", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: /Clone to My Workspace/ })).toBeVisible();
   await page.screenshot({ path: `${qaDir}/390-shared-build-landing-source.png`, fullPage: true });
 
@@ -179,7 +181,7 @@ test("Versioned share landing, legacy migration, malformed rejection and legacy 
   };
   await page.goto(`${BASE}#gvg-share=${base64url(gvgEnvelope)}`, { waitUntil: "networkidle" });
   await expect(page.getByTestId("gvg-shared-landing")).toBeVisible();
-  await expect(page.getByText("SHARED GUILD WAR PLAN")).toBeVisible();
+  await expect(page.getByText("SHARED GUILD WAR PLAN", { exact: true })).toBeVisible();
   await expect(page.getByText(/Player names: redacted/i)).toBeVisible();
   await expect(page.getByText(/Nothing has been applied/i)).toBeVisible();
 });
