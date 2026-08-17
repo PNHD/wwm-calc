@@ -1,0 +1,85 @@
+name: GvG Follow-up Patch
+
+on:
+  push:
+    branches:
+      - fix/gvg-followup-completeness
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/gvg-followup-completeness
+      - name: Patch GvG follow-up completeness issues
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('src/product/GuildWarWorkspace.tsx')
+          text = path.read_text()
+
+          old = '  const saveMatch = (form: HTMLFormElement) => {\n    const data = new FormData(form);\n    const log = createMatchLog({'
+          new = '''  const saveMatch = (form: HTMLFormElement) => {\n    const data = new FormData(form);\n    const optionalSeconds = (key: string) => {\n      const raw = String(data.get(key) ?? "").trim();\n      if (!raw) return null;\n      const value = Number(raw);\n      return Number.isFinite(value) && value >= 0 ? value : null;\n    };\n    const log = createMatchLog({'''
+          assert old in text, 'saveMatch anchor missing'
+          text = text.replace(old, new, 1)
+
+          old = '      duelOutcome: data.get("duelOutcome"), bulwarkBreakSeconds: data.get("bulwarkBreakSeconds") || null, gooseBreakSeconds: data.get("gooseBreakSeconds") || null,\n      tree: { pickupSeconds: data.get("treePickupSeconds") || null, distance: data.get("treeDistance") || null, delivered: data.get("treeDelivered") === "on" },\n      funCoinUsage: workspace.commander?.events ?? [],'
+          new = '''      duelOutcome: data.get("duelOutcome"), bulwarkBreakSeconds: data.get("bulwarkBreakSeconds") || null, gooseBreakSeconds: data.get("gooseBreakSeconds") || null,\n      outpostCaptureTimes: [\n        { outpost: "TOP", timeSeconds: optionalSeconds("topOutpostCaptureSeconds") },\n        { outpost: "BOTTOM", timeSeconds: optionalSeconds("bottomOutpostCaptureSeconds") },\n      ].filter((event) => event.timeSeconds != null),\n      neutralBosses: [\n        { boss: "ZHANG_BAO", timeSeconds: optionalSeconds("zhangBaoEventSeconds") },\n        { boss: "ZHUXIE_GULE", timeSeconds: optionalSeconds("zhuxieGuleEventSeconds") },\n      ].filter((event) => event.timeSeconds != null),\n      tree: { pickupSeconds: optionalSeconds("treePickupSeconds"), distance: data.get("treeDistance") || null, delivered: data.get("treeDelivered") === "on", deliverySeconds: optionalSeconds("treeDeliverySeconds") },\n      funCoinUsage: workspace.commander?.events ?? [],'''
+          assert old in text, 'match structured event anchor missing'
+          text = text.replace(old, new, 1)
+
+          typo = 'workspace.objectiveParams.zhhangBaoBaseSeconds'
+          assert text.count(typo) == 1, f'expected one Zhang Bao typo, got {text.count(typo)}'
+          text = text.replace(typo, 'workspace.objectiveParams.zhangBaoBaseSeconds', 1)
+
+          old = '<div className="gvg-roster-meta"><select value={member.roles[0] ?? "MAIN_BALL"} onChange={(event) => updateMember(member.id, { roles: [event.target.value] })}>{GVG_ROLES.map((role: string) => <option key={role} value={role}>{roleShort[role]}</option>)}</select><input value={member.team} aria-label="Team/group" onChange={(event) => updateMember(member.id, { team: event.target.value })} /><select value={member.exTechnique} onChange={(event) => updateMember(member.id, { exTechnique: event.target.value })}>{EX_TECHNIQUES.map((technique: any) => <option key={technique.id}>{technique.name}</option>)}</select><select value={member.exLevel} onChange={(event) => updateMember(member.id, { exLevel: Number(event.target.value) })}><option value={1}>EX Lv1</option><option value={2}>EX Lv2</option><option value={3}>EX Lv3</option></select></div>'
+          new = '<div className="gvg-roster-meta"><select aria-label="Primary role" value={member.roles[0] ?? "MAIN_BALL"} onChange={(event) => updateMember(member.id, { roles: [event.target.value, ...member.roles.slice(1).filter((role) => role !== event.target.value).slice(0, 1)] })}>{GVG_ROLES.map((role: string) => <option key={role} value={role}>{roleShort[role]}</option>)}</select><select aria-label="Secondary role" value={member.roles[1] ?? ""} onChange={(event) => updateMember(member.id, { roles: event.target.value && event.target.value !== member.roles[0] ? [member.roles[0] ?? "MAIN_BALL", event.target.value] : [member.roles[0] ?? "MAIN_BALL"] })}><option value="">No secondary role</option>{GVG_ROLES.map((role: string) => <option key={role} value={role}>{roleShort[role]}</option>)}</select><input value={member.team} aria-label="Team/group" onChange={(event) => updateMember(member.id, { team: event.target.value })} /><select value={member.exTechnique} onChange={(event) => updateMember(member.id, { exTechnique: event.target.value })}>{EX_TECHNIQUES.map((technique: any) => <option key={technique.id}>{technique.name}</option>)}</select><select value={member.exLevel} onChange={(event) => updateMember(member.id, { exLevel: Number(event.target.value) })}><option value={1}>EX Lv1</option><option value={2}>EX Lv2</option><option value={3}>EX Lv3</option></select></div>'
+          assert old in text, 'roster role anchor missing'
+          text = text.replace(old, new, 1)
+
+          old = '<label>Objective damage<input name="objectiveDamage" type="number" /></label><label>Bulwark break (sec)<input name="bulwarkBreakSeconds" type="number" /></label><label>Goose break (sec)<input name="gooseBreakSeconds" type="number" /></label><label>Tree pickup (sec)<input name="treePickupSeconds" type="number" /></label><label>Tree distance<input name="treeDistance" type="number" /></label><label className="gvg-check"><input name="treeDelivered" type="checkbox" /> Tree delivered</label>'
+          new = '<label>Objective damage<input name="objectiveDamage" type="number" /></label><label>Top outpost capture (sec)<input name="topOutpostCaptureSeconds" type="number" min="0" /></label><label>Bottom outpost capture (sec)<input name="bottomOutpostCaptureSeconds" type="number" min="0" /></label><label>Zhang Bao event (sec)<input name="zhangBaoEventSeconds" type="number" min="0" /></label><label>Zhuxie Gule event (sec)<input name="zhuxieGuleEventSeconds" type="number" min="0" /></label><label>Bulwark break (sec)<input name="bulwarkBreakSeconds" type="number" /></label><label>Goose break (sec)<input name="gooseBreakSeconds" type="number" /></label><label>Tree pickup (sec)<input name="treePickupSeconds" type="number" /></label><label>Tree distance<input name="treeDistance" type="number" /></label><label>Tree delivery (sec)<input name="treeDeliverySeconds" type="number" min="0" /></label><label className="gvg-check"><input name="treeDelivered" type="checkbox" /> Tree delivered</label>'
+          assert old in text, 'match form anchor missing'
+          text = text.replace(old, new, 1)
+
+          old = '<small>K/D {log.kills}/{log.deaths} · Heal {Number(log.healing).toLocaleString()} · Obj {Number(log.objectiveDamage).toLocaleString()}</small><EvidenceBadge value={EVIDENCE.CONFIRMED_CLIENT} />'
+          new = '<small>K/D {log.kills}/{log.deaths} · Heal {Number(log.healing).toLocaleString()} · Obj {Number(log.objectiveDamage).toLocaleString()}</small><small>Outposts {log.outpostCaptureTimes?.length ?? 0} · Bosses {log.neutralBosses?.length ?? 0} · Tree {log.tree?.delivered ? "delivered" : "not delivered"}</small><EvidenceBadge value={EVIDENCE.CONFIRMED_CLIENT} />'
+          assert old in text, 'log summary anchor missing'
+          text = text.replace(old, new, 1)
+
+          path.write_text(text)
+
+          test_path = Path('scripts/runtime-gvg-acceptance.spec.mjs')
+          test = test_path.read_text()
+
+          old = '  await expect(roster.getByLabel("Player name").first()).toBeVisible();\n\n  await workspace.getByRole("button", { name: /Strategy/i }).click();'
+          new = '  await expect(roster.getByLabel("Player name").first()).toBeVisible();\n  await roster.getByLabel("Secondary role").first().selectOption("HEALER");\n  await expect(roster.getByLabel("Secondary role").first()).toHaveValue("HEALER");\n\n  await workspace.getByRole("button", { name: /Strategy/i }).click();'
+          assert old in test, 'runtime roster anchor missing'
+          test = test.replace(old, new, 1)
+
+          old = '  await expect(sim.getByText("100 → 50")).toBeVisible();\n\n  await workspace.getByRole("button", { name: /Share/i }).last().click();'
+          new = '''  await expect(sim.getByText("100 → 50")).toBeVisible();\n  await sim.getByLabel("Zhang Bao base (sec)").fill("900");\n  await expect(sim.getByText("14:00–16:00", { exact: true })).toBeVisible();\n\n  await workspace.getByRole("button", { name: /Match Log/i }).click();\n  const logs = page.getByTestId("gvg-match-log");\n  await logs.getByLabel("Date").fill("2026-08-17");\n  await logs.getByLabel("Top outpost capture (sec)").fill("240");\n  await logs.getByLabel("Bottom outpost capture (sec)").fill("300");\n  await logs.getByLabel("Zhang Bao event (sec)").fill("840");\n  await logs.getByLabel("Zhuxie Gule event (sec)").fill("960");\n  await logs.getByLabel("Tree delivery (sec)").fill("1200");\n  await logs.getByLabel("Tree delivered").check();\n  await logs.getByRole("button", { name: /Save structured match/i }).click();\n  await expect(logs.getByText("Recorded matches (1)")).toBeVisible();\n  await expect(logs.getByText(/Outposts 2 · Bosses 2 · Tree delivered/)).toBeVisible();\n\n  await workspace.getByRole("button", { name: /Share/i }).last().click();'''
+          assert old in test, 'runtime timeline/share anchor missing'
+          test = test.replace(old, new, 1)
+          test_path.write_text(test)
+          PY
+      - name: Verify patch compiles before commit
+        run: |
+          npm ci
+          npm run lint
+          node scripts/validate-gvg-model.mjs
+          npm run build
+      - name: Commit follow-up fix
+        run: |
+          rm .github/workflows/gvg-followup-patch.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/product/GuildWarWorkspace.tsx scripts/runtime-gvg-acceptance.spec.mjs .github/workflows/gvg-followup-patch.yml
+          git commit -m "fix(gvg): complete roster roles and structured match events"
+          git push origin HEAD:fix/gvg-followup-completeness
