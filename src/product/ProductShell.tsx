@@ -15,6 +15,8 @@ import {
   HeartPulse,
   Home,
   Layers3,
+  Library as LibraryIcon,
+  Link2,
   Map as MapIcon,
   Menu,
   Repeat2,
@@ -23,16 +25,20 @@ import {
   Shield,
   SlidersHorizontal,
   Target,
+  Upload,
   Users,
   X,
 } from "lucide-react";
 import GuildWarWorkspace from "./GuildWarWorkspace";
+import GvgSharedLanding from "./GvgSharedLanding";
+import LibraryWorkspace from "./LibraryWorkspace";
 import "./model-assumptions.css";
 import "./workspace-redesign.css";
 import "./workspaces/compare-v2.css";
 
 export type ProductTab = "details" | "gear-analyzer" | "gear-compare" | "inventory-optimizer" | "simulation" | "team" | "rotations" | "skill-editor" | "settings" | "profile";
-type ProductWorkspace = "pve" | "gvg";
+type BaseWorkspace = "pve" | "gvg";
+type ProductWorkspace = BaseWorkspace | "library";
 type PveView = "overview" | "build" | "gear" | "compare" | "best-build" | "combat" | "simulation" | "rotations" | "skill-editor" | "team" | "profile";
 type GvgView = "overview" | "roster" | "builds" | "strategy" | "timeline" | "objectives" | "matches" | "commander" | "support" | "share";
 
@@ -122,6 +128,7 @@ interface ProductShellProps {
 
 interface StoredShellState {
   workspace?: ProductWorkspace;
+  lastWorkspace?: BaseWorkspace;
   pveView?: PveView;
   gvgView?: GvgView;
   inspectorCollapsed?: boolean;
@@ -138,6 +145,7 @@ function readStoredShell(): StoredShellState {
 
 function explicitRoute() {
   const hash = window.location.hash;
+  if (hash.startsWith("#library") || hash.startsWith("#shared-build=")) return { workspace: "library" as const };
   if (hash.includes("gvg-share=")) return { workspace: "gvg" as const, gvgView: "share" as const };
   const match = hash.match(/^#(pve|gvg)\/([a-z-]+)/);
   if (!match) return null;
@@ -146,7 +154,7 @@ function explicitRoute() {
     : { workspace: "gvg" as const, gvgView: match[2] as GvgView };
 }
 
-function updateRoute(workspace: ProductWorkspace, view: PveView | GvgView) {
+function updateRoute(workspace: BaseWorkspace, view: PveView | GvgView) {
   const hash = window.location.hash;
   if (hash.includes("gvg-share=") && workspace === "gvg") return;
   if (hash && !/^#(pve|gvg)\//.test(hash)) return;
@@ -172,8 +180,13 @@ function readGvgSummary() {
 }
 
 const roleCount = (summary: ReturnType<typeof readGvgSummary>, role: string) => summary.roleCounts.get(role) || 0;
+const gvgSharePayload = () => {
+  const marker = "gvg-share=";
+  const index = window.location.hash.indexOf(marker);
+  return index < 0 ? "" : window.location.hash.slice(index + marker.length);
+};
 
-function WorkspaceSwitcher({ workspace, onChange }: { workspace: ProductWorkspace; onChange: (workspace: ProductWorkspace) => void }) {
+function WorkspaceSwitcher({ workspace, onChange }: { workspace: ProductWorkspace; onChange: (workspace: BaseWorkspace) => void }) {
   return (
     <nav className="workspace-switcher" aria-label="Product workspaces">
       <button type="button" className={workspace === "pve" ? "is-active" : ""} aria-pressed={workspace === "pve"} onClick={() => onChange("pve")}>
@@ -218,11 +231,11 @@ function ContextNavigation<T extends string>({
   );
 }
 
-function PveOverview({ context, onNavigate, showOnboarding, onChoose }: {
+function PveOverview({ context, onNavigate, showOnboarding, onOpenLibrary }: {
   context: ProductShellProps["context"];
   onNavigate: (view: PveView) => void;
   showOnboarding: boolean;
-  onChoose: (workspace: ProductWorkspace) => void;
+  onOpenLibrary: (hash?: string) => void;
 }) {
   const completeInnerWays = context.innerWays >= 4;
   return (
@@ -232,10 +245,12 @@ function PveOverview({ context, onNavigate, showOnboarding, onChoose }: {
         <button type="button" className="workspace-primary-action" onClick={() => onNavigate("compare")}>Compare gear <ChevronRight size={16} aria-hidden="true" /></button>
       </header>
 
-      {showOnboarding && <section className="workspace-onboarding" aria-label="First use">
-        <div><span className="workspace-eyebrow">Start here</span><h2>What are you planning?</h2><p>Choose a workspace now. You can switch at any time without losing either plan.</p></div>
-        <button type="button" onClick={() => onChoose("pve")}><BarChart3 size={20} aria-hidden="true" /><span><strong>PvE Build</strong><small>Choose a path, enter gear, compare and optimize.</small></span><ChevronRight size={16} /></button>
-        <button type="button" onClick={() => onChoose("gvg")}><Shield size={20} aria-hidden="true" /><span><strong>Guild War</strong><small>Create or import a roster, then plan strategy.</small></span><ChevronRight size={16} /></button>
+      {showOnboarding && <section className="workspace-onboarding workspace-onboarding-start" aria-label="First use PvE start options">
+        <div><span className="workspace-eyebrow">Start from</span><h2>Choose a safe starting point</h2><p>Reference and shared builds stay read-only until you explicitly clone them.</p></div>
+        <button type="button" onClick={() => onNavigate("build")}><BarChart3 size={20} aria-hidden="true" /><span><strong>Blank Build</strong><small>Configure your own Path and gear.</small></span><ChevronRight size={16} /></button>
+        <button type="button" onClick={() => onOpenLibrary("#library/pve")}><LibraryIcon size={20} aria-hidden="true" /><span><strong>Reference Build</strong><small>Browse curated, sourced presets.</small></span><ChevronRight size={16} /></button>
+        <button type="button" onClick={() => onNavigate("profile")}><Upload size={20} aria-hidden="true" /><span><strong>Import</strong><small>Load your existing calculator data.</small></span><ChevronRight size={16} /></button>
+        <button type="button" onClick={() => onOpenLibrary("#library")}><Link2 size={20} aria-hidden="true" /><span><strong>Shared Link</strong><small>Open a read-only shared build link.</small></span><ChevronRight size={16} /></button>
       </section>}
 
       <div className="workspace-overview-grid">
@@ -266,6 +281,7 @@ function PveOverview({ context, onNavigate, showOnboarding, onChoose }: {
 
         <section className="workspace-next-card">
           <div className="workspace-card-heading"><span>NEXT ACTIONS</span></div>
+          <button type="button" onClick={() => onOpenLibrary("#library/pve")}><span><strong>Compare with Reference</strong><small>Open a sourced build without changing My Build.</small></span><ChevronRight size={16} /></button>
           <button type="button" onClick={() => onNavigate("compare")}><span><strong>Compare a gear piece</strong><small>See the winner and why it wins.</small></span><ChevronRight size={16} /></button>
           <button type="button" onClick={() => onNavigate("best-build")}><span><strong>Run Best Build</strong><small>Search complete combinations by modeled DPS.</small></span><ChevronRight size={16} /></button>
           <button type="button" onClick={() => onNavigate("gear")}><span><strong>Review weak slots</strong><small>Manage equipped gear and inventory.</small></span><ChevronRight size={16} /></button>
@@ -275,7 +291,7 @@ function PveOverview({ context, onNavigate, showOnboarding, onChoose }: {
   );
 }
 
-function GvgOverview({ onNavigate }: { onNavigate: (view: GvgView) => void }) {
+function GvgOverview({ onNavigate, onOpenLibrary }: { onNavigate: (view: GvgView) => void; onOpenLibrary: (hash?: string) => void }) {
   const summary = readGvgSummary();
   const nextEvent = summary.timeline[0];
   const missing = [
@@ -288,11 +304,15 @@ function GvgOverview({ onNavigate }: { onNavigate: (view: GvgView) => void }) {
     <main className="workspace-overview workspace-overview-gvg" data-testid="gvg-overview" id="main-content">
       <header className="workspace-overview-heading">
         <div><span className="workspace-eyebrow">Guild War / Overview</span><h1>Command center</h1><p>Roster readiness, strategy and the next objective without PvE calculator noise.</p></div>
-        <div className="workspace-heading-actions"><button type="button" className="workspace-secondary-action" onClick={() => onNavigate("roster")}>Open Roster</button><button type="button" className="workspace-primary-action" onClick={() => onNavigate("strategy")}>Open Strategy <ChevronRight size={16} /></button></div>
+        <div className="workspace-heading-actions"><button type="button" className="workspace-secondary-action" onClick={() => onOpenLibrary("#library/gvg-plans")}>Templates</button><button type="button" className="workspace-primary-action" onClick={() => onNavigate("strategy")}>Open Strategy <ChevronRight size={16} /></button></div>
       </header>
 
-      {!summary.roster.length && <section className="workspace-empty-state">
-        <Users size={25} aria-hidden="true" /><div><h2>No Guild War roster yet</h2><p>Start a roster or import a shared plan. PvE build data stays untouched.</p></div><button type="button" onClick={() => onNavigate("roster")}>Start roster</button><button type="button" className="is-secondary" onClick={() => onNavigate("share")}>Import plan</button>
+      {!summary.roster.length && <section className="workspace-empty-state workspace-gvg-start">
+        <Users size={25} aria-hidden="true" /><div><h2>No Guild War roster yet</h2><p>Start blank, use a template, import a plan or inspect a shared plan. PvE data stays untouched.</p></div>
+        <button type="button" onClick={() => onNavigate("roster")}>Blank Roster</button>
+        <button type="button" className="is-secondary" onClick={() => onOpenLibrary("#library/gvg-plans")}>Roster Template</button>
+        <button type="button" className="is-secondary" onClick={() => onNavigate("share")}>Import Plan</button>
+        <button type="button" className="is-secondary" onClick={() => onNavigate("share")}>Shared Plan</button>
       </section>}
 
       <div className="workspace-overview-grid gvg-command-grid">
@@ -332,6 +352,7 @@ function GvgOverview({ onNavigate }: { onNavigate: (view: GvgView) => void }) {
         <section className="workspace-next-card">
           <div className="workspace-card-heading"><span>READINESS</span></div>
           <div className="workspace-readiness-lines"><span><strong>{summary.ready}/30</strong><small>Available</small></span><span><strong>{summary.strategyAssignments}</strong><small>Placed on map</small></span><span><strong>{summary.matches}</strong><small>Match logs</small></span></div>
+          <button type="button" onClick={() => onOpenLibrary("#library/gvg-plans")}><span><strong>Roster & strategy templates</strong><small>Browse curated plans and clone only when ready.</small></span><ChevronRight size={16} /></button>
           <button type="button" onClick={() => onNavigate("share")}><span><strong>Check shareability</strong><small>Export a roster, strategy or full plan with privacy controls.</small></span><ChevronRight size={16} /></button>
         </section>
       </div>
@@ -368,12 +389,15 @@ function PveInspector({ context, page, collapsed, onToggle, onNavigate }: {
 export default function ProductShell({ active, onNavigate, roleControl, actions, context }: ProductShellProps) {
   const stored = useMemo(readStoredShell, []);
   const route = useMemo(explicitRoute, []);
+  const initialBase = route?.workspace === "pve" || route?.workspace === "gvg" ? route.workspace : stored.lastWorkspace ?? (stored.workspace === "gvg" ? "gvg" : "pve");
   const [workspace, setWorkspace] = useState<ProductWorkspace>(route?.workspace ?? stored.workspace ?? "pve");
+  const [lastWorkspace, setLastWorkspace] = useState<BaseWorkspace>(initialBase);
   const [pveView, setPveView] = useState<PveView>((route && "pveView" in route ? route.pveView : undefined) ?? stored.pveView ?? "overview");
   const [gvgView, setGvgView] = useState<GvgView>((route && "gvgView" in route ? route.gvgView : undefined) ?? stored.gvgView ?? "overview");
   const [inspectorCollapsed, setInspectorCollapsed] = useState(Boolean(stored.inspectorCollapsed));
   const [moreOpen, setMoreOpen] = useState(false);
   const [onboarded, setOnboarded] = useState(Boolean(stored.onboarded) || Boolean(route));
+  const [previewLegacyGvgShare, setPreviewLegacyGvgShare] = useState(Boolean(gvgSharePayload()));
   const activeRef = useRef(active);
   const initializedRef = useRef(false);
 
@@ -381,12 +405,32 @@ export default function ProductShell({ active, onNavigate, roleControl, actions,
     const root = document.querySelector<HTMLElement>(".app-root");
     if (!root) return;
     root.dataset.productWorkspace = workspace;
-    root.dataset.productPage = workspace === "pve" ? pveView : gvgView;
+    root.dataset.productPage = workspace === "pve" ? pveView : workspace === "gvg" ? gvgView : "library";
   }, [workspace, pveView, gvgView]);
 
   useEffect(() => {
-    localStorage.setItem(SHELL_STORAGE_KEY, JSON.stringify({ workspace, pveView, gvgView, inspectorCollapsed, onboarded }));
-  }, [workspace, pveView, gvgView, inspectorCollapsed, onboarded]);
+    localStorage.setItem(SHELL_STORAGE_KEY, JSON.stringify({ workspace, lastWorkspace, pveView, gvgView, inspectorCollapsed, onboarded }));
+  }, [workspace, lastWorkspace, pveView, gvgView, inspectorCollapsed, onboarded]);
+
+  useEffect(() => {
+    const handleHash = () => {
+      const parsed = explicitRoute();
+      if (!parsed) return;
+      if (parsed.workspace === "library") {
+        setWorkspace("library"); setMoreOpen(false); return;
+      }
+      if (parsed.workspace === "pve") {
+        setWorkspace("pve"); setLastWorkspace("pve");
+        if ("pveView" in parsed) setPveView(parsed.pveView);
+      } else {
+        setWorkspace("gvg"); setLastWorkspace("gvg");
+        if ("gvgView" in parsed) setGvgView(parsed.gvgView);
+        setPreviewLegacyGvgShare(Boolean(gvgSharePayload()));
+      }
+    };
+    window.addEventListener("hashchange", handleHash);
+    return () => window.removeEventListener("hashchange", handleHash);
+  }, []);
 
   useEffect(() => {
     if (initializedRef.current) return;
@@ -404,7 +448,7 @@ export default function ProductShell({ active, onNavigate, roleControl, actions,
   }, [active, workspace]);
 
   useEffect(() => {
-    if (workspace !== "gvg" || gvgView === "overview") return;
+    if (workspace !== "gvg" || gvgView === "overview" || (gvgView === "share" && previewLegacyGvgShare)) return;
     const target = GVG_INTERNAL_LABEL[gvgView];
     if (!target) return;
     const timer = window.setTimeout(() => {
@@ -421,27 +465,39 @@ export default function ProductShell({ active, onNavigate, roleControl, actions,
       }
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [workspace, gvgView]);
+  }, [workspace, gvgView, previewLegacyGvgShare]);
 
   const goPve = (view: PveView) => {
-    setWorkspace("pve"); setPveView(view); setMoreOpen(false); setOnboarded(true); updateRoute("pve", view);
+    setWorkspace("pve"); setLastWorkspace("pve"); setPveView(view); setMoreOpen(false); setOnboarded(true); updateRoute("pve", view);
     const tab = TAB_FOR_PVE[view];
     if (tab) onNavigate(tab);
   };
 
   const goGvg = (view: GvgView) => {
-    setWorkspace("gvg"); setGvgView(view); setMoreOpen(false); setOnboarded(true); updateRoute("gvg", view);
+    setWorkspace("gvg"); setLastWorkspace("gvg"); setGvgView(view); setMoreOpen(false); setOnboarded(true); updateRoute("gvg", view);
   };
 
-  const switchWorkspace = (next: ProductWorkspace) => {
-    setWorkspace(next); setMoreOpen(false); setOnboarded(true);
+  const switchWorkspace = (next: BaseWorkspace) => {
+    setWorkspace(next); setLastWorkspace(next); setMoreOpen(false); setOnboarded(true); setPreviewLegacyGvgShare(false);
     if (next === "pve") {
-      updateRoute("pve", pveView);
+      if (!/^#pve\//.test(window.location.hash)) window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}#pve/${pveView}`);
       const tab = TAB_FOR_PVE[pveView];
       if (tab) onNavigate(tab);
     } else {
-      updateRoute("gvg", gvgView);
+      if (!/^#gvg\//.test(window.location.hash)) window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}#gvg/${gvgView}`);
     }
+  };
+
+  const openLibrary = (hash = "#library") => {
+    if (workspace === "pve" || workspace === "gvg") setLastWorkspace(workspace);
+    setWorkspace("library"); setMoreOpen(false); setOnboarded(true);
+    if (!window.location.hash.startsWith("#shared-build=")) window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}${hash}`);
+  };
+
+  const closeLegacyGvgShare = () => {
+    window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}#gvg/overview`);
+    setPreviewLegacyGvgShare(false);
+    goGvg("overview");
   };
 
   const pveTitle = [...PVE_PRIMARY, ...PVE_SECONDARY].find((item) => item.key === pveView)?.label ?? "Overview";
@@ -450,34 +506,38 @@ export default function ProductShell({ active, onNavigate, roleControl, actions,
   const mobileGvg: GvgView[] = ["roster", "strategy", "timeline", "matches"];
 
   return (
-    <div className="product-shell-root" data-shell-workspace={workspace} data-shell-page={workspace === "pve" ? pveView : gvgView}>
+    <div className="product-shell-root" data-shell-workspace={workspace} data-shell-page={workspace === "pve" ? pveView : workspace === "gvg" ? gvgView : "library"}>
       <header className="product-masthead product-masthead-v2">
-        <button type="button" className="product-brand" onClick={() => workspace === "pve" ? goPve("overview") : goGvg("overview")} aria-label="Open workspace overview">
+        <button type="button" className="product-brand" onClick={() => workspace === "library" ? switchWorkspace(lastWorkspace) : workspace === "pve" ? goPve("overview") : goGvg("overview")} aria-label="Open workspace overview">
           <span className="product-seal" aria-hidden="true">W</span><span><strong>WWM Build Lab</strong><small>Global 2.0 · {context.tier}</small></span>
         </button>
         <WorkspaceSwitcher workspace={workspace} onChange={switchWorkspace} />
         <div className="product-role">{roleControl}</div>
         <div className="product-actions product-actions-v2">
-          {workspace === "pve" ? <button type="button" onClick={() => goPve("profile")}><Share2 size={14} /> Share / Import</button> : <button type="button" onClick={() => goGvg("share")}><Share2 size={14} /> Share Plan</button>}
+          <button type="button" className={`product-library-button ${workspace === "library" ? "is-active" : ""}`} aria-current={workspace === "library" ? "page" : undefined} onClick={() => openLibrary()}><LibraryIcon size={14} /><span>Library</span></button>
+          {workspace === "pve" ? <button type="button" onClick={() => goPve("profile")}><Share2 size={14} /> Share / Import</button> : workspace === "gvg" ? <button type="button" onClick={() => goGvg("share")}><Share2 size={14} /> Share Plan</button> : null}
           {actions}
         </div>
       </header>
 
-      <div className="workspace-context-bar">
+      {workspace !== "library" && <div className="workspace-context-bar">
         <button type="button" className="workspace-mobile-switch" onClick={() => switchWorkspace(workspace === "pve" ? "gvg" : "pve")}><span>{workspace === "pve" ? "PvE" : "Guild War"}</span><ChevronDown size={14} /></button>
         <span>{workspace === "pve" ? "PvE" : "Guild War"} <b>/</b> {workspace === "pve" ? pveTitle : gvgTitle}</span>
         {workspace === "pve" && <section className="product-context" role="region" aria-label="Current build context"><span><small>Build</small><strong>{context.build}</strong></span><span><small>Inner Ways</small><strong>{context.innerWays}/4</strong></span><span className="product-context-metric"><small>Modeled DPS</small><strong>{context.estimate}/s</strong></span></section>}
-      </div>
+      </div>}
 
-      {workspace === "pve" ? <ContextNavigation label="PvE" primary={PVE_PRIMARY} secondary={PVE_SECONDARY} active={pveView} onNavigate={goPve} /> : <ContextNavigation label="Guild War" primary={GVG_PRIMARY} secondary={GVG_SECONDARY} active={gvgView} onNavigate={goGvg} />}
+      {workspace === "pve" && <ContextNavigation label="PvE" primary={PVE_PRIMARY} secondary={PVE_SECONDARY} active={pveView} onNavigate={goPve} />}
+      {workspace === "gvg" && <ContextNavigation label="Guild War" primary={GVG_PRIMARY} secondary={GVG_SECONDARY} active={gvgView} onNavigate={goGvg} />}
 
       {workspace === "pve" && <PveInspector context={context} page={pveView} collapsed={inspectorCollapsed} onToggle={() => setInspectorCollapsed((value) => !value)} onNavigate={goPve} />}
 
-      {workspace === "pve" && pveView === "overview" && <PveOverview context={context} onNavigate={goPve} showOnboarding={!onboarded} onChoose={(choice) => choice === "pve" ? (setOnboarded(true), goPve("build")) : (setOnboarded(true), goGvg("overview"))} />}
-      {workspace === "gvg" && gvgView === "overview" && <GvgOverview onNavigate={goGvg} />}
-      {workspace === "gvg" && gvgView !== "overview" && <div className={`workspace-gvg-host is-${gvgView}`}><GuildWarWorkspace onClose={() => goGvg("overview")} /></div>}
+      {workspace === "pve" && pveView === "overview" && <PveOverview context={context} onNavigate={goPve} showOnboarding={!onboarded} onOpenLibrary={openLibrary} />}
+      {workspace === "gvg" && gvgView === "overview" && <GvgOverview onNavigate={goGvg} onOpenLibrary={openLibrary} />}
+      {workspace === "gvg" && gvgView === "share" && previewLegacyGvgShare && gvgSharePayload() && <GvgSharedLanding payload={gvgSharePayload()} onView={() => setPreviewLegacyGvgShare(false)} onBack={closeLegacyGvgShare} />}
+      {workspace === "gvg" && gvgView !== "overview" && !(gvgView === "share" && previewLegacyGvgShare && gvgSharePayload()) && <div className={`workspace-gvg-host is-${gvgView}`}><GuildWarWorkspace onClose={() => goGvg("overview")} /></div>}
+      {workspace === "library" && <LibraryWorkspace context={context} onOpenPve={goPve} onOpenGvg={goGvg} onExit={() => switchWorkspace(lastWorkspace)} />}
 
-      <nav className="workspace-mobile-nav" aria-label={`${workspace === "pve" ? "PvE" : "Guild War"} mobile navigation`}>
+      {workspace !== "library" && <nav className="workspace-mobile-nav" aria-label={`${workspace === "pve" ? "PvE" : "Guild War"} mobile navigation`}>
         {workspace === "pve" ? mobilePve.map((key) => {
           const item = PVE_PRIMARY.find((candidate) => candidate.key === key)!; const Icon = item.icon;
           return <button type="button" key={key} className={pveView === key ? "is-active" : ""} aria-current={pveView === key ? "page" : undefined} onClick={() => goPve(key)}><Icon size={18} /><span>{item.label === "Best Build" ? "Best" : item.label}</span></button>;
@@ -486,14 +546,15 @@ export default function ProductShell({ active, onNavigate, roleControl, actions,
           return <button type="button" key={key} className={gvgView === key ? "is-active" : ""} aria-current={gvgView === key ? "page" : undefined} onClick={() => goGvg(key)}><Icon size={18} /><span>{item.label === "Match Log" ? "Matches" : item.label}</span></button>;
         })}
         <button type="button" className={moreOpen ? "is-active" : ""} aria-expanded={moreOpen} onClick={() => setMoreOpen((value) => !value)}><Menu size={18} /><span>More</span></button>
-      </nav>
+      </nav>}
 
-      {moreOpen && <div className="workspace-mobile-drawer" role="dialog" aria-modal="true" aria-label="More navigation">
+      {workspace !== "library" && moreOpen && <div className="workspace-mobile-drawer" role="dialog" aria-modal="true" aria-label="More navigation">
         <button type="button" className="workspace-mobile-drawer-close" aria-label="Close navigation" onClick={() => setMoreOpen(false)}><X size={18} /></button>
         <span className="workspace-eyebrow">{workspace === "pve" ? "PvE" : "Guild War"} · More</span><h2>Tools</h2>
         <nav>{(workspace === "pve" ? [PVE_PRIMARY[0], PVE_PRIMARY[5], PVE_PRIMARY[6], ...PVE_SECONDARY] : [GVG_PRIMARY[0], GVG_PRIMARY[2], GVG_PRIMARY[5], ...GVG_SECONDARY]).map((item: any) => {
           const Icon = item.icon; return <button type="button" key={item.key} onClick={() => workspace === "pve" ? goPve(item.key as PveView) : goGvg(item.key as GvgView)}><Icon size={18} /><span><strong>{item.label}</strong><small>{item.hint}</small></span><ChevronRight size={15} /></button>;
         })}</nav>
+        <button type="button" onClick={() => openLibrary()}><LibraryIcon size={18} /><span><strong>Library</strong><small>Curated references & templates</small></span><ChevronRight size={15} /></button>
       </div>}
     </div>
   );
