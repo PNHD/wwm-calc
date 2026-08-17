@@ -47,7 +47,8 @@ test("Library routing, filtering, trust labels, favorites and old workspace deep
   await page.getByLabel("Search Library").fill("");
 
   await page.getByRole("button", { name: "Filters" }).click();
-  await page.getByLabel("Path").selectOption({ label: "Bamboocut-Dust" });
+  const filters = page.getByRole("region", { name: "Library filters" });
+  await filters.getByLabel("Path").selectOption({ label: "Bamboocut-Dust" });
   await expect(page.locator(".library-card")).toHaveCount(1);
   await page.getByRole("button", { name: "Clear filters" }).click();
   await expect(page.locator(".library-card")).toHaveCount(2);
@@ -68,15 +69,6 @@ test("Library routing, filtering, trust labels, favorites and old workspace deep
 });
 
 test("Read-only detail, clone isolation, reference compare and full build-to-build diff", async ({ page }) => {
-  await page.addInitScript(() => {
-    const original = {
-      chars: [{ id: "char-1", name: "Test Character", schemes: [{ id: "scheme-1", name: "My Original Build", panel: { minOuter: 1500, maxOuter: 2500, outerPen: 40, prec: 110, crit: 120, aff: 18, attunedBonus: 10, set: "original-set" }, gear: [{ id: "old-gear", slot: "Helmet", name: "Original Helmet" }] }] }],
-      activeCharId: "char-1",
-      activeSchemeId: "scheme-1",
-    };
-    localStorage.setItem("wwm_chars_v3", JSON.stringify(original));
-    localStorage.setItem("wwm_selected_build", "bamboocut-dust");
-  });
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto(BASE, { waitUntil: "networkidle" });
   await openLibrary(page);
@@ -92,6 +84,15 @@ test("Read-only detail, clone isolation, reference compare and full build-to-bui
   await expect(page.getByText("WWM Calc calibrated T96 fixture 1106")).toBeVisible();
   await page.screenshot({ path: `${qaDir}/1440-library-build-detail.png`, fullPage: true });
 
+  await page.evaluate(() => {
+    const original = {
+      chars: [{ id: "char-1", name: "Test Character", schemes: [{ id: "scheme-1", name: "My Original Build", panel: { minOuter: 1500, maxOuter: 2500, outerPen: 40, prec: 110, crit: 120, aff: 18, attunedBonus: 10, set: "original-set" }, gear: [{ id: "old-gear", slot: "Helmet", name: "Original Helmet" }] }] }],
+      activeCharId: "char-1",
+      activeSchemeId: "scheme-1",
+    };
+    localStorage.setItem("wwm_chars_v3", JSON.stringify(original));
+    localStorage.setItem("wwm_selected_build", "bamboocut-dust");
+  });
   const before = await page.evaluate(() => JSON.parse(localStorage.getItem("wwm_chars_v3") || "{}"));
   await page.getByRole("button", { name: /Compare with My Build/ }).click();
   await expect(page.getByTestId("library-compare")).toBeVisible();
