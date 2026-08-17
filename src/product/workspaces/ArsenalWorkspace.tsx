@@ -89,18 +89,22 @@ export default function ArsenalWorkspace({
     <main className="arsenal-workspace" id="main-content">
       <header className="product-page-heading">
         <div>
-          <span className="product-kicker">Arsenal</span>
-          <h1>Gear inventory</h1>
-          <p>Equip, inspect, and compare every saved piece.</p>
+          <span className="product-kicker">PvE / Gear</span>
+          <h1>Gear</h1>
+          <p>Manage the equipped loadout and saved inventory without mixing selection, analysis, and diagnostics.</p>
         </div>
         <button className="product-primary-button" type="button" onClick={onAdd}>
           <Plus size={17} aria-hidden="true" /> Add gear
         </button>
       </header>
 
+      {rows.length === 0 && <section className="arsenal-empty arsenal-empty-primary" aria-label="Empty gear inventory">
+        <strong>No gear yet</strong><span>Add your first gear piece to calculate and compare your build.</span><button type="button" onClick={onAdd}><Plus size={14} aria-hidden="true" /> Add gear</button>
+      </section>}
+
       <section className="arsenal-loadout" aria-label="Equipped gear">
         <div className="product-section-heading">
-          <div><h2>Current loadout</h2><p>{equipped.filter((slot) => slot.item).length}/8 slots equipped</p></div>
+          <div><h2>Equipped</h2><p>{equipped.filter((slot) => slot.item).length}/8 slots equipped</p></div>
         </div>
         <div className="arsenal-slot-rail">
           {equipped.map(({ key, label, item }) => (
@@ -155,7 +159,10 @@ export default function ArsenalWorkspace({
         </div>
       </section>
 
-      <section className="arsenal-inventory">
+      <section className="arsenal-inventory" aria-label="Inventory">
+        <div className="product-section-heading">
+          <div><h2>Inventory</h2><p>{rows.length} saved pieces · filter by slot, name, set, or stat.</p></div>
+        </div>
         <div className="arsenal-toolbar">
           <div className="arsenal-slot-filter" role="group" aria-label="Filter by gear slot">
             {slots.map((slot) => (
@@ -177,7 +184,7 @@ export default function ArsenalWorkspace({
         <div className="arsenal-results-heading"><span>{visibleRows.length} gear pieces</span><span>Page {page} of {pageCount}</span></div>
         <div className="arsenal-card-grid" aria-label="Gear inventory">
           {visibleRows.length === 0 ? (
-            <div className="arsenal-empty"><strong>No gear in this slot</strong><span>Add a piece or choose another slot.</span></div>
+            <div className="arsenal-empty"><strong>No gear in this slot</strong><span>Add a piece or choose another slot.</span><button type="button" onClick={onAdd}><Plus size={14} aria-hidden="true" /> Add gear</button></div>
           ) : pageRows.map((row) => (
             <article
               key={row.id}
