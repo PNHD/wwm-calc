@@ -30,6 +30,7 @@ import {
   X,
 } from "lucide-react";
 import GuildWarWorkspace from "./GuildWarWorkspace";
+import GvgSharePrivacyPanel from "./GvgSharePrivacyPanel";
 import GvgSharedLanding from "./GvgSharedLanding";
 import LibraryWorkspace from "./LibraryWorkspace";
 import "./model-assumptions.css";
@@ -448,7 +449,7 @@ export default function ProductShell({ active, onNavigate, roleControl, actions,
   }, [active, workspace]);
 
   useEffect(() => {
-    if (workspace !== "gvg" || gvgView === "overview" || (gvgView === "share" && previewLegacyGvgShare)) return;
+    if (workspace !== "gvg" || gvgView === "overview" || (gvgView === "share" && (!gvgSharePayload() || previewLegacyGvgShare))) return;
     const target = GVG_INTERNAL_LABEL[gvgView];
     if (!target) return;
     const timer = window.setTimeout(() => {
@@ -533,8 +534,9 @@ export default function ProductShell({ active, onNavigate, roleControl, actions,
 
       {workspace === "pve" && pveView === "overview" && <PveOverview context={context} onNavigate={goPve} showOnboarding={!onboarded} onOpenLibrary={openLibrary} />}
       {workspace === "gvg" && gvgView === "overview" && <GvgOverview onNavigate={goGvg} onOpenLibrary={openLibrary} />}
+      {workspace === "gvg" && gvgView === "share" && !gvgSharePayload() && <GvgSharePrivacyPanel onBack={() => goGvg("overview")} />}
       {workspace === "gvg" && gvgView === "share" && previewLegacyGvgShare && gvgSharePayload() && <GvgSharedLanding payload={gvgSharePayload()} onView={() => setPreviewLegacyGvgShare(false)} onBack={closeLegacyGvgShare} />}
-      {workspace === "gvg" && gvgView !== "overview" && !(gvgView === "share" && previewLegacyGvgShare && gvgSharePayload()) && <div className={`workspace-gvg-host is-${gvgView}`}><GuildWarWorkspace onClose={() => goGvg("overview")} /></div>}
+      {workspace === "gvg" && gvgView !== "overview" && (gvgView !== "share" || (Boolean(gvgSharePayload()) && !previewLegacyGvgShare)) && <div className={`workspace-gvg-host is-${gvgView}`}><GuildWarWorkspace onClose={() => goGvg("overview")} /></div>}
       {workspace === "library" && <LibraryWorkspace context={context} onOpenPve={goPve} onOpenGvg={goGvg} onExit={() => switchWorkspace(lastWorkspace)} />}
 
       {workspace !== "library" && <nav className="workspace-mobile-nav" aria-label={`${workspace === "pve" ? "PvE" : "Guild War"} mobile navigation`}>
