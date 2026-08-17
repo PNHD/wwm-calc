@@ -92,6 +92,7 @@ test("Read-only detail, clone isolation, reference compare and full build-to-bui
   await expect(page.getByTestId("library-compare")).toBeVisible();
   await expect(page.getByText("BUILD TO BUILD COMPARISON")).toBeVisible();
   await expect(page.getByText("CHANGED · MENU PANEL")).toBeVisible();
+  await expect(page.getByTestId("build-difference-view")).toBeVisible();
   await page.screenshot({ path: `${qaDir}/1440-library-reference-vs-my-build.png`, fullPage: true });
 
   await page.goto(`${BASE}#library/compare/${BAMB}/${JADE}`, { waitUntil: "networkidle" });
@@ -108,6 +109,7 @@ test("Read-only detail, clone isolation, reference compare and full build-to-bui
   const clone = after.chars[0].schemes.find((scheme) => scheme.id !== "scheme-1");
   expect(clone.name).toMatch(/^Bamboocut-Dust/);
   expect(clone.libraryReference.id).toBe(BAMB);
+  expect(clone.libraryBuild.buildKey).toBe("bamboocut-dust");
   expect(clone.panel.minOuter).toBe(1614);
   expect(clone.panel.maxOuter).toBe(2777);
 });
@@ -184,6 +186,83 @@ test("Versioned share landing, legacy migration, malformed rejection and legacy 
   await expect(page.getByText("SHARED GUILD WAR PLAN", { exact: true })).toBeVisible();
   await expect(page.getByText(/Player names: redacted/i)).toBeVisible();
   await expect(page.getByText(/Nothing has been applied/i)).toBeVisible();
+});
+
+test("Recently Updated is freshness-based and progressive filters cover weapon tier and objective", async ({ page }) => {
+  await page.goto(`${BASE}#library/recent`, { waitUntil: "networkidle" });
+  await expect(page.getByTestId("library-landing")).toBeVisible();
+  await expect(page.locator(".library-card")).toHaveCount(5);
+  await page.getByRole("button", { name: "Filters" }).click();
+  await page.getByRole("button", { name: /More filters/ }).click();
+  await page.getByLabel("Weapon").selectOption({ label: "Vernal Umbrella" });
+  await expect(page.locator(".library-card")).toHaveCount(1);
+  await expect(page.getByText("Silkbind-Jade", { exact: true })).toBeVisible();
+  await page.getByLabel("Weapon").selectOption("");
+  await page.getByLabel("Tier").selectOption({ label: "T96" });
+  await expect(page.locator(".library-card")).toHaveCount(1);
+  await page.getByLabel("Tier").selectOption("");
+  await page.getByLabel("Objective").selectOption({ label: "Healing denial and zone control" });
+  await expect(page.locator(".library-card")).toHaveCount(1);
+});
+
+test("Saved persists after reload and curated build export remains structured", async ({ page }) => {
+  await page.goto(`${BASE}#library/pve`, { waitUntil: "networkidle" });
+  await page.getByRole("button", { name: /Save Bamboocut-Dust$/ }).click();
+  await page.reload({ waitUntil: "networkidle" });
+  await page.getByRole("button", { name: /^Saved 1$/ }).click();
+  await expect(page.locator(".library-card")).toHaveCount(1);
+  await page.goto(`${BASE}#library/build/${BAMB}`, { waitUntil: "networkidle" });
+  const pending = page.waitForEvent("download");
+  await page.getByRole("button", { name: /Export JSON/ }).click();
+  const download = await pending;
+  expect(download.suggestedFilename()).toBe(`${BAMB}.json`);
+  const stream = await download.createReadStream();
+  let text = "";
+  for await (const chunk of stream) text += chunk.toString("utf8");
+  const exported = JSON.parse(text);
+  expect(exported.entry.id).toBe(BAMB);
+  expect(JSON.stringify(exported)).not.toMatch(/email|accountId|deviceId/i);
+});
+
+test("Patch freshness marks historical shared references OUTDATED REFERENCE", async ({ page }) => {
+  await page.goto(BASE, { waitUntil: "networkidle" });
+  const data = await page.evaluate(async () => (await fetch("/data/library-v1.json")).json());
+  const entry = structuredClone(data.items.find((item) => item.id === BAMB));
+  entry.id = "historical-bamboocut-reference";
+  entry.patch = "1.9";
+  entry.lastReviewedDate = "2026-07-01";
+  const envelope = { schemaVersion: 2, kind: "PVE_BUILD", sharedAt: "2026-07-01T00:00:00.000Z", source: "USER_SHARED", entry, futureEnvelopeField: "safe" };
+  await page.goto(`${BASE}#shared-build=${base64url(envelope)}`, { waitUntil: "networkidle" });
+  await expect(page.getByTestId("shared-build-landing")).toBeVisible();
+  await expect(page.getByText("OUTDATED REFERENCE", { exact: true })).toBeVisible();
+});
+
+test("Guild War privacy gate redacts names and optional notes before link generation", async ({ page, context }) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: "http://127.0.0.1:4173" });
+  await page.addInitScript(() => localStorage.setItem("wwm_gvg_workspace_v1", JSON.stringify({
+    roster: [{ id: "p1", name: "Alice", roles: ["MAIN_BALL"], availability: true, notes: "caller", email: "private@example.com" }, { id: "p2", name: "Bob", roles: ["HEALER"], availability: true, notes: "private note" }],
+    strategy: { name: "Live Plan", positions: {}, arrows: [], rallyPoints: [], notes: "private commander note" }, timeline: [], commander: { startingCoins: 10, events: [] }, matchLogs: [], deviceId: "local-device"
+  })));
+  await page.goto(`${BASE}#gvg/share`, { waitUntil: "networkidle" });
+  await expect(page.getByTestId("gvg-share-privacy")).toBeVisible();
+  await expect(page.getByText("PUBLIC DATA INCLUDED", { exact: true })).toBeVisible();
+  await expect(page.getByRole("checkbox", { name: /Redact player names/ })).toBeChecked();
+  const notes = page.getByRole("checkbox", { name: /Redact notes/ });
+  await notes.check();
+  await page.getByRole("button", { name: /Generate share link/ }).click();
+  await expect(page.getByRole("status")).toContainText("Share link copied");
+  const link = await page.evaluate(() => navigator.clipboard.readText());
+  expect(link).toContain("#gvg-share=");
+  const encoded = link.split("#gvg-share=")[1];
+  const json = JSON.parse(Buffer.from(encoded, "base64url").toString("utf8"));
+  expect(JSON.stringify(json)).not.toContain("Alice");
+  expect(JSON.stringify(json)).not.toContain("Bob");
+  expect(JSON.stringify(json)).not.toContain("private@example.com");
+  expect(JSON.stringify(json)).not.toContain("local-device");
+  expect(JSON.stringify(json)).not.toContain("private commander note");
+  await page.goto(link, { waitUntil: "networkidle" });
+  await expect(page.getByTestId("gvg-shared-landing")).toBeVisible();
+  await expect(page.getByText(/Player names: redacted\. Notes: redacted/i)).toBeVisible();
 });
 
 test("Library responsive QA at 1440, 1024 and 390 with keyboard focus and no overflow", async ({ page }) => {
