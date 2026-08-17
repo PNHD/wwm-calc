@@ -1,0 +1,25 @@
+name: One-shot Library Fix
+on:
+  push:
+    branches: [feat/community-library-directory]
+permissions:
+  contents: write
+jobs:
+  fix:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/community-library-directory
+      - name: Patch shadowed DOM references
+        run: |
+          sed -i 's/const anchor = document\.createElement/const anchor = window.document.createElement/' src/product/LibraryWorkspace.tsx
+          sed -i 's/document\.body\.appendChild/window.document.body.appendChild/' src/product/LibraryWorkspace.tsx
+          sed -i 's/document\.getElementById/window.document.getElementById/' src/product/LibraryWorkspace.tsx
+          git rm .github/workflows/one-shot-library-fix.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/product/LibraryWorkspace.tsx
+          git commit -m 'fix(library): disambiguate browser document'
+          git push origin HEAD:feat/community-library-directory
