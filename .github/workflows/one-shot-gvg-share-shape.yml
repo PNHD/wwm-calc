@@ -1,0 +1,26 @@
+name: One-shot GvG Share Shape
+on:
+  push:
+    branches: [feat/community-library-directory]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: feat/community-library-directory}
+      - run: |
+          python3 - <<'PY'
+          p='src/product/GvgSharePrivacyPanel.tsx'
+          s=open(p).read()
+          s=s.replace('payload,\n    };','payload: { workspace: payload },\n    };')
+          open(p,'w').write(s)
+          PY
+          git rm .github/workflows/one-shot-gvg-share-shape.yml
+          git config user.name github-actions[bot]
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/product/GvgSharePrivacyPanel.tsx
+          git commit -m 'fix(sharing): align full-plan envelope shape'
+          git push origin HEAD:feat/community-library-directory
