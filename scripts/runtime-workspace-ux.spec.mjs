@@ -11,6 +11,10 @@ async function switchWorkspace(page, name) {
   await switcher.getByRole("button", { name: new RegExp(`^${name}`) }).click();
 }
 
+async function openWorkspaceOverview(page) {
+  await page.getByRole("button", { name: "Open workspace overview" }).click();
+}
+
 async function pve(page, name) {
   await page.getByLabel("PvE navigation").getByRole("button", { name: new RegExp(`^${name}`) }).click();
 }
@@ -121,15 +125,17 @@ test("Responsive and visual QA covers required workspace surfaces", async ({ pag
   await expect(page.getByTestId("gvg-timeline-simulator")).toBeVisible();
   await page.screenshot({ path: `${qaDir}/1440-gvg-timeline.png`, fullPage: true });
 
-  // Tablet: compact rail + large usable center surface.
+  // Tablet: compact rail + large usable center surface. Workspace switches preserve
+  // their last task by design, so explicitly enter Overview for overview QA.
   await page.setViewportSize({ width: 1024, height: 900 });
   await switchWorkspace(page, "PvE");
-  await page.getByRole("button", { name: "Open workspace overview" }).click();
+  await openWorkspaceOverview(page);
   await expect(page.getByTestId("pve-overview")).toBeVisible();
   await expectNoHorizontalOverflow(page);
   await page.screenshot({ path: `${qaDir}/1024-pve-overview.png`, fullPage: true });
 
   await switchWorkspace(page, "Guild War");
+  await openWorkspaceOverview(page);
   await expect(page.getByTestId("gvg-overview")).toBeVisible();
   await expectNoHorizontalOverflow(page);
   await page.screenshot({ path: `${qaDir}/1024-gvg-overview.png`, fullPage: true });
@@ -137,12 +143,13 @@ test("Responsive and visual QA covers required workspace surfaces", async ({ pag
   // Mobile: dedicated bottom navigation; desktop rail does not simply shrink.
   await page.setViewportSize({ width: 390, height: 844 });
   await switchWorkspace(page, "PvE");
-  await page.getByRole("button", { name: "Open workspace overview" }).click();
+  await openWorkspaceOverview(page);
   await expect(page.getByRole("navigation", { name: "PvE mobile navigation" })).toBeVisible();
   await expectNoHorizontalOverflow(page);
   await page.screenshot({ path: `${qaDir}/390-pve-overview.png`, fullPage: true });
 
   await switchWorkspace(page, "Guild War");
+  await openWorkspaceOverview(page);
   await expect(page.getByRole("navigation", { name: "Guild War mobile navigation" })).toBeVisible();
   await expect(page.getByTestId("gvg-overview")).toBeVisible();
   await expectNoHorizontalOverflow(page);
