@@ -8,6 +8,7 @@ import {
   ChevronRight,
   Clipboard,
   Copy,
+  Download,
   ExternalLink,
   Filter,
   GitCompareArrows,
@@ -162,6 +163,7 @@ function clonePveEntry(entry: LibraryEntry): { ok: boolean; name?: string; messa
       clonedAt: new Date().toISOString(),
       maturity: entry.maturity,
     };
+    copy.libraryBuild = JSON.parse(JSON.stringify(entry.build));
     if (entry.build.panel && copy.panel && typeof copy.panel === "object") {
       for (const [key, value] of Object.entries(entry.build.panel)) {
         if (typeof value === "number" || typeof value === "string") copy.panel[key] = value;
@@ -262,15 +264,26 @@ function ComparisonView({ a, b, context, onBack }: { a: LibraryEntry | "MY_BUILD
   const sets = (entry: LibraryEntry | "MY_BUILD") => entry === "MY_BUILD" ? current.sets : entry.build.sets ?? [];
   const innerWays = (entry: LibraryEntry | "MY_BUILD") => entry === "MY_BUILD" ? [`${current.innerWays}/4 configured`] : entry.build.innerWays ?? [];
   const attunements = (entry: LibraryEntry | "MY_BUILD") => entry === "MY_BUILD" ? [String(current.panel.attunedBonus ?? "Current scheme")] : entry.build.attunements ?? [];
+  const gear = (entry: LibraryEntry | "MY_BUILD") => entry === "MY_BUILD" ? current.gear : (entry.build.gear ?? []).map((item) => ({ slot: item.slot, name: item.name }));
   const pa = panel(a), pb = panel(b);
   const deltaKeys = Array.from(new Set([...Object.keys(pa), ...Object.keys(pb)])).filter((key) => typeof pa[key] === "number" || typeof pb[key] === "number");
   const roleRows = isGvg ? compareRoleScores(a === "MY_BUILD" ? undefined : a.build.roleScores, b === "MY_BUILD" ? undefined : b.build.roleScores) : [];
   const da = dps(a), db = dps(b);
   const delta = da != null && db != null ? db - da : null;
+  const deltaPct = delta != null && da ? (delta / da) * 100 : null;
+  const gearA = new Map(gear(a).map((item) => [item.slot, item.name]));
+  const gearB = new Map(gear(b).map((item) => [item.slot, item.name]));
+  const gearSlots = Array.from(new Set([...gearA.keys(), ...gearB.keys()]));
+  const gearChanges = gearSlots.filter((slot) => gearA.get(slot) !== gearB.get(slot));
+  const setA = sets(a).join(" · ") || "—";
+  const setB = sets(b).join(" · ") || "—";
+  const attA = attunements(a).join(" · ") || "—";
+  const attB = attunements(b).join(" · ") || "—";
   return <main className="library-page library-compare" data-testid="library-compare">
     <button type="button" className="library-back" onClick={onBack}><ArrowLeft size={16} /> Back</button>
     <header className="library-detail-header"><div><span className="library-eyebrow">BUILD TO BUILD COMPARISON</span><h1>{title(a)} <span>vs</span> {title(b)}</h1><p>{isGvg ? "Role suitability is contextual. A higher score for one role is not a universal GvG winner." : "Compare complete build intent, modeled output and human-readable differences."}</p></div></header>
     {!isGvg && <section className="library-compare-hero"><div><small>Build A modeled DPS</small><strong>{da == null ? "—" : formatDps(da)}</strong></div><div><small>Build B modeled DPS</small><strong>{db == null ? "—" : formatDps(db)}</strong></div><div><small>Delta B − A</small><strong>{delta == null ? "—" : `${delta >= 0 ? "+" : ""}${Math.round(delta).toLocaleString()}`}</strong></div></section>}
+    {!isGvg && <section className="library-diff" data-testid="build-difference-view"><span className="library-eyebrow">BUILD DIFFERENCE VIEW</span>{gearChanges.length ? gearChanges.map((slot) => <div key={slot}><strong>{slot}</strong><span>{gearA.get(slot) ?? "—"} → {gearB.get(slot) ?? "—"}</span><b>changed</b></div>) : <div><strong>GEAR</strong><span>same named slots</span><b>unchanged</b></div>}<div><strong>SET</strong><span>{setA === setB ? setA : `${setA} → ${setB}`}</span><b>{setA === setB ? "unchanged" : "changed"}</b></div><div><strong>ATTUNEMENT</strong><span>{attA === attB ? attA : `${attA} → ${attB}`}</span><b>{attA === attB ? "unchanged" : "changed"}</b></div><div><strong>RESULT</strong><span>{delta == null ? "Modeled DPS not available on both builds" : `${formatDps(da ?? undefined)} → ${formatDps(db ?? undefined)}`}</span><b>{deltaPct == null ? "context required" : `${deltaPct >= 0 ? "+" : ""}${deltaPct.toFixed(2)}%`}</b></div></section>}
     {isGvg ? <section className="library-diff"><span className="library-eyebrow">ROLE SUITABILITY DELTAS</span>{roleRows.length ? roleRows.map((row) => <div key={row.role}><strong>{row.role.replaceAll("_", " ")}</strong><span>{row.a ?? "—"} → {row.b ?? "—"}</span><b>{row.a == null || row.b == null ? "context required" : `${row.delta >= 0 ? "+" : ""}${row.delta}`}</b></div>) : <p>One side does not expose role scores. Compare inside the Guild War Builds surface for role-specific evidence.</p>}</section> : <section className="library-diff"><span className="library-eyebrow">CHANGED · MENU PANEL</span>{deltaKeys.length ? deltaKeys.map((key) => {
       const av = typeof pa[key] === "number" ? Number(pa[key]) : null; const bv = typeof pb[key] === "number" ? Number(pb[key]) : null; const diff = av != null && bv != null ? bv - av : null;
       return <div key={key}><strong>{key.replace(/([A-Z])/g, " $1")}</strong><span>{av ?? "—"} → {bv ?? "—"}</span><b>{diff == null ? "—" : `${diff >= 0 ? "+" : ""}${Number(diff.toFixed(2))}`}</b></div>;
@@ -289,8 +302,11 @@ export default function LibraryWorkspace({ context, onOpenPve, onOpenGvg, onExit
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [moreFiltersOpen, setMoreFiltersOpen] = useState(false);
   const [pathFilter, setPathFilter] = useState("");
+  const [weaponFilter, setWeaponFilter] = useState("");
+  const [tierFilter, setTierFilter] = useState("");
   const [maturityFilter, setMaturityFilter] = useState("");
   const [patchFilter, setPatchFilter] = useState("");
+  const [objectiveFilter, setObjectiveFilter] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
   const [sourceFilter, setSourceFilter] = useState("");
   const [favorites, setFavorites] = useState<string[]>(() => readStringArray(FAVORITES_KEY));
@@ -362,6 +378,19 @@ export default function LibraryWorkspace({ context, onOpenPve, onOpenGvg, onExit
     }
   };
 
+  const exportEntry = (entry: LibraryEntry) => {
+    const blob = new Blob([`${JSON.stringify({ schemaVersion: entry.buildSchemaVersion, exportedAt: new Date().toISOString(), entry }, null, 2)}\n`], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `${entry.id}.json`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+    setStatus("Structured reference JSON exported. No account identifiers were added.");
+  };
+
   const sectionFor = (entry: LibraryEntry, section: LibrarySection) => {
     if (section === "featured") return Boolean(entry.featured);
     if (section === "pve") return entry.workspace === "PVE";
@@ -379,8 +408,11 @@ export default function LibraryWorkspace({ context, onOpenPve, onOpenGvg, onExit
       const haystack = [entry.title, entry.subtitle, entry.path, entry.role, entry.objective, entry.source.label, ...(entry.weapons ?? []), ...(entry.tags ?? [])].filter(Boolean).join(" ").toLowerCase();
       if (q && !haystack.includes(q)) return false;
       if (pathFilter && entry.path !== pathFilter) return false;
+      if (weaponFilter && !entry.weapons?.includes(weaponFilter)) return false;
+      if (tierFilter && entry.tier !== tierFilter) return false;
       if (maturityFilter && !entry.maturity.includes(maturityFilter as any)) return false;
       if (patchFilter && entry.patch !== patchFilter) return false;
+      if (objectiveFilter && entry.objective !== objectiveFilter) return false;
       if (roleFilter && entry.role !== roleFilter) return false;
       if (sourceFilter === "community" && entry.source.kind !== "COMMUNITY_GUIDE" && !entry.maturity.includes("COMMUNITY_REFERENCE")) return false;
       if (sourceFilter === "reference" && entry.source.kind === "COMMUNITY_GUIDE") return false;
@@ -388,9 +420,9 @@ export default function LibraryWorkspace({ context, onOpenPve, onOpenGvg, onExit
     });
     result.sort((a, b) => b.lastReviewedDate.localeCompare(a.lastReviewedDate));
     return result;
-  }, [items, route, search, pathFilter, maturityFilter, patchFilter, roleFilter, sourceFilter, recent, favorites]);
+  }, [items, route, search, pathFilter, weaponFilter, tierFilter, maturityFilter, patchFilter, objectiveFilter, roleFilter, sourceFilter, recent, favorites]);
 
-  const clearFilters = () => { setSearch(""); setPathFilter(""); setMaturityFilter(""); setPatchFilter(""); setRoleFilter(""); setSourceFilter(""); };
+  const clearFilters = () => { setSearch(""); setPathFilter(""); setWeaponFilter(""); setTierFilter(""); setMaturityFilter(""); setPatchFilter(""); setObjectiveFilter(""); setRoleFilter(""); setSourceFilter(""); };
 
   if (loadError) return <main className="library-page library-error" data-testid="library-error"><AlertTriangle size={30} /><h1>Library could not be loaded</h1><p>{loadError}</p><button type="button" onClick={onExit}>Return to workspace</button></main>;
   if (!document) return <main className="library-page library-loading" data-testid="library-loading"><Library size={24} /><p>Loading curated Library…</p></main>;
@@ -402,8 +434,8 @@ export default function LibraryWorkspace({ context, onOpenPve, onOpenGvg, onExit
     trackLibraryEvent("shared_build_opened", { itemId: entry.id, workspace: entry.workspace });
     return <main className="library-page library-shared" data-testid="shared-build-landing">
       <button type="button" className="library-back" onClick={() => navigate({ kind: "landing", section: "featured" }, "#library")}><ArrowLeft size={16} /> Library</button>
-      <section className="library-shared-hero"><span className="library-eyebrow">{entry.workspace === "PVE" ? "SHARED PVE BUILD" : "SHARED GUILD WAR PLAN"}</span><h1>{entry.title}</h1><p>{entry.region} {entry.patch} · {entry.tier}</p><MaturityChips entry={entry} currentPatch={currentPatch} /><div className="library-shared-metrics"><div><small>Source</small><strong>{decoded.envelope.source === "LIBRARY" ? entry.source.label : "Shared by another player"}</strong></div>{entry.build.modeledDps != null && <div><small>Modeled DPS</small><strong>{formatDps(entry.build.modeledDps)}</strong></div>}<div><small>Confidence</small><strong>{entry.build.confidence || "Reference"}</strong></div></div>{decoded.migrated && <p className="library-notice">This legacy share was safely migrated to the current read-only schema.</p>}{decoded.envelope.privacy && <p className="library-notice">Privacy: player names {decoded.envelope.privacy.playerNamesRedacted ? "redacted" : "included"}; notes {decoded.envelope.privacy.notesRedacted ? "redacted" : "included"}.</p>}<div className="library-detail-actions"><button type="button" onClick={() => navigate({ kind: "detail", id: entry.id }, `#library/build/${encodeURIComponent(entry.id)}`)}>View Build</button><button type="button" className="is-primary" onClick={() => clone(entry, true)}>Clone to My Workspace</button><button type="button" onClick={() => compareWithMyBuild(entry)}>Compare with My Build</button></div></section>
-      <SourceBlock entry={entry} /><DetailSections entry={entry} />{status && <div className="library-toast" role="status">{status}</div>}
+      <section className="library-shared-hero"><span className="library-eyebrow">{entry.workspace === "PVE" ? "SHARED PVE BUILD" : "SHARED GUILD WAR PLAN"}</span><h1>{entry.title}</h1><p>{entry.region} {entry.patch} · {entry.tier}</p><MaturityChips entry={entry} currentPatch={currentPatch} /><div className="library-shared-metrics"><div><small>Source</small><strong>{decoded.envelope.source === "LIBRARY" ? entry.source.label : "Shared by another player"}</strong></div>{entry.build.modeledDps != null && <div><small>Modeled DPS</small><strong>{formatDps(entry.build.modeledDps)}</strong></div>}<div><small>Confidence</small><strong>{entry.build.confidence || "Reference"}</strong></div></div>{decoded.migrated && <p className="library-notice">This legacy share was safely migrated to the current read-only schema.</p>}{decoded.envelope.privacy && <p className="library-notice">Privacy: player names {decoded.envelope.privacy.playerNamesRedacted ? "redacted" : "included"}; notes {decoded.envelope.privacy.notesRedacted ? "redacted" : "included"}.</p>}<div className="library-detail-actions"><button type="button" onClick={() => document.getElementById("shared-build-details")?.scrollIntoView({ behavior: "smooth", block: "start" })}>View Build</button><button type="button" className="is-primary" onClick={() => clone(entry, true)}>Clone to My Workspace</button><button type="button" onClick={() => compareWithMyBuild(entry)}>Compare with My Build</button></div></section>
+      <div id="shared-build-details"><SourceBlock entry={entry} /><DetailSections entry={entry} /></div>{status && <div className="library-toast" role="status">{status}</div>}
     </main>;
   }
 
@@ -421,8 +453,8 @@ export default function LibraryWorkspace({ context, onOpenPve, onOpenGvg, onExit
     const issueUrl = `https://github.com/PNHD/wwm-calc/issues/new?title=${encodeURIComponent(`[Library] ${reportCategory}: ${entry.title}`)}&body=${encodeURIComponent(report)}`;
     return <main className="library-page library-detail" data-testid="library-build-detail">
       <button type="button" className="library-back" onClick={() => navigate({ kind: "landing", section: entry.workspace === "PVE" ? "pve" : entry.type === "GUILD_WAR_ROSTER" || entry.type === "GUILD_WAR_STRATEGY" ? "gvg-plans" : "gvg-builds" }, entry.workspace === "PVE" ? "#library/pve" : entry.type === "GUILD_WAR_ROSTER" || entry.type === "GUILD_WAR_STRATEGY" ? "#library/gvg-plans" : "#library/gvg-builds")}><ArrowLeft size={16} /> Library</button>
-      <header className="library-detail-header"><div><span className="library-eyebrow">{entry.type.replaceAll("_", " ")}</span><h1>{entry.title}</h1><p>{entry.subtitle}</p><div className="library-card-meta"><span>{entry.path || entry.role}</span>{entry.weapons?.map((weapon) => <span key={weapon}>{weapon}</span>)}<span>{entry.region} · {entry.tier}</span></div><MaturityChips entry={entry} currentPatch={currentPatch} /></div><div className="library-detail-primary-metric"><small>{entry.workspace === "PVE" ? "Modeled DPS" : "Objective"}</small><strong>{entry.workspace === "PVE" ? formatDps(entry.build.modeledDps) : entry.objective || entry.role || "Reference plan"}</strong><span>{entry.build.confidence || "Reference"}</span></div></header>
-      <div className="library-detail-actions"><button type="button" className="is-primary" onClick={() => clone(entry)}>Clone to My Workspace</button><button type="button" onClick={() => compareWithMyBuild(entry)}><GitCompareArrows size={15} /> Compare with My Build</button><button type="button" onClick={() => share(entry)}><Share2 size={15} /> Share</button><button type="button" onClick={() => setReportOpen(true)}>Report Data Issue</button></div>
+      <header className="library-detail-header"><div><span className="library-eyebrow">{entry.type.replaceAll("_", " ")}</span><h1>{entry.title}</h1><p>{entry.subtitle}</p><div className="library-card-meta"><span>{entry.path || entry.role}</span>{entry.weapons?.map((weapon) => <span key={weapon}>{weapon}</span>)}<span>{entry.region} · {entry.tier}</span><span>{entry.objective || entry.build.scenario}</span></div><MaturityChips entry={entry} currentPatch={currentPatch} /></div><div className="library-detail-primary-metric"><small>{entry.workspace === "PVE" ? "Modeled DPS" : "Objective"}</small><strong>{entry.workspace === "PVE" ? formatDps(entry.build.modeledDps) : entry.objective || entry.role || "Reference plan"}</strong><span>{entry.build.confidence || "Reference"}</span></div></header>
+      <div className="library-detail-actions"><button type="button" className="is-primary" onClick={() => clone(entry)}>Clone to My Workspace</button><button type="button" onClick={() => compareWithMyBuild(entry)}><GitCompareArrows size={15} /> Compare with My Build</button><button type="button" onClick={() => share(entry)}><Share2 size={15} /> Share</button><button type="button" onClick={() => exportEntry(entry)}><Download size={15} /> Export JSON</button><button type="button" onClick={() => setReportOpen(true)}>Report Data Issue</button></div>
       {patchFreshness(entry, currentPatch) === "OUTDATED_REFERENCE" && <div className="library-warning"><AlertTriangle size={18} /><div><strong>OUTDATED REFERENCE</strong><p>This item targets patch {entry.patch}; the app is on patch {currentPatch}. Historical mechanic assumptions were not silently migrated into current truth.</p></div></div>}
       <SourceBlock entry={entry} /><DetailSections entry={entry} />
       {entry.workspace === "PVE" && <section className="library-run-next"><Sparkles size={22} /><div><strong>Personalize before optimizing</strong><p>Clone creates a separate local scheme. Then edit gear or run Best Build against your own inventory and scenario.</p></div><button type="button" onClick={() => onOpenPve("best-build")}>Run Best Build</button></section>}
@@ -434,7 +466,10 @@ export default function LibraryWorkspace({ context, onOpenPve, onOpenGvg, onExit
 
   const section = route.section;
   const paths = Array.from(new Set(items.map((item) => item.path).filter((value): value is string => Boolean(value)))).sort();
+  const weapons = Array.from(new Set(items.flatMap((item) => item.weapons ?? []))).sort();
+  const tiers = Array.from(new Set(items.map((item) => item.tier))).sort();
   const patches = Array.from(new Set(items.map((item) => item.patch))).sort();
+  const objectives = Array.from(new Set(items.map((item) => item.objective).filter((value): value is string => Boolean(value)))).sort();
   const roles = Array.from(new Set(items.map((item) => item.role).filter((value): value is string => Boolean(value)))).sort();
   const nav: Array<{ id: LibrarySection; label: string; hash: string }> = [
     { id: "featured", label: "Featured", hash: "#library" },
@@ -444,11 +479,12 @@ export default function LibraryWorkspace({ context, onOpenPve, onOpenGvg, onExit
     { id: "recent", label: "Recently Updated", hash: "#library/recent" },
     { id: "saved", label: `Saved${favorites.length ? ` ${favorites.length}` : ""}`, hash: "#library/saved" },
   ];
+  const hasFilters = Boolean(search || pathFilter || weaponFilter || tierFilter || patchFilter || maturityFilter || objectiveFilter || roleFilter || sourceFilter);
   return <main className="library-page library-landing" data-testid="library-landing">
     <header className="library-landing-header"><div><span className="library-eyebrow">CURATED COMMUNITY LIBRARY</span><h1>Start from evidence, not from zero.</h1><p>Discover reference builds and Guild War templates, understand their provenance, compare them with your build, then clone a safe local copy.</p></div><button type="button" className="library-exit" onClick={onExit}><X size={16} /> Close Library</button></header>
     <nav className="library-section-nav" aria-label="Library sections">{nav.map((item) => <button type="button" key={item.id} className={section === item.id ? "is-active" : ""} aria-current={section === item.id ? "page" : undefined} onClick={() => navigate({ kind: "landing", section: item.id }, item.hash)}>{item.label}</button>)}</nav>
     <section className="library-discovery"><div className="library-search"><Search size={17} aria-hidden="true" /><input aria-label="Search Library" placeholder="Search build, Path, weapon, author or source" value={search} onChange={(event) => setSearch(event.target.value)} /></div><button type="button" className={filtersOpen ? "is-active" : ""} aria-expanded={filtersOpen} onClick={() => setFiltersOpen((value) => !value)}><Filter size={16} /> Filters</button></section>
-    {filtersOpen && <section className="library-filters" aria-label="Library filters"><label>Path<select value={pathFilter} onChange={(event) => { setPathFilter(event.target.value); trackLibraryEvent("library_filter_used", { filter: "path" }); }}><option value="">All Paths</option>{paths.map((value) => <option key={value}>{value}</option>)}</select></label><label>Patch<select value={patchFilter} onChange={(event) => setPatchFilter(event.target.value)}><option value="">All patches</option>{patches.map((value) => <option key={value}>{value}</option>)}</select></label><label>Maturity<select value={maturityFilter} onChange={(event) => setMaturityFilter(event.target.value)}><option value="">All maturity</option><option>CALIBRATED</option><option>CLIENT_VERIFIED</option><option>OFFICIAL_REFERENCE</option><option>COMMUNITY_REFERENCE</option><option>MODELED</option><option>EXPERIMENTAL</option><option>OUTDATED</option></select></label><button type="button" className="library-more-filter" aria-expanded={moreFiltersOpen} onClick={() => setMoreFiltersOpen((value) => !value)}><SlidersHorizontal size={15} /> More filters</button>{moreFiltersOpen && <><label>Role<select value={roleFilter} onChange={(event) => setRoleFilter(event.target.value)}><option value="">All roles</option>{roles.map((value) => <option key={value}>{value}</option>)}</select></label><label>Source<select value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value)}><option value="">Community + Reference</option><option value="community">Community</option><option value="reference">Reference</option></select></label></>} {(search || pathFilter || patchFilter || maturityFilter || roleFilter || sourceFilter) && <button type="button" className="library-clear" onClick={clearFilters}>Clear filters</button>}</section>}
+    {filtersOpen && <section className="library-filters" aria-label="Library filters"><label>Path<select value={pathFilter} onChange={(event) => { setPathFilter(event.target.value); trackLibraryEvent("library_filter_used", { filter: "path" }); }}><option value="">All Paths</option>{paths.map((value) => <option key={value}>{value}</option>)}</select></label><label>Patch<select value={patchFilter} onChange={(event) => setPatchFilter(event.target.value)}><option value="">All patches</option>{patches.map((value) => <option key={value}>{value}</option>)}</select></label><label>Maturity<select value={maturityFilter} onChange={(event) => setMaturityFilter(event.target.value)}><option value="">All maturity</option><option>CALIBRATED</option><option>CLIENT_VERIFIED</option><option>OFFICIAL_REFERENCE</option><option>COMMUNITY_REFERENCE</option><option>MODELED</option><option>EXPERIMENTAL</option><option>OUTDATED</option></select></label><button type="button" className="library-more-filter" aria-expanded={moreFiltersOpen} onClick={() => setMoreFiltersOpen((value) => !value)}><SlidersHorizontal size={15} /> More filters</button>{moreFiltersOpen && <><label>Weapon<select value={weaponFilter} onChange={(event) => setWeaponFilter(event.target.value)}><option value="">All weapons</option>{weapons.map((value) => <option key={value}>{value}</option>)}</select></label><label>Tier<select value={tierFilter} onChange={(event) => setTierFilter(event.target.value)}><option value="">All tiers</option>{tiers.map((value) => <option key={value}>{value}</option>)}</select></label><label>Objective<select value={objectiveFilter} onChange={(event) => setObjectiveFilter(event.target.value)}><option value="">All objectives</option>{objectives.map((value) => <option key={value}>{value}</option>)}</select></label><label>Role<select value={roleFilter} onChange={(event) => setRoleFilter(event.target.value)}><option value="">All roles</option>{roles.map((value) => <option key={value}>{value}</option>)}</select></label><label>Source<select value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value)}><option value="">Community + Reference</option><option value="community">Community</option><option value="reference">Reference</option></select></label></>} {hasFilters && <button type="button" className="library-clear" onClick={clearFilters}>Clear filters</button>}</section>}
     {filtered.length ? <section className="library-card-grid" aria-live="polite">{filtered.map((entry) => <BuildCard key={entry.id} entry={entry} currentPatch={currentPatch} favorite={favorites.includes(entry.id)} onFavorite={() => toggleFavorite(entry.id)} onView={() => openEntry(entry)} onCompare={() => compareWithMyBuild(entry)} onClone={() => clone(entry)} />)}</section> : <section className="library-empty"><Search size={24} /><h2>No builds match these filters.</h2><p>Try a broader workspace or remove one of the active filters.</p><button type="button" onClick={clearFilters}>Clear Filters</button></section>}
     <footer className="library-footnote"><ShieldCheck size={17} /><p><strong>Featured means curated.</strong> The Library does not invent views, likes, ratings, “Top Meta”, S-tier or universal Best Build claims.</p></footer>
     {status && <div className="library-toast" role="status">{status}</div>}
