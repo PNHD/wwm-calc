@@ -36,7 +36,6 @@ export const BAMBOOCUT_EVENT_TAGS = Object.freeze({
   "Burn and Bury": Object.freeze([
     "bamboocut",
     "guaranteed-crit",
-    "special-resolution",
   ]),
   Soulbreak: Object.freeze([
     "bamboocut",
