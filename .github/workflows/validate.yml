@@ -21,6 +21,12 @@ jobs:
         run: |
           node --version
           npm --version
+      - name: Refresh production audit lock for recovery
+        run: npm audit fix --package-lock-only --omit=dev
+      - uses: actions/upload-artifact@v4
+        with:
+          name: audit-lock-recovery
+          path: package-lock.json
       - run: npm ci
       - name: Audit production dependencies
         run: npm audit --omit=dev --audit-level=high
