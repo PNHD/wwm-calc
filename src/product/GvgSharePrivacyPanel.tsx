@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { AlertTriangle, Clipboard, Copy, Link2, ShieldCheck } from "lucide-react";
 import { validateShareEnvelope } from "../gvg/model.js";
 import "./library.css";
+import "./share-privacy.css";
 
 const STORAGE_KEY = "wwm_gvg_workspace_v1";
 const MAX_SHARE_BYTES = 64 * 1024;
@@ -100,7 +101,10 @@ export default function GvgSharePrivacyPanel({ onBack }: { onBack: () => void })
       payload,
     };
     const validation = validateShareEnvelope(envelope);
-    if (!validation.valid) throw new Error(validation.error || "Guild War share validation failed.");
+    if (!validation.valid) {
+      const validationError = "error" in validation && typeof validation.error === "string" ? validation.error : "Guild War share validation failed.";
+      throw new Error(validationError);
+    }
     return envelope;
   };
 
