@@ -14,7 +14,11 @@ test("Global T96 observed runtime state exposes panel, complete-build comparison
   const response = await page.goto("http://127.0.0.1:4173/", { waitUntil: "networkidle" });
   expect(response?.ok()).toBeTruthy();
   await expect(page.getByRole("navigation", { name: "Product workspaces" })).toBeVisible();
+  await expect(page.getByTestId("pve-overview")).toBeVisible();
 
+  // Workspace V2 intentionally starts at a decision-oriented PvE overview.
+  // Enter Gear before exercising the unchanged T96 runtime fixture.
+  await page.getByLabel("PvE navigation").getByRole("button", { name: /^Gear/ }).click();
   const loadObserved = page.getByRole("button", { name: /Load observed T96/i });
   await expect(loadObserved).toBeVisible();
   await loadObserved.click();

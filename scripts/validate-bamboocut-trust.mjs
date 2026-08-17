@@ -35,7 +35,10 @@ assert(app.includes("Outcome probability (Precision/Critical/Affinity)"), "joint
 assert(app.includes('label: "Song of Tang"') && app.includes('label: "Morale Chant"') && app.includes('label: "Phantom Chime"') && app.includes('label: "Starweave"'), "known lifecycle mechanic differential checks missing");
 assert(app.includes("fixtureDiagnostic,"), "1106/1129 modeled-vs-observed diagnostic missing");
 assert(app.includes("Best Build recommendation confidence"), "Best Build confidence summary missing");
-assert(compare.includes("COMBAT DELTA · MARGINAL DPS") && compare.includes("CONFIDENCE:") && compare.includes("MODELED vs OBSERVED"), "Compare trust UX incomplete");
+// Compare V2 preserves the same trust contract but moves diagnostics below the decision.
+assert(compare.includes("Combat Delta · Marginal DPS"), "Compare marginal DPS detail missing");
+assert(compare.includes("confidenceLabel(row.confidence)") && compare.includes("row.confidenceWhy"), "Compare confidence UX incomplete");
+assert(compare.includes("Modeled vs Observed") && compare.includes("row.fixtureDiagnostic"), "Compare modeled-vs-observed diagnostic missing");
 assert(compare.includes("Parse is diagnostic only; no auto-calibration is applied."), "parse diagnostic could be mistaken for auto-calibration");
 
 // Eligibility/evidence guardrails.
