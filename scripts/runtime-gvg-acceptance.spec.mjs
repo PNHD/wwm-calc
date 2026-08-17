@@ -31,6 +31,8 @@ test("Global Guild War Lab opens and exposes planning, simulator, roster and sha
   const seed = roster.getByRole("button", { name: /Seed sample/i });
   await seed.click();
   await expect(roster.getByLabel("Player name").first()).toBeVisible();
+  await roster.getByLabel("Secondary role").first().selectOption("HEALER");
+  await expect(roster.getByLabel("Secondary role").first()).toHaveValue("HEALER");
 
   await workspace.getByRole("button", { name: /Strategy/i }).click();
   await expect(page.getByTestId("gvg-strategy-board")).toBeVisible();
@@ -46,6 +48,21 @@ test("Global Guild War Lab opens and exposes planning, simulator, roster and sha
   await drInput.fill("0.01");
   await expect(sim.getByText("Needs manual DR", { exact: true })).toHaveCount(0);
   await expect(sim.getByText("100 → 50")).toBeVisible();
+  await sim.getByLabel("Zhang Bao base (sec)").fill("900");
+  await expect(sim.getByText("14:00–16:00", { exact: true })).toBeVisible();
+
+  await workspace.getByRole("button", { name: /Match Log/i }).click();
+  const logs = page.getByTestId("gvg-match-log");
+  await logs.getByLabel("Date").fill("2026-08-17");
+  await logs.getByLabel("Top outpost capture (sec)").fill("240");
+  await logs.getByLabel("Bottom outpost capture (sec)").fill("300");
+  await logs.getByLabel("Zhang Bao event (sec)").fill("840");
+  await logs.getByLabel("Zhuxie Gule event (sec)").fill("960");
+  await logs.getByLabel("Tree delivery (sec)").fill("1200");
+  await logs.getByLabel("Tree delivered").check();
+  await logs.getByRole("button", { name: /Save structured match/i }).click();
+  await expect(logs.getByText("Recorded matches (1)")).toBeVisible();
+  await expect(logs.getByText(/Outposts 2 · Bosses 2 · Tree delivered/)).toBeVisible();
 
   await workspace.getByRole("button", { name: /Share/i }).last().click();
   const share = page.getByTestId("gvg-sharing");
