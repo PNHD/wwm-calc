@@ -14,6 +14,7 @@ const hook = `  // CI/runtime diagnostics are derived synchronously from the sam
       ...equippedGear.filter((candidate) => candidate.slot !== candidate1129Item.slot),
       candidate1129Item,
     ] : null;
+    const candidate1129Combat = candidate1129Combo ? comboInCombat(candidate1129Combo) : null;
     const menu = {
       minOuter: currentMenuPanel.minOuter,
       maxOuter: currentMenuPanel.maxOuter,
@@ -36,6 +37,10 @@ const hook = `  // CI/runtime diagnostics are derived synchronously from the sam
       diagnosticCombatPanels: {
         current: comparePanelForDiagnostics(equippedGear),
         candidate1129: candidate1129Combo ? comparePanelForDiagnostics(candidate1129Combo) : null,
+      },
+      perSkill: {
+        current1106: currentCompareCombat.perSkill || [],
+        candidate1129: candidate1129Combat?.perSkill || [],
       },
       current1106Dps: currentCompareDps,
       current1106: current1106 ? {
@@ -67,4 +72,4 @@ if (!source.includes("__WWM_T96_RUNTIME_ACCEPTANCE__")) {
   source = source.replace(marker, hook + marker);
 }
 fs.writeFileSync(path, source, "utf8");
-console.log("[t96-runtime-hook] PASS — observed fixture synchronously exposes panel, exact combat coordinates, complete-build comparison, confidence and factor diagnostics.");
+console.log("[t96-runtime-hook] PASS — observed fixture synchronously exposes panel, exact combat coordinates, per-source damage, complete-build comparison, confidence and factor diagnostics.");
