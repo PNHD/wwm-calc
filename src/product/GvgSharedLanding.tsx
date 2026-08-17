@@ -4,16 +4,57 @@ import { validateShareEnvelope } from "../gvg/model.js";
 import "./library.css";
 
 const MAX_GVG_SHARE_CHARS = 96 * 1024;
+const MAX_GVG_SHARE_BYTES = 64 * 1024;
+const MAX_ROSTER = 30;
+const MAX_GENERIC_ARRAY = 120;
+const MAX_OBJECT_KEYS = 120;
+const MAX_STRING = 2_000;
+const MAX_DEPTH = 10;
 const GVG_CLONES_KEY = "wwm_library_gvg_clones_v1";
+const FORBIDDEN_KEYS = new Set(["__proto__", "prototype", "constructor"]);
+
+function plainObject(value: unknown): value is Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const proto = Object.getPrototypeOf(value);
+  return proto === Object.prototype || proto === null;
+}
+
+function inspectUntrusted(value: unknown, depth = 0): void {
+  if (depth > MAX_DEPTH) throw new Error("Shared Guild War payload is nested too deeply.");
+  if (value == null || typeof value === "boolean") return;
+  if (typeof value === "string") {
+    if (value.length > MAX_STRING) throw new Error("Shared Guild War payload contains an oversized string.");
+    return;
+  }
+  if (typeof value === "number") {
+    if (!Number.isFinite(value) || Math.abs(value) > 1_000_000_000) throw new Error("Shared Guild War payload contains an invalid number.");
+    return;
+  }
+  if (Array.isArray(value)) {
+    if (value.length > MAX_GENERIC_ARRAY) throw new Error("Shared Guild War payload contains an oversized array.");
+    value.forEach((item) => inspectUntrusted(item, depth + 1));
+    return;
+  }
+  if (!plainObject(value)) throw new Error("Shared Guild War payload contains an unsupported object.");
+  const entries = Object.entries(value);
+  if (entries.length > MAX_OBJECT_KEYS) throw new Error("Shared Guild War payload contains too many object fields.");
+  for (const [key, child] of entries) {
+    if (FORBIDDEN_KEYS.has(key)) throw new Error("Shared Guild War payload contains a forbidden object key.");
+    if (key.length > 100) throw new Error("Shared Guild War payload contains an oversized field name.");
+    inspectUntrusted(child, depth + 1);
+  }
+}
 
 function decodeBase64Url(value: string) {
   if (!value || value.length > MAX_GVG_SHARE_CHARS || !/^[A-Za-z0-9_-]+$/.test(value)) throw new Error("This shared Guild War payload is invalid or too large.");
   const normalized = value.replaceAll("-", "+").replaceAll("_", "/");
   const padded = normalized + "=".repeat((4 - normalized.length % 4) % 4);
   const binary = atob(padded);
-  if (binary.length > 64 * 1024) throw new Error("This shared Guild War payload is too large.");
+  if (binary.length > MAX_GVG_SHARE_BYTES) throw new Error("This shared Guild War payload is too large.");
   const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
-  return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
+  const parsed = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
+  inspectUntrusted(parsed);
+  return parsed;
 }
 
 function boundedText(value: unknown, max = 160) {
@@ -22,12 +63,15 @@ function boundedText(value: unknown, max = 160) {
 
 function inspectPayload(envelope: any) {
   const validation = validateShareEnvelope(envelope);
-  if (!validation.valid) throw new Error(validation.error || "Invalid Guild War share.");
-  if (!envelope.payload || typeof envelope.payload !== "object" || Array.isArray(envelope.payload)) throw new Error("Shared Guild War payload is missing.");
-  const payload = envelope.payload;
+  if (!validation.valid) {
+    const validationError = "error" in validation && typeof validation.error === "string" ? validation.error : "Invalid Guild War share.";
+    throw new Error(validationError);
+  }
+  if (!plainObject(envelope.payload)) throw new Error("Shared Guild War payload is missing.");
+  const payload: any = envelope.payload;
   const roster = Array.isArray(payload.roster) ? payload.roster : Array.isArray(payload?.workspace?.roster) ? payload.workspace.roster : [];
-  if (roster.length > 30) throw new Error("Shared roster exceeds the 30-player limit.");
-  if (roster.some((member: any) => member && typeof member === "object" && typeof member.name === "string" && member.name.length > 80)) throw new Error("Shared roster contains an invalid player name.");
+  if (roster.length > MAX_ROSTER) throw new Error("Shared roster exceeds the 30-player limit.");
+  if (roster.some((member: any) => !plainObject(member) || (typeof member.name === "string" && member.name.length > 80))) throw new Error("Shared roster contains an invalid player entry.");
   const strategy = payload.strategy ?? payload?.workspace?.strategy ?? null;
   const ready = roster.filter((member: any) => member?.availability !== false).length;
   const title = boundedText(payload.name || payload.title || strategy?.name || "Shared Guild War Plan", 120) || "Shared Guild War Plan";
