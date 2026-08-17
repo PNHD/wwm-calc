@@ -71,11 +71,12 @@ test("Global Guild War workspace exposes planning, simulator, roster and sharing
 
   await page.getByText("More & Advanced", { exact: true }).click();
   await nav.getByRole("button", { name: /^Share Plan/ }).click();
-  const share = page.getByTestId("gvg-sharing");
+  const share = page.getByTestId("gvg-share-privacy");
   await expect(share).toBeVisible();
-  await expect(share.getByText("Versioned schema v1")).toBeVisible();
+  await expect(share.getByText("PUBLIC DATA INCLUDED", { exact: true })).toBeVisible();
   await expect(share.getByLabel(/Redact player names/i)).toBeChecked();
-  await expect(share.getByRole("button", { name: /Clone to my workspace/i })).toBeVisible();
+  await expect(share.getByRole("button", { name: /Generate share link/i })).toBeVisible();
+  await expect(share.getByRole("button", { name: /Copy versioned JSON/i })).toBeVisible();
 
   const report = {
     pageErrors,
