@@ -43,7 +43,7 @@ test("Workspace IA separates PvE and Guild War, preserves context and keyboard f
   await pve(page, "Build");
   await expect(pveNav.getByRole("button", { name: /^Build/ })).toHaveAttribute("aria-current", "page");
   expect(new URL(page.url()).hash).toBe("#pve/build");
-  await expect(page.getByLabel("Context inspector")).toBeVisible();
+  await expect(page.locator('aside[aria-label="Context inspector"]')).toBeVisible();
 
   await switchWorkspace(page, "Guild War");
   await expect(page.getByTestId("gvg-overview")).toBeVisible();
