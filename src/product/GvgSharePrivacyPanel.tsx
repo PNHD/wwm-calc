@@ -7,6 +7,7 @@ import "./share-privacy.css";
 const STORAGE_KEY = "wwm_gvg_workspace_v1";
 const MAX_SHARE_BYTES = 64 * 1024;
 const MAX_ROSTER = 30;
+const PRIVATE_KEYS = /^(?:accountId|account_id|userId|user_id|email|deviceId|device_id|localMetadata|auth|token|accessToken|refreshToken)$/i;
 
 function cloneJson<T>(value: T): T {
   return JSON.parse(JSON.stringify(value));
@@ -19,6 +20,20 @@ function sanitizeWorkspace(raw: unknown) {
   const text = JSON.stringify(value);
   if (new TextEncoder().encode(text).byteLength > MAX_SHARE_BYTES) throw new Error("Guild War plan is too large to share safely.");
   return value;
+}
+
+function stripPrivateMetadata(value: any) {
+  const result = cloneJson(value);
+  const walk = (node: any) => {
+    if (!node || typeof node !== "object") return;
+    if (Array.isArray(node)) { node.forEach(walk); return; }
+    for (const key of Object.keys(node)) {
+      if (PRIVATE_KEYS.test(key)) delete node[key];
+      else walk(node[key]);
+    }
+  };
+  walk(result);
+  return result;
 }
 
 function redactPlayerNames(value: any) {
@@ -89,7 +104,7 @@ export default function GvgSharePrivacyPanel({ onBack }: { onBack: () => void })
 
   const counts = summary(workspace.value);
   const buildEnvelope = () => {
-    let payload = sanitizeWorkspace(workspace.value);
+    let payload = stripPrivateMetadata(sanitizeWorkspace(workspace.value));
     if (redactNames) payload = redactPlayerNames(payload);
     if (redactPlanNotes) payload = redactNotes(payload);
     const envelope = {
@@ -152,7 +167,7 @@ export default function GvgSharePrivacyPanel({ onBack }: { onBack: () => void })
     <section className="library-source-block" style={{ marginTop: 10 }}>
       <span className="library-eyebrow">PUBLIC DATA INCLUDED</span>
       <h3>Full Guild War plan</h3>
-      <p>The share can include role assignments, strategy positions, timeline data, commander configuration and match-planning fields. Private account identifiers are not added by this sharing layer.</p>
+      <p>The share can include role assignments, strategy positions, timeline data, commander configuration and match-planning fields. Private account identifiers and local-only metadata are stripped before serialization.</p>
       <div className="library-share-privacy-options">
         <label><input type="checkbox" checked={redactNames} onChange={(event) => setRedactNames(event.target.checked)} /><span><strong>Redact player names</strong><small>Replaces roster names with Player 01, Player 02… before serialization.</small></span></label>
         <label><input type="checkbox" checked={redactPlanNotes} onChange={(event) => setRedactPlanNotes(event.target.checked)} /><span><strong>Redact notes</strong><small>Removes note/comment fields recursively from the public payload. {counts.noteFields} note-like field{counts.noteFields === 1 ? "" : "s"} detected.</small></span></label>
@@ -167,7 +182,7 @@ export default function GvgSharePrivacyPanel({ onBack }: { onBack: () => void })
       <div className="library-share-import"><input aria-label="Guild War shared link" value={incoming} onChange={(event) => setIncoming(event.target.value)} placeholder="Paste gvg-share link or payload" /><button type="button" onClick={openIncoming}><Clipboard size={15} /> Open shared plan</button></div>
     </section>
 
-    <section className="library-footnote"><ShieldCheck size={17} /><p><strong>No anonymous publishing backend is used.</strong> A share link is self-contained public state. Redaction happens before the payload is encoded.</p></section>
+    <section className="library-footnote"><ShieldCheck size={17} /><p><strong>No anonymous publishing backend is used.</strong> A share link is self-contained public state. Redaction and private-metadata stripping happen before the payload is encoded.</p></section>
     {status && <div className="library-toast" role="status">{status}</div>}
   </main>;
 }
