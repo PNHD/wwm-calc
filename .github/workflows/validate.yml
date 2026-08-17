@@ -40,7 +40,7 @@ jobs:
         run: |
           npm install --no-save --package-lock=false @playwright/test@1.55.0
           npx playwright install chromium
-      - name: Smoke-test the production bundle in Chromium
+      - name: Smoke-test product workspaces and production bundle in Chromium
         run: |
           python3 -m http.server 4173 --bind 127.0.0.1 --directory dist > "$RUNNER_TEMP/wwm-preview.log" 2>&1 &
           PREVIEW_PID=$!
@@ -51,8 +51,10 @@ jobs:
           T96_STATUS=$?
           npx playwright test scripts/runtime-gvg-acceptance.spec.mjs --reporter=line --workers=1
           GVG_STATUS=$?
+          npx playwright test scripts/runtime-workspace-ux.spec.mjs --reporter=line --workers=1 --timeout=120000
+          UX_STATUS=$?
           set -e
-          STATUS=$(( T96_STATUS != 0 || GVG_STATUS != 0 ))
+          STATUS=$(( T96_STATUS != 0 || GVG_STATUS != 0 || UX_STATUS != 0 ))
           if [ "$T96_STATUS" -ne 0 ] && [ -f runtime-smoke-diagnostic.txt ]; then
             python3 - <<'PY'
           from pathlib import Path
@@ -76,6 +78,11 @@ jobs:
           print(f'::notice file=scripts/runtime-gvg-acceptance.spec.mjs,line=1,title=GvG runtime acceptance::{text}')
           PY
           fi
+          if [ "$UX_STATUS" -ne 0 ]; then
+            echo "::error file=scripts/runtime-workspace-ux.spec.mjs,line=1,title=Workspace UX diagnostic::Responsive workspace acceptance or visual QA failed"
+          else
+            echo "::notice file=scripts/runtime-workspace-ux.spec.mjs,line=1,title=Workspace UX acceptance::PvE/Guild War IA, state preservation, responsive layouts, keyboard focus and representative screenshots passed"
+          fi
           exit "$STATUS"
       - uses: actions/upload-artifact@v4
         if: always()
@@ -87,6 +94,7 @@ jobs:
             runtime-smoke-diagnostic.txt
             runtime-gvg-smoke.png
             runtime-gvg-smoke-report.json
+            visual-qa/
             test-results/
           if-no-files-found: ignore
       - name: Ensure migration is deterministic
