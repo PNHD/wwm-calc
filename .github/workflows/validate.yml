@@ -25,6 +25,8 @@ jobs:
       - name: Audit production dependencies
         run: npm audit --omit=dev --audit-level=high
       - run: npm run lint
+      - name: Validate Global Guild War model
+        run: node scripts/validate-gvg-model.mjs
       - run: npm run build
       - name: Validate Global T96 product model
         run: npm run validate:t96-product
@@ -46,20 +48,32 @@ jobs:
           for attempt in {1..30}; do curl --fail --silent http://127.0.0.1:4173/ > /dev/null && break; sleep 1; done
           set +e
           npx playwright test scripts/runtime-t96-acceptance.spec.mjs --reporter=line --workers=1
-          STATUS=$?
+          T96_STATUS=$?
+          npx playwright test scripts/runtime-gvg-acceptance.spec.mjs --reporter=line --workers=1
+          GVG_STATUS=$?
           set -e
-          if [ "$STATUS" -ne 0 ] && [ -f runtime-smoke-diagnostic.txt ]; then
+          STATUS=$(( T96_STATUS != 0 || GVG_STATUS != 0 ))
+          if [ "$T96_STATUS" -ne 0 ] && [ -f runtime-smoke-diagnostic.txt ]; then
             python3 - <<'PY'
           from pathlib import Path
           text=Path('runtime-smoke-diagnostic.txt').read_text()[:7000].replace('%','%25').replace('\r','%0D').replace('\n','%0A')
           print(f'::error file=scripts/runtime-t96-acceptance.spec.mjs,line=1,title=T96 runtime diagnostic::{text}')
           PY
           fi
-          if [ "$STATUS" -eq 0 ] && [ -f runtime-smoke-report.json ]; then
+          if [ "$T96_STATUS" -eq 0 ] && [ -f runtime-smoke-report.json ]; then
             python3 - <<'PY'
           from pathlib import Path
           text=Path('runtime-smoke-report.json').read_text()[:7000].replace('%','%25').replace('\r','%0D').replace('\n','%0A')
           print(f'::notice file=scripts/runtime-t96-acceptance.spec.mjs,line=1,title=T96 runtime acceptance::{text}')
+          PY
+          fi
+          if [ "$GVG_STATUS" -ne 0 ]; then
+            echo "::error file=scripts/runtime-gvg-acceptance.spec.mjs,line=1,title=GvG runtime diagnostic::Guild War Chromium acceptance failed"
+          elif [ -f runtime-gvg-smoke-report.json ]; then
+            python3 - <<'PY'
+          from pathlib import Path
+          text=Path('runtime-gvg-smoke-report.json').read_text()[:7000].replace('%','%25').replace('\r','%0D').replace('\n','%0A')
+          print(f'::notice file=scripts/runtime-gvg-acceptance.spec.mjs,line=1,title=GvG runtime acceptance::{text}')
           PY
           fi
           exit "$STATUS"
@@ -71,6 +85,8 @@ jobs:
             runtime-smoke.png
             runtime-smoke-report.json
             runtime-smoke-diagnostic.txt
+            runtime-gvg-smoke.png
+            runtime-gvg-smoke-report.json
             test-results/
           if-no-files-found: ignore
       - name: Ensure migration is deterministic
