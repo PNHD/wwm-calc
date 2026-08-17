@@ -113,7 +113,7 @@ export default function GvgSharePrivacyPanel({ onBack }: { onBack: () => void })
       kind: "FULL_GUILD_WAR_PLAN",
       createdAt: new Date().toISOString(),
       privacy: { playerNamesRedacted: redactNames, notesRedacted: redactPlanNotes },
-      payload,
+      payload: { workspace: payload },
     };
     const validation = validateShareEnvelope(envelope);
     if (!validation.valid) {
