@@ -21,7 +21,7 @@ test("Global Guild War Lab opens and exposes planning, simulator, roster and sha
 
   const lab = page.getByTestId("gvg-build-lab");
   await expect(lab.getByText("Bamboocut-Dust", { exact: true })).toBeVisible();
-  await expect(lab.getByText("ANTI-HEAL / ZONE PRESSURE")).toBeVisible();
+  await expect(lab.getByText("ANTI-HEAL / ZONE PRESSURE", { exact: true })).toBeVisible();
   await expect(lab.getByText("65%", { exact: true })).toBeVisible();
   await expect(lab.getByText("12m", { exact: true })).toBeVisible();
 
