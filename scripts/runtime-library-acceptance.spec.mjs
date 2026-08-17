@@ -42,7 +42,7 @@ test("Library routing, filtering, trust labels, favorites and old workspace deep
   await page.getByLabel("Search Library").fill("Mun");
   await expect(page.locator(".library-card")).toHaveCount(1);
   await expect(page.locator(".library-card").getByRole("heading", { name: "Silkbind-Jade", exact: true })).toBeVisible();
-  await expect(page.getByText("COMMUNITY REFERENCE")).toBeVisible();
+  await expect(page.getByText("COMMUNITY REFERENCE", { exact: true })).toBeVisible();
   await expect(page.getByText("MODELED", { exact: true })).toBeVisible();
   await page.getByLabel("Search Library").fill("");
 
@@ -78,7 +78,9 @@ test("Read-only detail, clone isolation, reference compare and full build-to-bui
     localStorage.setItem("wwm_selected_build", "bamboocut-dust");
   });
   await page.setViewportSize({ width: 1440, height: 1000 });
-  await page.goto(`${BASE}#library/pve`, { waitUntil: "networkidle" });
+  await page.goto(BASE, { waitUntil: "networkidle" });
+  await openLibrary(page);
+  await page.getByRole("button", { name: /^PvE Builds$/ }).click();
   await expect(page.getByTestId("library-landing")).toBeVisible();
   const bambCard = page.locator(".library-card").filter({ has: page.getByRole("heading", { name: "Bamboocut-Dust", exact: true }) });
   await bambCard.getByRole("button", { name: /^View$/ }).click();
