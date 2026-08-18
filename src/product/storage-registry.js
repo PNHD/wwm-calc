@@ -93,7 +93,16 @@ export function readJsonStorage(key, options = {}) {
     if (typeof validation === "string" && validation) throw new Error(validation);
     const migration = options.migrate?.(parsed);
     if (migration && typeof migration === "object" && "value" in migration) {
-      return { value: migration.value, recovered: false, migrated: Boolean(migration.migrated), recoveryMessage: migration.message || "", reason: migration.migrated ? "migrated" : "ok" };
+      const recovered = Boolean(migration.recovered);
+      const backedUp = (recovered || migration.backup) ? backupDomainValue(key, raw) : false;
+      const message = migration.message || (recovered ? recoveryMessage : "");
+      return {
+        value: migration.value,
+        recovered,
+        migrated: Boolean(migration.migrated),
+        recoveryMessage: `${message}${backedUp && message ? " A local recovery backup was preserved." : ""}`,
+        reason: recovered ? (migration.reason || "normalized") : migration.migrated ? "migrated" : "ok",
+      };
     }
     return { value: parsed, recovered: false, migrated: false, recoveryMessage: "", reason: "ok" };
   } catch (error) {
