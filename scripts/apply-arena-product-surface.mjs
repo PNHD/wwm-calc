@@ -18,3 +18,28 @@ ${needle}`;
 } else {
   console.log("Arena workspace switcher already applied");
 }
+
+// Arena adds three current Library references. Keep the existing browser acceptance
+// contract aligned with the larger curated dataset instead of treating valid Arena
+// content as a PvE/GvG regression.
+const libraryTestPath = "scripts/runtime-library-acceptance.spec.mjs";
+let libraryTest = fs.readFileSync(libraryTestPath, "utf8");
+const recentNeedle = `  await expect(page.locator(".library-card")).toHaveCount(5);`;
+const recentReplacement = `  await expect(page.locator(".library-card")).toHaveCount(8);`;
+if (!libraryTest.includes(recentReplacement)) {
+  if (!libraryTest.includes(recentNeedle)) throw new Error("Arena migration: Library recent-count acceptance anchor not found");
+  libraryTest = libraryTest.replace(recentNeedle, recentReplacement);
+}
+const weaponNeedle = `  await filters.getByLabel("Weapon").selectOption({ label: "Vernal Umbrella" });
+  await expect(page.locator(".library-card")).toHaveCount(1);
+  await expect(page.locator(".library-card").getByRole("heading", { name: "Silkbind-Jade", exact: true })).toBeVisible();`;
+const weaponReplacement = `  await filters.getByLabel("Weapon").selectOption({ label: "Vernal Umbrella" });
+  await expect(page.locator(".library-card")).toHaveCount(2);
+  await expect(page.locator(".library-card").getByRole("heading", { name: "Silkbind-Jade", exact: true })).toBeVisible();
+  await expect(page.locator(".library-card").getByRole("heading", { name: "Silkbind-Jade Arena", exact: true })).toBeVisible();`;
+if (!libraryTest.includes(weaponReplacement)) {
+  if (!libraryTest.includes(weaponNeedle)) throw new Error("Arena migration: Library weapon-filter acceptance anchor not found");
+  libraryTest = libraryTest.replace(weaponNeedle, weaponReplacement);
+}
+fs.writeFileSync(libraryTestPath, libraryTest, "utf8");
+console.log("Arena Library runtime acceptance contract applied");
