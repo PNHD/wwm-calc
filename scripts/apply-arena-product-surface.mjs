@@ -19,6 +19,19 @@ ${needle}`;
   console.log("Arena workspace switcher already applied");
 }
 
+// The legacy app has a generic `header { ... }` rule. Scope the Arena topbar so the
+// new workspace keeps its dark design surface at every responsive breakpoint.
+const arenaCssPath = "src/arena/arena.css";
+let arenaCss = fs.readFileSync(arenaCssPath, "utf8");
+const topbarIsolation = `.arena-root .arena-topbar{background:rgba(11,13,16,.98)!important;background-color:#0b0d10!important;box-shadow:none!important}`;
+if (!arenaCss.includes(topbarIsolation)) {
+  arenaCss = `${arenaCss.trimEnd()}\n${topbarIsolation}\n`;
+  fs.writeFileSync(arenaCssPath, arenaCss, "utf8");
+  console.log("Arena topbar CSS isolation applied");
+} else {
+  console.log("Arena topbar CSS isolation already applied");
+}
+
 // Arena adds three current Library references. Keep the existing browser acceptance
 // contract aligned with the larger curated dataset instead of treating valid Arena
 // content as a PvE/GvG regression.
