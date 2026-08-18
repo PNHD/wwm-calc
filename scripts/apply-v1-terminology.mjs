@@ -14,6 +14,10 @@ function stabilizeV1RuntimeAcceptance() {
   const ambiguous = `await expect(arenaPage.getByText(/Invalid Arena share/i)).toBeVisible();`;
   const precise = `await expect(arenaPage.getByRole("heading", { name: "Invalid Arena share", exact: true })).toBeVisible();`;
   if (source.includes(ambiguous)) source = source.replace(ambiguous, precise);
+
+  const disclosureLegacy = `    const about = page.getByTestId("model-about");\n    await expect(about).toBeVisible();\n    await about.locator("summary").click();\n    await expect(about.getByText("WWM Calc V1", { exact: true })).toBeVisible();\n    await expect(about.getByRole("link", { name: /Report bad data/i })).toHaveAttribute("href", /github\\.com\\/PNHD\\/wwm-calc\\/issues\\/new/);`;
+  const disclosureStable = `    const about = page.getByTestId("model-about");\n    const aboutHeading = about.getByText("WWM Calc V1", { exact: true });\n    await expect(about).toBeVisible();\n    if (await about.evaluate((element) => element.open)) {\n      await about.locator("summary").click();\n      await expect(aboutHeading).toBeHidden();\n    }\n    await about.locator("summary").click();\n    await expect(aboutHeading).toBeVisible();\n    await expect(about.getByRole("link", { name: /Report bad data/i })).toHaveAttribute("href", /github\\.com\\/PNHD\\/wwm-calc\\/issues\\/new/);`;
+  if (source.includes(disclosureLegacy)) source = source.replace(disclosureLegacy, disclosureStable);
   fs.writeFileSync(path, source, "utf8");
 }
 
