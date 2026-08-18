@@ -22,10 +22,13 @@ jobs:
           node --version
           npm --version
       - run: npm ci
-      - name: Apply deterministic Arena source/library migrations before typecheck
+      - name: Apply deterministic release migrations before typecheck
         run: |
           node scripts/apply-arena-library.mjs
           node scripts/apply-arena-product-surface.mjs
+          node scripts/apply-v1-release-hardening.mjs
+          node scripts/apply-v1-release-ui.mjs
+          node scripts/apply-v1-terminology.mjs
       - name: Audit production dependencies
         run: npm audit --omit=dev --audit-level=high
       - run: npm run lint
@@ -35,6 +38,8 @@ jobs:
         run: node scripts/validate-library.mjs
       - name: Validate Global Arena model
         run: node scripts/validate-arena-model.mjs
+      - name: Validate V1 storage registry and untrusted-data boundaries
+        run: npm run validate:v1-release
       - run: npm run build
       - name: Validate Global T96 product model
         run: npm run validate:t96-product
@@ -65,8 +70,10 @@ jobs:
           LIBRARY_STATUS=$?
           npx playwright test scripts/runtime-arena-acceptance.spec.mjs --reporter=line --workers=1 --timeout=180000
           ARENA_STATUS=$?
+          npx playwright test scripts/runtime-v1-release-acceptance.spec.mjs --reporter=line --workers=1 --timeout=180000
+          V1_STATUS=$?
           set -e
-          STATUS=$(( T96_STATUS != 0 || GVG_STATUS != 0 || UX_STATUS != 0 || LIBRARY_STATUS != 0 || ARENA_STATUS != 0 ))
+          STATUS=$(( T96_STATUS != 0 || GVG_STATUS != 0 || UX_STATUS != 0 || LIBRARY_STATUS != 0 || ARENA_STATUS != 0 || V1_STATUS != 0 ))
           if [ "$T96_STATUS" -ne 0 ] && [ -f runtime-smoke-diagnostic.txt ]; then
             python3 - <<'PY'
           from pathlib import Path
@@ -82,12 +89,12 @@ jobs:
           PY
           fi
           if [ "$GVG_STATUS" -ne 0 ]; then
-            echo "::error file=scripts/runtime-gvg-acceptance.spec.mjs,line=1,title=GvG runtime diagnostic::Guild War Chromium acceptance failed"
+            echo "::error file=scripts/runtime-gvg-acceptance.spec.mjs,line=1,title=Guild War runtime diagnostic::Guild War Chromium acceptance failed"
           elif [ -f runtime-gvg-smoke-report.json ]; then
             python3 - <<'PY'
           from pathlib import Path
           text=Path('runtime-gvg-smoke-report.json').read_text()[:7000].replace('%','%25').replace('\r','%0D').replace('\n','%0A')
-          print(f'::notice file=scripts/runtime-gvg-acceptance.spec.mjs,line=1,title=GvG runtime acceptance::{text}')
+          print(f'::notice file=scripts/runtime-gvg-acceptance.spec.mjs,line=1,title=Guild War runtime acceptance::{text}')
           PY
           fi
           if [ "$UX_STATUS" -ne 0 ]; then
@@ -98,7 +105,7 @@ jobs:
           if [ "$LIBRARY_STATUS" -ne 0 ]; then
             echo "::error file=scripts/runtime-library-acceptance.spec.mjs,line=1,title=Library runtime diagnostic::Library routing, clone isolation, build compare, sharing, security or responsive acceptance failed"
           else
-            echo "::notice file=scripts/runtime-library-acceptance.spec.mjs,line=1,title=Library runtime acceptance::Curated Library, read-only detail/share, safe clone, PvE/GvG comparison, favorites and responsive QA passed"
+            echo "::notice file=scripts/runtime-library-acceptance.spec.mjs,line=1,title=Library runtime acceptance::Curated Library, read-only detail/share, safe clone, PvE/Guild War comparison, favorites and responsive QA passed"
           fi
           if [ "$ARENA_STATUS" -ne 0 ]; then
             echo "::error file=scripts/runtime-arena-acceptance.spec.mjs,line=1,title=Arena runtime diagnostic::Arena workspace, matchup/state model, Arena Library/share, History or responsive visual QA failed"
@@ -107,6 +114,15 @@ jobs:
           from pathlib import Path
           text=Path('runtime-arena-smoke-report.json').read_text()[:7000].replace('%','%25').replace('\r','%0D').replace('\n','%0A')
           print(f'::notice file=scripts/runtime-arena-acceptance.spec.mjs,line=1,title=Arena runtime acceptance::{text}')
+          PY
+          fi
+          if [ "$V1_STATUS" -ne 0 ]; then
+            echo "::error file=scripts/runtime-v1-release-acceptance.spec.mjs,line=1,title=V1 release diagnostic::Cross-workspace recovery/security/responsive/performance release acceptance failed"
+          elif [ -f V1_PERFORMANCE_REPORT.json ]; then
+            python3 - <<'PY'
+          from pathlib import Path
+          text=Path('V1_PERFORMANCE_REPORT.json').read_text()[:7000].replace('%','%25').replace('\r','%0D').replace('\n','%0A')
+          print(f'::notice file=scripts/runtime-v1-release-acceptance.spec.mjs,line=1,title=V1 release acceptance::{text}')
           PY
           fi
           exit "$STATUS"
@@ -122,6 +138,7 @@ jobs:
             runtime-gvg-smoke-report.json
             runtime-arena-smoke.png
             runtime-arena-smoke-report.json
+            V1_PERFORMANCE_REPORT.json
             visual-qa/
             test-results/
           if-no-files-found: ignore
@@ -133,13 +150,20 @@ jobs:
           git checkout -- src
           npm run apply:global-v2
           diff -ru "$RUNNER_TEMP/src-first" src
-      - name: Verify Cloudflare Pages exact SHA and production browser smoke
+      - name: Verify Cloudflare Pages exact SHA and Arena production browser smoke
         if: github.event_name == 'push'
         env:
           EXPECTED_SHA: ${{ github.sha }}
           PRODUCTION_URL: https://wonton-wwm.pages.dev/
         run: |
           npx playwright test scripts/runtime-production-arena.spec.mjs --reporter=line --workers=1 --timeout=600000
+      - name: Verify Cloudflare Pages exact SHA and V1 production browser smoke
+        if: github.event_name == 'push'
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+          PRODUCTION_URL: https://wonton-wwm.pages.dev/
+        run: |
+          npx playwright test scripts/runtime-production-v1.spec.mjs --reporter=line --workers=1 --timeout=600000
       - name: Publish exact production verification artifact
         if: github.event_name == 'push' && always()
         uses: actions/upload-artifact@v4
@@ -148,5 +172,7 @@ jobs:
           path: |
             production-verification.json
             production-arena-smoke.png
+            V1_PRODUCTION_SMOKE.json
+            v1-production-mobile-smoke.png
             test-results/
           if-no-files-found: ignore
