@@ -1,5 +1,8 @@
 import fs from "node:fs";
 
+await import("./apply-competitive-v2-storage.mjs");
+await import("./apply-competitive-v2-storage-guards.mjs");
+
 const modelPath = "src/competitive/competitive-v2.mjs";
 let model = fs.readFileSync(modelPath, "utf8");
 const oldRow = `{ id: "arena-battlegroups", mode: "ARENA", patch: "2026-04-30+", source: "Official PVP427", sourceDate: "2026-04-30", claim: "Five current battlegroups and server mapping", scope: "Global Arena/Guild War", numeric: null, evidence: OFFICIAL, implementation: IMPLEMENTATION_STATE.ENCODED }`;
