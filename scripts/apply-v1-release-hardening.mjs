@@ -174,10 +174,11 @@ const gvgNumber = (value, min = 0, max = 1_000_000_000, fallback = null) => {
 const gvgPoint = (value) => isPlainRecord(value) ? { x: gvgNumber(value.x, 0, 100, 50), y: gvgNumber(value.y, 0, 100, 50) } : { x: 50, y: 50 };
 
 function uniqueBoundedId(value, prefix, index, seen) {
-  const base = gvgText(value, 64, \`${prefix}-\${index + 1}\`) || \`${prefix}-\${index + 1}\`;
+  const fallbackId = prefix + "-" + (index + 1);
+  const base = gvgText(value, 64, fallbackId) || fallbackId;
   let candidate = base;
   let suffix = 2;
-  while (seen.has(candidate)) candidate = \`${base}-\${suffix++}\`;
+  while (seen.has(candidate)) candidate = base + "-" + suffix++;
   seen.add(candidate);
   return candidate;
 }
