@@ -1,0 +1,99 @@
+name: Observe Post-Merge Production
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      TARGET_SHA: 92c2f3184538553b1ba58c03fc57fd1a5dd5137e
+      PRODUCTION_URL: https://wonton-wwm.pages.dev/
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Resolve and verify post-merge Validate push run
+        id: postmerge
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          API="https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/validate.yml/runs?event=push&branch=main&per_page=30"
+          deadline=$((SECONDS + 900))
+          while true; do
+            json="$(curl --fail --silent --show-error \
+              -H "Authorization: Bearer ${GH_TOKEN}" \
+              -H "Accept: application/vnd.github+json" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "$API")"
+            match="$(printf '%s' "$json" | node -e '
+              let s=""; process.stdin.on("data",d=>s+=d); process.stdin.on("end",()=>{
+                const data=JSON.parse(s); const sha=process.env.TARGET_SHA;
+                const run=(data.workflow_runs||[]).find(r=>r.head_sha===sha && r.event==="push");
+                if(run) process.stdout.write(JSON.stringify({id:run.id,status:run.status,conclusion:run.conclusion,head_sha:run.head_sha,run_number:run.run_number,html_url:run.html_url}));
+              });')"
+            if [ -n "$match" ]; then
+              status="$(printf '%s' "$match" | node -pe 'JSON.parse(require("fs").readFileSync(0,"utf8")).status')"
+              conclusion="$(printf '%s' "$match" | node -pe 'JSON.parse(require("fs").readFileSync(0,"utf8")).conclusion || ""')"
+              run_id="$(printf '%s' "$match" | node -pe 'JSON.parse(require("fs").readFileSync(0,"utf8")).id')"
+              run_number="$(printf '%s' "$match" | node -pe 'JSON.parse(require("fs").readFileSync(0,"utf8")).run_number')"
+              echo "Observed Validate #${run_number} run ${run_id}: ${status}/${conclusion}"
+              if [ "$status" = "completed" ]; then
+                [ "$conclusion" = "success" ] || { echo "Post-merge Validate failed: $match"; exit 1; }
+                printf '%s\n' "$match" > postmerge-validate.json
+                echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+                echo "run_number=$run_number" >> "$GITHUB_OUTPUT"
+                break
+              fi
+            fi
+            if [ "$SECONDS" -ge "$deadline" ]; then
+              echo "Timed out waiting for post-merge Validate for ${TARGET_SHA}" >&2
+              exit 1
+            fi
+            sleep 10
+          done
+      - name: Install production browser verifier
+        run: |
+          npm install --no-save --package-lock=false @playwright/test@1.55.0
+          npx playwright install chromium
+      - name: Verify production exact SHA and critical browser smoke
+        env:
+          EXPECTED_SHA: ${{ env.TARGET_SHA }}
+        run: npx playwright test scripts/runtime-production-arena.spec.mjs --reporter=line --workers=1 --timeout=600000
+      - name: Build verification sentinel
+        if: success()
+        run: |
+          node - <<'NODE'
+          const fs=require('fs');
+          const validate=JSON.parse(fs.readFileSync('postmerge-validate.json','utf8'));
+          const production=JSON.parse(fs.readFileSync('production-verification.json','utf8'));
+          const out={
+            success: validate.status==='completed' && validate.conclusion==='success' && production.success===true && production.exactShaMatch===true && production.productionCommit===process.env.TARGET_SHA,
+            targetSha: process.env.TARGET_SHA,
+            postMergeValidate: validate,
+            production
+          };
+          fs.writeFileSync('final-production-verification.json',JSON.stringify(out,null,2));
+          if(!out.success) process.exit(1);
+          NODE
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: final-production-verification
+          path: |
+            postmerge-validate.json
+            production-verification.json
+            final-production-verification.json
+            production-arena-smoke.png
+            test-results/
+          if-no-files-found: ignore
