@@ -23,15 +23,19 @@ export default function ModelAbout({ workspace, page, path, tier }: { workspace:
   const issueUrl = `https://github.com/PNHD/wwm-calc/issues/new?title=${title}&body=${body}`;
 
   return <details className="model-about" data-testid="model-about">
-    <summary><Info size={14} aria-hidden="true" /><span>Model & About</span></summary>
+    <summary onClick={(event) => {
+      event.preventDefault();
+      const details = event.currentTarget.closest("details");
+      if (details) details.open = !details.open;
+    }}><Info size={14} aria-hidden="true" /><span>Model & About</span></summary>
     <div className="model-about-popover">
       <div className="model-about-heading"><ShieldCheck size={18} aria-hidden="true" /><div><strong>WWM Calc V1</strong><small>{PATCH} · reviewed {REVIEWED}</small></div></div>
       <dl>
-        <div><dt>CALIBRATED</dt><dd>Bamboocut-Dust PvE T96 acceptance fixtures.</dd></div>
-        <div><dt>MODELED</dt><dd>PvE outputs beyond calibrated fixtures, Arena matchup dimensions, and Guild War role/objective scenarios.</dd></div>
-        <div><dt>EXPERIMENTAL</dt><dd>Community/reference assumptions explicitly marked in their surfaces.</dd></div>
+        <div><dt>CALIBRATED DATA</dt><dd>Bamboocut-Dust PvE T96 acceptance fixtures.</dd></div>
+        <div><dt>MODELED OUTPUT</dt><dd>PvE outputs beyond calibrated fixtures, Arena matchup dimensions, and Guild War role/objective scenarios.</dd></div>
+        <div><dt>EXPERIMENTAL ASSUMPTIONS</dt><dd>Community/reference assumptions explicitly marked in their surfaces.</dd></div>
       </dl>
-      <p>Arena output is not empirical win probability. Guild War output is not a guaranteed match result. Community builds are references, not authoritative best builds.</p>
+      <p>Arena output is not empirical win probability. Guild War output is not a guaranteed match result. Community builds are references, not authoritative recommendations.</p>
       <a href={issueUrl} target="_blank" rel="noreferrer">Report bad data <ExternalLink size={13} aria-hidden="true" /></a>
     </div>
   </details>;
