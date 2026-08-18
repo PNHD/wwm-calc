@@ -1,0 +1,6 @@
+{
+  "outcome": "failure",
+  "targetSha": "b3ee4307be59b8c8de2e75c7b3d04f8c4359af47",
+  "log": "FINAL VERIFICATION ERROR: Post-merge Validate failed: failure\nTraceback (most recent call last):\n  File \"/home/runner/work/wwm-calc/wwm-calc/scripts/finalize-competitive-v2-verification.py\", line 388, in <module>\n    main()\n  File \"/home/runner/work/wwm-calc/wwm-calc/scripts/finalize-competitive-v2-verification.py\", line 379, in main\n    discover()\n  File \"/home/runner/work/wwm-calc/wwm-calc/scripts/finalize-competitive-v2-verification.py\", line 108, in discover\n    require(run.get(\"conclusion\") == \"success\", f\"Post-merge Validate failed: {run.get('conclusion')}\")\n  File \"/home/runner/work/wwm-calc/wwm-calc/scripts/finalize-competitive-v2-verification.py\", line 69, in require\n    raise RuntimeError(message)\nRuntimeError: Post-merge Validate failed: failure\n",
+  "liveState": null
+}
