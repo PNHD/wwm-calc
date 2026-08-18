@@ -157,10 +157,17 @@ test("V1 public payloads fail closed and supplied strings stay text", async ({ p
   const badGvg = JSON.parse('{"schema":"wwm-gvg-share","version":1,"kind":"ROSTER","privacy":{"playerNamesRedacted":true},"payload":{"__proto__":{"polluted":true},"roster":[]}}');
   await page.goto(`${BASE}#gvg-share=${b64(badGvg)}`, { waitUntil: "networkidle" });
   await expect(page.getByTestId("gvg-shared-invalid")).toBeVisible();
+
+  // Reset to a fresh document before the intentionally oversized fragment. Chromium may
+  // preserve a same-document navigation after a very large hash, so each security vector
+  // gets an independent navigation state instead of contaminating the next assertion.
+  await page.goto(BASE, { waitUntil: "networkidle" });
   await page.goto(`${BASE}#arena/shared/${"A".repeat(33000)}`, { waitUntil: "domcontentloaded" });
   await expect(page.getByText(/Invalid Arena share/i)).toBeVisible();
 
+  await page.goto(BASE, { waitUntil: "networkidle" });
   const response = await request.get(`${BASE}data/library-v1.json`);
+  expect(response.ok()).toBeTruthy();
   const document = await response.json();
   const entry = structuredClone(document.items[0]);
   entry.title = '<img src=x onerror="window.__V1_XSS__=1">';
