@@ -28,6 +28,9 @@ jobs:
       - name: Check out verification branch
         uses: actions/checkout@v4
 
+      - name: Initialize verification diagnostics
+        run: mkdir -p verification-work
+
       - name: Prove verification branch does not modify product source
         id: branch_scope
         continue-on-error: true
@@ -39,7 +42,7 @@ jobs:
           printf ' - %s\n' "${changed[@]}"
           for path in "${changed[@]}"; do
             case "$path" in
-              .github/workflows/finalize-competitive-v2-verification.yml|scripts/finalize-competitive-v2-verification.py|scripts/runtime-production-final-extra.spec.mjs)
+              .github/workflows/finalize-competitive-v2-verification.yml|scripts/finalize-competitive-v2-verification.py|scripts/runtime-production-final-extra.spec.mjs|COMPETITIVE_MODES_V2_VERIFICATION_FAILURE.json|COMPETITIVE_MODES_V2_FINAL_VERIFICATION.json)
                 ;;
               *)
                 echo "Unexpected non-verification path: $path" >&2
@@ -57,40 +60,61 @@ jobs:
       - name: Install repository dependencies
         id: npm_ci
         continue-on-error: true
-        run: npm ci
+        shell: bash
+        run: |
+          set -o pipefail
+          npm ci 2>&1 | tee verification-work/npm-ci.log
 
       - name: Discover authoritative post-merge live state
         id: discover
         continue-on-error: true
-        run: python3 scripts/finalize-competitive-v2-verification.py discover
+        shell: bash
+        run: |
+          set -o pipefail
+          python3 scripts/finalize-competitive-v2-verification.py discover 2>&1 | tee verification-work/discover.log
 
       - name: Install Chromium verification runtime
         id: browser_runtime
         continue-on-error: true
         shell: bash
         run: |
-          npm install --no-save --package-lock=false @playwright/test@1.55.0
-          npx playwright install chromium
+          set -o pipefail
+          {
+            npm install --no-save --package-lock=false @playwright/test@1.55.0
+            npx playwright install chromium
+          } 2>&1 | tee verification-work/browser-runtime.log
 
       - name: Independently re-run exact-SHA Arena production smoke
         id: arena_smoke
         continue-on-error: true
-        run: npx playwright test scripts/runtime-production-arena.spec.mjs --reporter=line --workers=1 --timeout=600000
+        shell: bash
+        run: |
+          set -o pipefail
+          npx playwright test scripts/runtime-production-arena.spec.mjs --reporter=line --workers=1 --timeout=600000 2>&1 | tee verification-work/arena-smoke.log
 
       - name: Independently re-run exact-SHA V1 production smoke
         id: v1_smoke
         continue-on-error: true
-        run: npx playwright test scripts/runtime-production-v1.spec.mjs --reporter=line --workers=1 --timeout=600000
+        shell: bash
+        run: |
+          set -o pipefail
+          npx playwright test scripts/runtime-production-v1.spec.mjs --reporter=line --workers=1 --timeout=600000 2>&1 | tee verification-work/v1-smoke.log
 
       - name: Run final Guild War Library and 390 production coverage
         id: extra_smoke
         continue-on-error: true
-        run: npx playwright test scripts/runtime-production-final-extra.spec.mjs --reporter=line --workers=1 --timeout=480000
+        shell: bash
+        run: |
+          set -o pipefail
+          npx playwright test scripts/runtime-production-final-extra.spec.mjs --reporter=line --workers=1 --timeout=480000 2>&1 | tee verification-work/extra-smoke.log
 
       - name: Final race check and generate final verification JSON
         id: finalize
         continue-on-error: true
-        run: python3 scripts/finalize-competitive-v2-verification.py finalize
+        shell: bash
+        run: |
+          set -o pipefail
+          python3 scripts/finalize-competitive-v2-verification.py finalize 2>&1 | tee verification-work/finalize.log
 
       - name: Upload verification evidence
         if: always()
@@ -102,7 +126,7 @@ jobs:
             FINAL_EXTRA_PRODUCTION_SMOKE.json
             production-verification.json
             V1_PRODUCTION_SMOKE.json
-            verification-work/live_state.json
+            verification-work/
             final-extra-production-mobile-390.png
           if-no-files-found: ignore
 
@@ -168,7 +192,12 @@ jobs:
                       "COMPETITIVE_MODES_V2_FINAL_VERIFICATION.json",
                   ]
               },
+              "logTails": {},
           }
+          for name in ["npm-ci.log", "discover.log", "browser-runtime.log", "arena-smoke.log", "v1-smoke.log", "extra-smoke.log", "finalize.log"]:
+              path = Path("verification-work") / name
+              if path.exists():
+                  report["logTails"][name] = path.read_text(errors="replace")[-16000:]
           for name, key in [
               ("verification-work/live_state.json", "liveState"),
               ("FINAL_EXTRA_PRODUCTION_SMOKE.json", "extraSmoke"),
@@ -185,10 +214,14 @@ jobs:
           fi
 
           content="$(base64 -w0 "$file")"
-          gh api --method PUT "repos/$GITHUB_REPOSITORY/contents/$file" \
-            -f message="$message" \
-            -f content="$content" \
-            -f branch="$VERIFY_BRANCH" >/tmp/publish-result.json
+          existing_sha="$(gh api "repos/$GITHUB_REPOSITORY/contents/$file?ref=$VERIFY_BRANCH" --jq .sha 2>/dev/null || true)"
+          if [ -n "$existing_sha" ]; then
+            gh api --method PUT "repos/$GITHUB_REPOSITORY/contents/$file" \
+              -f message="$message" -f content="$content" -f branch="$VERIFY_BRANCH" -f sha="$existing_sha" >/tmp/publish-result.json
+          else
+            gh api --method PUT "repos/$GITHUB_REPOSITORY/contents/$file" \
+              -f message="$message" -f content="$content" -f branch="$VERIFY_BRANCH" >/tmp/publish-result.json
+          fi
           cat /tmp/publish-result.json
 
           if [ "$all_success" != true ]; then
