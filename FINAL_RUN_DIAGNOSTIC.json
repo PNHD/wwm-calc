@@ -1,0 +1,94 @@
+{
+  "runs": [
+    {
+      "id": 32113731735,
+      "run_number": 1,
+      "run_attempt": 1,
+      "status": "completed",
+      "conclusion": "failure",
+      "head_sha": "489067c493b6e2cb8466785c7fad97c970b24960",
+      "created_at": "2026-08-18T07:54:57Z",
+      "updated_at": "2026-08-18T07:55:46Z",
+      "jobs": [
+        {
+          "id": 95638537331,
+          "name": "verify",
+          "status": "completed",
+          "conclusion": "failure",
+          "steps": [
+            {
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "name": "Run actions/checkout@v4",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "name": "Discover and verify authoritative live state",
+              "status": "completed",
+              "conclusion": "failure"
+            },
+            {
+              "name": "Run actions/setup-node@v4",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "name": "Run npm ci",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "name": "Install browser runtime",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "name": "Independent Arena production smoke",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "name": "Independent V1 production smoke",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "name": "Independent GvG Library mobile production smoke",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "name": "Generate final artifact with final race check",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "name": "Upload final verification evidence",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "name": "Publish final JSON to verification branch",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "name": "Post Run actions/checkout@v4",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "name": "Complete job",
+              "status": "completed",
+              "conclusion": "success"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
