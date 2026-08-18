@@ -6,7 +6,7 @@ const marker = "COMPETITIVE_V2_BATTLEFIELD_MAP";
 if (!source.includes(marker)) {
   const objectivesAnchor = `const objectives = ["TOP_OUTPOST","BOTTOM_OUTPOST","JUNGLE","BULWARK","GOOSE","FORTUNE_TREE","FALLBACK"];`;
   if (!source.includes(objectivesAnchor)) throw new Error("Competitive V2 battlefield: Strategy objectives anchor missing");
-  source = source.replace(objectivesAnchor, `${objectivesAnchor} const [selectedObjective, setSelectedObjective] = useState("TOP_OUTPOST"); const objectivePositions: Record<string,{x:number;y:number}> = { TOP_OUTPOST:{x:22,y:18}, BOTTOM_OUTPOST:{x:22,y:78}, JUNGLE:{x:43,y:52}, BULWARK:{x:62,y:50}, GOOSE:{x:78,y:50}, FORTUNE_TREE:{x:88,y:72}, FALLBACK:{x:8,y:50} }; const selectedSquad = assignments[selectedObjective] || "UNASSIGNED"; const selectedEx = [...new Set(roster.filter((member) => selectedSquad !== "UNASSIGNED" && member.team === selectedSquad && member.exTechnique).map((member) => member.exTechnique))]; // COMPETITIVE_V2_BATTLEFIELD_MAP`);
+  source = source.replace(objectivesAnchor, `${objectivesAnchor} const [selectedObjective, setSelectedObjective] = useState("TOP_OUTPOST"); const objectivePositions: Record<string,{x:number;y:number}> = { TOP_OUTPOST:{x:22,y:18}, BOTTOM_OUTPOST:{x:22,y:78}, JUNGLE:{x:43,y:52}, BULWARK:{x:62,y:50}, GOOSE:{x:78,y:50}, FORTUNE_TREE:{x:88,y:72}, FALLBACK:{x:8,y:50} }; const selectedSquad = assignments[selectedObjective] || "UNASSIGNED"; const selectedEx = [...new Set(roster.filter((member) => selectedSquad !== "UNASSIGNED" && member.team === selectedSquad && member.exTechnique).map((member) => member.exTechnique))]; /* COMPETITIVE_V2_BATTLEFIELD_MAP */`);
 
   const boardAnchor = `</article></div><div className="gvg-grid gvg-grid-2">{objectives.map((id) => <article className="gvg-card" data-objective-id={id} key={id}>`;
   if (!source.includes(boardAnchor)) throw new Error("Competitive V2 battlefield: board insertion anchor missing");
@@ -37,6 +37,4 @@ if (!test.includes(testMarker)) {
   fs.writeFileSync(testPath, test, "utf8");
 }
 
-const debugLines = fs.readFileSync(path, "utf8").split("\n");
-console.log("Competitive V2 GuildWar generated middle:\n" + debugLines.slice(48, 77).map((line, index) => `${49 + index}: ${line}`).join("\n"));
 console.log("Competitive V2 battlefield map/shared objective-state contract applied deterministically.");
