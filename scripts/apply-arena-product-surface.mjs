@@ -19,17 +19,26 @@ ${needle}`;
   console.log("Arena workspace switcher already applied");
 }
 
-// The legacy app has a generic `header { ... }` rule. Scope the Arena topbar so the
-// new workspace keeps its dark design surface at every responsive breakpoint.
+// The legacy app has generic header/form rules. Scope Arena surfaces so the new
+// workspace retains its dark design system at every responsive breakpoint.
 const arenaCssPath = "src/arena/arena.css";
 let arenaCss = fs.readFileSync(arenaCssPath, "utf8");
-const topbarIsolation = `.arena-root .arena-topbar{background:rgba(11,13,16,.98)!important;background-color:#0b0d10!important;box-shadow:none!important}`;
-if (!arenaCss.includes(topbarIsolation)) {
-  arenaCss = `${arenaCss.trimEnd()}\n${topbarIsolation}\n`;
+const arenaCssIsolation = [
+  `.arena-root .arena-topbar{background:rgba(11,13,16,.98)!important;background-color:#0b0d10!important;box-shadow:none!important}`,
+  `.arena-root input,.arena-root select,.arena-root textarea{background:#0d1115!important;background-color:#0d1115!important;color:#e9e6df!important;border-color:rgba(255,255,255,.09)!important;color-scheme:dark}`,
+];
+let cssChanged = false;
+for (const rule of arenaCssIsolation) {
+  if (!arenaCss.includes(rule)) {
+    arenaCss = `${arenaCss.trimEnd()}\n${rule}\n`;
+    cssChanged = true;
+  }
+}
+if (cssChanged) {
   fs.writeFileSync(arenaCssPath, arenaCss, "utf8");
-  console.log("Arena topbar CSS isolation applied");
+  console.log("Arena scoped CSS isolation applied");
 } else {
-  console.log("Arena topbar CSS isolation already applied");
+  console.log("Arena scoped CSS isolation already applied");
 }
 
 // Arena adds three current Library references. Keep the existing browser acceptance
