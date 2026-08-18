@@ -1,0 +1,49 @@
+{
+  "checkedAt": "2026-08-18T07:41:44Z",
+  "targetSha": "b3ee4307be59b8c8de2e75c7b3d04f8c4359af47",
+  "mainSha": "b3ee4307be59b8c8de2e75c7b3d04f8c4359af47",
+  "mainMatchesTarget": true,
+  "cloudflareCandidates": [
+    {
+      "id": 95631290820,
+      "name": "Cloudflare Pages",
+      "head_sha": "b3ee4307be59b8c8de2e75c7b3d04f8c4359af47",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-08-18T07:25:24Z",
+      "completed_at": "2026-08-18T07:25:24Z",
+      "details_url": "https://dash.cloudflare.com/?to=/cb78d92d037bc507404dcd640d2f3122/pages/view/wonton-wwm/9c1b44c9-4e93-480e-8d37-728df6236ec2",
+      "external_id": "9c1b44c9-4e93-480e-8d37-728df6236ec2",
+      "app": {
+        "id": 85455,
+        "name": "Cloudflare Workers and Pages",
+        "slug": "cloudflare-workers-and-pages"
+      },
+      "output": {
+        "title": "Deployed successfully",
+        "summary": "<table><tr><td><strong>Latest commit:</strong> </td><td>\n<code>b3ee430</code>\n</td></tr>\n<tr><td><strong>Status:</strong></td><td>&nbsp;\u2705&nbsp; Deploy successful!</td></tr>\n<tr><td><strong>Preview URL:</strong></td><td>\n<a href='https://9c1b44c9.wonton-wwm.pages.dev'>https://9c1b44c9.wonton-wwm.pages.dev</a>\n</td></tr>\n<tr><td><strong>Branch Preview URL:</strong></td><td>\n<a href='https://verification-competitive-v2.wonton-wwm.pages.dev'>https://verification-competitive-v2.wonton-wwm.pages.dev</a>\n</td></tr>\n</table>\n\n[View logs](https://dash.cloudflare.com/?to=/cb78d92d037bc507404dcd640d2f3122/pages/view/wonton-wwm/9c1b44c9-4e93-480e-8d37-728df6236ec2)\n",
+        "text": null
+      },
+      "deployment_id": "9c1b44c9-4e93-480e-8d37-728df6236ec2",
+      "deployment_url": "https://9c1b44c9.wonton-wwm.pages.dev"
+    }
+  ],
+  "combinedStatus": "pending",
+  "commitStatuses": [],
+  "buildInfo": {
+    "product": "Where Winds Meet Build Calculator",
+    "dataVersion": "Global 2.0 \u00b7 Tier 96 \u00b7 100\u4e0a calibration",
+    "schemaVersion": 1,
+    "commit": "b3ee4307be59b8c8de2e75c7b3d04f8c4359af47",
+    "shortCommit": "b3ee4307",
+    "branch": "main",
+    "builtAt": "2026-08-18T06:53:16.058Z",
+    "evidence": {
+      "gearCaps": "Global screenshots + workbook 100\u4e0a",
+      "innerWays": "English Global client + official Global patch notes",
+      "dummyFixture": "Level 96 Sword Trial Boss \u00b7 60 seconds"
+    }
+  },
+  "buildInfoError": null,
+  "buildInfoExactShaMatch": true
+}
