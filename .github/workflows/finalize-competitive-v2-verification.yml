@@ -1,0 +1,196 @@
+name: Finalize Competitive Modes V2 Verification
+
+on:
+  push:
+    branches:
+      - verification/competitive-v2-final-20260818
+    paths:
+      - .github/workflows/finalize-competitive-v2-verification.yml
+
+permissions:
+  contents: write
+  actions: read
+  checks: read
+  pull-requests: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      TARGET_SHA: b3ee4307be59b8c8de2e75c7b3d04f8c4359af47
+      EXPECTED_SHA: b3ee4307be59b8c8de2e75c7b3d04f8c4359af47
+      PRODUCTION_URL: https://wonton-wwm.pages.dev/
+      VERIFY_BRANCH: verification/competitive-v2-final-20260818
+      GH_TOKEN: ${{ github.token }}
+
+    steps:
+      - name: Check out verification branch
+        uses: actions/checkout@v4
+
+      - name: Prove verification branch does not modify product source
+        id: branch_scope
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t changed < <(git diff --name-only "$TARGET_SHA" HEAD)
+          printf 'Verification-only changed paths:\n'
+          printf ' - %s\n' "${changed[@]}"
+          for path in "${changed[@]}"; do
+            case "$path" in
+              .github/workflows/finalize-competitive-v2-verification.yml|scripts/finalize-competitive-v2-verification.py|scripts/runtime-production-final-extra.spec.mjs)
+                ;;
+              *)
+                echo "Unexpected non-verification path: $path" >&2
+                exit 1
+                ;;
+            esac
+          done
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install repository dependencies
+        id: npm_ci
+        continue-on-error: true
+        run: npm ci
+
+      - name: Discover authoritative post-merge live state
+        id: discover
+        continue-on-error: true
+        run: python3 scripts/finalize-competitive-v2-verification.py discover
+
+      - name: Install Chromium verification runtime
+        id: browser_runtime
+        continue-on-error: true
+        shell: bash
+        run: |
+          npm install --no-save --package-lock=false @playwright/test@1.55.0
+          npx playwright install chromium
+
+      - name: Independently re-run exact-SHA Arena production smoke
+        id: arena_smoke
+        continue-on-error: true
+        run: npx playwright test scripts/runtime-production-arena.spec.mjs --reporter=line --workers=1 --timeout=600000
+
+      - name: Independently re-run exact-SHA V1 production smoke
+        id: v1_smoke
+        continue-on-error: true
+        run: npx playwright test scripts/runtime-production-v1.spec.mjs --reporter=line --workers=1 --timeout=600000
+
+      - name: Run final Guild War Library and 390 production coverage
+        id: extra_smoke
+        continue-on-error: true
+        run: npx playwright test scripts/runtime-production-final-extra.spec.mjs --reporter=line --workers=1 --timeout=480000
+
+      - name: Final race check and generate final verification JSON
+        id: finalize
+        continue-on-error: true
+        run: python3 scripts/finalize-competitive-v2-verification.py finalize
+
+      - name: Upload verification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: competitive-modes-v2-final-verification
+          path: |
+            COMPETITIVE_MODES_V2_FINAL_VERIFICATION.json
+            FINAL_EXTRA_PRODUCTION_SMOKE.json
+            production-verification.json
+            V1_PRODUCTION_SMOKE.json
+            verification-work/live_state.json
+            final-extra-production-mobile-390.png
+          if-no-files-found: ignore
+
+      - name: Publish verification result to verification branch
+        if: always()
+        env:
+          BRANCH_SCOPE_OUTCOME: ${{ steps.branch_scope.outcome }}
+          NPM_CI_OUTCOME: ${{ steps.npm_ci.outcome }}
+          DISCOVER_OUTCOME: ${{ steps.discover.outcome }}
+          BROWSER_RUNTIME_OUTCOME: ${{ steps.browser_runtime.outcome }}
+          ARENA_SMOKE_OUTCOME: ${{ steps.arena_smoke.outcome }}
+          V1_SMOKE_OUTCOME: ${{ steps.v1_smoke.outcome }}
+          EXTRA_SMOKE_OUTCOME: ${{ steps.extra_smoke.outcome }}
+          FINALIZE_OUTCOME: ${{ steps.finalize.outcome }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          outcomes=(
+            "$BRANCH_SCOPE_OUTCOME"
+            "$NPM_CI_OUTCOME"
+            "$DISCOVER_OUTCOME"
+            "$BROWSER_RUNTIME_OUTCOME"
+            "$ARENA_SMOKE_OUTCOME"
+            "$V1_SMOKE_OUTCOME"
+            "$EXTRA_SMOKE_OUTCOME"
+            "$FINALIZE_OUTCOME"
+          )
+          all_success=true
+          for outcome in "${outcomes[@]}"; do
+            if [ "$outcome" != "success" ]; then all_success=false; fi
+          done
+
+          if [ "$all_success" = true ] && [ -f COMPETITIVE_MODES_V2_FINAL_VERIFICATION.json ]; then
+            file=COMPETITIVE_MODES_V2_FINAL_VERIFICATION.json
+            message='chore(verification): record Competitive V2 production success'
+          else
+            file=COMPETITIVE_MODES_V2_VERIFICATION_FAILURE.json
+            export FAILURE_CHECKED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          outcomes = {
+              "branch_scope": os.environ["BRANCH_SCOPE_OUTCOME"],
+              "npm_ci": os.environ["NPM_CI_OUTCOME"],
+              "discover": os.environ["DISCOVER_OUTCOME"],
+              "browser_runtime": os.environ["BROWSER_RUNTIME_OUTCOME"],
+              "arena_smoke": os.environ["ARENA_SMOKE_OUTCOME"],
+              "v1_smoke": os.environ["V1_SMOKE_OUTCOME"],
+              "extra_smoke": os.environ["EXTRA_SMOKE_OUTCOME"],
+              "finalize": os.environ["FINALIZE_OUTCOME"],
+          }
+          report = {
+              "checkedAt": os.environ["FAILURE_CHECKED_AT"],
+              "targetSha": os.environ["TARGET_SHA"],
+              "success": False,
+              "stepOutcomes": outcomes,
+              "filesPresent": {
+                  name: Path(name).exists() for name in [
+                      "verification-work/live_state.json",
+                      "production-verification.json",
+                      "V1_PRODUCTION_SMOKE.json",
+                      "FINAL_EXTRA_PRODUCTION_SMOKE.json",
+                      "COMPETITIVE_MODES_V2_FINAL_VERIFICATION.json",
+                  ]
+              },
+          }
+          for name, key in [
+              ("verification-work/live_state.json", "liveState"),
+              ("FINAL_EXTRA_PRODUCTION_SMOKE.json", "extraSmoke"),
+              ("production-verification.json", "arenaSmoke"),
+              ("V1_PRODUCTION_SMOKE.json", "v1Smoke"),
+          ]:
+              path = Path(name)
+              if path.exists():
+                  try: report[key] = json.loads(path.read_text())
+                  except Exception as exc: report[key] = {"readError": str(exc)}
+          Path("COMPETITIVE_MODES_V2_VERIFICATION_FAILURE.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
+          PY
+            message='chore(verification): record Competitive V2 verification failure'
+          fi
+
+          content="$(base64 -w0 "$file")"
+          gh api --method PUT "repos/$GITHUB_REPOSITORY/contents/$file" \
+            -f message="$message" \
+            -f content="$content" \
+            -f branch="$VERIFY_BRANCH" >/tmp/publish-result.json
+          cat /tmp/publish-result.json
+
+          if [ "$all_success" != true ]; then
+            exit 1
+          fi
