@@ -1,0 +1,62 @@
+name: Diagnose Competitive V2 Verification
+
+on:
+  push:
+    branches:
+      - verification/competitive-v2-final-20260818
+    paths:
+      - .github/workflows/diagnose-competitive-v2-verification.yml
+
+permissions:
+  contents: write
+  actions: read
+  checks: read
+  pull-requests: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    env:
+      TARGET_SHA: b3ee4307be59b8c8de2e75c7b3d04f8c4359af47
+      EXPECTED_SHA: b3ee4307be59b8c8de2e75c7b3d04f8c4359af47
+      PRODUCTION_URL: https://wonton-wwm.pages.dev/
+      VERIFY_BRANCH: verification/competitive-v2-final-20260818
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run discovery with exact diagnostics
+        id: discover
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p verification-work
+          python3 scripts/finalize-competitive-v2-verification.py discover 2>&1 | tee verification-work/discover-only.log
+      - name: Publish diagnostic
+        if: always()
+        env:
+          DISCOVER_OUTCOME: ${{ steps.discover.outcome }}
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          log = Path('verification-work/discover-only.log').read_text(errors='replace') if Path('verification-work/discover-only.log').exists() else ''
+          live = None
+          if Path('verification-work/live_state.json').exists():
+              live = json.loads(Path('verification-work/live_state.json').read_text())
+          Path('COMPETITIVE_MODES_V2_DISCOVER_DIAGNOSTIC.json').write_text(json.dumps({
+              'outcome': os.environ['DISCOVER_OUTCOME'],
+              'targetSha': os.environ['TARGET_SHA'],
+              'log': log[-30000:],
+              'liveState': live,
+          }, indent=2), encoding='utf-8')
+          PY
+          file=COMPETITIVE_MODES_V2_DISCOVER_DIAGNOSTIC.json
+          content="$(base64 -w0 "$file")"
+          existing_sha="$(gh api "repos/$GITHUB_REPOSITORY/contents/$file?ref=$VERIFY_BRANCH" --jq .sha 2>/dev/null || true)"
+          if [ -n "$existing_sha" ]; then
+            gh api --method PUT "repos/$GITHUB_REPOSITORY/contents/$file" -f message='chore(verification): update discovery diagnostic' -f content="$content" -f branch="$VERIFY_BRANCH" -f sha="$existing_sha" >/dev/null
+          else
+            gh api --method PUT "repos/$GITHUB_REPOSITORY/contents/$file" -f message='chore(verification): record discovery diagnostic' -f content="$content" -f branch="$VERIFY_BRANCH" >/dev/null
+          fi
