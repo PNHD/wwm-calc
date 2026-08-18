@@ -1,0 +1,46 @@
+name: Diagnose Final Verification Run
+
+on:
+  push:
+    branches:
+      - verification/competitive-v2-final-ed715
+    paths:
+      - .github/workflows/diagnose-final-verification-run.yml
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    env:
+      VERIFY_BRANCH: verification/competitive-v2-final-ed715
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Read final workflow runs and jobs
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json, os, urllib.parse, urllib.request
+          from pathlib import Path
+          repo=os.environ['GITHUB_REPOSITORY']; token=os.environ['GH_TOKEN']; branch=os.environ['VERIFY_BRANCH']
+          h={'Accept':'application/vnd.github+json','Authorization':f'Bearer {token}','X-GitHub-Api-Version':'2022-11-28','User-Agent':'wwm-final-run-diagnostic'}
+          def gh(path):
+              req=urllib.request.Request(f'https://api.github.com{path}',headers=h)
+              with urllib.request.urlopen(req,timeout=45) as r:return json.loads(r.read().decode())
+          q=urllib.parse.urlencode({'branch':branch,'per_page':20})
+          runs=gh(f'/repos/{repo}/actions/workflows/competitive-v2-final-verification.yml/runs?{q}').get('workflow_runs',[])
+          rows=[]
+          for r in runs[:5]:
+              jobs=gh(f"/repos/{repo}/actions/runs/{r['id']}/jobs?per_page=100").get('jobs',[])
+              rows.append({'id':r.get('id'),'run_number':r.get('run_number'),'run_attempt':r.get('run_attempt'),'status':r.get('status'),'conclusion':r.get('conclusion'),'head_sha':r.get('head_sha'),'created_at':r.get('created_at'),'updated_at':r.get('updated_at'),'jobs':[{'id':j.get('id'),'name':j.get('name'),'status':j.get('status'),'conclusion':j.get('conclusion'),'steps':[{'name':s.get('name'),'status':s.get('status'),'conclusion':s.get('conclusion')} for s in j.get('steps',[])]} for j in jobs]})
+          Path('FINAL_RUN_DIAGNOSTIC.json').write_text(json.dumps({'runs':rows},indent=2),encoding='utf-8')
+          print(json.dumps({'runs':[{'id':r['id'],'status':r['status'],'conclusion':r['conclusion']} for r in rows]},indent=2))
+          PY
+      - name: Publish diagnostic
+        shell: bash
+        run: |
+          file=FINAL_RUN_DIAGNOSTIC.json; content="$(base64 -w0 "$file")"; existing="$(gh api "repos/$GITHUB_REPOSITORY/contents/$file?ref=$VERIFY_BRANCH" --jq .sha 2>/dev/null || true)"
+          if [ -n "$existing" ]; then gh api --method PUT "repos/$GITHUB_REPOSITORY/contents/$file" -f message='chore(verification): update final run diagnostic' -f content="$content" -f branch="$VERIFY_BRANCH" -f sha="$existing" >/dev/null; else gh api --method PUT "repos/$GITHUB_REPOSITORY/contents/$file" -f message='chore(verification): record final run diagnostic' -f content="$content" -f branch="$VERIFY_BRANCH" >/dev/null; fi
