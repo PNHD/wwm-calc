@@ -1,9 +1,9 @@
 {
-  "checkedAt": "2026-08-18T07:41:44Z",
+  "checkedAt": "2026-08-18T07:42:43Z",
   "targetSha": "b3ee4307be59b8c8de2e75c7b3d04f8c4359af47",
   "mainSha": "b3ee4307be59b8c8de2e75c7b3d04f8c4359af47",
   "mainMatchesTarget": true,
-  "cloudflareCandidates": [
+  "cloudflareCheckRuns": [
     {
       "id": 95631290820,
       "name": "Cloudflare Pages",
@@ -14,6 +14,13 @@
       "completed_at": "2026-08-18T07:25:24Z",
       "details_url": "https://dash.cloudflare.com/?to=/cb78d92d037bc507404dcd640d2f3122/pages/view/wonton-wwm/9c1b44c9-4e93-480e-8d37-728df6236ec2",
       "external_id": "9c1b44c9-4e93-480e-8d37-728df6236ec2",
+      "deployment_id": "9c1b44c9-4e93-480e-8d37-728df6236ec2",
+      "pages_urls": [
+        "https://9c1b44c9.wonton-wwm.pages.dev",
+        "https://9c1b44c9.wonton-wwm.pages.dev",
+        "https://verification-competitive-v2.wonton-wwm.pages.dev",
+        "https://verification-competitive-v2.wonton-wwm.pages.dev"
+      ],
       "app": {
         "id": 85455,
         "name": "Cloudflare Workers and Pages",
@@ -24,12 +31,83 @@
         "summary": "<table><tr><td><strong>Latest commit:</strong> </td><td>\n<code>b3ee430</code>\n</td></tr>\n<tr><td><strong>Status:</strong></td><td>&nbsp;\u2705&nbsp; Deploy successful!</td></tr>\n<tr><td><strong>Preview URL:</strong></td><td>\n<a href='https://9c1b44c9.wonton-wwm.pages.dev'>https://9c1b44c9.wonton-wwm.pages.dev</a>\n</td></tr>\n<tr><td><strong>Branch Preview URL:</strong></td><td>\n<a href='https://verification-competitive-v2.wonton-wwm.pages.dev'>https://verification-competitive-v2.wonton-wwm.pages.dev</a>\n</td></tr>\n</table>\n\n[View logs](https://dash.cloudflare.com/?to=/cb78d92d037bc507404dcd640d2f3122/pages/view/wonton-wwm/9c1b44c9-4e93-480e-8d37-728df6236ec2)\n",
         "text": null
       },
-      "deployment_id": "9c1b44c9-4e93-480e-8d37-728df6236ec2",
-      "deployment_url": "https://9c1b44c9.wonton-wwm.pages.dev"
+      "looksPreview": true,
+      "looksMainProduction": false
+    },
+    {
+      "id": 95623908961,
+      "name": "Cloudflare Pages",
+      "head_sha": "b3ee4307be59b8c8de2e75c7b3d04f8c4359af47",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-08-18T06:53:34Z",
+      "completed_at": "2026-08-18T06:53:34Z",
+      "details_url": "https://dash.cloudflare.com/?to=/cb78d92d037bc507404dcd640d2f3122/pages/view/wonton-wwm/923b0af1-cb68-4c90-abe9-71cf81149514",
+      "external_id": "923b0af1-cb68-4c90-abe9-71cf81149514",
+      "deployment_id": "923b0af1-cb68-4c90-abe9-71cf81149514",
+      "pages_urls": [
+        "https://923b0af1.wonton-wwm.pages.dev",
+        "https://923b0af1.wonton-wwm.pages.dev"
+      ],
+      "app": {
+        "id": 85455,
+        "name": "Cloudflare Workers and Pages",
+        "slug": "cloudflare-workers-and-pages"
+      },
+      "output": {
+        "title": "Deployed successfully",
+        "summary": "<table><tr><td><strong>Latest commit:</strong> </td><td>\n<code>b3ee430</code>\n</td></tr>\n<tr><td><strong>Status:</strong></td><td>&nbsp;\u2705&nbsp; Deploy successful!</td></tr>\n<tr><td><strong>Preview URL:</strong></td><td>\n<a href='https://923b0af1.wonton-wwm.pages.dev'>https://923b0af1.wonton-wwm.pages.dev</a>\n</td></tr>\n</table>\n\n[View logs](https://dash.cloudflare.com/?to=/cb78d92d037bc507404dcd640d2f3122/pages/view/wonton-wwm/923b0af1-cb68-4c90-abe9-71cf81149514)\n",
+        "text": null
+      },
+      "looksPreview": false,
+      "looksMainProduction": false
     }
   ],
-  "combinedStatus": "pending",
-  "commitStatuses": [],
+  "cloudflareCheckSuites": [
+    {
+      "id": 87037188454,
+      "head_sha": "b3ee4307be59b8c8de2e75c7b3d04f8c4359af47",
+      "head_branch": "main",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-08-18T06:52:30Z",
+      "updated_at": "2026-08-18T06:53:34Z",
+      "app": {
+        "id": 85455,
+        "name": "Cloudflare Workers and Pages",
+        "slug": "cloudflare-workers-and-pages"
+      }
+    },
+    {
+      "id": 87037188936,
+      "head_sha": "b3ee4307be59b8c8de2e75c7b3d04f8c4359af47",
+      "head_branch": "main",
+      "status": "queued",
+      "conclusion": null,
+      "created_at": "2026-08-18T06:52:30Z",
+      "updated_at": "2026-08-18T06:52:30Z",
+      "app": {
+        "id": 4121304,
+        "name": "vercel-pnhd",
+        "slug": "vercel-pnhd"
+      }
+    },
+    {
+      "id": 87037191683,
+      "head_sha": "b3ee4307be59b8c8de2e75c7b3d04f8c4359af47",
+      "head_branch": "main",
+      "status": "in_progress",
+      "conclusion": null,
+      "created_at": "2026-08-18T06:52:31Z",
+      "updated_at": "2026-08-18T07:42:07Z",
+      "app": {
+        "id": 15368,
+        "name": "GitHub Actions",
+        "slug": "github-actions"
+      }
+    }
+  ],
+  "githubDeployments": [],
   "buildInfo": {
     "product": "Where Winds Meet Build Calculator",
     "dataVersion": "Global 2.0 \u00b7 Tier 96 \u00b7 100\u4e0a calibration",
