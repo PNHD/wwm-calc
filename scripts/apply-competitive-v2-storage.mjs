@@ -18,4 +18,12 @@ if (!source.includes(marker)) {
   fs.writeFileSync(path, source, "utf8");
 }
 
-console.log("Competitive V2 storage registry applied deterministically.");
+const validatorPath = "scripts/validate-arena-model.mjs";
+let validator = fs.readFileSync(validatorPath, "utf8");
+const storageImport = `import "./validate-competitive-storage-v2.mjs";`;
+if (!validator.includes(storageImport)) {
+  validator = `${storageImport}\n${validator}`;
+  fs.writeFileSync(validatorPath, validator, "utf8");
+}
+
+console.log("Competitive V2 storage registry and sanitizer regression applied deterministically.");
