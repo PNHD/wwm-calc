@@ -11,6 +11,7 @@ permissions:
   contents: write
   actions: read
   checks: read
+  statuses: read
   pull-requests: read
 
 jobs:
@@ -19,98 +20,93 @@ jobs:
     env:
       TARGET_SHA: b3ee4307be59b8c8de2e75c7b3d04f8c4359af47
       VERIFY_BRANCH: verification/competitive-v2-final-20260818
+      PRODUCTION_URL: https://wonton-wwm.pages.dev/
       GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
-      - name: Inspect exact post-merge push Validate
+      - name: Inspect current exact-SHA deployment evidence
         shell: bash
         run: |
           python3 - <<'PY'
-          import json, os, re, urllib.parse, urllib.request
+          import json, os, re, time, urllib.request
           from pathlib import Path
 
           repo = os.environ['GITHUB_REPOSITORY']
           sha = os.environ['TARGET_SHA']
+          prod = os.environ['PRODUCTION_URL']
           token = os.environ['GH_TOKEN']
           headers = {
               'Accept': 'application/vnd.github+json',
               'Authorization': f'Bearer {token}',
               'X-GitHub-Api-Version': '2022-11-28',
-              'User-Agent': 'wwm-competitive-v2-diagnostic',
+              'User-Agent': 'wwm-competitive-v2-deployment-diagnostic',
           }
-          def get_json(path):
+          def gh(path):
               req = urllib.request.Request(f'https://api.github.com{path}', headers=headers)
               with urllib.request.urlopen(req, timeout=45) as r:
                   return json.loads(r.read().decode())
-          def get_bytes(path):
-              req = urllib.request.Request(f'https://api.github.com{path}', headers=headers)
-              with urllib.request.urlopen(req, timeout=90) as r:
-                  return r.read()
+          def get_json(url):
+              req = urllib.request.Request(url, headers={'Accept':'application/json','Cache-Control':'no-cache','User-Agent':'wwm-competitive-v2-deployment-diagnostic'})
+              with urllib.request.urlopen(req, timeout=30) as r:
+                  return json.loads(r.read().decode())
+          def uuid(text):
+              m = re.search(r'\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b', text or '')
+              return m.group(0) if m else None
+          def pages_url(text):
+              m = re.search(r'https://[a-zA-Z0-9-]+\.wonton-wwm\.pages\.dev/?', text or '')
+              return m.group(0) if m else None
 
-          query = urllib.parse.urlencode({'head_sha': sha, 'event': 'push', 'per_page': 100})
-          runs = get_json(f'/repos/{repo}/actions/runs?{query}').get('workflow_runs', [])
-          matches = [r for r in runs if r.get('name') == 'Validate' and r.get('event') == 'push' and r.get('head_sha') == sha]
-          matches.sort(key=lambda r: r.get('created_at') or '')
-          if not matches:
-              raise SystemExit('No exact push Validate found')
-          run = matches[-1]
-          jobs = get_json(f"/repos/{repo}/actions/runs/{run['id']}/jobs?per_page=100").get('jobs', [])
-          job_rows = []
-          for job in jobs:
-              steps = job.get('steps', [])
-              failed = [s for s in steps if s.get('conclusion') not in ('success', 'skipped')]
-              log_text = ''
-              try:
-                  raw = get_bytes(f"/repos/{repo}/actions/jobs/{job['id']}/logs")
-                  log_text = raw.decode('utf-8', errors='replace')
-              except Exception as exc:
-                  log_text = f'LOG_FETCH_ERROR: {exc}'
-              # Keep the tail and error-centered excerpts without bloating the repository.
-              lines = log_text.splitlines()
-              error_indexes = [i for i, line in enumerate(lines) if re.search(r'(?i)(error|failed|failure|timeout|expect\(|traceback)', line)]
-              excerpts = []
-              for idx in error_indexes[-20:]:
-                  start, end = max(0, idx - 4), min(len(lines), idx + 8)
-                  excerpts.append('\n'.join(lines[start:end]))
-              job_rows.append({
-                  'id': job.get('id'), 'name': job.get('name'), 'status': job.get('status'),
-                  'conclusion': job.get('conclusion'), 'started_at': job.get('started_at'),
-                  'completed_at': job.get('completed_at'),
-                  'failedSteps': failed,
-                  'steps': steps,
-                  'logErrorExcerpts': excerpts[-12:],
-                  'logTail': '\n'.join(lines[-350:]),
-              })
+          branch = gh(f'/repos/{repo}/branches/main')
+          main_sha = branch.get('commit',{}).get('sha')
+          checks = gh(f'/repos/{repo}/commits/{sha}/check-runs?per_page=100').get('check_runs',[])
+          statuses = gh(f'/repos/{repo}/commits/{sha}/status')
+          candidates=[]
+          for c in checks:
+              app=c.get('app') or {}
+              output=c.get('output') or {}
+              raw=json.dumps(c, ensure_ascii=False)
+              hay=' '.join([str(c.get('name') or ''),str(c.get('details_url') or ''),str(c.get('external_id') or ''),str(app.get('name') or ''),str(app.get('slug') or ''),str(output.get('title') or ''),str(output.get('summary') or ''),str(output.get('text') or '')]).lower()
+              if 'cloudflare' in hay or 'pages' in hay or 'wonton-wwm' in hay:
+                  candidates.append({
+                      'id':c.get('id'),'name':c.get('name'),'head_sha':c.get('head_sha'),'status':c.get('status'),'conclusion':c.get('conclusion'),
+                      'started_at':c.get('started_at'),'completed_at':c.get('completed_at'),'details_url':c.get('details_url'),'external_id':c.get('external_id'),
+                      'app':{'id':app.get('id'),'name':app.get('name'),'slug':app.get('slug')},
+                      'output':{'title':output.get('title'),'summary':output.get('summary'),'text':output.get('text')},
+                      'deployment_id': uuid(str(c.get('external_id') or '')) or uuid(str(c.get('details_url') or '')) or uuid(raw),
+                      'deployment_url': pages_url(raw),
+                  })
+          status_rows=[]
+          for s in statuses.get('statuses',[]):
+              raw=json.dumps(s,ensure_ascii=False)
+              status_rows.append({'id':s.get('id'),'state':s.get('state'),'context':s.get('context'),'target_url':s.get('target_url'),'created_at':s.get('created_at'),'updated_at':s.get('updated_at'),'deployment_id':uuid(raw),'deployment_url':pages_url(raw)})
 
-          report = {
-              'targetSha': sha,
-              'run': {
-                  'id': run.get('id'), 'run_number': run.get('run_number'), 'name': run.get('name'),
-                  'event': run.get('event'), 'head_sha': run.get('head_sha'), 'head_branch': run.get('head_branch'),
-                  'status': run.get('status'), 'conclusion': run.get('conclusion'),
-                  'created_at': run.get('created_at'), 'updated_at': run.get('updated_at'),
-                  'run_attempt': run.get('run_attempt'), 'html_url': run.get('html_url'),
-              },
-              'jobs': job_rows,
+          build_info=None; build_error=None
+          try:
+              build_info=get_json(f'{prod}build-info.json?verify={int(time.time())}')
+          except Exception as exc:
+              build_error=repr(exc)
+          report={
+              'checkedAt': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
+              'targetSha':sha,'mainSha':main_sha,'mainMatchesTarget':main_sha==sha,
+              'cloudflareCandidates':candidates,
+              'combinedStatus':statuses.get('state'),
+              'commitStatuses':status_rows,
+              'buildInfo':build_info,'buildInfoError':build_error,
+              'buildInfoExactShaMatch': bool(build_info and build_info.get('commit')==sha and build_info.get('branch')=='main'),
           }
-          Path('COMPETITIVE_MODES_V2_PUSH_VALIDATE_DIAGNOSTIC.json').write_text(json.dumps(report, indent=2), encoding='utf-8')
-          print(json.dumps(report['run'], indent=2))
-          for job in job_rows:
-              print(job['id'], job['name'], job['conclusion'], [s.get('name') for s in job['failedSteps']])
+          Path('COMPETITIVE_MODES_V2_DEPLOYMENT_DIAGNOSTIC.json').write_text(json.dumps(report,indent=2),encoding='utf-8')
+          print(json.dumps(report,indent=2))
           PY
-
-      - name: Publish diagnostic
+      - name: Publish deployment diagnostic
         if: always()
         shell: bash
         run: |
-          file=COMPETITIVE_MODES_V2_PUSH_VALIDATE_DIAGNOSTIC.json
-          if [ ! -f "$file" ]; then
-            printf '{"success":false,"error":"diagnostic file was not generated"}\n' > "$file"
-          fi
+          file=COMPETITIVE_MODES_V2_DEPLOYMENT_DIAGNOSTIC.json
+          if [ ! -f "$file" ]; then printf '{"success":false,"error":"deployment diagnostic not generated"}\n' > "$file"; fi
           content="$(base64 -w0 "$file")"
           existing_sha="$(gh api "repos/$GITHUB_REPOSITORY/contents/$file?ref=$VERIFY_BRANCH" --jq .sha 2>/dev/null || true)"
           if [ -n "$existing_sha" ]; then
-            gh api --method PUT "repos/$GITHUB_REPOSITORY/contents/$file" -f message='chore(verification): update push Validate diagnostic' -f content="$content" -f branch="$VERIFY_BRANCH" -f sha="$existing_sha" >/dev/null
+            gh api --method PUT "repos/$GITHUB_REPOSITORY/contents/$file" -f message='chore(verification): update deployment diagnostic' -f content="$content" -f branch="$VERIFY_BRANCH" -f sha="$existing_sha" >/dev/null
           else
-            gh api --method PUT "repos/$GITHUB_REPOSITORY/contents/$file" -f message='chore(verification): record push Validate diagnostic' -f content="$content" -f branch="$VERIFY_BRANCH" >/dev/null
+            gh api --method PUT "repos/$GITHUB_REPOSITORY/contents/$file" -f message='chore(verification): record deployment diagnostic' -f content="$content" -f branch="$VERIFY_BRANCH" >/dev/null
           fi
