@@ -37,4 +37,6 @@ if (!test.includes(testMarker)) {
   fs.writeFileSync(testPath, test, "utf8");
 }
 
+const debugLines = fs.readFileSync(path, "utf8").split("\n");
+console.log("Competitive V2 GuildWar generated tail:\n" + debugLines.slice(Math.max(0, debugLines.length - 12)).map((line, index) => `${debugLines.length - 11 + index}: ${line}`).join("\n"));
 console.log("Competitive V2 battlefield map/shared objective-state contract applied deterministically.");
