@@ -44,9 +44,9 @@ test("Arena is a first-class isolated workspace with 1v1, 3v3, sharing, Library 
   await expect(page).toHaveURL(/#arena\/overview$/);
   await expect(page.getByTestId("arena-overview")).toBeVisible();
   const arenaSwitcher = page.getByRole("navigation", { name: "Product workspaces" });
-  await expect(arenaSwitcher.getByText("PvE", { exact: true })).toBeVisible();
-  await expect(arenaSwitcher.getByText("Arena", { exact: true })).toBeVisible();
-  await expect(arenaSwitcher.getByText("Guild War", { exact: true })).toBeVisible();
+  await expect(arenaSwitcher.getByRole("button", { name: /^PvE\b/i })).toBeVisible();
+  await expect(arenaSwitcher.getByRole("button", { name: /^Arena\b/i })).toBeVisible();
+  await expect(arenaSwitcher.getByRole("button", { name: /^Guild War\b/i })).toBeVisible();
   await expect(page.getByText("Bamboocut-Dust", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("BURST PRESSURE", { exact: true })).toBeVisible();
   await expect(page.getByText("NEXT ACTION", { exact: true })).toBeVisible();
