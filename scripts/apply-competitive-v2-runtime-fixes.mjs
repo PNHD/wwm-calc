@@ -45,6 +45,38 @@ function replaceContract(path, marker, before, after, label) {
   }
 }
 
+// P0 correctness: the legacy-compatible Guild War workspace model must not
+// silently choose Arena (or Normal) Attunement when current Global applicability
+// is unresolved. Explicit historical selections remain representable, but the
+// default/fallback is UNKNOWN and an unknown selector resolves to no profile.
+{
+  const path = "src/gvg/model.js";
+  const marker = "COMPETITIVE_V2_GVG_ATTUNEMENT_UNKNOWN_DEFAULT";
+  let source = read(path);
+  if (!source.includes(marker)) {
+    const selectBefore = `export function selectAttunementProfile(profiles, selected) {\n  if (selected === "ARENA") return profiles?.arena ?? null;\n  return profiles?.normal ?? null;\n}`;
+    const selectAfter = `export function selectAttunementProfile(profiles, selected) {\n  if (selected === "ARENA") return profiles?.arena ?? null;\n  if (selected === "NORMAL") return profiles?.normal ?? null;\n  return null;\n}`;
+    const signatureBefore = `\${member.gvgSelectedProfile ?? "ARENA"}`;
+    const signatureAfter = `\${member.gvgSelectedProfile ?? "UNKNOWN"}`;
+    const defaultBefore = `attunementProfiles: { normal: { name: "PvE / Normal", source: "legacy-compatible" }, arena: { name: "Arena", source: "separate-profile" }, gvgSelected: "ARENA" },`;
+    const defaultAfter = `attunementProfiles: { normal: { name: "PvE / Normal", source: "legacy-compatible" }, arena: { name: "Arena", source: "separate-profile" }, gvgSelected: "UNKNOWN" /* COMPETITIVE_V2_GVG_ATTUNEMENT_UNKNOWN_DEFAULT */ },`;
+    for (const [before, label] of [[selectBefore, "selector"], [signatureBefore, "roster signature"], [defaultBefore, "workspace default"]]) if (!source.includes(before)) throw new Error(`Competitive V2 runtime fix: Guild War Attunement ${label} anchor missing`);
+    source = source.replace(selectBefore, selectAfter).replace(signatureBefore, signatureAfter).replace(defaultBefore, defaultAfter);
+    if (!source.includes(marker)) throw new Error("Competitive V2 runtime fix: Guild War Attunement UNKNOWN marker missing");
+    write(path, source);
+  }
+}
+
+// Regression for the P0 default: explicit profiles may still be selected, but
+// UNKNOWN never aliases to Normal/Arena and a fresh workspace stays UNKNOWN.
+replaceContract(
+  "scripts/validate-gvg-model.mjs",
+  "COMPETITIVE_V2_GVG_ATTUNEMENT_UNKNOWN_TEST",
+  `assert.equal(selectAttunementProfile(profiles, "ARENA").attack, undefined);`,
+  `assert.equal(selectAttunementProfile(profiles, "ARENA").attack, undefined);\nassert.equal(selectAttunementProfile(profiles, "UNKNOWN"), null);\nassert.equal(defaultWorkspace().attunementProfiles.gvgSelected, "UNKNOWN"); // COMPETITIVE_V2_GVG_ATTUNEMENT_UNKNOWN_TEST`,
+  "Guild War Attunement UNKNOWN regression",
+);
+
 // Selector compatibility: keep assertions tied to the semantic surface instead
 // of changing product copy solely to satisfy Playwright accessible-name/text rules.
 replaceContract(
@@ -71,4 +103,23 @@ replaceContract(
   "Arena no-universal-winner assertion",
 );
 
-console.log("Competitive V2 runtime routing, clone and scoped acceptance contracts applied deterministically.");
+// Post-merge production smoke must exercise the V2 Guild War strategy surface,
+// not the superseded strategy-board test id, and seeded compatibility data must
+// not reintroduce an assumed Arena Attunement profile.
+replaceContract(
+  "scripts/runtime-production-v1.spec.mjs",
+  "COMPETITIVE_V2_PROD_GVG_STRATEGY",
+  `  await expect(page.getByTestId("gvg-strategy-board")).toBeVisible();`,
+  `  await expect(page.getByTestId("gvg-strategy" /* COMPETITIVE_V2_PROD_GVG_STRATEGY */)).toBeVisible();\n  await expect(page.locator('[data-objective-id="BULWARK"]')).toBeVisible();`,
+  "production Guild War V2 strategy smoke",
+);
+
+replaceContract(
+  "scripts/runtime-production-v1.spec.mjs",
+  "COMPETITIVE_V2_PROD_GVG_ATTUNEMENT_UNKNOWN",
+  `gvgSelectedProfile: "ARENA",`,
+  `gvgSelectedProfile: "UNKNOWN" /* COMPETITIVE_V2_PROD_GVG_ATTUNEMENT_UNKNOWN */,`,
+  "production Guild War Attunement seed",
+);
+
+console.log("Competitive V2 runtime routing, UNKNOWN defaults, clone and scoped acceptance contracts applied deterministically.");
