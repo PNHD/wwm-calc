@@ -29,12 +29,27 @@ async function noOverflow(page) { const row = await page.evaluate(() => ({ inner
   await expect(page).toHaveURL(/#arena\/overview$/);
   await expect(page.getByTestId("arena-overview")).toBeVisible();
 
+  const arenaModeLabels = ["1v1","3v3","Group Strategy","5v5 Arena","Perception Forest","Training Terrace"];
   const modes = page.getByLabel("Arena mode").first();
-  for (const label of ["1v1","3v3","Group Strategy","5v5 Arena","Perception Forest","Training Terrace"]) await expect(modes.getByRole("button", { name: label, exact: true })).toBeVisible();
-  await expect(page.getByText("24/7", { exact: true }).first()).toBeVisible();
-  await expect(page.getByText(/Choose the ruleset before the build/i)).toBeVisible();
+  for (const label of arenaModeLabels) {
+    const button = modes.getByRole("button", { name: label, exact: true });
+    await expect(button).toBeVisible();
+    await button.click();
+    await expect(button).toHaveClass(/is-active/);
+    await expect(page.getByTestId("arena-mode-truth").getByRole("heading", { name: label, exact: true })).toBeVisible();
+  }
+  await expect(page.getByText("Training Terrace is not ranked truth", { exact: true })).toBeVisible();
+  await page.goto(`${base}#arena/attunement`, { waitUntil: "networkidle" });
+  await expect(page.getByTestId("arena-attunement")).toBeVisible();
+  await expect(page.getByTestId("arena-attunement").getByRole("heading", { name: "Training Terrace", exact: true })).toBeVisible();
+  await expect(page.getByTestId("arena-attunement")).toContainText("UNKNOWN");
 
-  await modes.getByRole("button", { name: "3v3", exact: true }).click();
+  await page.goto(`${base}#arena/overview`, { waitUntil: "networkidle" });
+  await expect(page.getByText(/Choose the ruleset before the build/i)).toBeVisible();
+  await page.getByLabel("Arena mode").first().getByRole("button", { name: "1v1", exact: true }).click();
+  await expect(page.getByText("24/7", { exact: true }).first()).toBeVisible();
+
+  await page.getByLabel("Arena mode").first().getByRole("button", { name: "3v3", exact: true }).click();
   await expect(page.getByTestId("arena-3v3-composition")).toBeVisible();
   await expect(page.getByText(/One revive opportunity · 10m range · 15s window/i)).toBeVisible();
   await expect(page.getByText(/Same Martial Art ≤ 2 per team/i)).toBeVisible();
