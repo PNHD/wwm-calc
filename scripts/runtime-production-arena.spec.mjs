@@ -97,7 +97,7 @@ test("production is exact-main-SHA and critical Arena smoke passes", async ({ pa
   await expect(page.getByText("GET_UP_PROTECTION", { exact: true })).toBeVisible();
 
   await page.goto(`${base}#arena/overview`);
-  await page.getByRole("button", { name: "3v3", exact: true }).click();
+  await page.getByLabel("Arena mode").first().getByRole("button", { name: "3v3", exact: true }).click();
   await page.goto(`${base}#arena/matchups`);
   await expect(page.getByTestId("arena-3v3-composition")).toBeVisible();
   await expect(page.getByText(/same Martial Art ≤ 2/i)).toBeVisible();
