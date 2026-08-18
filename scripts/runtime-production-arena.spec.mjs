@@ -38,7 +38,7 @@ async function assertNoHorizontalOverflow(page) {
 }
 
 async function assertArenaMode(page, label) {
-  const picker = page.getByLabel("Arena mode");
+  const picker = page.getByLabel("Arena mode").first();
   const button = picker.getByRole("button", { name: label, exact: true });
   await button.click();
   await expect(button).toHaveClass(/is-active/);
