@@ -34,7 +34,6 @@ test("Arena is a first-class isolated workspace with 1v1, 3v3, sharing, Library 
   page.on("console", (message) => { if (message.type() === "error") consoleErrors.push(message.text()); });
   await seedArena(page);
 
-  // Existing PvE opens unchanged and exposes the upgraded global workspace switcher.
   let response = await page.goto(`${base}#pve/overview`, { waitUntil: "networkidle" });
   expect(response?.ok()).toBeTruthy();
   await expect(page.getByTestId("pve-overview")).toBeVisible();
@@ -42,7 +41,6 @@ test("Arena is a first-class isolated workspace with 1v1, 3v3, sharing, Library 
   await expect(legacySwitcher.getByRole("button", { name: /Arena/i })).toBeVisible();
   await legacySwitcher.getByRole("button", { name: /Arena/i }).click();
 
-  // Arena overview and three first-class contexts.
   await expect(page).toHaveURL(/#arena\/overview$/);
   await expect(page.getByTestId("arena-overview")).toBeVisible();
   const arenaSwitcher = page.getByRole("navigation", { name: "Product workspaces" });
@@ -53,7 +51,6 @@ test("Arena is a first-class isolated workspace with 1v1, 3v3, sharing, Library 
   await expect(page.getByText("BURST PRESSURE", { exact: true })).toBeVisible();
   await expect(page.getByText("NEXT ACTION", { exact: true })).toBeVisible();
 
-  // Build reads a copy of PvE inventory only and keeps Arena Attunement separate.
   await page.goto(`${base}#arena/build`);
   await expect(page.getByTestId("arena-build")).toBeVisible();
   await expect(page.getByText(/read-only snapshot/i)).toBeVisible();
@@ -67,7 +64,6 @@ test("Arena is a first-class isolated workspace with 1v1, 3v3, sharing, Library 
   expect(pveAfterAttune).toBe(pveBeforeAttune);
   expect(arenaBeforeAttune).toBeTruthy();
 
-  // 1v1 Matchup Lab is qualitative/deterministic and does not claim a win probability.
   await page.goto(`${base}#arena/matchups`);
   await expect(page.getByTestId("arena-matchup-result")).toBeVisible();
   await page.getByLabel("Opponent Path").selectOption({ label: "Bamboocut-Wind" });
@@ -75,14 +71,12 @@ test("Arena is a first-class isolated workspace with 1v1, 3v3, sharing, Library 
   await expect(page.getByText(/not an empirical win probability/i)).toBeVisible();
   expect((await page.locator("body").innerText()).includes("63.7% win chance")).toBe(false);
 
-  // Bamboocut-Dust current Arena mechanics render from current evidence.
   await page.goto(`${base}#arena/skills`);
   await expect(page.getByText(/Burn and Bury:/)).toBeVisible();
   await expect(page.getByText(/unblockable; golden-flash warning/i)).toBeVisible();
   await expect(page.getByText(/Tenacity starts 0.5s/i)).toBeVisible();
   await expect(page.getByText(/Scarlet Spin/i).first()).toBeVisible();
 
-  // State/resource simulator runs and exposes Execute / Guarding Qi Core semantics.
   await page.goto(`${base}#arena/simulation`);
   await expect(page.getByTestId("arena-simulation")).toBeVisible();
   await expect(page.getByText("GET_UP_PROTECTION", { exact: true })).toBeVisible();
@@ -91,7 +85,6 @@ test("Arena is a first-class isolated workspace with 1v1, 3v3, sharing, Library 
   await page.getByLabel("Reaction assumption").selectOption("perfect");
   await expect(page.getByText(/not a player skill rating/i)).toBeVisible();
 
-  // Switch to 3v3 and validate current composition restriction + revive model.
   await page.goto(`${base}#arena/overview`);
   await page.getByRole("button", { name: "3v3", exact: true }).click();
   await page.goto(`${base}#arena/matchups`);
@@ -104,11 +97,11 @@ test("Arena is a first-class isolated workspace with 1v1, 3v3, sharing, Library 
   await page.getByLabel("Player 3 primary Martial Art").selectOption(duplicate);
   await expect(page.getByText(/appears more than twice/i)).toBeVisible();
 
-  // Arena Community Library entries are first-class, read-only, and clone without activating/overwriting.
   await page.goto(`${base}#library/arena`, { waitUntil: "networkidle" });
   await expect(page.getByRole("button", { name: "Arena Builds", exact: true })).toBeVisible();
-  await expect(page.getByText("Bamboocut-Dust Arena", { exact: true })).toBeVisible();
-  await page.getByText("Bamboocut-Dust Arena", { exact: true }).click();
+  const arenaLibraryCard = page.locator('[data-library-id="bamboocut-dust-arena-control-pressure"]');
+  await expect(arenaLibraryCard.getByText("Bamboocut-Dust Arena", { exact: true })).toBeVisible();
+  await arenaLibraryCard.getByRole("button", { name: "View", exact: true }).click();
   await expect(page.getByTestId("library-build-detail")).toBeVisible();
   const beforeClone = await page.evaluate(() => JSON.parse(localStorage.getItem("wwm_arena_state_v1") || "{}"));
   await page.getByRole("button", { name: /Clone to My Workspace/i }).click();
@@ -116,7 +109,6 @@ test("Arena is a first-class isolated workspace with 1v1, 3v3, sharing, Library 
   expect(afterClone.activeProfileId).toBe(beforeClone.activeProfileId);
   expect(afterClone.profiles.length).toBe(beforeClone.profiles.length + 1);
 
-  // Dedicated Arena share flow: read-only landing then clone is isolated.
   await page.goto(`${base}#arena/transfer`);
   await page.getByRole("button", { name: /Generate read-only share/i }).click();
   const shareLink = await page.getByLabel("Arena share token").inputValue();
@@ -129,7 +121,6 @@ test("Arena is a first-class isolated workspace with 1v1, 3v3, sharing, Library 
   const activeAfterSharedClone = await page.evaluate(() => JSON.parse(localStorage.getItem("wwm_arena_state_v1") || "{}").activeProfileId);
   expect(activeAfterSharedClone).toBe(activeBeforeSharedClone);
 
-  // History persists locally and remains descriptive.
   await page.goto(`${base}#arena/history`);
   await expect(page.getByTestId("arena-history")).toBeVisible();
   await page.getByLabel("Opponent Path").selectOption({ label: "Bamboocut-Wind" });
@@ -141,17 +132,14 @@ test("Arena is a first-class isolated workspace with 1v1, 3v3, sharing, Library 
   await page.reload({ waitUntil: "networkidle" });
   await expect(page.getByText("Observed manual Arena result", { exact: true })).toBeVisible();
 
-  // Guild War opens unchanged from the Arena top switcher.
   await page.goto(`${base}#arena/overview`);
   await page.getByRole("navigation", { name: "Product workspaces" }).getByRole("button", { name: /Guild War/i }).click();
   await expect(page.getByTestId("gvg-overview")).toBeVisible();
 
-  // Keyboard/focus sanity.
   await page.goto(`${base}#arena/overview`);
   await page.keyboard.press("Tab");
   expect(await page.evaluate(() => document.activeElement?.tagName)).not.toBe("BODY");
 
-  // Required visual QA captures: 1440 x six views, 1024 x two, 390 x four.
   const views1440 = ["overview", "build", "matchups", "compare", "simulation", "history"];
   for (const view of views1440) {
     await page.goto(`${base}#arena/${view}`);
