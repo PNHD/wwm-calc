@@ -1,0 +1,22 @@
+{
+  "checkedAt": "2026-08-18T07:30:48Z",
+  "targetSha": "b3ee4307be59b8c8de2e75c7b3d04f8c4359af47",
+  "success": false,
+  "stepOutcomes": {
+    "branch_scope": "success",
+    "npm_ci": "success",
+    "discover": "failure",
+    "browser_runtime": "success",
+    "arena_smoke": "failure",
+    "v1_smoke": "failure",
+    "extra_smoke": "failure",
+    "finalize": "failure"
+  },
+  "filesPresent": {
+    "verification-work/live_state.json": false,
+    "production-verification.json": false,
+    "V1_PRODUCTION_SMOKE.json": false,
+    "FINAL_EXTRA_PRODUCTION_SMOKE.json": false,
+    "COMPETITIVE_MODES_V2_FINAL_VERIFICATION.json": false
+  }
+}
