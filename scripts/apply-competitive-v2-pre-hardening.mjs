@@ -46,4 +46,19 @@ function write(path, source) { fs.writeFileSync(path, source, "utf8"); }
   }
 }
 
-console.log("Competitive V2 pre-hardening Guild War Attunement UNKNOWN generator contract applied deterministically.");
+// runtime-final2 patches a Playwright line containing a nested template literal.
+// Escape the inner ${qaDir} placeholder before importing that module so Node does
+// not evaluate it as a variable in the migration script itself.
+{
+  const path = "scripts/apply-competitive-v2-runtime-final2.mjs";
+  const marker = "COMPETITIVE_V2_QADIR_LITERAL_NORMALIZED";
+  let source = read(path);
+  if (!source.includes(marker)) {
+    const needle = "${qaDir}";
+    if (!source.includes(needle)) throw new Error("Competitive V2 pre-hardening: workspace QA nested template anchor missing");
+    source = `// ${marker}\n${source.replaceAll(needle, "\\${qaDir}")}`;
+    write(path, source);
+  }
+}
+
+console.log("Competitive V2 pre-hardening Guild War Attunement UNKNOWN and runtime-template contracts applied deterministically.");
