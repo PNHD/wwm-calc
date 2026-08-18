@@ -34,5 +34,6 @@ patch("src/product/GuildWarWorkspace.tsx", "V1_GVG_IMPORT_TYPE_CONTRACT", (sourc
 });
 
 await import("./apply-competitive-v2-runtime-fixes.mjs");
+await import("./apply-competitive-v2-runtime-final.mjs");
 
 console.log("Competitive V2 compatibility contracts applied deterministically.");
