@@ -23,10 +23,11 @@ class MemoryStorage {
 
 const registryKeys = new Set(STORAGE_REGISTRY.map((item) => item.key));
 for (const key of [
-  "wwm_product_shell_v2", "wwm_selected_build", "wwm_chars_v3", "wwm_t91_custom_config",
+  "wwm_product_shell_v2", "wwm_uid", "wwm_selected_build", "wwm_chars_v3", "wwm_t91_custom_config",
   "wwm_t91_profiles", "wwm_skill_overrides", "wwm_timing_overrides", "wwm_rotation_presets",
-  "wwm_relay_cooldowns", "wwm_arena_state_v1", "wwm_arena_history_v1", "wwm_gvg_workspace_v1",
-  "wwm_library_favorites_v1", "wwm_library_gvg_clones_v1",
+  "wwm_relay_cooldowns", "wwm_arena_state_v1", "wwm_arena_history_v1", "wwm_arena_library_compare_v1",
+  "wwm_gvg_workspace_v1", "wwm_library_favorites_v1", "wwm_library_recent_v1",
+  "wwm_library_clone_descriptor_v1", "wwm_library_gvg_clones_v1",
 ]) assert.ok(registryKeys.has(key), `storage registry missing ${key}`);
 
 for (const raw of ["", "{", "not-json"]) {
