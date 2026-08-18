@@ -33,4 +33,6 @@ patch("src/product/GuildWarWorkspace.tsx", "V1_GVG_IMPORT_TYPE_CONTRACT", (sourc
   return `// V1_GVG_IMPORT_TYPE_CONTRACT — V2 import validation is handled by validateShareEnvelope/migrateWorkspace.\n${source}`;
 });
 
+await import("./apply-competitive-v2-runtime-fixes.mjs");
+
 console.log("Competitive V2 compatibility contracts applied deterministically.");
