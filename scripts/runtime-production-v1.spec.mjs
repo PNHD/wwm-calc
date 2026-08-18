@@ -92,7 +92,10 @@ test("production is exact main SHA and V1 critical surfaces pass", async ({ page
   await page.goto(`${base}#shared-build=${token}`, { waitUntil: "networkidle" });
   await expect(page.getByTestId("shared-build-landing")).toBeVisible();
 
-  await page.evaluate(() => localStorage.setItem("wwm_gvg_workspace_v1", "{"));
+  await page.evaluate(() => {
+    localStorage.removeItem("wwm_gvg_workspace_v1__recovery_backup_v1");
+    localStorage.setItem("wwm_gvg_workspace_v1", "{");
+  });
   await page.goto(`${base}#gvg/roster`, { waitUntil: "networkidle" });
   await expect(page.getByText(/Some saved Guild War data could not be loaded/i)).toBeVisible();
   expect(await page.evaluate(() => localStorage.getItem("wwm_gvg_workspace_v1"))).toBe("{");
