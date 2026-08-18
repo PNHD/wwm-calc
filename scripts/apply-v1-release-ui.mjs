@@ -36,4 +36,12 @@ patch("src/arena/ArenaWorkspace.tsx", "V1_MODEL_ABOUT_ARENA", [
   ],
 ]);
 
-console.log("V1 model/about and report-issue UI applied deterministically.");
+patch("src/product/GuildWarWorkspace.tsx", "V1_GVG_IMPORT_TYPE_CONTRACT", [
+  [
+    `        patchWorkspace({ importedBuildReference: imported.importedBuildReference });`,
+    `        patchWorkspace({ importedBuildReference: (imported as any).importedBuildReference }); // V1_GVG_IMPORT_TYPE_CONTRACT`,
+    "Guild War imported build type bridge",
+  ],
+]);
+
+console.log("V1 model/about, report-issue UI and generated type contracts applied deterministically.");
