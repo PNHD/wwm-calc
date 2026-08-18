@@ -3,6 +3,7 @@ export const MAX_RECOVERY_BACKUP_CHARS = 128 * 1024;
 
 export const STORAGE_REGISTRY = Object.freeze([
   { key: "wwm_product_shell_v2", owner: "GLOBAL", schemaVersion: 2, migration: "tolerant shell defaults", fallback: "workspace shell defaults", size: "small", corruption: "reset shell only" },
+  { key: "wwm_uid", owner: "GLOBAL", schemaVersion: 1, migration: "verified {uid,name,server} access-gate record", fallback: "prompt for Player ID again", size: "tiny", corruption: "UID gate only; never clear gameplay data" },
   { key: "wwm_selected_build", owner: "PVE", schemaVersion: 1, migration: "allowlisted build fallback", fallback: "Bamboocut-Dust", size: "tiny", corruption: "reset selected build only" },
   { key: "wwm_chars_v3", owner: "PVE", schemaVersion: 3, migration: "sanitizeChars", fallback: "factory character/scheme", size: "medium-large", corruption: "bounded PvE recovery" },
   { key: "wwm_t91_custom_config", owner: "PVE", schemaVersion: 1, migration: "legacy tolerant", fallback: "factory panel defaults", size: "small", corruption: "ignore config only" },
@@ -13,6 +14,7 @@ export const STORAGE_REGISTRY = Object.freeze([
   { key: "wwm_relay_cooldowns", owner: "PVE", schemaVersion: 1, migration: "legacy tolerant", fallback: "empty cooldowns", size: "small", corruption: "ignore cooldowns only" },
   { key: "wwm_arena_state_v1", owner: "ARENA", schemaVersion: 1, migration: "v0/unversioned → v1 sanitize", fallback: "default Arena profile", size: "medium", corruption: "backup + Arena-only recovery" },
   { key: "wwm_arena_history_v1", owner: "ARENA", schemaVersion: 1, migration: "entry sanitize", fallback: "empty local history", size: "medium", corruption: "history-only recovery" },
+  { key: "wwm_arena_library_compare_v1", owner: "ARENA", schemaVersion: 1, migration: "legacy local descriptor → session-scoped comparison descriptor", fallback: "no Library reference selected for Arena compare", size: "tiny", corruption: "drop comparison descriptor only" },
   { key: "wwm_gvg_workspace_v1", owner: "GUILD_WAR", schemaVersion: 1, migration: "v0 → v1 bounded sanitize", fallback: "empty Guild War plan", size: "large", corruption: "backup + Guild-War-only recovery" },
   { key: "wwm_library_favorites_v1", owner: "LIBRARY", schemaVersion: 1, migration: "string-ID list sanitize", fallback: "empty favorites", size: "tiny", corruption: "favorites-only recovery" },
   { key: "wwm_library_recent_v1", owner: "LIBRARY", schemaVersion: 1, migration: "string-ID list sanitize", fallback: "empty recently viewed", size: "tiny", corruption: "recent-only recovery" },
