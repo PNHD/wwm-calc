@@ -27,8 +27,8 @@ replaceContract(
 replaceContract(
   "scripts/runtime-v1-release-acceptance.spec.mjs",
   "COMPETITIVE_V2_V1_SCALE_GVG_STRATEGY",
-  `  await page.goto(\`${BASE}#gvg/strategy\`, { waitUntil: "networkidle" });\n  await expect(page.getByTestId("gvg-strategy-board")).toBeVisible();\n  timings.gvgStrategyMs = Date.now() - start;`,
-  `  await page.goto(\`${BASE}#gvg/strategy\`, { waitUntil: "networkidle" });\n  await expect(page.getByTestId("gvg-strategy" /* COMPETITIVE_V2_V1_SCALE_GVG_STRATEGY */)).toBeVisible();\n  await expect(page.getByTestId("gvg-objective-map")).toBeVisible();\n  timings.gvgStrategyMs = Date.now() - start;`,
+  `  await page.goto(\`\${BASE}#gvg/strategy\`, { waitUntil: "networkidle" });\n  await expect(page.getByTestId("gvg-strategy-board")).toBeVisible();\n  timings.gvgStrategyMs = Date.now() - start;`,
+  `  await page.goto(\`\${BASE}#gvg/strategy\`, { waitUntil: "networkidle" });\n  await expect(page.getByTestId("gvg-strategy" /* COMPETITIVE_V2_V1_SCALE_GVG_STRATEGY */)).toBeVisible();\n  await expect(page.getByTestId("gvg-objective-map")).toBeVisible();\n  timings.gvgStrategyMs = Date.now() - start;`,
   "V1 scale Guild War Strategy surface",
 );
 
