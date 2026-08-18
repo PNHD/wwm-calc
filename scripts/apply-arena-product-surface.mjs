@@ -174,3 +174,5 @@ if (!validator.includes(validatorImport)) {
 } else {
   console.log("Competitive V2 validator already chained");
 }
+
+await import("./apply-competitive-v2-compat.mjs");
