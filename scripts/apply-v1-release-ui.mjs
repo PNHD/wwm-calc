@@ -57,4 +57,22 @@ patch("src/product/GuildWarWorkspace.tsx", "V1_GVG_IMPORT_TYPE_CONTRACT", [
   ],
 ]);
 
+patch("scripts/runtime-v1-release-acceptance.spec.mjs", "V1_SECURITY_PAGE_ISOLATION", [
+  [
+    "test(\"V1 public payloads fail closed and supplied strings stay text\", async ({ page, request }) => {\n  const runtime = runtimeWatch(page);",
+    "test(\"V1 public payloads fail closed and supplied strings stay text\", async ({ page, request, context }) => { // V1_SECURITY_PAGE_ISOLATION\n  const runtime = runtimeWatch(page);",
+    "V1 security test context"
+  ],
+  [
+    "  await page.goto(`${BASE}?case=arena-oversize#arena/shared/${\"A\".repeat(33000)}`, { waitUntil: \"domcontentloaded\" });\n  await expect(page.getByText(/Invalid Arena share/i)).toBeVisible();",
+    "  const arenaPage = await context.newPage();\n  const arenaRuntime = runtimeWatch(arenaPage);\n  await arenaPage.goto(`${BASE}#arena/shared/${\"A\".repeat(33000)}`, { waitUntil: \"domcontentloaded\" });\n  await expect(arenaPage.getByText(/Invalid Arena share/i)).toBeVisible();\n  await assertClean(arenaRuntime);\n  await arenaPage.close();",
+    "Arena malicious page isolation"
+  ],
+  [
+    "  await page.goto(`${BASE}?case=library-xss#shared-build=${b64(envelope)}`, { waitUntil: \"networkidle\" });\n  await expect(page.getByTestId(\"shared-build-landing\")).toBeVisible();\n  expect(await page.locator('img[src=\"x\"]').count()).toBe(0);\n  expect(await page.evaluate(() => window.__V1_XSS__)).toBeUndefined();\n  expect((await page.locator(\"body\").innerText()).includes(\"<img src=x\")).toBeTruthy();\n  await assertClean(runtime);",
+    "  const libraryPage = await context.newPage();\n  const libraryRuntime = runtimeWatch(libraryPage);\n  await libraryPage.goto(`${BASE}#shared-build=${b64(envelope)}`, { waitUntil: \"networkidle\" });\n  await expect(libraryPage.getByTestId(\"shared-build-landing\")).toBeVisible();\n  expect(await libraryPage.locator('img[src=\"x\"]').count()).toBe(0);\n  expect(await libraryPage.evaluate(() => window.__V1_XSS__)).toBeUndefined();\n  expect((await libraryPage.locator(\"body\").innerText()).includes(\"<img src=x\")).toBeTruthy();\n  await assertClean(libraryRuntime);\n  await libraryPage.close();\n  await assertClean(runtime);",
+    "Library malicious page isolation"
+  ]
+]);
+
 console.log("V1 model/about, Library Arena compare wiring, report-issue UI and generated type contracts applied deterministically.");
