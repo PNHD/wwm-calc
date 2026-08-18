@@ -37,6 +37,14 @@ async function assertNoHorizontalOverflow(page) {
   expect(sizes.scroll).toBeLessThanOrEqual(sizes.inner + 1);
 }
 
+async function assertArenaMode(page, label) {
+  const picker = page.getByLabel("Arena mode");
+  const button = picker.getByRole("button", { name: label, exact: true });
+  await button.click();
+  await expect(button).toHaveClass(/is-active/);
+  await expect(page.getByTestId("arena-mode-truth").getByRole("heading", { name: label, exact: true })).toBeVisible();
+}
+
 test("production is exact-main-SHA and critical Arena smoke passes", async ({ page, request }) => {
   test.setTimeout(10 * 60 * 1000);
   if (!expectedSha) throw new Error("EXPECTED_SHA is required for production verification");
@@ -56,6 +64,22 @@ test("production is exact-main-SHA and critical Arena smoke passes", async ({ pa
   await page.goto(`${base}#arena/overview`, { waitUntil: "networkidle" });
   await expect(page.getByTestId("arena-overview")).toBeVisible();
   await expect(page.getByText("Bamboocut-Dust", { exact: true }).first()).toBeVisible();
+
+  const productionArenaModes = ["1v1", "3v3", "Group Strategy", "5v5 Arena", "Perception Forest", "Training Terrace"];
+  for (const label of productionArenaModes) {
+    await assertArenaMode(page, label);
+    if (label === "3v3") {
+      await expect(page.getByTestId("arena-3v3-composition")).toBeVisible();
+      await expect(page.getByText(/same Martial Art ≤ 2/i)).toBeVisible();
+    }
+    if (label === "Perception Forest") {
+      await expect(page.getByTestId("perception-forest-rules")).toBeVisible();
+      await expect(page.getByText(/Mode-specific effects are isolated/i)).toBeVisible();
+    }
+    if (label === "Training Terrace") {
+      await expect(page.getByText("Training Terrace is not ranked truth", { exact: true })).toBeVisible();
+    }
+  }
 
   await page.goto(`${base}#arena/build`);
   await expect(page.getByTestId("arena-build")).toBeVisible();
@@ -124,16 +148,20 @@ test("production is exact-main-SHA and critical Arena smoke passes", async ({ pa
     checks: {
       pveUnchanged: true,
       arenaOverview: true,
+      arenaModeTaxonomy: productionArenaModes,
+      arenaAllSixModesRendered: true,
       arenaBuild: true,
       arenaAttunementSeparated: true,
       matchupComparison: true,
       stateSimulation: true,
       bamboocutProfile: true,
       team3v3Validation: true,
+      perceptionForestIsolation: true,
+      trainingTerraceCalibrationOnly: true,
       arenaLibraryReadOnlyAndCloneIsolated: true,
       arenaShareLanding: true,
       historyPersistence: true,
-      guildWarUnchanged: true,
+      guildWarV2Overview: true,
       mobile390NoOverflow: true
     },
     pageErrors,

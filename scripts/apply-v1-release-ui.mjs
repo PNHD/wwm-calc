@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import "./apply-competitive-v2-compat.mjs";
 
 function patch(path, marker, replacements) {
   let source = fs.readFileSync(path, "utf8");
