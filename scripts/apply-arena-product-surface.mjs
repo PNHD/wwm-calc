@@ -9,7 +9,7 @@ if (!source.includes(marker)) {
       </button>`;
   if (!source.includes(needle)) throw new Error("Arena migration: WorkspaceSwitcher anchor not found");
   const arena = `      <button type="button" aria-label="Open Arena workspace" aria-pressed={false} onClick={() => { window.location.hash = "#arena/overview"; }}>
-        <Swords size={15} aria-hidden="true" /><span>Arena</span>
+        <Target size={15} aria-hidden="true" /><span>Arena</span>
       </button>
 ${needle}`;
   source = source.replace(needle, arena);
