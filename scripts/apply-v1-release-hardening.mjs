@@ -39,7 +39,7 @@ export function loadArenaState(storage = globalThis?.localStorage) {
       if (!isPlainRecord(value)) return "Arena state must be an object.";
       const version = value.schemaVersion == null ? 0 : Number(value.schemaVersion);
       if (!Number.isInteger(version) || version < 0) return "Invalid Arena schema version.";
-      if (version > ARENA_SCHEMA_VERSION) return `Unsupported future Arena schema v${version}.`;
+      if (version > ARENA_SCHEMA_VERSION) return "Unsupported future Arena schema v" + version + ".";
       return "";
     },
     migrate: (value) => {
