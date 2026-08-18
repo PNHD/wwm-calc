@@ -9,8 +9,10 @@ async function seedArena(page) {
   const state = defaultArenaState();
   state.onboardingComplete = true;
   await page.addInitScript((value) => {
+    if (sessionStorage.getItem("wwm_arena_smoke_seeded") === "1") return;
     localStorage.setItem("wwm_arena_state_v1", JSON.stringify(value));
     localStorage.removeItem("wwm_arena_history_v1");
+    sessionStorage.setItem("wwm_arena_smoke_seeded", "1");
   }, state);
 }
 
