@@ -17,6 +17,15 @@ function stabilizeV1RuntimeAcceptance() {
   fs.writeFileSync(path, source, "utf8");
 }
 
+function stabilizeLibraryRuntimeAcceptance() {
+  const path = "scripts/runtime-library-acceptance.spec.mjs";
+  let source = fs.readFileSync(path, "utf8");
+  const legacy = `await expect(page.getByText(/not a universal GvG winner/i)).toBeVisible();`;
+  const normalized = `await expect(page.getByText(/not a universal Guild War winner/i)).toBeVisible();`;
+  if (source.includes(legacy)) source = source.replace(legacy, normalized);
+  fs.writeFileSync(path, source, "utf8");
+}
+
 replaceAllChecked("src/product/GuildWarWorkspace.tsx", [
   ["The GvG share link could not be decoded.", "The Guild War share link could not be decoded."],
   ["Cloned into my local GvG workspace.", "Cloned into my local Guild War workspace."],
@@ -36,4 +45,5 @@ replaceAllChecked("src/product/LibraryWorkspace.tsx", [
 ]);
 
 stabilizeV1RuntimeAcceptance();
+stabilizeLibraryRuntimeAcceptance();
 console.log("V1 user-facing Guild War terminology and runtime acceptance selectors normalized.");
