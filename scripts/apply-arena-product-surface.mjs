@@ -13,11 +13,21 @@ if (!source.includes(marker)) {
       </button>
 ${needle}`;
   source = source.replace(needle, arena);
-  fs.writeFileSync(path, source, "utf8");
   console.log("Arena workspace switcher applied");
 } else {
   console.log("Arena workspace switcher already applied");
 }
+
+const oldOverview = `{workspace === "gvg" && gvgView === "overview" && <GvgOverview onNavigate={goGvg} onOpenLibrary={openLibrary} />}`;
+const v2Overview = `{workspace === "gvg" && gvgView === "overview" && <div className="workspace-gvg-host is-overview"><GuildWarWorkspace onClose={() => goGvg("overview")} /></div>}`;
+if (!source.includes(v2Overview)) {
+  if (!source.includes(oldOverview)) throw new Error("Competitive V2 migration: Guild War overview anchor not found");
+  source = source.replace(oldOverview, v2Overview);
+  console.log("Guild War V2 overview applied");
+} else {
+  console.log("Guild War V2 overview already applied");
+}
+fs.writeFileSync(path, source, "utf8");
 
 // The legacy app has generic header/form rules. Scope Arena surfaces so the new
 // workspace retains its dark design system at every responsive breakpoint.
@@ -43,7 +53,7 @@ if (cssChanged) {
 
 // Arena adds three current Library references. Keep the existing browser acceptance
 // contract aligned with the larger curated dataset instead of treating valid Arena
-// content as a PvE/GvG regression.
+// content as a PvE/Guild War regression.
 const libraryTestPath = "scripts/runtime-library-acceptance.spec.mjs";
 let libraryTest = fs.readFileSync(libraryTestPath, "utf8");
 const recentNeedle = `  await expect(page.locator(".library-card")).toHaveCount(5);`;
@@ -65,3 +75,16 @@ if (!libraryTest.includes(weaponReplacement)) {
 }
 fs.writeFileSync(libraryTestPath, libraryTest, "utf8");
 console.log("Arena Library runtime acceptance contract applied");
+
+// Competitive V2 validator is chained through the already-authoritative Arena model
+// step so PR and push workflows cannot bypass evidence/applicability guards.
+const validatorPath = "scripts/validate-arena-model.mjs";
+let validator = fs.readFileSync(validatorPath, "utf8");
+const validatorImport = `import "./validate-competitive-v2.mjs";`;
+if (!validator.includes(validatorImport)) {
+  validator = `${validatorImport}\n${validator}`;
+  fs.writeFileSync(validatorPath, validator, "utf8");
+  console.log("Competitive V2 validator chained");
+} else {
+  console.log("Competitive V2 validator already chained");
+}

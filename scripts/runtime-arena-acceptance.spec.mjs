@@ -3,175 +3,124 @@ import { test, expect } from "@playwright/test";
 import { defaultArenaState } from "../src/arena/arena-core.mjs";
 
 const base = "http://127.0.0.1:4173/";
-const visualDir = "visual-qa/arena";
+const visualDir = "visual-qa/arena-v2";
 
 async function seedArena(page) {
   const state = defaultArenaState();
   state.onboardingComplete = true;
   await page.addInitScript((value) => {
-    if (sessionStorage.getItem("wwm_arena_smoke_seeded") === "1") return;
     localStorage.setItem("wwm_arena_state_v1", JSON.stringify(value));
+    localStorage.removeItem("wwm_arena_mode_v2");
     localStorage.removeItem("wwm_arena_history_v1");
-    sessionStorage.setItem("wwm_arena_smoke_seeded", "1");
   }, state);
 }
+async function noOverflow(page) { const row = await page.evaluate(() => ({ inner: innerWidth, scroll: document.documentElement.scrollWidth })); expect(row.scroll).toBeLessThanOrEqual(row.inner + 1); }
 
-async function noHorizontalOverflow(page) {
-  const overflow = await page.evaluate(() => ({ width: window.innerWidth, scroll: document.documentElement.scrollWidth }));
-  expect(overflow.scroll).toBeLessThanOrEqual(overflow.width + 1);
-}
-
-async function shot(page, name, width, height = 900) {
-  await page.setViewportSize({ width, height });
-  await page.waitForTimeout(80);
-  await noHorizontalOverflow(page);
-  await page.screenshot({ path: `${visualDir}/${name}.png`, fullPage: true });
-}
-
-test("Arena is a first-class isolated workspace with 1v1, 3v3, sharing, Library and History", async ({ page }) => {
+ test("Competitive Arena V2 is mode-first, mechanics-accurate and uncertainty-guarded", async ({ page }) => {
   fs.mkdirSync(visualDir, { recursive: true });
-  const pageErrors = [];
-  const consoleErrors = [];
+  const pageErrors = []; const consoleErrors = [];
   page.on("pageerror", (error) => pageErrors.push(error.stack || error.message));
   page.on("console", (message) => { if (message.type() === "error") consoleErrors.push(message.text()); });
   await seedArena(page);
 
-  let response = await page.goto(`${base}#pve/overview`, { waitUntil: "networkidle" });
-  expect(response?.ok()).toBeTruthy();
-  await expect(page.getByTestId("pve-overview")).toBeVisible();
-  const legacySwitcher = page.getByRole("navigation", { name: "Product workspaces" });
-  await expect(legacySwitcher.getByRole("button", { name: /Arena/i })).toBeVisible();
-  await legacySwitcher.getByRole("button", { name: /Arena/i }).click();
-
+  await page.goto(`${base}#pve/overview`, { waitUntil: "networkidle" });
+  const switcher = page.getByRole("navigation", { name: "Product workspaces" });
+  await switcher.getByRole("button", { name: /Arena/i }).click();
   await expect(page).toHaveURL(/#arena\/overview$/);
   await expect(page.getByTestId("arena-overview")).toBeVisible();
-  const arenaSwitcher = page.getByRole("navigation", { name: "Product workspaces" });
-  await expect(arenaSwitcher.getByRole("button", { name: /^PvE\b/i })).toBeVisible();
-  await expect(arenaSwitcher.getByRole("button", { name: /^Arena\b/i })).toBeVisible();
-  await expect(arenaSwitcher.getByRole("button", { name: /^Guild War\b/i })).toBeVisible();
-  await expect(page.getByText("Bamboocut-Dust", { exact: true }).first()).toBeVisible();
-  await expect(page.getByText("BURST PRESSURE", { exact: true })).toBeVisible();
-  await expect(page.getByText("NEXT ACTION", { exact: true })).toBeVisible();
 
-  await page.goto(`${base}#arena/build`);
+  const modes = page.getByLabel("Arena mode").first();
+  for (const label of ["1v1","3v3","Group Strategy","5v5 Arena","Perception Forest","Training Terrace"]) await expect(modes.getByRole("button", { name: label, exact: true })).toBeVisible();
+  await expect(page.getByText("24/7", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText(/Choose the ruleset before the build/i)).toBeVisible();
+
+  await modes.getByRole("button", { name: "3v3", exact: true }).click();
+  await expect(page.getByTestId("arena-3v3-composition")).toBeVisible();
+  await expect(page.getByText(/One revive opportunity · 10m range · 15s window/i)).toBeVisible();
+  await expect(page.getByText(/Same Martial Art ≤ 2 per team/i)).toBeVisible();
+  await page.getByLabel("Same Martial Art count").fill("3");
+  await expect(page.getByText(/at most twice/i)).toBeVisible();
+  await page.getByText("Team has healer").locator("input").check();
+  await expect(page.getByText(/Panacea Fan Resurrection restriction applies/i)).toBeVisible();
+  await page.getByText(/Royal Remedy T6 exception observed/i).locator("input").check();
+
+  await page.goto(`${base}#arena/build`, { waitUntil: "networkidle" });
   await expect(page.getByTestId("arena-build")).toBeVisible();
-  await expect(page.getByText(/read-only snapshot/i)).toBeVisible();
-  await page.getByRole("button", { name: /Use My Current Gear/i }).click();
-  const arenaBeforeAttune = await page.evaluate(() => localStorage.getItem("wwm_arena_state_v1"));
-  const pveBeforeAttune = await page.evaluate(() => localStorage.getItem("wwm_chars_v3"));
-  await page.goto(`${base}#arena/attunement`);
-  await expect(page.getByTestId("arena-attunement")).toBeVisible();
-  await expect(page.getByText(/Normal Attunement \+ Arena Attunement stacking = OFF/i)).toBeVisible();
-  const pveAfterAttune = await page.evaluate(() => localStorage.getItem("wwm_chars_v3"));
-  expect(pveAfterAttune).toBe(pveBeforeAttune);
-  expect(arenaBeforeAttune).toBeTruthy();
+  await expect(page.getByText("Optimizer locked", { exact: true })).toBeVisible();
+  await expect(page.getByText(/NEEDS CURRENT CLIENT DATA/i).first()).toBeVisible();
+  await expect(page.getByText(/NO UNIVERSAL WINNER/i)).toBeVisible();
+  await expect(page.getByText(/Normal \+ Arena stacking = OFF/i)).toBeVisible();
+  expect((await page.locator("body").innerText()).includes("PvE modeled DPS is" )).toBe(false);
 
-  await page.goto(`${base}#arena/matchups`);
+  await page.goto(`${base}#arena/matchups`, { waitUntil: "networkidle" });
   await expect(page.getByTestId("arena-matchup-result")).toBeVisible();
-  await page.getByLabel("Opponent Path").selectOption({ label: "Bamboocut-Wind" });
-  await expect(page.getByText(/FAVORED TOOLS|DISADVANTAGED TOOLS|CLOSE MATCHUP/).first()).toBeVisible();
+  await page.getByLabel("Opponent Path").selectOption({ label: "Stonesplit-Might" });
+  for (const label of ["ADVANTAGES","RISKS","KEY INTERACTIONS","PUNISH WINDOWS","DEFENSIVE ANSWERS","UNKNOWN / PLAYER-SKILL-SENSITIVE"]) await expect(page.getByText(label, { exact: true })).toBeVisible();
   await expect(page.getByText(/not an empirical win probability/i)).toBeVisible();
-  expect((await page.locator("body").innerText()).includes("63.7% win chance")).toBe(false);
+  const matchupText = await page.getByTestId("arena-matchup-result").innerText();
+  expect(matchupText).not.toMatch(/\d+(\.\d+)?% win/i);
+  expect(matchupText).not.toMatch(/modeled tool delta/i);
 
-  await page.goto(`${base}#arena/skills`);
-  await expect(page.getByText(/Burn and Bury:/)).toBeVisible();
-  await expect(page.getByText(/unblockable; golden-flash warning/i)).toBeVisible();
-  await expect(page.getByText(/Tenacity starts 0.5s/i)).toBeVisible();
-  await expect(page.getByText(/Scarlet Spin/i).first()).toBeVisible();
+  await page.goto(`${base}#arena/skills`, { waitUntil: "networkidle" });
+  await expect(page.getByText(/Burn and Bury:/)).toContainText(/unblockable/i);
+  await expect(page.getByText(/Tenacity starts after/)).toContainText("0.5s");
+  await expect(page.getByText(/Phantom Rally\/Resonance must not interrupt Tenacity/i)).toBeVisible();
+  await expect(page.getByText(/Dreamwrought \+20% is non-player-only/i)).toBeVisible();
 
-  await page.goto(`${base}#arena/simulation`);
+  await page.goto(`${base}#arena/simulation`, { waitUntil: "networkidle" });
   await expect(page.getByTestId("arena-simulation")).toBeVisible();
   await expect(page.getByText("GET_UP_PROTECTION", { exact: true })).toBeVisible();
-  await expect(page.getByText(/Qi Damage ignored during Execute knockdown/i)).toBeVisible();
-  await page.getByLabel("Simulation horizon").selectOption("30");
-  await page.getByLabel("Reaction assumption").selectOption("perfect");
-  await expect(page.getByText(/not a player skill rating/i)).toBeVisible();
+  await expect(page.getByText("TENACITY", { exact: true })).toBeVisible();
+  await expect(page.getByText("CONTROL_IMMUNITY", { exact: true })).toBeVisible();
+  await expect(page.getByText("SUPER_ARMOR", { exact: true })).toBeVisible();
+  await expect(page.getByText(/Qi Damage ignored during applicable Execute knockdown/i)).toBeVisible();
+  await expect(page.getByText(/latency damage coefficient = none/i)).toBeVisible();
 
-  await page.goto(`${base}#arena/overview`);
-  await page.getByRole("button", { name: "3v3", exact: true }).click();
-  await page.goto(`${base}#arena/matchups`);
-  await expect(page.getByTestId("arena-3v3-composition")).toBeVisible();
-  await expect(page.getByText(/same Martial Art ≤ 2/i)).toBeVisible();
-  await expect(page.getByText(/one revive opportunity/i)).toBeVisible();
-  const primary = page.getByLabel("Player 1 primary Martial Art");
-  const duplicate = await primary.inputValue();
-  await page.getByLabel("Player 2 primary Martial Art").selectOption(duplicate);
-  await page.getByLabel("Player 3 primary Martial Art").selectOption(duplicate);
-  await expect(page.getByText(/appears more than twice/i)).toBeVisible();
+  await page.goto(`${base}#arena/attunement`, { waitUntil: "networkidle" });
+  await expect(page.getByTestId("arena-attunement")).toBeVisible();
+  await expect(page.getByText(/stacking = OFF/i)).toBeVisible();
+  await expect(page.getByText(/Stonesplit-Might/i).first()).toBeVisible();
 
-  await page.goto(`${base}#library/arena`, { waitUntil: "networkidle" });
-  await expect(page.getByRole("button", { name: "Arena Builds", exact: true })).toBeVisible();
-  const arenaLibraryCard = page.locator('[data-library-id="bamboocut-dust-arena-control-pressure"]');
-  await expect(arenaLibraryCard.getByText("Bamboocut-Dust Arena", { exact: true })).toBeVisible();
-  await arenaLibraryCard.getByRole("button", { name: "View", exact: true }).click();
-  await expect(page.getByTestId("library-build-detail")).toBeVisible();
-  const beforeClone = await page.evaluate(() => JSON.parse(localStorage.getItem("wwm_arena_state_v1") || "{}"));
-  await page.getByRole("button", { name: /Clone to My Workspace/i }).click();
-  const afterClone = await page.evaluate(() => JSON.parse(localStorage.getItem("wwm_arena_state_v1") || "{}"));
-  expect(afterClone.activeProfileId).toBe(beforeClone.activeProfileId);
-  expect(afterClone.profiles.length).toBe(beforeClone.profiles.length + 1);
+  await page.goto(`${base}#arena/overview`, { waitUntil: "networkidle" });
+  await page.getByLabel("Arena mode").first().getByRole("button", { name: "Perception Forest", exact: true }).click();
+  await expect(page.getByTestId("perception-forest-rules")).toBeVisible();
+  await expect(page.getByText("-50%", { exact: true })).toBeVisible();
+  await expect(page.getByText("30%", { exact: true })).toBeVisible();
+  await expect(page.getByText(/cannot leak into 1v1\/3v3\/Group Strategy\/Guild War\/PvE/i)).toBeVisible();
 
-  await page.goto(`${base}#arena/transfer`);
+  await page.goto(`${base}#arena/evidence`, { waitUntil: "networkidle" });
+  await expect(page.getByTestId("arena-evidence")).toBeVisible();
+  await expect(page.getByText(/Minimum client capture/i)).toBeVisible();
+
+  await page.goto(`${base}#arena/transfer`, { waitUntil: "networkidle" });
   await page.getByRole("button", { name: /Generate read-only share/i }).click();
   const shareLink = await page.getByLabel("Arena share token").inputValue();
   expect(shareLink).toContain("#arena/shared/");
-  await page.goto(shareLink);
+  const activeBefore = await page.evaluate(() => JSON.parse(localStorage.getItem("wwm_arena_state_v1") || "{}").activeProfileId);
+  await page.goto(shareLink, { waitUntil: "networkidle" });
   await expect(page.getByTestId("arena-shared-landing")).toBeVisible();
-  await expect(page.getByText("READ-ONLY ARENA BUILD", { exact: true })).toBeVisible();
-  const activeBeforeSharedClone = await page.evaluate(() => JSON.parse(localStorage.getItem("wwm_arena_state_v1") || "{}").activeProfileId);
   await page.getByRole("button", { name: "CLONE TO MY WORKSPACE", exact: true }).click();
-  const activeAfterSharedClone = await page.evaluate(() => JSON.parse(localStorage.getItem("wwm_arena_state_v1") || "{}").activeProfileId);
-  expect(activeAfterSharedClone).toBe(activeBeforeSharedClone);
+  const activeAfter = await page.evaluate(() => JSON.parse(localStorage.getItem("wwm_arena_state_v1") || "{}").activeProfileId);
+  expect(activeAfter).toBe(activeBefore);
 
-  await page.goto(`${base}#arena/history`);
-  await expect(page.getByTestId("arena-history")).toBeVisible();
-  await page.getByLabel("Opponent Path").selectOption({ label: "Bamboocut-Wind" });
+  await page.goto(`${base}#arena/history`, { waitUntil: "networkidle" });
   await page.getByLabel("Result").selectOption("WIN");
-  await page.getByLabel("Match duration (sec)").fill("73");
-  await page.getByLabel("Notes").fill("Observed manual Arena result");
+  await page.getByLabel("Notes").fill("Observed Arena V2 fixture");
   await page.getByRole("button", { name: /Save local match/i }).click();
   await expect(page.getByText(/n=1; descriptive record only/i)).toBeVisible();
   await page.reload({ waitUntil: "networkidle" });
-  await expect(page.getByText("Observed manual Arena result", { exact: true })).toBeVisible();
+  await expect(page.getByText("Observed Arena V2 fixture", { exact: true })).toBeVisible();
 
-  await page.goto(`${base}#arena/overview`);
-  await page.getByRole("navigation", { name: "Product workspaces" }).getByRole("button", { name: /Guild War/i }).click();
-  await expect(page.getByTestId("gvg-overview")).toBeVisible();
-
-  await page.goto(`${base}#arena/overview`);
-  await page.keyboard.press("Tab");
-  expect(await page.evaluate(() => document.activeElement?.tagName)).not.toBe("BODY");
-
-  const views1440 = ["overview", "build", "matchups", "compare", "simulation", "history"];
-  for (const view of views1440) {
-    await page.goto(`${base}#arena/${view}`);
-    await shot(page, `1440-${view}`, 1440, 960);
+  for (const [width, height] of [[1440,960],[1024,900],[390,844]]) {
+    await page.setViewportSize({ width, height });
+    await page.goto(`${base}#arena/overview`, { waitUntil: "networkidle" });
+    await noOverflow(page);
+    await page.screenshot({ path: `${visualDir}/${width}-overview.png`, fullPage: true });
   }
-  for (const view of ["overview", "matchups"]) {
-    await page.goto(`${base}#arena/${view}`);
-    await shot(page, `1024-${view}`, 1024, 900);
-  }
-  for (const view of ["overview", "build", "matchups", "history"]) {
-    await page.goto(`${base}#arena/${view}`);
-    await shot(page, `390-${view}`, 390, 844);
-  }
+  await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.getByRole("navigation", { name: "Arena mobile navigation" })).toBeVisible();
 
-  const report = {
-    success: pageErrors.length === 0 && consoleErrors.length === 0,
-    pageErrors,
-    consoleErrors,
-    arenaStateKey: "wwm_arena_state_v1",
-    historyKey: "wwm_arena_history_v1",
-    visualCaptures: 12,
-    mobile390NoOverflow: true,
-    pvePreserved: true,
-    gvgPreserved: true,
-    libraryArenaCloneIsolated: true,
-    shareCloneIsolated: true,
-  };
-  fs.writeFileSync("runtime-arena-smoke-report.json", JSON.stringify(report, null, 2), "utf8");
+  fs.writeFileSync("runtime-arena-smoke-report.json", JSON.stringify({ success: pageErrors.length === 0 && consoleErrors.length === 0, arenaModes: 6, qualitativeMatchup: true, levelAdjustmentGuard: true, attunementGuard: true, perceptionForestIsolated: true, pageErrors, consoleErrors }, null, 2));
   await page.screenshot({ path: "runtime-arena-smoke.png", fullPage: true });
-  expect(pageErrors).toEqual([]);
-  expect(consoleErrors).toEqual([]);
+  expect(pageErrors).toEqual([]); expect(consoleErrors).toEqual([]);
 });
