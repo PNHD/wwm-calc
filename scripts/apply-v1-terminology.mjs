@@ -8,6 +8,15 @@ function replaceAllChecked(path, pairs) {
   fs.writeFileSync(path, source, "utf8");
 }
 
+function stabilizeV1RuntimeAcceptance() {
+  const path = "scripts/runtime-v1-release-acceptance.spec.mjs";
+  let source = fs.readFileSync(path, "utf8");
+  const ambiguous = `await expect(arenaPage.getByText(/Invalid Arena share/i)).toBeVisible();`;
+  const precise = `await expect(arenaPage.getByRole("heading", { name: "Invalid Arena share", exact: true })).toBeVisible();`;
+  if (source.includes(ambiguous)) source = source.replace(ambiguous, precise);
+  fs.writeFileSync(path, source, "utf8");
+}
+
 replaceAllChecked("src/product/GuildWarWorkspace.tsx", [
   ["The GvG share link could not be decoded.", "The Guild War share link could not be decoded."],
   ["Cloned into my local GvG workspace.", "Cloned into my local Guild War workspace."],
@@ -26,4 +35,5 @@ replaceAllChecked("src/product/LibraryWorkspace.tsx", [
   ["a universal GvG winner", "a universal Guild War winner"],
 ]);
 
-console.log("V1 user-facing Guild War terminology normalized.");
+stabilizeV1RuntimeAcceptance();
+console.log("V1 user-facing Guild War terminology and runtime acceptance selectors normalized.");
