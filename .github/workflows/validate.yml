@@ -164,6 +164,70 @@ jobs:
           PRODUCTION_URL: https://wonton-wwm.pages.dev/
         run: |
           npx playwright test scripts/runtime-production-v1.spec.mjs --reporter=line --workers=1 --timeout=600000
+      - name: Verify final V1 release candidate contract
+        if: github.event_name == 'push'
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+          GITHUB_TOKEN: ${{ github.token }}
+          TARGET_REPOSITORY: ${{ github.repository }}
+          TARGET_RUN_ID: ${{ github.run_id }}
+          TARGET_RUN_NUMBER: ${{ github.run_number }}
+        run: |
+          python3 - <<'PY'
+          import datetime
+          import json
+          import os
+          import urllib.request
+
+          expected = os.environ["EXPECTED_SHA"]
+          repository = os.environ["TARGET_REPOSITORY"]
+
+          def load(path):
+              with open(path, "r", encoding="utf-8") as handle:
+                  return json.load(handle)
+
+          arena = load("production-verification.json")
+          v1 = load("V1_PRODUCTION_SMOKE.json")
+          for label, payload in (("Arena", arena), ("V1", v1)):
+              if payload.get("success") is not True or payload.get("exactShaMatch") is not True:
+                  raise RuntimeError(f"{label} production verification did not succeed for the exact SHA")
+              if payload.get("expectedSha") != expected or payload.get("productionCommit") != expected:
+                  raise RuntimeError(f"{label} production verification SHA mismatch")
+
+          request = urllib.request.Request(
+              f"https://api.github.com/repos/{repository}/git/ref/heads/main",
+              headers={
+                  "Authorization": f"Bearer {os.environ['GITHUB_TOKEN']}",
+                  "Accept": "application/vnd.github+json",
+                  "X-GitHub-Api-Version": "2022-11-28",
+              },
+          )
+          with urllib.request.urlopen(request, timeout=20) as response:
+              live_main = json.load(response)["object"]["sha"]
+          if live_main != expected:
+              raise RuntimeError(f"main moved after production smoke: expected {expected}, observed {live_main}")
+
+          report = {
+              "success": True,
+              "verifiedAt": datetime.datetime.now(datetime.timezone.utc).isoformat().replace("+00:00", "Z"),
+              "repository": repository,
+              "event": "push",
+              "runId": int(os.environ["TARGET_RUN_ID"]),
+              "runNumber": int(os.environ["TARGET_RUN_NUMBER"]),
+              "expectedSha": expected,
+              "liveMainShaAfterSmoke": live_main,
+              "mainStableAfterSmoke": live_main == expected,
+              "arenaProductionSuccess": arena["success"],
+              "arenaProductionCommit": arena["productionCommit"],
+              "v1ProductionSuccess": v1["success"],
+              "v1ProductionCommit": v1["productionCommit"],
+              "productionExactSha": arena["productionCommit"] == expected and v1["productionCommit"] == expected,
+          }
+          with open("V1_RELEASE_VERIFICATION.json", "w", encoding="utf-8") as handle:
+              json.dump(report, handle, indent=2)
+              handle.write("\n")
+          print(json.dumps(report, indent=2))
+          PY
       - name: Publish exact production verification artifact
         if: github.event_name == 'push' && always()
         uses: actions/upload-artifact@v4
@@ -173,6 +237,7 @@ jobs:
             production-verification.json
             production-arena-smoke.png
             V1_PRODUCTION_SMOKE.json
+            V1_RELEASE_VERIFICATION.json
             v1-production-mobile-smoke.png
             test-results/
           if-no-files-found: ignore
