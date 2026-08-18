@@ -14,7 +14,9 @@ export const STORAGE_REGISTRY = Object.freeze([
   { key: "wwm_arena_state_v1", owner: "ARENA", schemaVersion: 1, migration: "v0/unversioned → v1 sanitize", fallback: "default Arena profile", size: "medium", corruption: "backup + Arena-only recovery" },
   { key: "wwm_arena_history_v1", owner: "ARENA", schemaVersion: 1, migration: "entry sanitize", fallback: "empty local history", size: "medium", corruption: "history-only recovery" },
   { key: "wwm_gvg_workspace_v1", owner: "GUILD_WAR", schemaVersion: 1, migration: "v0 → v1 bounded sanitize", fallback: "empty Guild War plan", size: "large", corruption: "backup + Guild-War-only recovery" },
-  { key: "wwm_library_favorites_v1", owner: "LIBRARY", schemaVersion: 1, migration: "ID allowlist on read", fallback: "empty favorites", size: "tiny", corruption: "favorites-only recovery" },
+  { key: "wwm_library_favorites_v1", owner: "LIBRARY", schemaVersion: 1, migration: "string-ID list sanitize", fallback: "empty favorites", size: "tiny", corruption: "favorites-only recovery" },
+  { key: "wwm_library_recent_v1", owner: "LIBRARY", schemaVersion: 1, migration: "string-ID list sanitize", fallback: "empty recently viewed", size: "tiny", corruption: "recent-only recovery" },
+  { key: "wwm_library_clone_descriptor_v1", owner: "LIBRARY", schemaVersion: 1, migration: "descriptor replacement", fallback: "no pending clone", size: "small", corruption: "descriptor-only recovery" },
   { key: "wwm_library_gvg_clones_v1", owner: "LIBRARY", schemaVersion: 1, migration: "validated clone envelopes", fallback: "empty cloned plans", size: "medium-large", corruption: "clone-store-only recovery" },
 ]);
 
