@@ -2,6 +2,7 @@ import fs from "node:fs";
 
 await import("./apply-competitive-v2-storage.mjs");
 await import("./apply-competitive-v2-storage-guards.mjs");
+await import("./apply-competitive-v2-war-room.mjs");
 
 const modelPath = "src/competitive/competitive-v2.mjs";
 let model = fs.readFileSync(modelPath, "utf8");
