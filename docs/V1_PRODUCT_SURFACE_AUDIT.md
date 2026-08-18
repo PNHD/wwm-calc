@@ -20,6 +20,7 @@ Severity policy used here:
 | Surface | Route | State source | Primary user action | V1 risk | Acceptance coverage |
 |---|---|---|---|---|---|
 | Workspace switcher | global masthead | `wwm_product_shell_v2` + hash | move among PvE / Arena / Guild War | wrong workspace restored; hash drift | `runtime-workspace-ux`, `runtime-arena-acceptance`, `runtime-v1-release-acceptance` |
+| Player ID access gate | startup modal | `wwm_uid` | verify/store Player ID access record | malformed gate record should not affect gameplay state | storage registry audit; existing gate validation |
 | Character/profile selector | PvE shell | `wwm_chars_v3` | choose/create/duplicate character | corrupt legacy object; wrong active IDs | T96 runtime + V1 corrupt-storage smoke |
 | Global version/tier context | masthead/context bar | product constants + active PvE context | understand patch/tier | stale context hidden | visual QA + Model & About |
 | Library entry | `#library` | curated `library-v1.json` + local favorites/recent | discover/filter/open references | stale reference presented as current | Library acceptance + V1 visuals |
@@ -41,10 +42,10 @@ Severity policy used here:
 | Arena Best Build | `#arena/build` | bounded Arena profiles/objective/opponent | run Top 3 | PvE DPS becoming winner; stale opponent input | Arena model validator + V1 12-candidate runtime |
 | Arena Attunement | `#arena/attunement` | Arena profile | select Arena Attunement | Normal + Arena stacking | Arena acceptance |
 | Arena Matchups | `#arena/matchups` | my Path/mode + opponent | compare matchup dimensions | stale WHY/verdict | Arena acceptance + V1 390/1024/1440 |
-| Arena Compare | `#arena/compare` | active Arena profile/opponent | compare Arena builds | accidental PvE ranking | Arena acceptance |
+| Arena Compare | `#arena/compare` | active Arena profiles + optional one-shot Library descriptor | compare Arena builds/reference | selected Library reference previously was written but never consumed; accidental PvE ranking | Arena acceptance + `runtime-v1-arena-library-compare` |
 | Arena Simulation | `#arena/simulation` | Arena state-transition model | inspect combat-state timeline | unverified probability claim | Arena acceptance |
 | Arena History | `#arena/history` | `wwm_arena_history_v1` | record local match | private history leaking into share | Arena acceptance + V1 privacy checks |
-| Arena Reference/Library | `#arena/reference`, `#library/arena` | Arena reference presets/library | inspect/clone | active profile overwrite | Arena acceptance + cross-workspace smoke |
+| Arena Reference/Library | `#arena/reference`, `#library/arena` | Arena reference presets/library | inspect/clone/compare | active profile overwrite; comparison descriptor leakage | Arena acceptance + cross-workspace + Arena Library Compare regression |
 | Arena Share/Import | `#arena/transfer`, `#arena/shared/<token>` | Arena schema v1 envelope | generate/read-only inspect/clone | malformed/future/prototype/oversize payload | Arena validator + V1 malicious-share smoke |
 | Guild War Overview | `#gvg/overview` | `wwm_gvg_workspace_v1` summary | assess readiness / next action | corrupt workspace breaking overview | GvG acceptance + V1 visuals |
 | Guild War Roster | `#gvg/roster` | Guild War workspace roster | manage up to 30 members/roles | duplicate IDs; wrong types; orphan references | GvG + V1 30-player/runtime/recovery |
@@ -63,11 +64,12 @@ Severity policy used here:
 
 ## Storage registry
 
-The canonical registry is `src/product/storage-registry.js`. Release validation scans literal `localStorage` / `sessionStorage` accesses in `src/` and fails CI when an app-owned literal key is absent from the registry.
+The canonical registry is `src/product/storage-registry.js`. Release validation scans literal `localStorage` / `sessionStorage` accesses in `src/` and fails CI when an app-owned literal key is absent from the registry. `h72na_data_token` is the only explicit exemption because it belongs to the external game-dashboard origin inside a generated bookmarklet, not WWM Calc persistence.
 
 | Key | Owner | Schema | Migration/fallback | Corruption behavior |
 |---|---|---:|---|---|
 | `wwm_product_shell_v2` | Global | 2 | tolerant shell defaults | shell-only fallback |
+| `wwm_uid` | Global | 1 | verified `{uid,name,server}` gate record | re-prompt gate only; gameplay data untouched |
 | `wwm_selected_build` | PvE | 1 | allowlisted/factory build | selected-build-only fallback |
 | `wwm_chars_v3` | PvE | 3 | `sanitizeChars` | bounded PvE fallback; other workspaces untouched |
 | `wwm_t91_custom_config` | PvE | 1 | legacy tolerant | config-only fallback |
@@ -78,11 +80,12 @@ The canonical registry is `src/product/storage-registry.js`. Release validation 
 | `wwm_relay_cooldowns` | PvE | 1 | legacy tolerant | cooldowns-only fallback |
 | `wwm_arena_state_v1` | Arena | 1 | unversioned/v0 sanitize → v1 | future/corrupt/normalized input backed up per-domain; visible recovery |
 | `wwm_arena_history_v1` | Arena | 1 | entry sanitizer | history-only empty fallback |
+| `wwm_arena_library_compare_v1` | Arena | 1 | legacy local one-shot descriptor → validated session descriptor | descriptor-only drop; does not clone/activate a profile |
 | `wwm_gvg_workspace_v1` | Guild War | 1 | v0 → v1; v1 bounded sanitizer | backup + visible recovery; no cross-domain wipe |
 | `wwm_library_favorites_v1` | Library | 1 | string-ID list sanitizer | favorites-only empty fallback |
 | `wwm_library_recent_v1` | Library | 1 | string-ID list sanitizer | recent-only empty fallback |
 | `wwm_library_clone_descriptor_v1` | Library | 1 | descriptor replacement | descriptor-only fallback |
-| `wwm_library_gvg_clones_v1` | Library | 1 | validated clone store | clone-store-only fallback |
+| `wwm_library_gvg_clones_v1` | Library | 1 | validated clone envelopes | clone-store-only fallback |
 
 Recovery backups use `<domain-key>__recovery_backup_v1` and are bounded to 128 KiB. A bad key never triggers a global clear. For recovered Guild War data, the initial fallback render does not immediately overwrite the original; the recovered value is persisted only after a deliberate subsequent edit.
 
@@ -93,6 +96,7 @@ Recovery backups use `<domain-key>__recovery_backup_v1` and are bounded to 128 K
 | P0 | Corrupt/current-shape Guild War storage could crash assumptions such as `.map/.filter` or be rewritten after fallback | v1 migration shallow-spread arbitrary stored values into `defaultWorkspace`; component immediately persisted state | bounded type/schema sanitizer; unique IDs; bounded collections/numbers; per-domain backup/recovery; first recovered persist guard |
 | P0/P1 | Guild War editable JSON import had weaker security than public shared landing | `validateShareEnvelope` checked only schema/version/kind; `ROSTER`/`STRATEGY` branches patched payload directly | deep size/depth/prototype/roster-ID validation plus all clone branches pass through bounded workspace migration |
 | P1 | Arena future schema could be silently reinterpreted as current | `loadArenaState` sanitized any parsed object without schema gate | explicit future-schema rejection, v0 migration path, per-domain backup and user-visible recovery |
+| P1 | Library → Arena Compare did not compare the selected Community Reference | Library wrote `wwm_arena_library_compare_v1` and navigated, but Arena Compare had no consumer for that descriptor | validated one-shot bridge to session state; selected reference becomes a read-only pseudo-profile in BUILD B; active Arena state remains untouched; malformed descriptor fails closed |
 | P2 | Arena profile duplicate IDs and arbitrary nested gear snapshot were accepted | sanitizer bounded list length but not ID uniqueness/snapshot object graph | deterministic ID dedupe + bounded snapshot clone/prototype/depth/size checks |
 | P2 | Deleting a Guild War roster member left live duelist/position references | delete cleaned strategy position only | clear selected strategy member, strategy position and active duelist references in one state update; historical match snapshots remain historical |
 | P2 | Product lacked one compact model/maturity/report surface across workspaces | disclosures were fragmented between advanced pages | shared Model & About surface + privacy-minimized structured GitHub issue context |
@@ -102,7 +106,7 @@ Recovery backups use `<domain-key>__recovery_backup_v1` and are bounded to 128 K
 ## Cross-workspace integrity invariants
 
 1. PvE owns `wwm_chars_v3`, selected build, PvE overrides and presets.
-2. Arena owns `wwm_arena_state_v1` and local Arena history; PvE gear enters Arena only as a bounded read-only snapshot.
+2. Arena owns `wwm_arena_state_v1` and local Arena history; PvE gear enters Arena only as a bounded read-only snapshot. Library Compare enters Arena only as a validated comparison descriptor/read-only pseudo-profile and does not clone or activate a profile.
 3. Guild War owns `wwm_gvg_workspace_v1`; Library Guild War clones are stored separately until deliberate apply/import.
 4. Library favorites/recent/clones do not activate another workspace build automatically.
 5. Arena Match History is excluded from Arena public share payloads.
@@ -115,13 +119,13 @@ Recovery backups use `<domain-key>__recovery_backup_v1` and are bounded to 128 K
 |---|---|
 | GLOBAL | all 3 workspaces, Library, hash/deep links, refresh, back/forward, state isolation, corrupt storage |
 | PvE | fresh/default state, T96 observed gear, Compare, Best Build, Combat/Menu Panel, Simulation, Share/Import regression |
-| Arena | 1v1, 3v3, Attunement isolation, opponent/matchup, Compare, Best Build, Simulation, History, share/clone |
+| Arena | 1v1, 3v3, Attunement isolation, opponent/matchup, Compare, Library-selected Compare bridge, Best Build, Simulation, History, share/clone |
 | Guild War | 30-member roster, role/ref cleanup, Strategy, Timeline/Objectives, Commander, Match Log, redacted share |
-| Library | discovery, filters, freshness/outdated presentation, favorite, detail, compare, clone, shared landing |
+| Library | discovery, filters, freshness/outdated presentation, favorite, detail, compare, Arena handoff, clone, shared landing |
 | Security | malformed base64/JSON, size/depth bounds, prototype keys, duplicate IDs, invalid future schemas, HTML/script strings |
 | Responsive | 390, 1024, 1440 real routes with no horizontal overflow plus required visual artifacts |
 | Runtime | `pageErrors = []`, unexpected `consoleErrors = []` in representative Chromium acceptance |
-| Legacy | T96, OCR, Library v1 share migration, Arena unversioned migration, Guild War v0 migration |
+| Legacy | T96, OCR, Library v1 share migration, Arena unversioned migration, Arena Library one-shot descriptor migration, Guild War v0 migration |
 | Performance | browser render/interaction timings recorded for PvE gear 50/100/250, Arena 12 candidates, Guild War 30 roster + populated strategy/timeline, Library 80 synthetic references |
 
 The authoritative gate remains `.github/workflows/validate.yml`; the V1 matrix augments, rather than replaces, the existing deterministic formula/model/OCR/T96/Arena/Guild War/Library suites.
