@@ -55,7 +55,7 @@ replaceContract(
   if (!source.includes(marker)) {
     const holdAnchor = `const [holdPersistence,setHoldPersistence] = useState(Boolean(loaded.holdPersistence));`;
     if (!source.includes(holdAnchor)) throw new Error("Competitive V2 last-mile: Guild War hold-persistence anchor missing");
-    source = source.replace(holdAnchor, `${holdAnchor} const [secondaryRecovery,setSecondaryRecovery] = useState(""); // ${marker}`);
+    source = source.replace(holdAnchor, `${holdAnchor} const [secondaryRecovery,setSecondaryRecovery] = useState(""); /* ${marker} */`);
 
     const shareEffectAnchor = `  useEffect(() => { const marker = "gvg-share=";`;
     if (!source.includes(shareEffectAnchor)) throw new Error("Competitive V2 last-mile: Guild War share-effect anchor missing");
