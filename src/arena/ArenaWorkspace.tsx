@@ -21,7 +21,6 @@ type Route = "overview" | "build" | "matchups" | "compare" | "simulation" | "his
 type ArenaState = ReturnType<typeof loadArenaState>;
 type ArenaModeV2 = typeof ARENA_MODE_IDS[number];
 
-const MODE_KEY = "wwm_arena_mode_v2";
 const PRIMARY: Array<{ id: Route; label: string; icon: typeof Activity }> = [
   { id: "overview", label: "Overview", icon: Activity },
   { id: "build", label: "Build", icon: Shield },
@@ -44,9 +43,8 @@ function sharedTokenFromHash() { const match = location.hash.match(/^#arena\/sha
 function go(route: Route) { location.hash = `#arena/${route}`; }
 function evidenceLabel(value: string) { return value.replaceAll("_", " "); }
 function legacyMode(mode: ArenaModeV2) { return mode === "3V3_ARENA" ? "3v3" : mode === "GROUP_STRATEGY" || mode === "5V5_ARENA" ? "5v5" : "1v1"; }
-function initialMode(profile: any): ArenaModeV2 {
-  const stored = localStorage.getItem(MODE_KEY);
-  if (ARENA_MODE_IDS.includes(stored as any)) return stored as ArenaModeV2;
+function initialMode(state: any, profile: any): ArenaModeV2 { // ARENA_CANONICAL_V2_MODE
+  if (ARENA_MODE_IDS.includes(state?.activeModeV2)) return state.activeModeV2;
   if (profile?.mode === "3v3") return "3V3_ARENA";
   if (profile?.mode === "5v5") return "GROUP_STRATEGY";
   return "1V1_ARENA";
@@ -55,7 +53,7 @@ function EvidenceBadge({ value }: { value: string }) { return <span className={`
 function SectionHeader({ eyebrow, title, copy }: { eyebrow?: string; title: string; copy?: string }) { return <div className="arena-section-heading"><div>{eyebrow && <span className="arena-eyebrow">{eyebrow}</span>}<h2>{title}</h2>{copy && <p>{copy}</p>}</div></div>; }
 function Unknown({ children }: { children: React.ReactNode }) { return <div className="arena-validation bad"><Info size={16} /><span><strong>NEEDS CURRENT CLIENT DATA</strong> · {children}</span></div>; }
 
-function WorkspaceSwitcher() { return <nav className="arena-workspace-switcher" aria-label="Product workspaces"><button type="button" onClick={() => { location.hash = "#pve/overview"; }}>PvE<small>Boss Lab</small></button><button type="button" className="is-active" aria-current="page">Arena<small>PvP Lab V2</small></button><button type="button" onClick={() => { location.hash = "#gvg/overview"; }}>Guild War<small>War Room V2</small></button></nav>; }
+function WorkspaceSwitcher() { return <nav className="arena-workspace-switcher" aria-label="Product workspaces"><button type="button" onClick={() => { location.hash = "#pve/overview"; }}>PvE<small>Boss Lab</small></button><button type="button" className="is-active" aria-current="page">Arena<small>PvP Lab V2</small></button><button type="button" onClick={() => { location.hash = "#training-terrace/overview"; }}>Training Terrace<small>Calibration</small></button><button type="button" onClick={() => { location.hash = "#gvg/overview"; }}>Guild War<small>War Room V2</small></button></nav>; }
 
 function ModePicker({ mode, onChange }: { mode: ArenaModeV2; onChange: (mode: ArenaModeV2) => void }) {
   return <div className="arena-mode-picker" aria-label="Arena mode">{ARENA_MODE_IDS.map((id) => <button key={id} type="button" className={mode === id ? "is-active" : ""} onClick={() => onChange(id)}>{ARENA_MODE_RULES[id].label}</button>)}</div>;
@@ -126,9 +124,10 @@ function Inspector({ mode, profile, opponent }: { mode: ArenaModeV2; profile: an
 
 export default function ArenaWorkspace() {
   const [route, setRoute] = useState<Route>(() => routeFromHash()); const [state, setStateRaw] = useState<ArenaState>(() => loadArenaState()); const profile = state.profiles.find((p: any) => p.id === state.activeProfileId) || state.profiles[0];
-  const [mode, setModeRaw] = useState<ArenaModeV2>(() => initialMode(profile)); const [opponent, setOpponent] = useState(PATHS.find((p) => p !== profile.path) || PATHS[0]); const [moreOpen, setMoreOpen] = useState(false);
+  const [mode, setModeRaw] = useState<ArenaModeV2>(() => initialMode(state, profile)); const [opponent, setOpponentRaw] = useState(state.opponentPath || PATHS.find((p) => p !== profile.path) || PATHS[0]); const [moreOpen, setMoreOpen] = useState(false);
   const setState = (next: ArenaState) => setStateRaw(saveArenaState(next));
-  const setMode = (next: ArenaModeV2) => { localStorage.setItem(MODE_KEY, next); setModeRaw(next); setState({ ...state, profiles: state.profiles.map((p: any) => p.id === state.activeProfileId ? { ...p, mode: legacyMode(next) } : p) } as ArenaState); };
+  const setMode = (next: ArenaModeV2) => { setModeRaw(next); setState({ ...state, activeModeV2: next, profiles: state.profiles.map((p: any) => p.id === state.activeProfileId ? { ...p, mode: legacyMode(next) } : p) } as ArenaState); };
+  const setOpponent = (next: string) => { setOpponentRaw(next); setState({ ...state, opponentPath: next } as ArenaState); };
   useEffect(() => { const onHash = () => { setRoute(routeFromHash()); setMoreOpen(false); }; addEventListener("hashchange", onHash); return () => removeEventListener("hashchange", onHash); }, []);
   const sharedToken = sharedTokenFromHash(); if (sharedToken) return <SharedLanding token={sharedToken} state={state} setState={setState}/>;
   const content: Record<Route, React.ReactNode> = { overview: <Overview mode={mode} setMode={setMode} profile={profile} state={state}/>, build: <Build mode={mode} profile={profile} state={state} setState={setState}/>, matchups: <Matchups mode={mode} profile={profile} opponent={opponent} setOpponent={setOpponent}/>, compare: <Compare mode={mode}/>, simulation: <Simulation/>, history: <HistoryView profile={profile} mode={mode}/>, attunement: <Attunement mode={mode}/>, skills: <Mechanics mode={mode}/>, evidence: <EvidenceView/>, reference: <ReferenceBuilds/>, transfer: <Transfer profile={profile}/> };

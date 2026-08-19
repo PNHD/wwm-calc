@@ -26,8 +26,24 @@ import {
   validateRoster,
   validateShareEnvelope,
 } from "../src/gvg/model.js";
+import { consumeGvgStorageRecovery, loadGvgAssignmentsV2, loadGvgManualV2, loadGvgPhaseV2, saveGvgAssignmentsV2, saveGvgManualV2, saveGvgPhaseV2 } from "../src/competitive/storage-v2.mjs";
 
 const technique = (id) => EX_TECHNIQUES.find((item) => item.id === id);
+const memoryStorage = () => { const rows = new Map(); return { getItem: (key) => rows.get(key) ?? null, setItem: (key, value) => rows.set(key, String(value)), rows }; };
+
+const secondaryStorage = memoryStorage();
+secondaryStorage.setItem("wwm_gvg_phase_v2", "BROKEN");
+assert.equal(loadGvgPhaseV2(secondaryStorage), "PREPARATION");
+assert.equal(secondaryStorage.getItem("wwm_gvg_phase_v2__recovery_backup_v1"), "BROKEN");
+secondaryStorage.setItem("wwm_gvg_v2_assignments", "{");
+assert.deepEqual(loadGvgAssignmentsV2(secondaryStorage), {});
+assert.equal(secondaryStorage.getItem("wwm_gvg_v2_assignments__recovery_backup_v1"), "{");
+secondaryStorage.setItem("wwm_gvg_v2_manual", JSON.stringify({ halftimeTrigger: 900 }));
+assert.deepEqual(loadGvgManualV2(secondaryStorage), { halftimeTrigger: 900 });
+assert.equal(saveGvgPhaseV2("OUTPOST_PHASE", secondaryStorage), "OUTPOST_PHASE");
+assert.deepEqual(saveGvgAssignmentsV2({ BULWARK: "Main Ball", BAD: "drop" }, secondaryStorage), { BULWARK: "Main Ball" });
+assert.deepEqual(saveGvgManualV2({ halftimeTrigger: 1200 }, secondaryStorage), { halftimeTrigger: 1200 });
+assert.match(consumeGvgStorageRecovery(), /Guild War/);
 
 // Scenario architecture is explicit and GvG remains separate from the PvE/Arena engines.
 assert.deepEqual(SCENARIOS, ["PVE_BOSS", "ARENA", "GUILD_WAR"]);

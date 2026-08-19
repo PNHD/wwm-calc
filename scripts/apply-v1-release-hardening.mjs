@@ -20,7 +20,8 @@ function patchArenaCore() {
     return sanitizeArenaState(JSON.parse(raw));
   } catch { return defaultArenaState(); }
 }`,
-`let arenaStorageRecovery = "";
+`const V2_ARENA_MODES = ["1V1_ARENA", "3V3_ARENA", "GROUP_STRATEGY", "5V5_ARENA", "PERCEPTION_FOREST", "TRAINING_TERRACE"];
+let arenaStorageRecovery = "";
 export function consumeArenaStorageRecovery() {
   const message = arenaStorageRecovery;
   arenaStorageRecovery = "";
@@ -45,19 +46,26 @@ export function loadArenaState(storage = globalThis?.localStorage) {
     migrate: (value) => {
       const version = value.schemaVersion == null ? 0 : Number(value.schemaVersion);
       const safe = sanitizeArenaState(value);
+      const legacyMode = !V2_ARENA_MODES.includes(value.activeModeV2) ? storage?.getItem?.(ARENA_LEGACY_MODE_KEY) : null;
+      const consumedLegacyMode = V2_ARENA_MODES.includes(legacyMode);
+      if (consumedLegacyMode) safe.activeModeV2 = legacyMode;
       if (version === 0) {
         return { value: safe, migrated: true, backup: true, message: "Saved Arena data was migrated to schema v1." };
       }
-      const normalized = JSON.stringify(safe) !== JSON.stringify(value);
+      const normalized = consumedLegacyMode || JSON.stringify(safe) !== JSON.stringify(value);
       return {
         value: safe,
-        recovered: normalized,
+        recovered: normalized && !consumedLegacyMode,
+        migrated: consumedLegacyMode,
         backup: normalized,
-        message: normalized ? "Some saved Arena data was normalized to the supported V1 schema." : "",
+        message: consumedLegacyMode ? "Saved Arena mode was migrated into canonical Arena state." : normalized ? "Some saved Arena data was normalized to the supported V1 schema." : "",
         reason: normalized ? "Arena state contained unsupported or invalid fields." : "ok",
       };
     },
   });
+  if (result.migrated && V2_ARENA_MODES.includes(result.value.activeModeV2)) {
+    try { storage?.setItem?.(ARENA_STORAGE_KEY, JSON.stringify(result.value)); storage?.removeItem?.(ARENA_LEGACY_MODE_KEY); } catch {}
+  }
   arenaStorageRecovery = result.recoveryMessage;
   return result.value;
 }`,
@@ -79,17 +87,29 @@ function sanitizeArenaState(input) {`,
 `      gearSnapshot: p?.gearSnapshot && typeof p.gearSnapshot === "object" ? JSON.parse(JSON.stringify(p.gearSnapshot)) : null,`,
 `      gearSnapshot: safeArenaGearSnapshot(p?.gearSnapshot),`,
 "Arena gear snapshot");
-  source = replaceOnce(source,
-`      arenaDimensions: sanitizeDimensions(p?.arenaDimensions),
+  const duplicateIdsLegacy = `      arenaDimensions: sanitizeDimensions(p?.arenaDimensions),
     };
   });
-  return { schemaVersion: ARENA_SCHEMA_VERSION, patch: ARENA_PATCH, activeProfileId: profiles.some((p) => p.id === input.activeProfileId) ? input.activeProfileId : profiles[0]?.id, profiles, opponentPath: allowedPath(input.opponentPath || base.opponentPath), objective: cleanText(input.objective || base.objective, 40), onboardingComplete: Boolean(input.onboardingComplete) };`,
-`      arenaDimensions: sanitizeDimensions(p?.arenaDimensions),
+  return { schemaVersion: ARENA_SCHEMA_VERSION, patch: ARENA_PATCH, activeProfileId: profiles.some((p) => p.id === input.activeProfileId) ? input.activeProfileId : profiles[0]?.id, profiles, opponentPath: allowedPath(input.opponentPath || base.opponentPath), objective: cleanText(input.objective || base.objective, 40), onboardingComplete: Boolean(input.onboardingComplete) };`;
+  const duplicateIdsCanonical = `      arenaDimensions: sanitizeDimensions(p?.arenaDimensions),
+    };
+  });
+  const activeModeV2 = ["1V1_ARENA", "3V3_ARENA", "GROUP_STRATEGY", "5V5_ARENA", "PERCEPTION_FOREST", "TRAINING_TERRACE"].includes(input.activeModeV2) ? input.activeModeV2 : base.activeModeV2;
+  return { schemaVersion: ARENA_SCHEMA_VERSION, patch: ARENA_PATCH, activeProfileId: profiles.some((p) => p.id === input.activeProfileId) ? input.activeProfileId : profiles[0]?.id, profiles, activeModeV2, opponentPath: allowedPath(input.opponentPath || base.opponentPath), objective: cleanText(input.objective || base.objective, 40), onboardingComplete: Boolean(input.onboardingComplete) };`;
+  const duplicateIdsHardened = `      arenaDimensions: sanitizeDimensions(p?.arenaDimensions),
     };
   }).filter((profile, index, rows) => rows.findIndex((other) => other.id === profile.id) === index);
   const safeProfiles = profiles.length ? profiles : base.profiles;
-  return { schemaVersion: ARENA_SCHEMA_VERSION, patch: ARENA_PATCH, activeProfileId: safeProfiles.some((p) => p.id === input.activeProfileId) ? input.activeProfileId : safeProfiles[0]?.id, profiles: safeProfiles, opponentPath: allowedPath(input.opponentPath || base.opponentPath), objective: cleanText(input.objective || base.objective, 40), onboardingComplete: Boolean(input.onboardingComplete) };`,
-"Arena duplicate IDs");
+  const activeModeV2 = V2_ARENA_MODES.includes(input.activeModeV2) ? input.activeModeV2 : base.activeModeV2;
+  return { schemaVersion: ARENA_SCHEMA_VERSION, patch: ARENA_PATCH, activeProfileId: safeProfiles.some((p) => p.id === input.activeProfileId) ? input.activeProfileId : safeProfiles[0]?.id, profiles: safeProfiles, opponentPath: allowedPath(input.opponentPath || base.opponentPath), objective: cleanText(input.objective || base.objective, 40), onboardingComplete: Boolean(input.onboardingComplete) };`;
+  const duplicateIdsCanonicalHardened = `      arenaDimensions: sanitizeDimensions(p?.arenaDimensions),
+    };
+  }).filter((profile, index, rows) => rows.findIndex((other) => other.id === profile.id) === index);
+  const safeProfiles = profiles.length ? profiles : base.profiles;
+  const activeModeV2 = V2_ARENA_MODES.includes(input.activeModeV2) ? input.activeModeV2 : base.activeModeV2;
+  return { schemaVersion: ARENA_SCHEMA_VERSION, patch: ARENA_PATCH, activeProfileId: safeProfiles.some((p) => p.id === input.activeProfileId) ? input.activeProfileId : safeProfiles[0]?.id, profiles: safeProfiles, activeModeV2, opponentPath: allowedPath(input.opponentPath || base.opponentPath), objective: cleanText(input.objective || base.objective, 40), onboardingComplete: Boolean(input.onboardingComplete) };`;
+  if (source.includes(duplicateIdsCanonical)) source = source.replace(duplicateIdsCanonical, duplicateIdsCanonicalHardened);
+  else source = replaceOnce(source, duplicateIdsLegacy, duplicateIdsHardened, "Arena duplicate IDs");
   write(path, source);
 }
 
@@ -201,7 +221,7 @@ function sanitizeGvgWorkspaceV1(input) {
       exLevel: gvgNumber(member.exLevel, 1, 3, 1),
       normalProfile: gvgText(member.normalProfile, 80, "PvE / Normal"),
       arenaProfile: gvgText(member.arenaProfile, 80, "Arena"),
-      gvgSelectedProfile: member.gvgSelectedProfile === "NORMAL" ? "NORMAL" : "ARENA",
+      gvgSelectedProfile: member.gvgSelectedProfile === "NORMAL" || member.gvgSelectedProfile === "ARENA" ? member.gvgSelectedProfile : "UNKNOWN", // COMPETITIVE_V2_GVG_ATTUNEMENT_GENERATOR_UNKNOWN
       availability: member.availability !== false,
       notes: gvgText(member.notes, 1_000),
       antiHeal: Boolean(member.antiHeal),

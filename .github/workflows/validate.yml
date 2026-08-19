@@ -70,10 +70,12 @@ jobs:
           LIBRARY_STATUS=$?
           npx playwright test scripts/runtime-arena-acceptance.spec.mjs --reporter=line --workers=1 --timeout=180000
           ARENA_STATUS=$?
+          npx playwright test scripts/runtime-training-terrace-acceptance.spec.mjs --reporter=line --workers=1 --timeout=180000
+          TRAINING_STATUS=$?
           npx playwright test scripts/runtime-v1-release-acceptance.spec.mjs --reporter=line --workers=1 --timeout=180000
           V1_STATUS=$?
           set -e
-          STATUS=$(( T96_STATUS != 0 || GVG_STATUS != 0 || UX_STATUS != 0 || LIBRARY_STATUS != 0 || ARENA_STATUS != 0 || V1_STATUS != 0 ))
+          STATUS=$(( T96_STATUS != 0 || GVG_STATUS != 0 || UX_STATUS != 0 || LIBRARY_STATUS != 0 || ARENA_STATUS != 0 || TRAINING_STATUS != 0 || V1_STATUS != 0 ))
           if [ "$T96_STATUS" -ne 0 ] && [ -f runtime-smoke-diagnostic.txt ]; then
             python3 - <<'PY'
           from pathlib import Path
@@ -115,6 +117,11 @@ jobs:
           text=Path('runtime-arena-smoke-report.json').read_text()[:7000].replace('%','%25').replace('\r','%0D').replace('\n','%0A')
           print(f'::notice file=scripts/runtime-arena-acceptance.spec.mjs,line=1,title=Arena runtime acceptance::{text}')
           PY
+          fi
+          if [ "$TRAINING_STATUS" -ne 0 ]; then
+            echo "::error file=scripts/runtime-training-terrace-acceptance.spec.mjs,line=1,title=Training Terrace runtime diagnostic::Training Terrace route, persistence, recovery, Arena isolation or responsive acceptance failed"
+          else
+            echo "::notice file=scripts/runtime-training-terrace-acceptance.spec.mjs,line=1,title=Training Terrace runtime acceptance::Training Terrace controlled-observation route, persistence, recovery, Arena isolation and mobile overflow checks passed"
           fi
           if [ "$V1_STATUS" -ne 0 ]; then
             echo "::error file=scripts/runtime-v1-release-acceptance.spec.mjs,line=1,title=V1 release diagnostic::Cross-workspace recovery/security/responsive/performance release acceptance failed"

@@ -2,6 +2,8 @@ const ARENA_MODES = new Set(["1V1_ARENA", "3V3_ARENA", "GROUP_STRATEGY", "5V5_AR
 const GVG_PHASES = new Set(["PREPARATION", "OPENING", "LANE_RESOURCE_CONTROL", "OUTPOST_PHASE", "HALFTIME", "BULWARK_PRESSURE", "GOOSE_PRESSURE", "FORTUNE_TREE_ESCORT", "ENDGAME"]);
 const OBJECTIVE_IDS = new Set(["TOP_OUTPOST", "BOTTOM_OUTPOST", "JUNGLE", "BULWARK", "GOOSE", "FORTUNE_TREE", "FALLBACK"]);
 const FORBIDDEN = new Set(["__proto__", "prototype", "constructor"]);
+const GVG_RECOVERY_SUFFIX = "__recovery_backup_v1";
+let gvgStorageRecovery = "";
 
 export const ARENA_MODE_STORAGE_KEY = "wwm_arena_mode_v2";
 export const GVG_PHASE_STORAGE_KEY = "wwm_gvg_phase_v2";
@@ -20,6 +22,15 @@ function readText(key, storage) {
 function writeText(key, value, storage) {
   try { getStorage(storage)?.setItem(key, value); return true; } catch { return false; }
 }
+
+function preserveGvgBackup(key, raw, storage) {
+  try { if (raw && raw.length <= 128 * 1024) getStorage(storage)?.setItem(`${key}${GVG_RECOVERY_SUFFIX}`, raw); } catch {}
+}
+function recoverGvgKey(key, raw, storage, reason) {
+  preserveGvgBackup(key, raw, storage);
+  gvgStorageRecovery ||= `Saved Guild War ${reason} was reset safely; a bounded recovery backup is available when possible.`;
+}
+export function consumeGvgStorageRecovery() { const message = gvgStorageRecovery; gvgStorageRecovery = ""; return message; }
 
 function parseSmallObject(raw, maxChars = 8192) {
   if (!raw || raw.length > maxChars) return null;
@@ -50,7 +61,10 @@ export function sanitizeGvgPhaseV2(value) {
 }
 
 export function loadGvgPhaseV2(storage) {
-  return sanitizeGvgPhaseV2(readText("wwm_gvg_phase_v2", storage));
+  const raw = readText("wwm_gvg_phase_v2", storage);
+  if (raw == null) return "PREPARATION";
+  if (!GVG_PHASES.has(raw)) { recoverGvgKey(GVG_PHASE_STORAGE_KEY, raw, storage, "phase"); return "PREPARATION"; }
+  return raw;
 }
 
 export function saveGvgPhaseV2(value, storage) {
@@ -71,7 +85,10 @@ export function sanitizeGvgAssignmentsV2(value) {
 }
 
 export function loadGvgAssignmentsV2(storage) {
-  return sanitizeGvgAssignmentsV2(parseSmallObject(readText("wwm_gvg_v2_assignments", storage), 4096));
+  const raw = readText(GVG_ASSIGNMENTS_STORAGE_KEY, storage);
+  const parsed = parseSmallObject(raw, 4096);
+  if (raw != null && !parsed) recoverGvgKey(GVG_ASSIGNMENTS_STORAGE_KEY, raw, storage, "objective assignments");
+  return sanitizeGvgAssignmentsV2(parsed);
 }
 
 export function saveGvgAssignmentsV2(value, storage) {
@@ -92,7 +109,10 @@ export function sanitizeGvgManualV2(value) {
 }
 
 export function loadGvgManualV2(storage) {
-  return sanitizeGvgManualV2(parseSmallObject(readText("wwm_gvg_v2_manual", storage), 2048));
+  const raw = readText(GVG_MANUAL_STORAGE_KEY, storage);
+  const parsed = parseSmallObject(raw, 2048);
+  if (raw != null && !parsed) recoverGvgKey(GVG_MANUAL_STORAGE_KEY, raw, storage, "manual overrides");
+  return sanitizeGvgManualV2(parsed);
 }
 
 export function saveGvgManualV2(value, storage) {
