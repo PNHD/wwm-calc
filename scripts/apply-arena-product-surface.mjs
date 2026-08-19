@@ -93,8 +93,8 @@ if (!gvgV2.includes("V1_STORAGE_RECOVERY_GVG_UI")) {
   if (!gvgV2.includes(oldLoader)) throw new Error("Competitive V2 migration: Guild War loader anchor not found");
   gvgV2 = gvgV2.replace(oldLoader, newLoader);
   gvgV2 = gvgV2.replace(
-    `  const loaded = useMemo(() => loadWorkspace(), []); const [workspace,setWorkspaceRaw] = useState<any>(loaded.workspace); const [recovery,setRecovery] = useState(loaded.recovery); const [view,setView] = useState<View>(() => routeFromHash()); const [phase,setPhaseRaw] = useState(() => localStorage.getItem(PHASE_KEY) || "PREPARATION");`,
-    `  const loaded = useMemo(() => loadWorkspace(), []); const [workspace,setWorkspaceRaw] = useState<any>(loaded.workspace); const [recovery,setRecovery] = useState(loaded.recovery); const [holdPersistence,setHoldPersistence] = useState(Boolean(loaded.holdPersistence)); const [view,setView] = useState<View>(() => routeFromHash()); const [phase,setPhaseRaw] = useState(() => localStorage.getItem(PHASE_KEY) || "PREPARATION");`,
+    `  const loaded = useMemo(() => loadWorkspace(), []); const [workspace,setWorkspaceRaw] = useState<any>(loaded.workspace); const [recovery,setRecovery] = useState(loaded.recovery || consumeGvgStorageRecovery()); const [view,setView] = useState<View>(() => routeFromHash()); const [phase,setPhaseRaw] = useState(() => loadGvgPhaseV2());`,
+    `  const loaded = useMemo(() => loadWorkspace(), []); const [workspace,setWorkspaceRaw] = useState<any>(loaded.workspace); const [recovery,setRecovery] = useState(loaded.recovery || consumeGvgStorageRecovery()); const [holdPersistence,setHoldPersistence] = useState(Boolean(loaded.holdPersistence)); const [view,setView] = useState<View>(() => routeFromHash()); const [phase,setPhaseRaw] = useState(() => loadGvgPhaseV2());`,
   );
   gvgV2 = gvgV2.replace(
     `  useEffect(() => { if (!recovery) localStorage.setItem(STORAGE_KEY, JSON.stringify(workspace)); }, [workspace,recovery]);`,
@@ -108,7 +108,7 @@ if (!gvgV2.includes("V1_STORAGE_RECOVERY_GVG_UI")) {
     `{sharedError && <div className="gvg-card"><Unknown>{sharedError}</Unknown></div>}`,
     `{sharedError && <div className="gvg-card" data-testid="gvg-shared-invalid"><Unknown>{sharedError}</Unknown></div>}`,
   );
-  if (!gvgV2.includes("migrateWorkspaceWithStatus") || !gvgV2.includes("holdPersistence") || !gvgV2.includes("gvg-shared-invalid")) throw new Error("Competitive V2 migration: Guild War recovery/share contract incomplete");
+  if (!gvgV2.includes("migrateWorkspaceWithStatus") || !gvgV2.includes("const [holdPersistence,setHoldPersistence]") || !gvgV2.includes("gvg-shared-invalid")) throw new Error("Competitive V2 migration: Guild War recovery/share contract incomplete");
   fs.writeFileSync(gvgV2Path, gvgV2, "utf8");
   console.log("Guild War V2 recovery/share contract applied");
 } else {
