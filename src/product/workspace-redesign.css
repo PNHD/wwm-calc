@@ -22,7 +22,7 @@
 .product-masthead-v2 .product-brand strong{font:700 17px/1.1 system-ui,-apple-system,sans-serif;letter-spacing:-.02em}
 .product-masthead-v2 .product-brand small{font:600 10px/1.25 system-ui,-apple-system,sans-serif;color:var(--workspace-muted)}
 .product-masthead-v2 .product-role{position:relative;z-index:1;min-width:0}.product-masthead-v2 .product-role select{min-width:132px;max-width:190px;height:34px;border-radius:7px!important;background:var(--workspace-surface)!important;border-color:var(--workspace-border)!important}
-.product-actions-v2{position:relative;z-index:2;display:flex;justify-content:flex-end;gap:5px;min-width:0;overflow-x:auto;scrollbar-width:none}
+.product-actions-v2{position:relative;z-index:2;display:flex;justify-content:flex-start;gap:5px;min-width:0;overflow-x:auto;scrollbar-width:none}
 .product-actions-v2::-webkit-scrollbar{display:none}
 .product-actions-v2 button{flex:none;min-height:34px!important;border-radius:7px!important;background:transparent!important;border-color:var(--workspace-border)!important;padding:6px 9px!important;font-size:11px!important}
 .product-actions-v2 button:hover{background:var(--workspace-surface-raised)!important;color:var(--workspace-text)!important;border-color:#53657f!important}
