@@ -1,6 +1,7 @@
 export const ARENA_SCHEMA_VERSION = 1;
 export const ARENA_PATCH = "2.0 / 2026-08-07";
 export const ARENA_STORAGE_KEY = "wwm_arena_state_v1";
+export const ARENA_LEGACY_MODE_KEY = "wwm_arena_mode_v2";
 export const ARENA_HISTORY_KEY = "wwm_arena_history_v1";
 export const PVE_INVENTORY_KEY = "wwm_chars_v3";
 
@@ -332,7 +333,7 @@ export function defaultArenaState() {
   return {
     schemaVersion: ARENA_SCHEMA_VERSION, patch: ARENA_PATCH, activeProfileId: "arena-main",
     profiles: [{ id: "arena-main", name: "My Arena Build", path: "Bamboocut-Dust", weapons: ["Everspring Umbrella", "Unfettered Rope Dart"], mode: "1v1", normalAttunementProfile: null, arenaAttunementIds: ["arena-everspring-scarlet-spin"], mysticSkills: [], innerWays: [], gearSnapshot: null, battlegroup: "Jiangzhu", latency: "Moderate latency" }],
-    opponentPath: "Bamboocut-Wind", objective: "1V1_GENERAL", onboardingComplete: false,
+    activeModeV2: "1V1_ARENA", opponentPath: "Bamboocut-Wind", objective: "1V1_GENERAL", onboardingComplete: false,
   };
 }
 
@@ -369,7 +370,8 @@ function sanitizeArenaState(input) {
       arenaDimensions: sanitizeDimensions(p?.arenaDimensions),
     };
   });
-  return { schemaVersion: ARENA_SCHEMA_VERSION, patch: ARENA_PATCH, activeProfileId: profiles.some((p) => p.id === input.activeProfileId) ? input.activeProfileId : profiles[0]?.id, profiles, opponentPath: allowedPath(input.opponentPath || base.opponentPath), objective: cleanText(input.objective || base.objective, 40), onboardingComplete: Boolean(input.onboardingComplete) };
+  const activeModeV2 = ["1V1_ARENA", "3V3_ARENA", "GROUP_STRATEGY", "5V5_ARENA", "PERCEPTION_FOREST", "TRAINING_TERRACE"].includes(input.activeModeV2) ? input.activeModeV2 : base.activeModeV2;
+  return { schemaVersion: ARENA_SCHEMA_VERSION, patch: ARENA_PATCH, activeProfileId: profiles.some((p) => p.id === input.activeProfileId) ? input.activeProfileId : profiles[0]?.id, profiles, activeModeV2, opponentPath: allowedPath(input.opponentPath || base.opponentPath), objective: cleanText(input.objective || base.objective, 40), onboardingComplete: Boolean(input.onboardingComplete) };
 }
 function sanitizeDimensions(input) {
   const out = {};

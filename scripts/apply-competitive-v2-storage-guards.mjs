@@ -11,6 +11,13 @@ function update(path, marker, transform) {
 update("src/arena/ArenaWorkspace.tsx", "COMPETITIVE_V2_ARENA_STORAGE_GUARDS", (source) => {
   const importAnchor = `} from "../competitive/competitive-v2.mjs";`;
   if (!source.includes(importAnchor)) throw new Error("Arena V2 storage guard import anchor missing");
+  if (source.includes("ARENA_CANONICAL_V2_MODE")) {
+    const verifiedCanonicalState = source.includes("activeModeV2: next")
+      && source.includes("opponentPath: next")
+      && source.includes("setOpponentRaw");
+    if (!verifiedCanonicalState) throw new Error("Arena canonical mode marker lacks verified canonical persistence postconditions");
+    return source.replace(importAnchor, `${importAnchor}\n// COMPETITIVE_V2_ARENA_STORAGE_GUARDS`);
+  }
   source = source.replace(importAnchor, `${importAnchor}\nimport { loadArenaModeV2, saveArenaModeV2 } from "../competitive/storage-v2.mjs"; // COMPETITIVE_V2_ARENA_STORAGE_GUARDS`);
   source = source.replace(`const MODE_KEY = "wwm_arena_mode_v2";\n`, "");
   const initialOld = `function initialMode(profile: any): ArenaModeV2 {\n  const stored = localStorage.getItem(MODE_KEY);\n  if (ARENA_MODE_IDS.includes(stored as any)) return stored as ArenaModeV2;\n  if (profile?.mode === "3v3") return "3V3_ARENA";\n  if (profile?.mode === "5v5") return "GROUP_STRATEGY";\n  return "1V1_ARENA";\n}`;
@@ -23,6 +30,11 @@ update("src/arena/ArenaWorkspace.tsx", "COMPETITIVE_V2_ARENA_STORAGE_GUARDS", (s
 });
 
 update("src/product/GuildWarWorkspace.tsx", "COMPETITIVE_V2_GVG_STORAGE_GUARDS", (source) => {
+  if (source.includes("COMPETITIVE_V2_GVG_STORAGE_GUARDS")) {
+    const verified = source.includes("consumeGvgStorageRecovery") && source.includes("loadGvgAssignmentsV2") && source.includes("saveGvgAssignmentsV2") && source.includes("loadGvgManualV2") && source.includes("saveGvgManualV2") && source.includes("loadGvgPhaseV2") && source.includes("saveGvgPhaseV2");
+    if (!verified) throw new Error("Guild War storage guard marker lacks verified bounded persistence postconditions");
+    return source;
+  }
   const importAnchor = `} from "../competitive/competitive-v2.mjs";`;
   if (!source.includes(importAnchor)) throw new Error("Guild War V2 storage guard import anchor missing");
   source = source.replace(importAnchor, `${importAnchor}\nimport { loadGvgAssignmentsV2, loadGvgManualV2, loadGvgPhaseV2, saveGvgAssignmentsV2, saveGvgManualV2, saveGvgPhaseV2 } from "../competitive/storage-v2.mjs"; // COMPETITIVE_V2_GVG_STORAGE_GUARDS`);

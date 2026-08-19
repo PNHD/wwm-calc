@@ -2,6 +2,7 @@ export const STORAGE_RECOVERY_SCHEMA = 1;
 export const MAX_RECOVERY_BACKUP_CHARS = 128 * 1024;
 
 export const STORAGE_REGISTRY = Object.freeze([
+  { key: "wwm_execution_scaling_v2", owner: "PVE_EXECUTION_SCALING", schemaVersion: 2, migration: "bounded current-client execution-scaling settings", fallback: "default execution scaling", size: "small", corruption: "bounded local recovery + explicit replacement" },
   { key: "wwm_product_shell_v2", owner: "GLOBAL", schemaVersion: 2, migration: "tolerant shell defaults", fallback: "workspace shell defaults", size: "small", corruption: "reset shell only" },
   { key: "wwm_uid", owner: "GLOBAL", schemaVersion: 1, migration: "verified {uid,name,server} access-gate record", fallback: "prompt for Player ID again", size: "tiny", corruption: "UID gate only; never clear gameplay data" },
   { key: "wwm_selected_build", owner: "PVE", schemaVersion: 1, migration: "allowlisted build fallback", fallback: "Bamboocut-Dust", size: "tiny", corruption: "reset selected build only" },
@@ -15,7 +16,12 @@ export const STORAGE_REGISTRY = Object.freeze([
   { key: "wwm_arena_state_v1", owner: "ARENA", schemaVersion: 1, migration: "v0/unversioned → v1 sanitize", fallback: "default Arena profile", size: "medium", corruption: "backup + Arena-only recovery" },
   { key: "wwm_arena_history_v1", owner: "ARENA", schemaVersion: 1, migration: "entry sanitize", fallback: "empty local history", size: "medium", corruption: "history-only recovery" },
   { key: "wwm_arena_library_compare_v1", owner: "ARENA", schemaVersion: 1, migration: "legacy local descriptor → session-scoped comparison descriptor", fallback: "no Library reference selected for Arena compare", size: "tiny", corruption: "drop comparison descriptor only" },
+  { key: "wwm_arena_mode_v2", owner: "ARENA", schemaVersion: 2, migration: "allowlisted competitive mode enum", fallback: "1V1_ARENA", size: "tiny", corruption: "reset mode selector only" },
+  { key: "wwm_training_terrace_state_v1", owner: "TRAINING_TERRACE", schemaVersion: 1, migration: "bounded v1 observation sanitizer", fallback: "empty calibration session", size: "medium", corruption: "bounded local recovery + explicit replacement" },
   { key: "wwm_gvg_workspace_v1", owner: "GUILD_WAR", schemaVersion: 1, migration: "v0 → v1 bounded sanitize", fallback: "empty Guild War plan", size: "large", corruption: "backup + Guild-War-only recovery" },
+  { key: "wwm_gvg_phase_v2", owner: "GUILD_WAR", schemaVersion: 2, migration: "allowlisted Guild War phase enum", fallback: "PREPARATION", size: "tiny", corruption: "reset current phase only" },
+  { key: "wwm_gvg_v2_assignments", owner: "GUILD_WAR", schemaVersion: 2, migration: "seven-objective allowlist + bounded squad labels", fallback: "empty phase assignments", size: "small", corruption: "drop objective assignments only" },
+  { key: "wwm_gvg_v2_manual", owner: "GUILD_WAR", schemaVersion: 2, migration: "bounded Advanced overrides; current Halftime trigger 0..3600s", fallback: "empty manual overrides / UNKNOWN", size: "tiny", corruption: "drop manual override only" },
   { key: "wwm_library_favorites_v1", owner: "LIBRARY", schemaVersion: 1, migration: "string-ID list sanitize", fallback: "empty favorites", size: "tiny", corruption: "favorites-only recovery" },
   { key: "wwm_library_recent_v1", owner: "LIBRARY", schemaVersion: 1, migration: "string-ID list sanitize", fallback: "empty recently viewed", size: "tiny", corruption: "recent-only recovery" },
   { key: "wwm_library_clone_descriptor_v1", owner: "LIBRARY", schemaVersion: 1, migration: "descriptor replacement", fallback: "no pending clone", size: "small", corruption: "descriptor-only recovery" },

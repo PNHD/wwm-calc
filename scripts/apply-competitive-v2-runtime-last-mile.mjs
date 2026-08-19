@@ -44,4 +44,31 @@ replaceContract(
   "V1 scale Guild War Strategy surface",
 );
 
+// Secondary Guild War persistence (phase/assignments/manual overrides) is
+// intentionally separate from the main workspace document. Surface bounded
+// recovery from those helpers after the child/phase loaders have had a chance to
+// report corruption; do not reuse the main-workspace replacement action.
+{
+  const path = "src/product/GuildWarWorkspace.tsx";
+  const marker = "V1_GVG_SECONDARY_RECOVERY_UI";
+  let source = read(path);
+  if (!source.includes(marker)) {
+    const holdAnchor = `const [holdPersistence,setHoldPersistence] = useState(Boolean(loaded.holdPersistence));`;
+    if (!source.includes(holdAnchor)) throw new Error("Competitive V2 last-mile: Guild War hold-persistence anchor missing");
+    source = source.replace(holdAnchor, `${holdAnchor} const [secondaryRecovery,setSecondaryRecovery] = useState(""); /* ${marker} */`);
+
+    const shareEffectAnchor = `  useEffect(() => { const marker = "gvg-share=";`;
+    if (!source.includes(shareEffectAnchor)) throw new Error("Competitive V2 last-mile: Guild War share-effect anchor missing");
+    source = source.replace(shareEffectAnchor, `  useEffect(() => { const message = consumeGvgStorageRecovery(); if (message) setSecondaryRecovery(message); }, [view, phase]);\n${shareEffectAnchor}`);
+
+    const navAnchor = `<nav className="gvg-tabs" aria-label="Guild War workspaces">`;
+    if (!source.includes(navAnchor)) throw new Error("Competitive V2 last-mile: Guild War tab-nav anchor missing");
+    const secondaryUi = `{secondaryRecovery && <div className="gvg-card" data-testid="gvg-secondary-recovery"><Unknown>{secondaryRecovery}</Unknown><p>Invalid secondary state is not trusted. A bounded backup is retained; editing the affected control replaces only that secondary key.</p><button className="gvg-button" type="button" aria-label="Acknowledge secondary recovery" onClick={() => setSecondaryRecovery("")}>Acknowledge</button></div>}`;
+    source = source.replace(navAnchor, `${secondaryUi}${navAnchor}`);
+
+    if (!source.includes(marker) || !source.includes("gvg-secondary-recovery") || !source.includes("consumeGvgStorageRecovery(); if (message) setSecondaryRecovery(message)")) throw new Error("Competitive V2 last-mile: Guild War secondary recovery UI contract incomplete");
+    write(path, source);
+  }
+}
+
 console.log("Competitive V2 last-mile runtime assertions applied deterministically.");

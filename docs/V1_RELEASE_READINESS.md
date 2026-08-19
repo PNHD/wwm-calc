@@ -30,6 +30,12 @@ Purpose: discover curated reference/community builds and Guild War templates, in
 
 Community references are inputs to a decision, not authoritative rankings.
 
+### Training Terrace
+
+Purpose: record current-client controlled calibration observations with explicit target/context, categorical Attunement state, before/after values, notes, and provenance snapshots. It is observational only: it does not fabricate normalization coefficients and it is not ranked Arena truth by default. One-mode measurements do not establish another mode; current-client provenance remains required.
+
+Training Terrace persists independently in `wwm_training_terrace_state_v1`. A corrupt or future primary payload is preserved in a bounded backup and held until the user either recovers a valid backup or explicitly replaces it with a blank calibration. Authoritative acceptance is the dedicated Training Terrace Chromium contract plus its exact-SHA production smoke extension; neither is marked passed until CI evidence exists.
+
 ## Patch, tier and evidence assumptions
 
 - Global product context is **2.0**.

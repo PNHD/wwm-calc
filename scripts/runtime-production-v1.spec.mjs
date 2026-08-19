@@ -27,7 +27,7 @@ function seedGvg() {
   workspace.roster = Array.from({ length: 30 }, (_, index) => ({
     id: `prod-${index + 1}`, name: `Player ${String(index + 1).padStart(2, "0")}`, path: "Bamboocut - Dust",
     weapons: ["Everspring Umbrella", "Unfettered Rope Dart"], roles: [index % 6 === 0 ? "HEALER" : "MAIN_BALL"], team: index < 15 ? "Main Ball" : "Flex",
-    buildReference: "", exTechnique: "Everspring Umbrella: EX", exLevel: 3, normalProfile: "PvE / Normal", arenaProfile: "Arena", gvgSelectedProfile: "ARENA",
+    buildReference: "", exTechnique: "Everspring Umbrella: EX", exLevel: 3, normalProfile: "PvE / Normal", arenaProfile: "Arena", gvgSelectedProfile: "UNKNOWN" /* COMPETITIVE_V2_PROD_GVG_ATTUNEMENT_UNKNOWN */,
     availability: true, notes: "", antiHeal: true, aoeCc: index % 3 === 0,
   }));
   workspace.strategy.positions = Object.fromEntries(workspace.roster.map((member, index) => [member.id, { x: 10 + (index % 6) * 15, y: 10 + Math.floor(index / 6) * 17 }]));
@@ -76,11 +76,23 @@ test("production is exact main SHA and V1 critical surfaces pass", async ({ page
   await expect(page.getByTestId("arena-matchup-result")).toBeVisible();
   await expect(page.getByText(/not an empirical win probability/i)).toBeVisible();
 
+  const arenaBeforeTraining = await page.evaluate(() => localStorage.getItem("wwm_arena_state_v1"));
+  await page.goto(`${base}#training-terrace/overview`, { waitUntil: "networkidle" });
+  await expect(page.getByTestId("training-terrace-workspace")).toBeVisible();
+  await page.getByLabel("Target or dummy label").fill("Production training dummy");
+  await page.getByLabel("HP baseline").fill("100");
+  await page.getByLabel("HP after").fill("125");
+  await expect(page.getByText("+25 (+25.00%)")).toBeVisible();
+  await page.reload({ waitUntil: "networkidle" });
+  await expect(page.getByLabel("Target or dummy label")).toHaveValue("Production training dummy");
+  expect(await page.evaluate(() => localStorage.getItem("wwm_arena_state_v1"))).toBe(arenaBeforeTraining);
+
   await page.goto(`${base}#gvg/roster`, { waitUntil: "networkidle" });
   await expect(page.getByTestId("gvg-roster")).toBeVisible();
   await expect(page.getByLabel("Player name")).toHaveCount(30);
   await page.goto(`${base}#gvg/strategy`, { waitUntil: "networkidle" });
-  await expect(page.getByTestId("gvg-strategy-board")).toBeVisible();
+  await expect(page.getByTestId("gvg-strategy" /* COMPETITIVE_V2_PROD_GVG_STRATEGY */)).toBeVisible();
+  await expect(page.getByTestId("gvg-objective-map" /* COMPETITIVE_V2_PROD_GVG_OBJECTIVE_MAP_SCOPE */).locator('button[data-objective-id="BULWARK"]')).toBeVisible();
 
   await page.goto(`${base}#library`, { waitUntil: "networkidle" });
   await expect(page.getByTestId("library-landing")).toBeVisible();
@@ -102,7 +114,7 @@ test("production is exact main SHA and V1 critical surfaces pass", async ({ page
   expect(await page.evaluate(() => localStorage.getItem("wwm_gvg_workspace_v1__recovery_backup_v1"))).toBe("{");
 
   await page.setViewportSize({ width: 390, height: 844 });
-  for (const route of ["#pve/gear", "#arena/matchups", "#gvg/roster", `#shared-build=${token}`]) {
+  for (const route of ["#pve/gear", "#arena/matchups", "#training-terrace/overview", "#gvg/roster", `#shared-build=${token}`]) {
     await page.goto(`${base}${route}`, { waitUntil: "networkidle" });
     await noOverflow(page);
   }
@@ -118,8 +130,8 @@ test("production is exact main SHA and V1 critical surfaces pass", async ({ page
     productionCommit: buildInfo.commit,
     exactShaMatch: buildInfo.commit === expectedSha,
     productionBranch: buildInfo.branch,
-    browserSmoke: { pve: true, arena: true, guildWar: true, library: true, pageErrors, consoleErrors },
-    mobile390: { pveGear: true, arenaMatchup: true, guildWarRoster: true, libraryShared: true, noHorizontalOverflow: true },
+    browserSmoke: { pve: true, arena: true, trainingTerrace: true, trainingRoute: true, trainingInput: true, trainingDelta: true, trainingReloadPersistence: true, arenaTrainingIsolation: true, guildWar: true, library: true, pageErrors, consoleErrors },
+    mobile390: { pveGear: true, arenaMatchup: true, trainingTerrace: true, guildWarRoster: true, libraryShared: true, noHorizontalOverflow: true },
     migrationSmoke: { guildWarCorruptStorageRecovered: true, originalPreservedBeforeEdit: true, backupPreserved: true },
     securitySmoke: { versionedReadOnlyLibraryShare: true },
   };

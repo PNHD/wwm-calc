@@ -57,10 +57,18 @@ Severity policy used here:
 | Duelist / Healer | `#gvg/support` | roster refs + healer calibration | choose duelists/calibration | deleted-member refs | V1 delete-reference cleanup |
 | Guild War Match Log | `#gvg/matches` | structured local match logs | record observed match | history/private data in share | GvG acceptance + redaction policy |
 | Guild War Share Plan | `#gvg/share`, `#gvg-share=<payload>` | GvG share schema v1 | redact/share/read-only inspect/clone | editable JSON path had shallow validation | GvG + Library + V1 share security |
+| Training Terrace | `#training-terrace/overview` | `wwm_training_terrace_state_v1` | record bounded before/after calibration observations | corrupt observation overwriting; cross-mode inference | dedicated Training Terrace Chromium + production smoke |
+
 | Library Featured/PvE/Arena/Guild War | `#library/*` | curated document + Arena injected references | discover/filter | stale/experimental trust ambiguity | Library acceptance + patch freshness |
 | Library Detail | `#library/build/<id>` | validated Library entry | inspect provenance/clone/share/report | unsafe source URL; stale claim | Library model/runtime |
 | Library Compare | `#library/compare/<a>/<b>` | two validated entries/current build | compare complete intent/result | universal-winner wording | Library acceptance + terminology cleanup |
 | Library Saved/Recent | `#library/saved`, `#library/recent` | local string-ID lists | revisit references | corrupt minor key | bounded empty fallback + registry audit |
+
+## Training Terrace calibration contract
+
+Training Terrace is a first-class **CALIBRATION** companion, not a ranked Arena surface. It stores current-client, controlled before/after observations only; it does not invent normalization coefficients, win probabilities, or cross-mode conclusions. Attunement is recorded categorically, and an observation in one mode does not establish behavior in another mode.
+
+Its separate `wwm_training_terrace_state_v1` domain contains target/context, optional Arena context, notes, measurements, and bounded provenance snapshots. Corrupt or future primary payloads are copied to a bounded recovery backup and held without silently replacing the primary state. The user must recover a valid backup or explicitly replace it with a blank v1 calibration.
 
 ## Storage registry
 

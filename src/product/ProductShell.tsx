@@ -193,6 +193,8 @@ function WorkspaceSwitcher({ workspace, onChange }: { workspace: ProductWorkspac
       <button type="button" className={workspace === "pve" ? "is-active" : ""} aria-pressed={workspace === "pve"} onClick={() => onChange("pve")}>
         <BarChart3 size={15} aria-hidden="true" /><span>PvE</span>
       </button>
+      <button type="button" aria-label="Open Arena workspace" onClick={() => { location.hash = "#arena/overview"; }}><Target size={15} aria-hidden="true" /><span>Arena</span></button>
+      <button type="button" aria-label="Open Training Terrace workspace" onClick={() => { location.hash = "#training-terrace/overview"; }}><FlaskConical size={15} aria-hidden="true" /><span>Training Terrace</span></button>
       <button type="button" className={workspace === "gvg" ? "is-active" : ""} aria-pressed={workspace === "gvg"} onClick={() => onChange("gvg")}>
         <Shield size={15} aria-hidden="true" /><span>Guild War</span>
       </button>
