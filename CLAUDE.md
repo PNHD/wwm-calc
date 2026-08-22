@@ -1,33 +1,34 @@
 # WWM Calc — project guide for AI agents
 
-**This repo is ONLY the "Where Winds Meet" gear graduation calculator.**
-- GitHub: `https://github.com/PNHD/wwm-calc` (branch `main`)
-- Live: https://wonton-wwm.pages.dev/ — deploys on push to `main` (Cloudflare Pages, build `npm run build`, output `dist`).
-- Stack: Vite + React + TS. Author shown in-app: **Wonton**.
+WWM Calc / WWM Build Lab is the fan-made Where Winds Meet Global calculator.
 
-## Project boundary — do NOT mix projects
-A separate project, **Thiên Kim**, lives in `D:\Thiên Kim` with its OWN GitHub repo and its own Cloudflare site (thienkim.pages.dev). The `tk-pipeline/` Worker (hono + D1, wrangler name `thienkim`) belongs to Thiên Kim and was moved OUT of this repo. **Never add Thiên Kim / tk-pipeline / n8n / content-pipeline code here**, and never bring WWM code into Thiên Kim.
+- Product version: `1.0.0`
+- Current context: Global 2.0, active calibrated profile Tier 96
+- Canonical production: https://wonton-wwm.pages.dev/ (Cloudflare Pages)
+- Repository: https://github.com/PNHD/wwm-calc
 
-## LOCKED DECISIONS — do not "fix"/revert these (they are intentional & verified)
-Other agents have repeatedly reverted these thinking they were bugs. They are correct.
+## Source of truth and project boundary
 
-1. **Tier = 95下 (T91 Global).** `WWM_DATA.tiers["95下"]` + the damage formula in `src/utils/calc.ts` are verified against the official Excel (`燕云调律计算器`, sheets `各等级模板`, `伤害公式`, `各流派历史等级毕业配置`). Do not alter tier constants or the pen/precision formulas.
-2. **Inner ways are IN-COMBAT buffs**, not character-menu stats. `adjustedPanel` adds the full `iwStats` (pen/crit/critDmg/aff/affDmg/outerDmg/pzPen/pzDmg) on top of `basePanel`; `generalDmg` stays in its own multiplier bucket. Do NOT go back to ignoring inner-way stats.
-3. **`computeGearPanel` IS used** via the `basePanel` memo. Panel ALWAYS auto-computes from equipped gear (like spongem.com/yysls/). Do not delete this call or call it "dead code".
-4. **Panel always auto-computes from gear** (`autoGearPanel = true` always, no toggle). Equip/unequip gear → panel stats update automatically. Manual panel inputs are read-only. Do NOT re-add a manual/auto toggle.
-5. **Cultivate tab uses 条 (substat-count) units.** Targets = verified 95下 graduated substat counts (`GRAD95_COUNTS`); current = gear sum ÷ 95下 max roll. NOT value caps, NOT "count×roll value", NOT "CN Lv105 × 0.604". The Cultivate tab has 3 sections: 培养总结 / 定音词条总结 (tuned-substat upgrade ranking) / 培养建议 (greedy next-8 advice). Keep all three.
-6. **There is NO "Fire-Fist-Healer" path** (it was fake — removed). Only the 8 verified 95下 paths exist in `GRAD95_*`.
-7. **Swap Sim & Rotation Sim tabs were intentionally removed**, replaced by **Transmute Advice**. Do not re-add the old Swap/Rotation Sim. **EXCEPTION (user-approved override):** a **Rotations editor** was re-added on purpose — it lives as a sub-tab in the `grad-tabs` group in `App.tsx` and lets the user edit the current build's per-skill cast counts and recompute DPS via `simulateRotation` (timelineEngine, which only wraps the verified `calcSkill` — no formula change). This is NOT the removed Swap Sim; do not revert it.
-8. In-app labels: **Author = Wonton**, **"Edition: Global (T91 / Lv95)"**, NO version numbers.
-9. **UI text is English.** The Vietnamese/Chinese strings remaining in `ocrParser.ts` and the OCR slot/stat detection are FUNCTIONAL keyword matching for VN/CN game clients — do not "translate"/remove them.
-10. **`src/utils/englishCalc.ts` is dead code** (not imported). Don't trust it as a reference.
-11. Gear-slot click in the Panel Simulator is **non-destructive** (opens the slot inventory). Unequip is the small **✕** button on the slot. Don't make a plain click unequip.
+Current Git and artifact metadata, followed by current README/V1 release documentation and manifests, outrank historical agent instructions when they conflict. Do not encode a mutable current HEAD SHA in guidance.
 
-## Build / verify / deploy
-- `npm run build` = `vite build` only (esbuild strips types — TS errors don't block the build). `npx tsc --noEmit` is the lint check and should stay clean.
-- Verify behaviour in the dev server before pushing; deploy = commit + push `main`.
-- If the live site shows old UI, the Cloudflare Pages build is stale — check the project is connected to `PNHD/wwm-calc` @ `main` and the last deployment succeeded.
-- **Canonical live URL = `wonton-wwm.pages.dev` (Cloudflare Pages).** There is ALSO a stray `wonton-wwm` **Worker** (`wonton-wwm.phamnhathaidang.workers.dev`) pointing at the same repo — it can drift to a different bundle and cause confusion. Prefer Pages; delete/ignore the Worker. Pages deploys cannot be triggered via the Cloudflare MCP (Workers-only) — use the dashboard.
+Keep WWM Calc separate from Thiên Kim, `tk-pipeline`, n8n, and content-pipeline code. Those systems have their own repositories and deployment surfaces; do not mix their code or configuration into this project.
 
-## Before changing calc/data, re-read the source
-The numbers come from the Excel sheet, not guesses. If a value "looks wrong", check it against the Excel 95下 columns first.
+Unsupported or unverified mechanics remain explicitly modeled, reference-only, or UNKNOWN until current Global evidence supports a stronger claim. Do not guess or silently convert historical T91/Lv95 values into current Tier 96 facts.
+
+## Calculator and UI invariants
+
+- Inner Ways are in-combat buffs and remain separate from character-menu stats and their multiplier buckets.
+- `computeGearPanel` remains the source of the automatically computed equipped-gear panel; do not reintroduce a manual/auto toggle.
+- Cultivation retains a historical Global T91 / 95下 reference model: `GRAD95_COUNTS` contains verified historical graduation substat counts; current count = summed gear substat value / historical 95下 max roll, and target = the historical verified graduation count. Preserve Cultivation Summary, Tuned Substat Summary, and Cultivation Advice with these semantics. They are not the active Global 2.0 / Tier 96 calibration; do not migrate them to value caps, T96 caps, or another model without a separate evidence-backed task.
+- The removed Swap Sim and Rotation Sim tabs must not be restored. The user-approved Rotations editor is a separate current sub-tab and may remain.
+- OCR Vietnamese/Chinese strings are functional keyword matching for supported clients; do not remove them as translation cleanup.
+- `src/utils/englishCalc.ts` is not an authoritative reference unless current imports make it one.
+- Panel Simulator gear-slot clicks open inventory; the small `✕` control performs unequip.
+
+## Build, integration, and production
+
+`package.json` is authoritative for npm lifecycle behavior. `npm run build` runs the applicable `prebuild` processing before the `vite build`; do not describe it as an isolated Vite command.
+
+Main is operationally protected. Normal changes use a task branch and pull request, required CI must pass before integration, and push, merge, and deployment require explicit authorization. V1 production verification must use exact-SHA evidence. Do not treat the stray Worker or old Cloudflare bot configuration as canonical deployment truth.
+
+Before changing formulas or game data, re-read the current evidence and owning documentation. Preserve explicit maturity, provenance, and UNKNOWN boundaries.
