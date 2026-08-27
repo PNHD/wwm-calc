@@ -468,8 +468,8 @@ const BASE_INNER_WAYS: InnerWay[] = [
       {tier:2,effect:"Combo: Ballistic Skills +4% DMG for 7s (conditional, not summed)",stat:{}},
       {tier:3,effect:"Combo: +6% DMG for 8s (conditional, not summed)",stat:{}},
       {tier:4,effect:"Combo: +8% DMG for 9s (conditional, not summed)",stat:{}},
-      {tier:5,effect:"Combo: Ballistic Skills +10% DMG for 10s (conditional, not summed)",stat:{}},
-      {tier:6,effect:"Basic Buff (conditional, NOT summed): combo +10% DMG for 10s. Attr Buff: Crit DMG +4.4%, Crit Rate +8.2%",stat:{critDmg:4.4,crit:8.2}},
+      {tier:5,effect:"Global 2.0: Critical DMG breakthrough changed to Direct Critical Rate. Numeric current-client value unresolved; not added as a flat stat here.",stat:{}},
+      {tier:6,effect:"Ground Jade enabler (community/current behavior): Q on own Combo can gain ~2.5 Petals and refund 5s Q cooldown; Direct Crit numeric remains user/client supplied until verified.",stat:{}},
     ]
   },
   {
