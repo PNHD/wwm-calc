@@ -461,6 +461,15 @@ export function calcSkill(
   if (!sk) return { perHit: 0, total: 0, breakdown: { crit: 0, aff: 0, normal: 0, abrasion: 0 }, sim: { pCrit: 0, pAff: 0, pWhite: 0, pGraze: 0, critHit: 0, affHit: 0, normHit: 0, grazeHit: 0, casts: 0 } };
   if (opts.skillOverride) sk = { ...sk, ...opts.skillOverride };
 
+  // The base Effective Critical Rate remains capped before Direct Critical is
+  // added. Only explicit current-Global skill exceptions are applied here; all
+  // unverified DoT/summon/settlement sources keep the normal formula rather than
+  // being guessed into forced Crit/Affinity behavior.
+  const outcomeRule = GLOBAL_V2_SKILL_OUTCOME_RULES[rot.name]?.rule;
+  if (outcomeRule === "guaranteed-critical" && sk.force !== "crit") {
+    sk = { ...sk, force: "crit" };
+  }
+
   const set = opts.set;
   // Armor 4pc applies ALONGSIDE the weapon 4pc (the game allows one of each). When
   // the caller doesn't split them, fall back to `set` so a single "stormrain"

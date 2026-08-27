@@ -583,7 +583,7 @@ function sanitizeGvgWorkspaceV1(input) {
     attunementProfiles: {
       normal: { name: gvgText(normalAttunement.name, 80, "PvE / Normal"), source: gvgText(normalAttunement.source, 80, "legacy-compatible") },
       arena: { name: gvgText(arenaAttunement.name, 80, "Arena"), source: gvgText(arenaAttunement.source, 80, "separate-profile") },
-      gvgSelected: attunementInput.gvgSelected === "NORMAL" ? "NORMAL" : "ARENA",
+      gvgSelected: attunementInput.gvgSelected === "NORMAL" || attunementInput.gvgSelected === "ARENA" ? attunementInput.gvgSelected : "UNKNOWN",
     },
     ...(input.importedBuildReference && isPlainRecord(input.importedBuildReference) ? { importedBuildReference: cloneBoundedJson(input.importedBuildReference, { maxDepth: 6, maxArray: 80, maxKeys: 100, maxString: 2_000, maxChars: 64 * 1024 }) } : {}),
   };

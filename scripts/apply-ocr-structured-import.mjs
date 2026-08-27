@@ -20,8 +20,21 @@ function replaceRequired(source, from, to, label) {
   return source.replace(from.replaceAll("\n", eol), to.replaceAll("\n", eol));
 }
 
+function hasStructuredBatchPayload(source) {
+  const normalized = source.replace(/\r\n/g, "\n");
+  return [
+    /rawText:\s*it\.rawText\s*\|\|\s*lines\.join\("\\n"\)/,
+    /fileName:\s*it\.fileName/,
+    /slot:\s*it\.slot/,
+    /mastery:\s*it\.mastery/,
+    /subs:\s*it\.subs\.filter\(\(sub\)\s*=>\s*sub\.type\s*!==\s*"Other"\s*&&\s*sub\.val\)\.map\(\(sub\)\s*=>\s*\(\{\s*\.\.\.sub\s*\}\)\)/,
+  ].every((pattern) => pattern.test(normalized));
+}
+
 function replaceRegexRequired(source, pattern, to, label) {
-  if (typeof to === "string" && source.includes(to)) return source;
+  const normalizedSource = source.replace(/\r\n/g, "\n");
+  const normalizedTarget = typeof to === "string" ? to.replace(/\r\n/g, "\n") : null;
+  if (normalizedTarget && (normalizedSource.includes(normalizedTarget) || (label === "structured batch payload" && hasStructuredBatchPayload(normalizedSource)))) return source;
   if (!pattern.test(source)) throw new Error(`[ocr-structured] Missing regex anchor: ${label}`);
   return source.replace(pattern, to);
 }

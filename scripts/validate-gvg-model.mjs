@@ -160,6 +160,17 @@ assert.equal(defaultWorkspace().scenario, "GUILD_WAR");
 const unknownAttunementWorkspace = migrateWorkspace({ ...defaultWorkspace(), roster: [{ id: "attune-unknown", name: "Unknown profile", roles: [], weapons: [], gvgSelectedProfile: "UNKNOWN" }] });
 assert.equal(unknownAttunementWorkspace.roster[0].gvgSelectedProfile, "UNKNOWN"); // COMPETITIVE_V2_GVG_ATTUNEMENT_SANITIZER_TEST
 
+// Workspace-level applicability remains UNKNOWN until it is explicitly established.
+const workspaceUnknownBefore = defaultWorkspace();
+const workspaceUnknownAfter = migrateWorkspace(workspaceUnknownBefore);
+assert.equal(workspaceUnknownBefore.attunementProfiles.gvgSelected, "UNKNOWN");
+assert.equal(workspaceUnknownAfter.attunementProfiles.gvgSelected, "UNKNOWN");
+assert.equal(selectAttunementProfile(workspaceUnknownAfter.attunementProfiles, workspaceUnknownAfter.attunementProfiles.gvgSelected), null);
+assert.deepEqual(
+  migrateWorkspace(JSON.parse(JSON.stringify(workspaceUnknownAfter))),
+  workspaceUnknownAfter,
+); // COMPETITIVE_V2_GVG_WORKSPACE_ATTUNEMENT_UNKNOWN_REGRESSION
+
 console.log(JSON.stringify({
   ok: true,
   tests: "Global Guild War model",
