@@ -28,7 +28,7 @@ test("Guild War V2 is phase-first, capability-based and UNKNOWN-safe", async ({ 
   await expect(page.getByText(/No universal GvG score/i)).toBeVisible();
   await expect(page.getByText("3:00", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("60s", { exact: true }).first()).toBeVisible();
-  await expect(page.getByText("×0.5", { exact: true }).first()).toBeVisible();
+  await expect(page.getByTestId("gvg-phase-context" /* COMPETITIVE_V2_QI_MULTIPLIER_SELECTOR */)).toContainText("×0.5");
 
   await page.goto(`${base}#gvg/roster`, { waitUntil: "networkidle" });
   const roster = page.getByTestId("gvg-roster");
@@ -49,9 +49,13 @@ test("Guild War V2 is phase-first, capability-based and UNKNOWN-safe", async ({ 
   expect(buildText).not.toMatch(/universal.*score/i);
 
   await page.goto(`${base}#gvg/timeline`, { waitUntil: "networkidle" });
-  await expect(page.getByTestId("gvg-timeline")).toBeVisible();
-  await expect(page.getByText("OUTPOST PHASE", { exact: true })).toBeVisible();
-  await expect(page.getByText("3:00", { exact: true })).toBeVisible();
+  const timelineSurface = page.getByTestId("gvg-timeline" /* COMPETITIVE_V2_GVG_TIMELINE_SCOPE */);
+  await expect(timelineSurface).toBeVisible();
+  await expect(timelineSurface.getByText("OUTPOST PHASE", { exact: true })).toBeVisible();
+  const objectiveTimeline = page.getByTestId("gvg-objective-timeline" /* COMPETITIVE_V2_GVG_OUTPOST_3M_SCOPE */);
+  await expect(objectiveTimeline.getByText("TOP OUTPOST", { exact: true })).toBeVisible();
+  await expect(objectiveTimeline.getByText("BOTTOM OUTPOST", { exact: true })).toBeVisible();
+  await expect(objectiveTimeline.getByText("3:00", { exact: true })).toHaveCount(2);
   await expect(page.getByText(/At entry = 0%; \+30% every 30 seconds/i)).toBeVisible();
   await expect(page.getByLabel("Halftime trigger override")).toHaveAttribute("placeholder", "UNKNOWN");
 
@@ -74,9 +78,16 @@ test("Guild War V2 is phase-first, capability-based and UNKNOWN-safe", async ({ 
 
   await page.goto(`${base}#gvg/strategy`, { waitUntil: "networkidle" });
   await expect(page.getByTestId("gvg-strategy")).toBeVisible();
-  await expect(page.locator('[data-objective-id="BULWARK"]')).toBeVisible();
-  await expect(page.locator('[data-objective-id="GOOSE"]')).toBeVisible();
-  await expect(page.locator('[data-objective-id="FORTUNE_TREE"]')).toBeVisible();
+  const objectiveMap = page.getByTestId("gvg-objective-map" /* COMPETITIVE_V2_GVG_OBJECTIVE_MAP_SCOPE */);
+  await expect(objectiveMap.locator('button[data-objective-id="BULWARK"]')).toBeVisible();
+  await expect(objectiveMap.locator('button[data-objective-id="GOOSE"]')).toBeVisible();
+  await expect(objectiveMap.locator('button[data-objective-id="FORTUNE_TREE"]')).toBeVisible();
+  await expect(page.getByTestId("gvg-objective-map")).toBeVisible();
+  await page.getByTestId("gvg-objective-map").locator('[data-objective-id="GOOSE"]').click();
+  await expect(page.getByTestId("gvg-objective-inspector")).toContainText("GOOSE");
+  await expect(page.getByTestId("gvg-objective-inspector")).toContainText(/Exact proximity DR-per-stack remains unresolved/i);
+  await page.goto(base + "#gvg/timeline", { waitUntil: "networkidle" });
+  await expect(page.getByTestId("gvg-objective-timeline").locator('[data-objective-id="TOP_OUTPOST"]')).toContainText("3:00");
 
   await page.goto(`${base}#gvg/support`, { waitUntil: "networkidle" });
   await expect(page.getByTestId("gvg-support")).toBeVisible();
@@ -90,9 +101,12 @@ test("Guild War V2 is phase-first, capability-based and UNKNOWN-safe", async ({ 
   await expect(page.getByText("Observed Guild War V2 fixture", { exact: true })).toBeVisible();
 
   await page.goto(`${base}#gvg/share`, { waitUntil: "networkidle" });
-  await expect(page.getByTestId("gvg-share")).toBeVisible();
-  await page.getByRole("button", { name: /Prepare JSON/i }).click();
-  await expect(page.getByRole("status")).toContainText(/redacted/i);
+  const sharePrivacy = page.getByTestId("gvg-share-privacy" /* COMPETITIVE_V2_GVG_SHARE_PRIVACY_SURFACE */);
+  await expect(sharePrivacy).toBeVisible();
+  await expect(sharePrivacy.getByText("PUBLIC DATA INCLUDED", { exact: true })).toBeVisible();
+  await expect(sharePrivacy.getByLabel(/Redact player names/i)).toBeChecked();
+  await expect(sharePrivacy.getByRole("button", { name: /Generate share link/i })).toBeVisible();
+  await expect(sharePrivacy.getByRole("button", { name: /Copy versioned JSON/i })).toBeVisible();
 
   for (const [width, height] of [[1440,960],[1024,900],[390,844]]) {
     await page.setViewportSize({ width, height });

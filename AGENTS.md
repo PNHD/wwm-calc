@@ -8,7 +8,7 @@
 
 ## Product and evidence scope
 
-- Current product context is WWM Build Lab / WWM Calc, Global 2.0, active calibrated profile Tier 96, product version 1.0.0.
+- Current product context is WWM Build Lab / WWM Calc, Global 2.1, active calibrated profile Tier 96, product version 1.1.0.
 - Preserve verified formulas and calculator invariants. Do not invent conditional mechanics; keep unsupported or unverified effects modeled, reference-only, or UNKNOWN.
 - Current Git/artifact metadata and current canonical repository docs outrank historical agent guidance when they conflict.
 - Do not mix this project with Thiên Kim, `tk-pipeline`, n8n, or content-pipeline systems.

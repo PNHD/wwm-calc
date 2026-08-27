@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "region": "Global",
-  "reviewedAt": "2026-08-18",
+  "reviewedAt": "2026-08-24",
   "latestApplicableOfficial": "Version 2.0 Patch Notes: Optimizations and Bug Fixes (August 7, 2026)",
-  "newerOfficialArenaSearch": "Searched official Global news through 2026-08-18; no newer applicable Arena mechanics were surfaced after the August 7 Version 2.0 rolling notes.",
+  "newerOfficialArenaSearch": "Reviewed current Global context through 2026-08-24; no newer applicable Arena mechanics were surfaced after the August 7 Version 2.0 rolling notes.",
   "records": [
     {"id":"arena-endurance-cap","category":"CONFIRMED_OFFICIAL","patch":"1.7+","modes":["1v1","3v3","5v5"],"mechanic":"Endurance consumption reduction","value":{"maxReductionPct":40},"source":"https://www.wherewindsmeetgame.com/news/official/Adjustment528.html"},
     {"id":"arena-sprint-endurance","category":"CONFIRMED_OFFICIAL","patch":"1.7+","modes":["1v1","3v3","5v5"],"mechanic":"Continuous Sprint","value":"Endurance consumed after continuously Sprinting for over 1 second was increased; no fabricated coefficient is modeled.","source":"https://www.wherewindsmeetgame.com/news/official/Adjustment528.html"},

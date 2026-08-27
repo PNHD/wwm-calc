@@ -1,8 +1,9 @@
 import { InnerWayTier, InnerWay, InnerWayTrigger } from "../types";
+import { GLOBAL_V2_INNER_WAY_OVERRIDES } from "./globalV2CombatEvidence";
 
 export type { InnerWayTier, InnerWay, InnerWayTrigger };
 
-export const INNER_WAYS: InnerWay[] = [
+const BASE_INNER_WAYS: InnerWay[] = [
   // ── BAMBOOCUT-DUST (v1.4 new) ──
   {
     id:"phantom_rally", name:"Phantom Rally", cat:"BAMBOOCUT-DUST",
@@ -32,7 +33,7 @@ export const INNER_WAYS: InnerWay[] = [
   },
   {
     id:"light_anew", name:"Light Anew", cat:"BAMBOOCUT-DUST",
-    desc:"When hitting 3 or more enemies at once, apply Candle Flicker for 3s (max 5 stacks). Each stack: -4% enemy Movement Speed, +2% damage taken from caster. Triggers once per 0.5s, 1 stack per 0.5s per source.",
+    desc:"When hitting 3 or more enemies at once, apply Candle Flicker for 3s (max 5 stacks). Each stack: -4% enemy Movement Speed, +2% damage taken from caster. Global 2.0 classifies Exhaustion/Qi-Imbalance vulnerability with boss mechanism DMG boosts; do not add it to the ordinary general-damage bucket.",
     recommended:true, note:"AoE debuff — each stack makes enemies take 2% more damage from you (max +10% at 5 stacks).",
     tiers:[
       {tier:1,effect:"Each stack: +0.8% damage taken by enemies (max 5 stacks = +4%; needs 3+ enemies, not summed)",stat:{}},
@@ -182,7 +183,7 @@ export const INNER_WAYS: InnerWay[] = [
   {
     id:"sword_horizon", name:"Sword Horizon", cat:"BELLSTRIKE-UMBRA",
     desc:"After Strategic Sword's Martial Art / Special / Charged Skill, press skill at perfect timing to cast Crisscrossing Swords (follow-up). If target has 5 Bleed stacks, remove all and deal high Bleed damage once.",
-    recommended:false, note:"Core Bellstrike-Umbra. Requires precise timing input.",
+    recommended:false, note:"Core Bellstrike-Umbra. Global 2.0 Tier 3 guaranteed-Affinity High Bleeding extends eligible active DoTs by 10s, capped at 16s remaining.",
     tiers:[
       {tier:1,effect:"Crisscrossing Swords follow-up enabled. Timing window: strict. Bleed burst: 80% ATK (skill effect, not a flat stat)",stat:{}},
       {tier:2,effect:"Timing window slightly wider. Bleed burst: 120% ATK (skill effect, not a flat stat)",stat:{}},
@@ -220,7 +221,7 @@ export const INNER_WAYS: InnerWay[] = [
   },
   {
     id:"wolfchasers_art", name:"Wolfchaser's Art", cat:"BELLSTRIKE-UMBRA",
-    desc:"For Nine-Bend Spirit-Stealing Spear's Sorrow Without Wine: Combo count required for buff reduced from 5/10 to 4/8. Each time Sorrow Without Wine hits target with your Bleed, 60/70/80/90/100% chance (based on Bleed stacks) to add 1 extra Combo count.",
+    desc:"For Nine-Bend Spirit-Stealing Spear's Sorrow Without Wine, the combo requirement is reduced. Global 2.0 Tier 6: Sober Sorrow inflicts Soul-Shaken without requiring an existing stack; Wine Gu now requires 3 hits within 3s instead of 5, and further hits refresh duration.",
     recommended:false, note:"Heavenquaker Spear specific. Greatly optimizes Bleed-stack rotations.",
     tiers:[
       {tier:1,effect:"Combo req: 4/8. 60% chance +1 combo on Bleed hit (any stack count)",stat:{}},
@@ -235,7 +236,7 @@ export const INNER_WAYS: InnerWay[] = [
   // ── GENERAL ──
   {
     id:"seasonal_edge", name:"Seasonal Edge", cat:"GENERAL",
-    desc:"After casting a Dual-Weapon Skill, gain one of four effects: Crit Rate +10%, Phys Pen +10, Phys DMG +10%, or Min Phys ATK +200. Lasts 10s.",
+    desc:"After casting a Dual-Weapon Skill, gain one of four effects: Crit Rate +10%, Phys Pen +10, Phys DMG +10%, or Min Phys ATK +200 for 10s. Global 2.0: completing Serene Breeze can also trigger the effect at Tier 4; at Tier 6 Serene Breeze cannot roll Winter.",
     recommended:true, note:"Highly reliable for any dual-weapon build including Bamboocut-Dust.",
     tiers:[
       {tier:1,effect:"One random buff after Dual-Weapon Skill (conditional; not summed as a flat stat)",stat:{}},
@@ -460,7 +461,7 @@ export const INNER_WAYS: InnerWay[] = [
   // ── SILKBIND-JADE ──
   {
     id:"blossom_barrage", name:"Blossom Barrage", cat:"SILKBIND-JADE",
-    desc:"Vernal Umbrella's Spring Sorrow Martial Art Skill can hold up to 2 stacks. Hitting a target applies Combo effect: target takes +10% damage from your Ballistic Skills for 10s. Affected Skills: Let Spring Go, Everbloom, Umbrella Light Attack, Spring Away.",
+    desc:"Global 2.0: Blossom Barrage is projectile-focused. Tier 5 changes the former Critical DMG breakthrough to Direct Critical Rate. Spring Away / Unfading Flower gain an own-Combo damage bonus, increased while the target is Exhausted. Exact current Direct Crit numeric value is intentionally not fabricated.",
     recommended:false, note:"Requires 6-tier upgrade for Silkbind-Jade core mechanic.",
     tiers:[
       {tier:1,effect:"Spring Sorrow max stacks: 2. Combo: Ballistic Skills +2% DMG for 6s (conditional, not summed)",stat:{}},
@@ -486,8 +487,8 @@ export const INNER_WAYS: InnerWay[] = [
   },
   {
     id:"thunderous_bloom", name:"Thunderous Bloom", cat:"SILKBIND-JADE",
-    desc:"Moving >15m in 3s grants 3 stacks of Spring Thunder (12s): each Heavy Attack, Aerial Heavy, Light, or Light Charged Skill hit consumes 1 stack for +15% HP damage (next 1s of that skill type). Cannot stack. Once per 15s.",
-    recommended:false, note:"Mobility-triggered buff. Less consistent on stationary boss fights.",
+    desc:"Official 1.7: completing Martial Art Skills activates Spring Thunder. Eligible attack/ballistic events consume charges for the temporary damage effect; low-Qi/Qi-break rules are modeled as event state rather than a permanent average.",
+    recommended:false, note:"Global 1.7+ event-driven trigger. Legacy movement-distance behavior is not used by the Jade optimizer.",
     tiers:[
       {tier:1,effect:"Movement trigger grants 1 stack. Spring Thunder: +5% HP DMG (conditional, not summed)",stat:{}},
       {tier:2,effect:"Grants 2 stacks. +8% HP DMG per stack (conditional, not summed)",stat:{}},
@@ -632,6 +633,14 @@ export const INNER_WAYS: InnerWay[] = [
     ]
   },
 ];
+
+// Overlay only the records verified against the current English Global client.
+// Keeping the historical table below the overlay preserves all other paths while
+// preventing stale CN/early-Global values from leaking into the active T96 build.
+export const INNER_WAYS: InnerWay[] = BASE_INNER_WAYS.map((innerWay) => {
+  const override = GLOBAL_V2_INNER_WAY_OVERRIDES[innerWay.id];
+  return override ? { ...innerWay, ...override, id: innerWay.id, tiers: override.tiers } : innerWay;
+});
 
 // Trigger classification for each inner way.
 //  passive     = flat always-on, would show in the character-menu panel

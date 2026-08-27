@@ -8,14 +8,18 @@ let inner=fs.readFileSync(innerPath,'utf8');
 let att=fs.readFileSync(attPath,'utf8');
 
 function replaceRequired(source,from,to,label){
-  if(source.includes(to)) return source;
-  if(!source.includes(from)) throw new Error(`[jade-2.0] Missing patch anchor: ${label}`);
-  return source.replace(from,to);
+  const normalized=source.replace(/\r\n/g,'\n');
+  if(normalized.includes(to)) return source;
+  if(!normalized.includes(from)) throw new Error(`[jade-2.0] Missing patch anchor: ${label}`);
+  const eol=source.includes('\r\n')?'\r\n':'\n';
+  return source.replace(from.replaceAll('\n',eol),to.replaceAll('\n',eol));
 }
 function replaceRegexRequired(source,re,to,label){
-  if(typeof to==='string' && source.includes(to)) return source;
-  if(!re.test(source)) throw new Error(`[jade-2.0] Missing regex anchor: ${label}`);
-  return source.replace(re,to);
+  const normalized=source.replace(/\r\n/g,'\n');
+  if(typeof to==='string' && normalized.includes(to)) return source;
+  if(!re.test(normalized)) throw new Error(`[jade-2.0] Missing regex anchor: ${label}`);
+  const replaced=normalized.replace(re,to);
+  return source.includes('\r\n')?replaced.replace(/\n/g,'\r\n'):replaced;
 }
 
 app=replaceRequired(app,
@@ -41,9 +45,9 @@ app=replaceRequired(app,
   },`,
   `  "silkbind-jade": {
     label: "Silkbind-Jade", weapons: "Vernal Umbrella + Inkwell Fan",
-    tier: "T96 Global 2.0", color: "text-teal-400",
+    tier: "T96 Global 2.1", color: "text-teal-400",
     gradTargets: { maxOuter: 2990, minOuter: 1345, outerPen: 35.5, crit: 107.6, aff: 43.5, critDmg: 50 },
-    notes: "Global 2.0: dynamic priority model. Reach effective Precision/Crit needs, then let modeled Jade DPS decide rates vs Physical Attack; no static stat weights.",
+    notes: "Global 2.1: dynamic priority model. Reach effective Precision/Crit needs, then let modeled Jade DPS decide rates vs Physical Attack; no static stat weights.",
     priorityStats: [],
   },`,
   'Jade profile copy');
@@ -51,7 +55,7 @@ app=app.replaceAll('Ninefold Spring: Special Skill DMG Bonus (Attuned Weapon Bon
 
 const scenarioAnchor='  const starweaveDistanceBonusPct = starweaveDistance === "far" ? 1 : 0;';
 const scenarioState=`  const starweaveDistanceBonusPct = starweaveDistance === "far" ? 1 : 0;
-  const [jadeObjective, setJadeObjective] = useState<string>(JADE_OBJECTIVES.EXPECTED_DPS);
+  const [jadeObjective, setJadeObjective] = useState<(typeof JADE_OBJECTIVES)[keyof typeof JADE_OBJECTIVES]>(JADE_OBJECTIVES.EXPECTED_DPS);
   const [jadeScenarioOverrides, setJadeScenarioOverrides] = useState<Record<string, any>>({
     duration: 60, strategy: "ground-jade", opening: "qhlq", firstQiBreakTime: 24,
     qiBreakDuration: 8, subsequentQiBreakInterval: 35, bossTakesQiDamage: true,
@@ -105,7 +109,12 @@ const helperBlock=`  const jadeAttunementsForCombo = (combo: GearItem[]) => {
   };
 
   // ponytail: single source for "gear combo → in-combat panel → rotation total".`;
-app=replaceRequired(app,helperAnchor,helperBlock,'Jade complete-build helpers');
+const hasCurrentJadeCompleteBuildHelpers = app.includes('const jadeScenarioForCombo = (combo: GearItem[]) => {')
+  && app.includes('const gearSignature = combo.map((gear) => gear.id).sort().join(",")')
+  && app.includes('const priceJadeEvent = (event: any, eventPanel: PanelStats) => {');
+if (!hasCurrentJadeCompleteBuildHelpers) {
+  app=replaceRequired(app,helperAnchor,helperBlock,'Jade complete-build helpers');
+}
 
 if(!app.includes('const jadeResult = evaluateSilkbindJadeCached(')){
   app=replaceRegexRequired(app,
@@ -190,14 +199,18 @@ if(!app.includes('onObjectiveChange={setJadeObjective}')){
 }
 
 if(!app.includes('const jadeReason = selectedBuild === "silkbind-jade"')){
-  app=app.replace(
+  app=replaceRequired(
+    app,
     'const reason = item.id === current?.id\n      ? "Current complete-build baseline."',
     'const jadeReason = selectedBuild === "silkbind-jade"\n      ? (candidateMenu.prec >= 115 ? " Precision remains near/at effective cap; excess Precision has low marginal value." : " Precision is still below the Jade target and remains valuable.")\n        + (jadeObjective === JADE_OBJECTIVES.SPEEDRUN_CEILING && candidateMenu.maxOuter > currentMenuPanel.maxOuter ? " +Max Physical is favored by the community Speedrun Ceiling endpoint." : "")\n      : "";\n    const reason = item.id === current?.id\n      ? "Current complete-build baseline."',
+    'Jade recommendation explanation',
   );
-  app=app.replace(
-    ': `\${deltaDps >= 0 ? "Rotation gain" : "Rotation loss"} after the same 60s combat timeline\${reasonStats ? `; largest menu-panel changes: \${reasonStats}` : ""}.`;',
-    ': `\${deltaDps >= 0 ? "Modeled gain" : "Modeled loss"} after the same path/scenario objective\${reasonStats ? `; largest menu-panel changes: \${reasonStats}` : ""}.\${jadeReason}`;',
-  );
+}
+if(!app.includes('.${jadeReason}`;')){
+  const legacyReason=': `\${deltaDps >= 0 ? "Rotation gain" : "Rotation loss"} after the same 60s combat timeline\${reasonStats ? `; largest menu-panel changes: \${reasonStats}` : ""}.`;';
+  const modeledReason=': `\${deltaDps >= 0 ? "Modeled gain" : "Modeled loss"} after the same path/scenario objective\${reasonStats ? `; largest menu-panel changes: \${reasonStats}` : ""}.`;';
+  const jadeReason=': `\${deltaDps >= 0 ? "Modeled gain" : "Modeled loss"} after the same path/scenario objective\${reasonStats ? `; largest menu-panel changes: \${reasonStats}` : ""}.\${jadeReason}`;';
+  app=replaceRequired(app, app.replace(/\r\n/g,'\n').includes(legacyReason) ? legacyReason : modeledReason, jadeReason, 'Jade recommendation reason text');
 }
 
 inner=replaceRequired(inner,
@@ -213,26 +226,28 @@ inner=replaceRequired(inner,
   'desc:"Official 1.7: completing Martial Art Skills activates Spring Thunder. Eligible attack/ballistic events consume charges for the temporary damage effect; low-Qi/Qi-break rules are modeled as event state rather than a permanent average.",\n    recommended:false, note:"Global 1.7+ event-driven trigger. Legacy movement-distance behavior is not used by the Jade optimizer.",',
   'Thunderous Bloom current description');
 
-const attInsert=`  { id: "vernal-high-frequency-ballistic", family: "umbrella", statKey: "Vernal Frequent Ballistic DMG Boost", weaponName: "Vernal Umbrella", aliases: ["vernal umbrella frequent ballistic dmg boost", "vernal umbrella frequent projectile dmg boost", "frequent ballistic dmg boost", "frequent projectile dmg boost"], displayName: "Vernal Umbrella — Frequent Ballistic DMG Boost" },
-  { id: "vernal-special-t96", family: "umbrella", statKey: "Vernal Special Skill DMG Boost", weaponName: "Vernal Umbrella", aliases: ["vernal umbrella special skill dmg boost", "ninefold spring special skill dmg bonus"], displayName: "Vernal Umbrella — Special Skill DMG Boost" },
-  { id: "vernal-charged-t96", family: "umbrella", statKey: "Vernal Charged Skill DMG Boost", weaponName: "Vernal Umbrella", aliases: ["vernal umbrella charged skill dmg boost"], displayName: "Vernal Umbrella — Charged Skill DMG Boost" },
-  { id: "vernal-light-heavy-derived", family: "umbrella", statKey: "Vernal Light Heavy Derived DMG Boost", weaponName: "Vernal Umbrella", aliases: ["vernal umbrella light heavy attack varied combo dmg boost", "vernal umbrella light heavy follow up dmg boost", "light heavy attack varied combo dmg boost"], displayName: "Vernal Umbrella — Light/Heavy + Derived DMG Boost" },
+const attInsert=`  { id: "vernal-frequent-projectile", family: "umbrella", statKey: "Vernal Frequent Projectile DMG Boost", weaponName: "Vernal Umbrella", aliases: ["vernal umbrella frequent projectile dmg boost", "frequent projectile dmg boost", "vernal umbrella frequent ballistic dmg boost", "frequent ballistic dmg boost", "vernal umbrella special skill dmg boost", "special skill damage boost", "ninefold spring special skill dmg bonus", "vernal umbrella charged skill dmg boost", "charged skill damage boost"], displayName: "Vernal Umbrella — Frequent Projectile DMG Boost" },
+  { id: "vernal-light-heavy-derived", family: "umbrella", statKey: "Vernal Light Heavy Derived DMG Boost", weaponName: "Vernal Umbrella", aliases: ["vernal umbrella light heavy attack varied combo dmg boost", "vernal umbrella light heavy follow up dmg boost", "light heavy attack varied combo dmg boost"], displayName: "Vernal Umbrella — Light/Heavy Attack & Varied Combo DMG Boost" },
 `;
-if(!att.includes('id: "vernal-high-frequency-ballistic"')){
+if(!att.includes('id: "vernal-frequent-projectile"')){
   att=replaceRequired(att,
     '  { id: "vernal-umbrella", family: "umbrella", statKey: "Umb Martial Art Skill DMG Boost", weaponName: "Vernal Umbrella", aliases: ["vernal umbrella"], displayName: "Vernal Umbrella — Martial Art Skill DMG Boost" },\n',
     '  { id: "vernal-umbrella", family: "umbrella", statKey: "Umb Martial Art Skill DMG Boost", weaponName: "Vernal Umbrella", aliases: ["vernal umbrella"], displayName: "Vernal Umbrella — Martial Art Skill DMG Boost" },\n'+attInsert,
     'Vernal T96 Attunement definitions');
 }
-att=replaceRequired(att,
-  '  const value = normalize(text);\n  if (!value.includes("martial art skill dmg")) return null;\n  for (const entry of WEAPON_ATTUNEMENTS) {',
-  '  const value = normalize(text);\n  for (const entry of WEAPON_ATTUNEMENTS) {',
-  'Attunement matcher supports semantic aliases');
+const matcherAlreadySupportsSpecificAliases = att.includes('const hasGenericMartialArtSkill =')
+  && att.includes('matches.sort((a, b) => b.alias.length - a.alias.length)');
+if (!matcherAlreadySupportsSpecificAliases) {
+  att=replaceRequired(att,
+    '  const value = normalize(text);\n  if (!value.includes("martial art skill dmg")) return null;\n  for (const entry of WEAPON_ATTUNEMENTS) {',
+    '  const value = normalize(text);\n  for (const entry of WEAPON_ATTUNEMENTS) {',
+    'Attunement matcher supports semantic aliases');
+}
 
 if(!app.includes('evaluateSilkbindJadeCached')) throw new Error('[jade-2.0] App integration missing');
 if(!app.includes('jadeObjective')) throw new Error('[jade-2.0] objective UI missing');
 if(!inner.includes('Exact current Direct Crit numeric value is intentionally not fabricated')) throw new Error('[jade-2.0] Blossom evidence correction missing');
-if(!att.includes('vernal-high-frequency-ballistic')) throw new Error('[jade-2.0] semantic Attunement family missing');
+if(!att.includes('vernal-frequent-projectile')) throw new Error('[jade-2.1] current Vernal Attunement family missing');
 
 fs.writeFileSync(appPath,app,'utf8');
 fs.writeFileSync(innerPath,inner,'utf8');

@@ -10,9 +10,14 @@ const read = (path) => fs.readFileSync(path, "utf8");
 const write = (path, content) => fs.writeFileSync(path, content, "utf8");
 
 function replaceRequired(source, from, to, label) {
-  if (source.includes(to)) return source;
-  if (!source.includes(from)) throw new Error(`[ocr-structured] Missing anchor: ${label}`);
-  return source.replace(from, to);
+  const normalizedSource = source.replace(/\r\n/g, "\n");
+  if (label === "Global English hybrid row parser import" && normalizedSource.includes('import { parseHybridGlobalEnglishRows } from "./ocrGlobalEnglish.ts";')) return source;
+  if (label === "hybrid Global English parser priority" && normalizedSource.includes("const hybridGlobalRows = parseHybridGlobalEnglishRows(text);")) return source;
+  if (label === "structured OCR parent handoff" && normalizedSource.includes("applyGearRowSemantics(item.subs")) return source;
+  if (normalizedSource.includes(to)) return source;
+  if (!normalizedSource.includes(from)) throw new Error(`[ocr-structured] Missing anchor: ${label}`);
+  const eol = source.includes("\r\n") ? "\r\n" : "\n";
+  return source.replace(from.replaceAll("\n", eol), to.replaceAll("\n", eol));
 }
 
 function replaceRegexRequired(source, pattern, to, label) {

@@ -1,7 +1,7 @@
 # Global Guild War Model V2
 
-Reviewed: 2026-08-18  
-Target: current Global client / Global 2.0  
+Current Global 2.1 envelope reviewed through 2026-08-24
+Target: current Global client / Global 2.1
 Status: supersedes generic role-score and assumed-Attunement Guild War conclusions where they conflict.
 
 ## Sources and provenance

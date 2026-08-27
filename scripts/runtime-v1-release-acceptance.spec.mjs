@@ -41,7 +41,7 @@ function gvgSeed(count = 30) {
   workspace.roster = Array.from({ length: count }, (_, index) => ({
     id: `v1-member-${index + 1}`, name: `Player ${String(index + 1).padStart(2, "0")}`, path: "Bamboocut - Dust",
     weapons: ["Everspring Umbrella", "Unfettered Rope Dart"], roles: [roles[index % roles.length]], team: index < 12 ? "Main Ball" : index < 21 ? "Flex A" : "Flex B",
-    buildReference: "", exTechnique: "Everspring Umbrella: EX", exLevel: 3, normalProfile: "PvE / Normal", arenaProfile: "Arena", gvgSelectedProfile: "ARENA",
+    buildReference: "", exTechnique: "Everspring Umbrella: EX", exLevel: 3, normalProfile: "PvE / Normal", arenaProfile: "Arena", gvgSelectedProfile: "UNKNOWN", // COMPETITIVE_V2_V1_GVG_ATTUNEMENT_UNKNOWN
     availability: true, notes: "", antiHeal: true, aoeCc: index % 3 === 0,
   }));
   workspace.strategy.positions = Object.fromEntries(workspace.roster.map((member, index) => [member.id, { x: 8 + (index % 6) * 16, y: 10 + Math.floor(index / 6) * 17 }]));
@@ -152,15 +152,19 @@ test("V1 corrupt/future storage recovers per domain and preserves a bounded back
   await assertClean(runtime);
 });
 
-test("V1 public payloads fail closed and supplied strings stay text", async ({ page, request }) => {
+test("V1 public payloads fail closed and supplied strings stay text", async ({ page, request, context }) => { // V1_SECURITY_PAGE_ISOLATION
   const runtime = runtimeWatch(page);
   const b64 = (value) => Buffer.from(JSON.stringify(value), "utf8").toString("base64url");
   const badGvg = JSON.parse('{"schema":"wwm-gvg-share","version":1,"kind":"ROSTER","privacy":{"playerNamesRedacted":true},"payload":{"__proto__":{"polluted":true},"roster":[]}}');
   await page.goto(`${BASE}?case=gvg-malformed#${`gvg-share=${b64(badGvg)}`}`, { waitUntil: "networkidle" });
   await expect(page.getByTestId("gvg-shared-invalid")).toBeVisible();
 
-  await page.goto(`${BASE}?case=arena-oversize#arena/shared/${"A".repeat(33000)}`, { waitUntil: "domcontentloaded" });
-  await expect(page.getByText(/Invalid Arena share/i)).toBeVisible();
+  const arenaPage = await context.newPage();
+  const arenaRuntime = runtimeWatch(arenaPage);
+  await arenaPage.goto(`${BASE}#arena/shared/${"A".repeat(33000)}`, { waitUntil: "domcontentloaded" });
+  await expect(arenaPage.getByRole("heading", { name: "Invalid Arena share", exact: true })).toBeVisible();
+  await assertClean(arenaRuntime);
+  await arenaPage.close();
 
   const response = await request.get(`${BASE}data/library-v1.json`);
   expect(response.ok()).toBeTruthy();
@@ -168,11 +172,15 @@ test("V1 public payloads fail closed and supplied strings stay text", async ({ p
   const entry = structuredClone(document.items[0]);
   entry.title = '<img src=x onerror="window.__V1_XSS__=1">';
   const envelope = { schemaVersion: 2, kind: "PVE_BUILD", sharedAt: new Date().toISOString(), source: "USER_SHARED", entry };
-  await page.goto(`${BASE}?case=library-xss#shared-build=${b64(envelope)}`, { waitUntil: "networkidle" });
-  await expect(page.getByTestId("shared-build-landing")).toBeVisible();
-  expect(await page.locator('img[src="x"]').count()).toBe(0);
-  expect(await page.evaluate(() => window.__V1_XSS__)).toBeUndefined();
-  expect((await page.locator("body").innerText()).includes("<img src=x")).toBeTruthy();
+  const libraryPage = await context.newPage();
+  const libraryRuntime = runtimeWatch(libraryPage);
+  await libraryPage.goto(`${BASE}#shared-build=${b64(envelope)}`, { waitUntil: "networkidle" });
+  await expect(libraryPage.getByTestId("shared-build-landing")).toBeVisible();
+  expect(await libraryPage.locator('img[src="x"]').count()).toBe(0);
+  expect(await libraryPage.evaluate(() => window.__V1_XSS__)).toBeUndefined();
+  expect((await libraryPage.locator("body").innerText()).includes("<img src=x")).toBeTruthy();
+  await assertClean(libraryRuntime);
+  await libraryPage.close();
   await assertClean(runtime);
 });
 
@@ -207,7 +215,7 @@ test("V1 required responsive surfaces render at 1440, 1024 and 390 with Model/Ab
 
 test("V1 representative scale completes and records relative browser timings", async ({ page }) => {
   const runtime = runtimeWatch(page);
-  const timings = { pveInventory: {}, arenaBestBuildMs: null, gvgRosterRenderMs: null, gvgStrategyMs: null, libraryFilterMs: null };
+  const timings = { pveInventory: {}, arenaBuildDecisionMs: null, gvgRosterRenderMs: null, gvgStrategyMs: null, libraryFilterMs: null }; // COMPETITIVE_V2_V1_PERF_TIMING_NAME
   await page.goto(`${BASE}#pve/gear`, { waitUntil: "networkidle" });
   const observed = page.getByRole("button", { name: /Load observed T96/i });
   if (await observed.count()) { await observed.click(); await page.waitForTimeout(250); }
@@ -233,9 +241,12 @@ test("V1 representative scale completes and records relative browser timings", a
   await page.evaluate((state) => localStorage.setItem("wwm_arena_state_v1", JSON.stringify(state)), arena);
   await page.goto(`${BASE}#arena/build`, { waitUntil: "networkidle" });
   let start = Date.now();
-  await page.getByRole("button", { name: /Run Top 3/i }).click();
-  await expect(page.locator(".arena-ranked-list > div")).toHaveCount(3);
-  timings.arenaBestBuildMs = Date.now() - start;
+  const arenaDecision = page.getByTestId("arena-best-build" /* COMPETITIVE_V2_V1_PERF_ARENA_DECISION */);
+  await expect(arenaDecision).toBeVisible();
+  await expect(arenaDecision.getByText("NO UNIVERSAL WINNER", { exact: true })).toBeVisible();
+  await expect(arenaDecision).toContainText(/Optimizer locked|Tradeoff candidates/);
+  expect(await page.locator(".arena-ranked-list").count()).toBe(0);
+  timings.arenaBuildDecisionMs = Date.now() - start;
 
   await page.evaluate((workspace) => localStorage.setItem("wwm_gvg_workspace_v1", JSON.stringify(workspace)), gvgSeed());
   start = Date.now();
@@ -244,7 +255,8 @@ test("V1 representative scale completes and records relative browser timings", a
   timings.gvgRosterRenderMs = Date.now() - start;
   start = Date.now();
   await page.goto(`${BASE}#gvg/strategy`, { waitUntil: "networkidle" });
-  await expect(page.getByTestId("gvg-strategy-board")).toBeVisible();
+  await expect(page.getByTestId("gvg-strategy" /* COMPETITIVE_V2_V1_SCALE_GVG_STRATEGY */)).toBeVisible();
+  await expect(page.getByTestId("gvg-objective-map")).toBeVisible();
   timings.gvgStrategyMs = Date.now() - start;
 
   await page.route("**/data/library-v1.json", async (route) => {

@@ -1,4 +1,4 @@
-export const COMPETITIVE_PATCH = 'Global 2.0 / verified through 2026-08-18';
+export const COMPETITIVE_PATCH = 'Global 2.1 / reviewed through 2026-08-24';
 
 export const EVIDENCE = Object.freeze({
   CONFIRMED_CLIENT: 'CONFIRMED_CLIENT',

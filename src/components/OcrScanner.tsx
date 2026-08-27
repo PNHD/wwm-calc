@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { runDualPassOcr, type OcrSub } from "../utils/ocrParser";
+import { isAttunementStatKey } from "../data/gearAttunement";
 import SearchableSelect from "./SearchableSelect";
+import { filterGlobalT96StatOptions, validateGlobalT96GearLines } from "../data/globalT96GearCompatibility";
 import {
   FileUp,
   Loader2,
@@ -11,28 +13,65 @@ import {
   Image
 } from "lucide-react";
 
+const OCR_SLOT_OPTIONS = [
+  { value: "Auto", label: "Auto-detect slot" },
+  { value: "Umbrella", label: "Weapon 1" },
+  { value: "Rope Dart", label: "Weapon 2" },
+  { value: "Disc", label: "Disc / Relic 1" },
+  { value: "Pendant", label: "Pendant / Relic 2" },
+  { value: "Helmet", label: "Helmet" },
+  { value: "Chest", label: "Chest" },
+  { value: "Greaves", label: "Greaves" },
+  { value: "Bracers", label: "Bracers" },
+] as const;
+
+const inferOcrSlot = (text: string): string => {
+  const value = text.toLowerCase();
+  if (value.includes("pendant") || value.includes("necklace") || value.includes("项链")) return "Pendant";
+  if (value.includes("disc") || value.includes("charm") || value.includes("唱片")) return "Disc";
+  if (value.includes("helmet") || value.includes("helm") || value.includes("headgear") || value.includes("头盔")) return "Helmet";
+  if (value.includes("bracers") || value.includes("bracer") || value.includes("护腕")) return "Bracers";
+  if (value.includes("greaves") || value.includes("leg armor") || value.includes("boots") || value.includes("腿甲")) return "Greaves";
+  if (value.includes("chest") || value.includes("armor") || value.includes("胸甲")) return "Chest";
+  // Weapon names also appear in Attunement lines on armor/relics. Never use
+  // that line alone to infer a weapon slot; a false negative (Auto) is safer
+  // than importing an armor piece into Weapon 1.
+  const hasWeaponSkillLine = value.includes("martial art skill dmg")
+    || value.includes("special skill dmg")
+    || value.includes("charged skill dmg");
+  if (!hasWeaponSkillLine && (value.includes("rope dart") || value.includes("rope_dart") || value.includes("绳镖"))) return "Rope Dart";
+  if (!hasWeaponSkillLine && (value.includes("umbrella") || value.includes("伞"))) return "Umbrella";
+  return "Auto";
+};
+
+const isWeaponOcrSlot = (slot: string): boolean => slot === "Umbrella" || slot === "Rope Dart";
+
 const OCR_STAT_OPTIONS: { value: string; label: string; group?: string }[] = [
   { value: "Other", label: "Select Stat / Empty" },
+  { value: "Max Void Atk", label: "Max Void Attack", group: "T96 Weapon · Void" },
+  { value: "Min Void Atk", label: "Min Void Attack", group: "T96 Weapon · Void" },
+  { value: "Max Void Atk", label: "Max Void Attack", group: "T96 Weapon · Void" },
+  { value: "Min Void Atk", label: "Min Void Attack", group: "T96 Weapon · Void" },
   { value: "Max Phys Atk", label: "Max Phys Atk", group: "Physical" },
   { value: "Min Phys Atk", label: "Min Phys Atk", group: "Physical" },
   { value: "Phys Pen", label: "Phys Pen", group: "Physical" },
   { value: "Phys DMG%", label: "Phys DMG%", group: "Physical" },
-  { value: "Max Silkbind Atk", label: "Max Silkbind Atk", group: "Inner" },
-  { value: "Min Silkbind Atk", label: "Min Silkbind Atk", group: "Inner" },
-  { value: "Silkbind Pen", label: "Silkbind Pen", group: "Inner" },
-  { value: "Silkbind DMG%", label: "Silkbind DMG%", group: "Inner" },
-  { value: "Max Bamboocut Atk", label: "Max Bamboocut Atk", group: "Inner" },
-  { value: "Min Bamboocut Atk", label: "Min Bamboocut Atk", group: "Inner" },
-  { value: "Bamboocut Pen", label: "Bamboocut Pen", group: "Inner" },
-  { value: "Bamboocut DMG%", label: "Bamboocut DMG%", group: "Inner" },
-  { value: "Max Bellstrike Atk", label: "Max Bellstrike Atk", group: "Inner" },
-  { value: "Min Bellstrike Atk", label: "Min Bellstrike Atk", group: "Inner" },
-  { value: "Bellstrike Pen", label: "Bellstrike Pen", group: "Inner" },
-  { value: "Bellstrike DMG%", label: "Bellstrike DMG%", group: "Inner" },
-  { value: "Max Stonesplit Atk", label: "Max Stonesplit Atk", group: "Inner" },
-  { value: "Min Stonesplit Atk", label: "Min Stonesplit Atk", group: "Inner" },
-  { value: "Stonesplit Pen", label: "Stonesplit Pen", group: "Inner" },
-  { value: "Stonesplit DMG%", label: "Stonesplit DMG%", group: "Inner" },
+  { value: "Max Silkbind Atk", label: "Max Silkbind Atk", group: "Relic / Armor · Path" },
+  { value: "Min Silkbind Atk", label: "Min Silkbind Atk", group: "Relic / Armor · Path" },
+  { value: "Silkbind Pen", label: "Silkbind Pen", group: "Relic / Armor · Path" },
+  { value: "Silkbind DMG%", label: "Silkbind DMG%", group: "Relic / Armor · Path" },
+  { value: "Max Bamboocut Atk", label: "Max Bamboocut Atk", group: "Relic / Armor · Path" },
+  { value: "Min Bamboocut Atk", label: "Min Bamboocut Atk", group: "Relic / Armor · Path" },
+  { value: "Bamboocut Pen", label: "Bamboocut Pen", group: "Relic / Armor · Path" },
+  { value: "Bamboocut DMG%", label: "Bamboocut DMG%", group: "Relic / Armor · Path" },
+  { value: "Max Bellstrike Atk", label: "Max Bellstrike Atk", group: "Relic / Armor · Path" },
+  { value: "Min Bellstrike Atk", label: "Min Bellstrike Atk", group: "Relic / Armor · Path" },
+  { value: "Bellstrike Pen", label: "Bellstrike Pen", group: "Relic / Armor · Path" },
+  { value: "Bellstrike DMG%", label: "Bellstrike DMG%", group: "Relic / Armor · Path" },
+  { value: "Max Stonesplit Atk", label: "Max Stonesplit Atk", group: "Relic / Armor · Path" },
+  { value: "Min Stonesplit Atk", label: "Min Stonesplit Atk", group: "Relic / Armor · Path" },
+  { value: "Stonesplit Pen", label: "Stonesplit Pen", group: "Relic / Armor · Path" },
+  { value: "Stonesplit DMG%", label: "Stonesplit DMG%", group: "Relic / Armor · Path" },
   { value: "Crit Rate", label: "Crit Rate", group: "Rate" },
   { value: "Crit DMG", label: "Crit DMG", group: "Rate" },
   { value: "Affinity Rate", label: "Affinity Rate", group: "Rate" },
@@ -90,7 +129,13 @@ const OCR_STAT_OPTIONS: { value: string; label: string; group?: string }[] = [
 
 interface OcrScannerProps {
   onOcrResult: (stats: any) => void;
-  onImportGears?: (items: { rawText: string; fileName: string }[]) => void;
+  onImportGears?: (items: {
+    rawText: string;
+    fileName: string;
+    slot: string;
+    mastery?: number;
+    subs: OcrSub[];
+  }[]) => void;
 }
 
 interface QueuedOcrItem {
@@ -103,6 +148,7 @@ interface QueuedOcrItem {
   mastery?: number;
   isSelected: boolean;
   rawText: string;
+  slot: string;
 }
 
 export default function OcrScanner({ onImportGears }: OcrScannerProps) {
@@ -131,7 +177,8 @@ export default function OcrScanner({ onImportGears }: OcrScannerProps) {
       progress: "In Queue",
       subs: [],
       isSelected: true,
-      rawText: ""
+      rawText: "",
+      slot: "Auto"
     }));
 
     setQueue((prev) => [...prev, ...newItems]);
@@ -180,21 +227,30 @@ export default function OcrScanner({ onImportGears }: OcrScannerProps) {
     );
   };
 
+  const handleSlotEdit = (id: string, slot: string) => {
+    setQueue((prev) => prev.map((it) => (it.id === id ? { ...it, slot } : it)));
+  };
+
   const handleStatEdit = (id: string, index: number, key: 'type' | 'val' | 'isTuned', val: any) => {
     setQueue((prev) =>
       prev.map((it) => {
         if (it.id === id) {
           const nextSubs = [...it.subs];
           if (key === 'isTuned' && val === true) {
-            // Uncheck other tuned
             nextSubs.forEach((sub, sidx) => {
-              sub.isTuned = sidx === index;
+              const isAttunement = sub.role === "attunement" || isAttunementStatKey(sub.type);
+              sub.isTuned = !isAttunement && sidx === index;
+              sub.isRetuned = sub.isTuned;
             });
           } else {
-            nextSubs[index] = {
-              ...nextSubs[index],
-              [key]: val
-            };
+            nextSubs[index] = { ...nextSubs[index], [key]: val };
+            if (key === "type") {
+              const isAttunement = isAttunementStatKey(String(val));
+              nextSubs[index].role = isAttunement ? "attunement" : nextSubs[index].role === "attunement" ? "additional" : nextSubs[index].role;
+              if (isAttunement) { nextSubs[index].isTuned = false; nextSubs[index].isRetuned = false; }
+            } else if (key === "isTuned") {
+              nextSubs[index].isRetuned = Boolean(val);
+            }
           }
           return {
             ...it,
@@ -253,7 +309,8 @@ export default function OcrScanner({ onImportGears }: OcrScannerProps) {
                   progress: "Analyzed successfully!",
                   subs: parsedSubs,
                   mastery: parsedMastery,
-                  rawText: reconstructedText
+                  rawText: reconstructedText,
+                  slot: item.slot === "Auto" ? inferOcrSlot(reconstructedText) : item.slot
                 }
               : item
           )
@@ -358,6 +415,7 @@ export default function OcrScanner({ onImportGears }: OcrScannerProps) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {queue.map((item) => {
               const hasSubs = item.subs && item.subs.length > 0;
+              const validation = validateGlobalT96GearLines(item.slot, item.subs);
               return (
                 <div
                   key={item.id}
@@ -425,36 +483,73 @@ export default function OcrScanner({ onImportGears }: OcrScannerProps) {
                   </div>
 
                   {hasSubs && (
-                    <div className="bg-[#0b0a09]/50 p-2.5 rounded border border-slate-950 text-[10px] space-y-2">
+                    <div className="bg-[#0b0a09]/50 p-3 rounded border border-slate-950 text-[10px] space-y-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-[145px_minmax(0,1fr)] gap-2 items-center rounded-md border border-slate-800 bg-slate-950/60 p-2.5">
+                        <label className="text-[10px] uppercase tracking-wide text-slate-500 font-bold font-mono">Gear slot / stat pool</label>
+                        <select
+                          value={item.slot}
+                          onChange={(event) => handleSlotEdit(item.id, event.target.value)}
+                          className="min-w-0 rounded border border-slate-700 bg-slate-900 px-2.5 py-2 text-[12px] font-semibold text-slate-100 outline-none focus:border-amber-500"
+                        >
+                          {OCR_SLOT_OPTIONS.map((slot) => <option key={slot.value} value={slot.value}>{slot.label}</option>)}
+                        </select>
+                        <div className="sm:col-start-2 text-[10px] leading-relaxed text-slate-500">
+                          {isWeaponOcrSlot(item.slot)
+                            ? "Global T96 weapon attribute lines use Void Attack. Legacy/path labels remain available for older screenshots."
+                            : item.slot === "Auto"
+                              ? "Auto shows every stat. Choose a slot if OCR cannot distinguish weapon Void stats from Path stats."
+                              : "Relic and armor pieces keep Bamboocut, Silkbind, Bellstrike, or Stonesplit labels by Path."}
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className={`rounded border px-2 py-1 text-[10px] font-bold font-mono ${validation.errors.length ? "border-rose-900 bg-rose-950/50 text-rose-300" : validation.origin === "relaid" ? "border-violet-900 bg-violet-950/40 text-violet-300" : "border-emerald-900 bg-emerald-950/40 text-emerald-300"}`}>
+                          {validation.label}
+                        </span>
+                        {validation.errors.length === 0 && <span className="text-[10px] text-slate-500">Ready for slot-aware import</span>}
+                      </div>
+                      {(validation.errors.length > 0 || validation.warnings.length > 0) && (
+                        <div className="space-y-1 rounded border border-slate-800 bg-slate-950/70 p-2.5">
+                          {validation.errors.map((message) => <div key={message} className="text-[10px] leading-relaxed text-rose-300">• {message}</div>)}
+                          {validation.warnings.map((message) => <div key={message} className="text-[10px] leading-relaxed text-amber-300">• {message}</div>)}
+                        </div>
+                      )}
                       <div className="text-slate-500 uppercase font-bold font-mono pb-1 border-b border-slate-900">
                         Detected stats (click to fix if wrong):
                       </div>
                       <div className="flex flex-col gap-1.5 font-mono text-slate-300">
                         {item.subs.map((sub, sidx) => (
-                          <div key={sidx} className="flex gap-2 items-center bg-slate-900/40 px-1.5 py-1 rounded border border-slate-900/20">
-                            <span className="text-slate-400 text-[9px] min-w-[12px]">#{sidx + 1}</span>
+                          <div key={sidx} className="grid grid-cols-[24px_minmax(190px,1fr)_82px_66px] gap-2 items-center bg-slate-900/40 px-2 py-2 rounded border border-slate-800/60">
+                            <span className="text-slate-400 text-[10px]">#{sidx + 1}</span>
                             <SearchableSelect
                               value={sub.type}
                               onChange={(val) => handleStatEdit(item.id, sidx, 'type', val)}
-                              options={OCR_STAT_OPTIONS}
+                              options={filterGlobalT96StatOptions(OCR_STAT_OPTIONS, item.slot)}
                               placeholder="Search stat..."
+                              className="min-w-[190px]"
                             />
                             <input
                               type="text"
                               value={sub.val}
                               onChange={(e) => handleStatEdit(item.id, sidx, 'val', e.target.value)}
-                              className="w-16 bg-slate-950 text-slate-100 border-none text-right px-1 rounded text-[10px] py-0.5"
+                              className="w-full min-w-[72px] bg-slate-950 text-slate-100 border border-slate-800 text-right px-2 rounded text-[11px] py-2"
                               placeholder="0"
                             />
-                            <label className="flex items-center gap-1 cursor-pointer">
-                              <input
-                                type="checkbox"
-                                checked={!!sub.isTuned}
-                                onChange={(e) => handleStatEdit(item.id, sidx, 'isTuned', e.target.checked)}
-                                className="accent-amber-500 w-3 h-3"
-                              />
-                              <span className="text-amber-500 font-bold text-[8px]">TUNED</span>
-                            </label>
+                            {(sub.role === "attunement" || isAttunementStatKey(sub.type)) ? (
+                              <div className="min-w-[66px] text-right">
+                                <div className="text-emerald-400 font-bold text-[8px]">ATTUNEMENT</div>
+                                {sub.displayName && <div className="mt-0.5 max-w-[220px] text-[8px] leading-tight text-slate-500">{sub.displayName}</div>}
+                              </div>
+                            ) : (
+                              <label className="flex items-center gap-1 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={!!(sub.isRetuned ?? sub.isTuned)}
+                                  onChange={(e) => handleStatEdit(item.id, sidx, 'isTuned', e.target.checked)}
+                                  className="accent-amber-500 w-3 h-3"
+                                />
+                                <span className="text-amber-500 font-bold text-[8px]">RETUNED</span>
+                              </label>
+                            )}
                           </div>
                         ))}
                       </div>
@@ -478,10 +573,16 @@ export default function OcrScanner({ onImportGears }: OcrScannerProps) {
                 <button
                   onClick={() => {
                     const activeItems = queue.filter((it) => it.isSelected && it.status === "success");
+                    const invalidItems = activeItems.filter((it) => it.slot === "Auto" || validateGlobalT96GearLines(it.slot, it.subs).errors.length > 0);
+                    if (invalidItems.length > 0) {
+                      alert(`Fix slot/stat errors on ${invalidItems.length} selected image(s) before importing.`);
+                      return;
+                    }
                     // Custom raw text reconstruct to make it compatible with parent parser
                     const scanned = activeItems.map(it => {
                       // Reconstruct the text in linear raw style to pass values to parser
-                      let lines: string[] = [];
+                      let lines: string[] = ["Equipped"];
+                      if (it.slot !== "Auto") lines.push(`Slot: ${it.slot}`);
                       if (it.mastery) {
                         lines.push(`Mastery: ${it.mastery}`);
                       }
@@ -491,13 +592,18 @@ export default function OcrScanner({ onImportGears }: OcrScannerProps) {
                         }
                       });
                       return {
-                        rawText: lines.join("\n"),
-                        fileName: it.fileName
+                        // Keep the original OCR text for diagnostics/fallback,
+                        // but the parent receives the already-reviewed structured rows.
+                        rawText: it.rawText || lines.join("\n"),
+                        fileName: it.fileName,
+                        slot: it.slot,
+                        mastery: it.mastery,
+                        subs: it.subs.filter((sub) => sub.type !== "Other" && sub.val).map((sub) => ({ ...sub })),
                       };
                     });
                     onImportGears(scanned);
                   }}
-                  disabled={queue.filter((it) => it.isSelected && it.status === "success").length === 0}
+                  disabled={queue.filter((it) => it.isSelected && it.status === "success" && it.slot !== "Auto" && validateGlobalT96GearLines(it.slot, it.subs).errors.length === 0).length === 0}
                   className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold px-4 py-2.5 rounded-lg text-xs flex items-center gap-1.5 shrink-0 transition-colors shadow-lg cursor-pointer"
                 >
                   📥 Add to inventory

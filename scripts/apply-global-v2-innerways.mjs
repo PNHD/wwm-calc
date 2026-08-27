@@ -14,9 +14,11 @@ function write(path, content) {
 }
 
 function replaceRequired(source, from, to, label) {
-  if (source.includes(to)) return source;
-  if (!source.includes(from)) throw new Error(`[global-v2-innerways] Missing patch anchor: ${label}`);
-  return source.replace(from, to);
+  const normalizedSource = source.replace(/\r\n/g, "\n");
+  if (normalizedSource.includes(to)) return source;
+  if (!normalizedSource.includes(from)) throw new Error(`[global-v2-innerways] Missing patch anchor: ${label}`);
+  const eol = source.includes("\r\n") ? "\r\n" : "\n";
+  return source.replace(from.replaceAll("\n", eol), to.replaceAll("\n", eol));
 }
 
 let innerWays = read(files.innerWays);

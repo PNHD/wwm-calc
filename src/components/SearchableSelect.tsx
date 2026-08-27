@@ -14,12 +14,24 @@ export default function SearchableSelect({ value, onChange, options, placeholder
   const [search, setSearch] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const [pos, setPos] = useState({ top: 0, left: 0, width: 0 });
+  const [pos, setPos] = useState({ top: 0, left: 0, width: 0, maxHeight: 320 });
 
   const updatePos = useCallback(() => {
     if (inputRef.current) {
       const r = inputRef.current.getBoundingClientRect();
-      setPos({ top: r.bottom + 2, left: r.left, width: Math.max(r.width, 280) });
+      const viewportPadding = 8;
+      const desiredWidth = Math.max(r.width, 360);
+      const width = Math.min(desiredWidth, Math.max(240, window.innerWidth - viewportPadding * 2));
+      const left = Math.min(
+        Math.max(viewportPadding, r.left),
+        Math.max(viewportPadding, window.innerWidth - width - viewportPadding),
+      );
+      const spaceBelow = Math.max(0, window.innerHeight - r.bottom - viewportPadding);
+      const spaceAbove = Math.max(0, r.top - viewportPadding);
+      const openAbove = spaceBelow < 190 && spaceAbove > spaceBelow;
+      const maxHeight = Math.max(150, Math.min(320, openAbove ? spaceAbove : spaceBelow));
+      const top = openAbove ? Math.max(viewportPadding, r.top - maxHeight - 2) : r.bottom + 2;
+      setPos({ top, left, width, maxHeight });
     }
   }, []);
 
@@ -32,8 +44,15 @@ export default function SearchableSelect({ value, onChange, options, placeholder
       if (dropdownRef.current?.contains(t)) return;
       setOpen(false);
     };
+    const reposition = () => updatePos();
     document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
+    window.addEventListener('resize', reposition);
+    window.addEventListener('scroll', reposition, true);
+    return () => {
+      document.removeEventListener('mousedown', handler);
+      window.removeEventListener('resize', reposition);
+      window.removeEventListener('scroll', reposition, true);
+    };
   }, [open, updatePos]);
 
   const selectedLabel = useMemo(() => {
@@ -72,7 +91,7 @@ export default function SearchableSelect({ value, onChange, options, placeholder
         top: pos.top,
         left: pos.left,
         width: pos.width,
-        maxHeight: 320,
+        maxHeight: pos.maxHeight,
         overflowY: 'auto',
         background: '#0f172a',
         border: '1px solid #334155',
@@ -129,6 +148,7 @@ export default function SearchableSelect({ value, onChange, options, placeholder
         type="text"
         value={open ? search : selectedLabel}
         placeholder={placeholder}
+        title={selectedLabel || placeholder}
         onChange={e => setSearch(e.target.value)}
         onFocus={() => { setOpen(true); setSearch(''); updatePos(); }}
         onKeyDown={e => { if (e.key === 'Escape') { setOpen(false); setSearch(''); inputRef.current?.blur(); } }}
@@ -136,7 +156,9 @@ export default function SearchableSelect({ value, onChange, options, placeholder
           width: '100%',
           height: 28,
           padding: '2px 6px',
-          fontSize: 11,
+          fontSize: 12,
+          fontWeight: 600,
+          textOverflow: 'ellipsis',
           background: '#0f172a',
           color: '#f1f5f9',
           border: '1px solid #334155',

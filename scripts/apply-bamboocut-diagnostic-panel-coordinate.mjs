@@ -2,18 +2,21 @@ import fs from "node:fs";
 
 const path = "src/App.tsx";
 let app = fs.readFileSync(path, "utf8");
+const normalizeEol = (value) => value.replace(/\r\n/g, "\n");
+const hasNormalized = (value, expected) => normalizeEol(value).includes(expected);
 
 const replaceRequired = (from, to, label) => {
-  if (app.includes(to)) return;
-  if (!app.includes(from)) throw new Error(`[bamboocut-diagnostic-panel] Missing anchor: ${label}`);
-  app = app.replace(from, to);
+  if (hasNormalized(app, to)) return;
+  if (!hasNormalized(app, from)) throw new Error(`[bamboocut-diagnostic-panel] Missing anchor: ${label}`);
+  const eol = app.includes("\r\n") ? "\r\n" : "\n";
+  app = app.replace(from.replaceAll("\n", eol), to.replaceAll("\n", eol));
 };
 
 // Build the exact pre-timeline panel used by comboInCombat. Diagnostic reverts
 // must use this coordinate system directly; deriving it from the rendered menu
 // panel is unsafe because the observed preset and Inner Way presentation can
 // contain already-resolved/static contributions.
-if (!app.includes("const comparePanelForDiagnostics = (combo: GearItem[])")) {
+if (!hasNormalized(app, "const comparePanelForDiagnostics = (combo: GearItem[])")) {
   replaceRequired(
     "  const currentSkillDps = aggregateSkillDps(currentCompareCombat.perSkill);\n  const compareRows: GearCompareRow[] = activeGear.map((item) => {",
     `  const currentSkillDps = aggregateSkillDps(currentCompareCombat.perSkill);
@@ -46,10 +49,10 @@ replaceRequired(
   "joint outcome exact panel coordinate",
 );
 
-if (!app.includes("const currentDiagnosticPanel = comparePanelForDiagnostics(equippedGear)")) {
+if (!hasNormalized(app, "const currentDiagnosticPanel = comparePanelForDiagnostics(equippedGear)")) {
   throw new Error("[bamboocut-diagnostic-panel] exact current diagnostic panel missing");
 }
-if (app.includes("currentMenuPanel[field.key] || 0) - Number((iwStats as any)[field.key]")) {
+if (hasNormalized(app, "currentMenuPanel[field.key] || 0) - Number((iwStats as any)[field.key]")) {
   throw new Error("[bamboocut-diagnostic-panel] inferred UI-coordinate revert remains");
 }
 

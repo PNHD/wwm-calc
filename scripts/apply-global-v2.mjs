@@ -16,11 +16,13 @@ function write(path, content) {
 }
 
 function replaceRequired(source, from, to, label) {
-  if (source.includes(to)) return source;
-  if (!source.includes(from)) {
+  const normalizedSource = source.replace(/\r\n/g, "\n");
+  if (normalizedSource.includes(to)) return source;
+  if (!normalizedSource.includes(from)) {
     throw new Error(`[global-v2] Missing patch anchor: ${label}`);
   }
-  return source.replace(from, to);
+  const eol = source.includes("\r\n") ? "\r\n" : "\n";
+  return source.replace(from.replaceAll("\n", eol), to.replaceAll("\n", eol));
 }
 
 function replaceRegexRequired(source, pattern, replacement, label) {
@@ -34,6 +36,9 @@ function replaceRegexRequired(source, pattern, replacement, label) {
 // Tier model: make the existing 95上/T96 dataset the current Global default,
 // retain T91 only as a legacy comparison, and stop calling T96 a preview.
 let calc = read(files.calc);
+const calcAlreadyAtLiveT96 = /"405\|0\.65b": makeTier\(t100U, 405, 26, 28, "Tier 96 \/ Lv100 Global 2\.[01]", "Global in-game calibration \+ Excel 各等级模板: 100上", false, 131, 263, 120, 240, 150\),/.test(calc.replace(/\r\n/g, "\n"))
+  && calc.includes('const t96 = TIERS["405|0.65b"];');
+if (!calcAlreadyAtLiveT96) {
 calc = replaceRequired(
   calc,
   '"350|0.45": makeTier(t95, 350, 20, 24, "Tier 91 / Lv95 Global", "Excel 各等级模板: 95下"),\n  "350|0.45-t96": makeTier(t96, 350, 20, 24, "Tier 96 / Lv95 Global Preview", "Excel 各等级模板: 95上", true),',
@@ -72,6 +77,7 @@ calc = replaceRequired(
   'const dps = LEGACY_T91_GRAD_DPS[key] || LEGACY_T91_GRAD_DPS["bamboocut-dust"];\n  // This remains an estimated benchmark until a verified Global T96 graduation\n  // dataset is available. Never present it as an authoritative parse target.',
   "baseline disclaimer",
 );
+}
 write(files.calc, calc);
 
 // Default the product to T96, including reset and fallback flows. Existing users
@@ -111,12 +117,17 @@ iw = replaceRequired(
   'note:"Core Bellstrike-Umbra. Global 2.0 Tier 3 guaranteed-Affinity High Bleeding extends eligible active DoTs by 10s, capped at 16s remaining.",',
   "Sword Horizon note",
 );
-iw = replaceRequired(
-  iw,
-  'desc:"Vernal Umbrella\'s Spring Sorrow Martial Art Skill can hold up to 2 stacks. Hitting a target applies Combo effect: target takes +10% damage from your Ballistic Skills for 10s. Affected Skills: Let Spring Go, Everbloom, Umbrella Light Attack, Spring Away.",',
-  'desc:"Vernal Umbrella\'s Spring Sorrow can hold up to 2 stacks and applies Combo. Global 2.0: Tier 4 Spring Away and Unfading Flower deal +5% damage to Combo-marked non-Arena targets, increased to +10% while Exhausted; Tier 5 was changed from Critical DMG Bonus to Direct Critical Rate.",',
-  "Blossom Barrage description",
+const blossomAlreadyAtCurrentJadeEvidence = iw.replace(/\r\n/g, "\n").includes(
+  'Exact current Direct Crit numeric value is intentionally not fabricated.',
 );
+if (!blossomAlreadyAtCurrentJadeEvidence) {
+  iw = replaceRequired(
+    iw,
+    'desc:"Vernal Umbrella\'s Spring Sorrow Martial Art Skill can hold up to 2 stacks. Hitting a target applies Combo effect: target takes +10% damage from your Ballistic Skills for 10s. Affected Skills: Let Spring Go, Everbloom, Umbrella Light Attack, Spring Away.",',
+    'desc:"Vernal Umbrella\'s Spring Sorrow can hold up to 2 stacks and applies Combo. Global 2.0: Tier 4 Spring Away and Unfading Flower deal +5% damage to Combo-marked non-Arena targets, increased to +10% while Exhausted; Tier 5 was changed from Critical DMG Bonus to Direct Critical Rate.",',
+    "Blossom Barrage description",
+  );
+}
 iw = replaceRequired(
   iw,
   'desc:"When hitting 3 or more enemies at once, apply Candle Flicker for 3s (max 5 stacks). Each stack: -4% enemy Movement Speed, +2% damage taken from caster. Triggers once per 0.5s, 1 stack per 0.5s per source.",',
@@ -126,6 +137,8 @@ iw = replaceRequired(
 write(files.innerways, iw);
 
 let data = read(files.data);
+const dataAlreadyAtLiveT96 = /"extractedFor": "Where Winds Meet Global 2\.[01] — current Tier 96 uses column 100上; columns 95下\/95上 remain legacy references",/.test(data.replace(/\r\n/g, "\n"));
+if (!dataAlreadyAtLiveT96) {
 data = replaceRequired(
   data,
   '// Auto-extracted from 燕云调律计算器 (NGA Violetta). Where Winds Meet Global Lv95/Tier91.',
@@ -144,6 +157,7 @@ data = replaceRequired(
   '"note": "Class graduation panels remain legacy/CN-derived references. Tier constants cover 95上 as current Global T96 and 95下 as legacy T91; unpublished Global coefficients must be verified in game before being treated as authoritative."',
   "data caveat",
 );
+}
 write(files.data, data);
 
 console.log("[global-v2] T96 and official 2.0 mechanics applied.");

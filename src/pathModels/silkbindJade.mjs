@@ -1,19 +1,19 @@
-export const JADE_MODEL_VERSION = 2;
+export const JADE_MODEL_VERSION = 3;
 export const PROVENANCE = Object.freeze({ CONFIRMED_CLIENT:'CONFIRMED_CLIENT', CONFIRMED_OFFICIAL:'CONFIRMED_OFFICIAL', COMMUNITY_GUIDE:'COMMUNITY_GUIDE', COMMUNITY_MEASURED:'COMMUNITY_MEASURED', MODELED_ASSUMPTION:'MODELED_ASSUMPTION', UNRESOLVED:'UNRESOLVED' });
+/** @typedef {"expected-dps" | "short-fight-burst" | "speedrun-ceiling" | "team-dps"} JadeObjective */
 export const JADE_OBJECTIVES = Object.freeze({ EXPECTED_DPS:'expected-dps', SHORT_FIGHT_BURST:'short-fight-burst', SPEEDRUN_CEILING:'speedrun-ceiling', TEAM_DPS:'team-dps' });
 export const JADE_OBJECTIVE_LABELS = Object.freeze({ 'expected-dps':'Expected DPS', 'short-fight-burst':'Short-fight Burst', 'speedrun-ceiling':'Speedrun Ceiling', 'team-dps':'Team DPS / Bitter Duty' });
 
 export const JADE_ATTUNEMENT_FAMILIES = Object.freeze({
-  'vernal-high-frequency-ballistic': { id:'vernal-high-frequency-ballistic', activeAtT96:true, provenance:PROVENANCE.CONFIRMED_OFFICIAL, displayAliases:['Vernal Umbrella Frequent Ballistic DMG Boost','Vernal Umbrella Frequent Projectile DMG Boost','Frequent Ballistic DMG Boost','Frequent Projectile DMG Boost'], legacyAliases:[], covers:['spring-away','unfading-flower'] },
-  'vernal-special': { id:'vernal-special', activeAtT96:true, provenance:PROVENANCE.CONFIRMED_OFFICIAL, displayAliases:['Vernal Umbrella Special Skill DMG Boost','Special Skill Damage Boost'], legacyAliases:['Ninefold Spring: Special Skill DMG Bonus'], covers:['unfading-flower'] },
-  'vernal-charged': { id:'vernal-charged', activeAtT96:true, provenance:PROVENANCE.CONFIRMED_OFFICIAL, displayAliases:['Vernal Umbrella Charged Skill DMG Boost','Charged Skill Damage Boost'], legacyAliases:[], covers:['spring-away'] },
+  'vernal-frequent-projectile': { id:'vernal-frequent-projectile', activeAtT96:true, provenance:PROVENANCE.CONFIRMED_OFFICIAL, displayAliases:['Vernal Umbrella Frequent Projectile DMG Boost','Frequent Projectile DMG Boost'], legacyAliases:['Vernal Umbrella Frequent Ballistic DMG Boost','Frequent Ballistic DMG Boost','Vernal Umbrella Special Skill DMG Boost','Special Skill Damage Boost','Ninefold Spring: Special Skill DMG Bonus','Vernal Umbrella Charged Skill DMG Boost','Charged Skill Damage Boost'], covers:['spring-away','unfading-flower'] },
   'vernal-light-heavy-derived': { id:'vernal-light-heavy-derived', activeAtT96:true, provenance:PROVENANCE.CONFIRMED_OFFICIAL, displayAliases:['Vernal Umbrella Light/Heavy Attack & Varied Combo DMG Boost','Vernal Umbrella Light/Heavy Follow-up DMG Boost','Light/Heavy Attack & Varied Combo DMG Boost'], legacyAliases:[], covers:['umbrella-light','umbrella-heavy-light'] },
 });
+const JADE_ATTUNEMENT_ID_ALIASES = Object.freeze({ 'vernal-high-frequency-ballistic':'vernal-frequent-projectile', 'vernal-special':'vernal-frequent-projectile', 'vernal-special-t96':'vernal-frequent-projectile', 'vernal-charged':'vernal-frequent-projectile', 'vernal-charged-t96':'vernal-frequent-projectile' });
 const clamp=(n,lo,hi)=>Math.min(hi,Math.max(lo,Number.isFinite(Number(n))?Number(n):0));
 const round=(n,p=4)=>Number(Number(n||0).toFixed(p));
 const norm=(s='')=>String(s).toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
-export function resolveJadeAttunementFamily(text=''){ const v=norm(text); if(!v)return null; for(const f of Object.values(JADE_ATTUNEMENT_FAMILIES)) if([...f.displayAliases,...f.legacyAliases].some(a=>v.includes(norm(a)))) return f; return null; }
-export function jadeAttunementCovers(familyOrText,skillId){ const f=typeof familyOrText==='string'?(JADE_ATTUNEMENT_FAMILIES[familyOrText]||resolveJadeAttunementFamily(familyOrText)):familyOrText; return Boolean(f?.covers?.includes(skillId)); }
+export function resolveJadeAttunementFamily(text=''){ const v=norm(text); if(!v)return null; const id=JADE_ATTUNEMENT_ID_ALIASES[String(text)]||String(text); if(JADE_ATTUNEMENT_FAMILIES[id]) return JADE_ATTUNEMENT_FAMILIES[id]; for(const f of Object.values(JADE_ATTUNEMENT_FAMILIES)) if([...f.displayAliases,...f.legacyAliases].some(a=>v.includes(norm(a)))) return f; return null; }
+export function jadeAttunementCovers(familyOrText,skillId){ const f=typeof familyOrText==='string'?(JADE_ATTUNEMENT_FAMILIES[JADE_ATTUNEMENT_ID_ALIASES[familyOrText]||familyOrText]||resolveJadeAttunementFamily(familyOrText)):familyOrText; return Boolean(f?.covers?.includes(skillId)); }
 
 export function deriveJadeRates(panel,judgeRes=0.45,blossomDirectCritPct=0){
   const jr=1+Math.max(0,Number(judgeRes||0));
@@ -53,6 +53,7 @@ export const JADE_SKILL_TEMPLATES = Object.freeze({
   'unfading-flower': { name:'Unfading Flower', duration:0, tags:['weapon','umbrella','special','projectile','ballistic','drone','blossom-eligible'], appSkill:'丢伞(无纵地)', priced:true },
   'fan-special': { name:'Fan Special', duration:0.9, tags:['weapon','fan','special','lingering-bone-source'], appSkill:null, priced:false },
   'fan-pursuit': { name:'Fan Pursuit', duration:1.15, tags:['weapon','fan','pursuit'], appSkill:'扇普通重击派生(风墙阴阳低真气鬼掣)', priced:true },
+  'forsaken-fame': { name:'Forsaken Fame', duration:0, tags:['weapon','fan','charged','pve'], appSkill:null, priced:false, pveDamageBonusPct:45, enduranceRecovery:true, provenance:PROVENANCE.CONFIRMED_OFFICIAL },
   'flying-projectile': { name:'Flying Jade projectile', duration:1.7, tags:['weapon','umbrella','charged','projectile','ballistic'], appSkill:'伞～(连中风墙无纵地)', priced:true },
   'dragonhead': { name:'Dragonhead filler', duration:1.8, tags:['mystic','qi-break-filler'], appSkill:null, priced:false, provenance:PROVENANCE.UNRESOLVED },
 });
@@ -127,6 +128,7 @@ export function jadeEventMultiplier(event,input={}){
   if(event.tags?.includes('projectile')){if(event.combo){m*=1+s.comboProjectileBonusPct/100;reasons.push('Combo projectile');}if(event.jadebreak){m*=1+s.jadebreakProjectileBonusPct/100;reasons.push('Jadebreak projectile');}}
   if(event.tags?.includes('blossom-eligible')&&event.combo&&s.blossomBarrage){const pct=event.qiBroken?s.blossomOwnComboExhaustedBonusPct:s.blossomOwnComboBonusPct;m*=1+pct/100;reasons.push(`Blossom Barrage own Combo +${pct}%`);}
   if(event.id==='unfading-flower'||event.id==='spring-away'){m*=1.15;reasons.push('Official 1.7 PvE +15%');}
+  if(event.id==='forsaken-fame'){m*=1.45;reasons.push('Official 1.7 Forsaken Fame PvE +45%');}
   if(event.id==='spring-away'&&event.shatteredSpringBefore>0){m*=1+event.shatteredSpringBefore*s.shatteredSpringPerStackPct/100;reasons.push('Shattered Spring');}
   if(event.thunderousBoost){m*=1.15;reasons.push('Thunderous Bloom event charge');}
   if(event.breakingPoint){m*=1.10;reasons.push('Breaking Point window');}
@@ -147,8 +149,10 @@ export function evaluateSilkbindJade(panel,inputScenario={},objective=JADE_OBJEC
 }
 const CACHE=new Map();
 export function getSilkbindJadeCacheKey(panel,scenario,objective){const keys=['minOuter','maxOuter','outerPen','minPz','maxPz','pzPen','pzDmg','prec','crit','aff','dcrit','daff','critDmg','affDmg','outerDmg','bossDmg','umbAll','umbMartial','umbSpecial','umbCharged','fanAll','fanMartial','fanSpecial','fanCharged','allArts','attunedBonus','power','agility','momentum','set'];const p=Object.fromEntries(keys.map(k=>[k,typeof panel?.[k]==='number'?round(panel[k],4):panel?.[k]]));return JSON.stringify({v:JADE_MODEL_VERSION,objective,panel:p,scenario:{...DEFAULT_JADE_SCENARIO,...scenario}});}
+/** @param {JadeObjective} objective */
 export function evaluateSilkbindJadeCached(panel,scenario={},objective=JADE_OBJECTIVES.EXPECTED_DPS,priceSkill=null){if(priceSkill&&!scenario.cacheSalt)return evaluateSilkbindJade(panel,scenario,objective,priceSkill);const key=getSilkbindJadeCacheKey(panel,scenario,objective)+(scenario.cacheSalt||'');if(CACHE.has(key))return CACHE.get(key);const v=evaluateSilkbindJade(panel,scenario,objective,priceSkill);CACHE.set(key,v);if(CACHE.size>4000)CACHE.delete(CACHE.keys().next().value);return v;}
 export function clearSilkbindJadeCache(){CACHE.clear();}
 export function jadeMarginalValue(panel,stat,delta,scenario={},objective=JADE_OBJECTIVES.EXPECTED_DPS,priceSkill=null){const a=evaluateSilkbindJade(panel,scenario,objective,priceSkill),b=evaluateSilkbindJade({...panel,[stat]:(panel[stat]||0)+delta},scenario,objective,priceSkill);return{stat,delta,gainDps:round(b.dps-a.dps,4),gainPct:a.dps?round((b.dps/a.dps-1)*100,4):0};}
+/** @param {JadeObjective} objective */
 export function jadeBuildAdvice(panel,scenario={},objective=JADE_OBJECTIVES.EXPECTED_DPS,priceSkill=null){const r=evaluateSilkbindJade(panel,scenario,objective,priceSkill),d=r.diagnostics,out=[];out.push(d.precision>=99.95?'Precision is already capped; more Precision has sharply reduced marginal value.':`Precision is ${d.precision.toFixed(1)}% effective — ${(100-d.precision).toFixed(1)}% below the Jade community target.`);if(d.effectiveCrit>=79.95)out.push('Yellow Critical is at the 80% cap; Direct Crit/Affinity and physical attack decide the remaining rate budget.');if(d.rateBudget>100.5)out.push('Rate budget is over 100%; Momentum/Affinity is not invalid, but its modeled marginal gain is likely squeezed by Direct Crit.');if(objective===JADE_OBJECTIVES.SPEEDRUN_CEILING)out.push('Max Physical receives extra value only for the community Speedrun Ceiling endpoint; Expected DPS remains separate.');if(d.droneUptimePct<60)out.push('Drone uptime is low; resource timing/redrone behavior can outweigh small static-stat gains.');return out;}
 export const SILKBIND_JADE_PATH_MODEL=Object.freeze({id:'silkbind-jade',menuPanelRules:'shared-global-t96-panel',skillTags:JADE_SKILL_TEMPLATES,stateFactory:()=>({petals:0,combo:false,jadebreak:false,lingeringBone:false,droneActive:false,shatteredSpring:0,qi:'normal',vitality:100}),eventRules:['projectile-eligibility','combo','jadebreak','lingering-bone','drone','qi-break','thunderous-bloom','breaking-point','bitter-duty'],rotationPlanner:planSilkbindJadeRotation,objectives:Object.values(JADE_OBJECTIVES),scenarioDefaults:DEFAULT_JADE_SCENARIO,buildDiagnostics:(p,s,o)=>evaluateSilkbindJadeCached(p,s,o).diagnostics,gearAdvice:jadeBuildAdvice});

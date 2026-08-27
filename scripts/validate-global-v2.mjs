@@ -1,6 +1,6 @@
 import fs from "node:fs";
 
-const read = (path) => fs.readFileSync(path, "utf8");
+const read = (path) => fs.readFileSync(path, "utf8").replace(/\r\n/g, "\n");
 const failures = [];
 
 function requireText(path, source, text, label) {
@@ -22,7 +22,7 @@ const compatibility = read("src/data/globalT96GearCompatibility.ts");
 const evidence = read("src/data/globalV2CombatEvidence.ts");
 const indexHtml = read("index.html");
 
-requireText("index.html", indexHtml, "Global 2.0 · Tier 96", "Global T96 document title");
+requireText("index.html", indexHtml, "Global 2.1 · Tier 96", "Global 2.1 document title");
 
 requireText("src/utils/calc.ts", calc, 'const t96 = TIERS["405|0.65b"]', "current 100-upper tier baseline");
 requireText("src/utils/calc.ts", calc, "GLOBAL_V2_SKILL_OUTCOME_RULES", "current skill outcome rules");

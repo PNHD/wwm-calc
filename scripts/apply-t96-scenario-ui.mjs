@@ -5,10 +5,20 @@ const timelinePath = "src/utils/rotationTimeline.ts";
 let app = fs.readFileSync(appPath, "utf8");
 let timeline = fs.readFileSync(timelinePath, "utf8");
 
+if (app.includes("getScenarioRotationForBuild")
+  && app.includes("onCinderAshChange={setCinderAsh}")
+  && app.includes("onStarweaveDistanceChange={setStarweaveDistance}")
+  && timeline.includes("distanceBonusPct")) {
+  console.log("[t96-scenario] Already applied; preserving current scenario wiring.");
+  process.exit(0);
+}
+
 function replaceRequired(source, from, to, label) {
-  if (source.includes(to)) return source;
-  if (!source.includes(from)) throw new Error(`[t96-scenario] Missing patch anchor: ${label}`);
-  return source.replace(from, to);
+  const normalizedSource = source.replace(/\r\n/g, "\n");
+  if (normalizedSource.includes(to)) return source;
+  if (!normalizedSource.includes(from)) throw new Error(`[t96-scenario] Missing patch anchor: ${label}`);
+  const eol = source.includes("\r\n") ? "\r\n" : "\n";
+  return source.replace(from.replaceAll("\n", eol), to.replaceAll("\n", eol));
 }
 
 // Session scenario state. Food already exists and is persisted by the legacy
@@ -69,16 +79,32 @@ app = app.replace(
 // Surface editable assumptions in the Combat workspace.
 app = replaceRequired(
   app,
-  `          onFoodChange={setFood}
+  `          onEfficiencyChange={(value) => { setDpsEff(value); localStorage.setItem(EXECUTION_SCALING_STORAGE_KEY, String(value)); }}
+          onFoodChange={setFood}
           onConfigure={() => openProductTab("settings")}`,
-  `          onFoodChange={setFood}
-          cinderAsh={cinderAsh}
-          onCinderAshChange={setCinderAsh}
-          starweaveDistance={starweaveDistance}
-          onStarweaveDistanceChange={setStarweaveDistance}
+  `          onEfficiencyChange={(value) => { setDpsEff(value); localStorage.setItem(EXECUTION_SCALING_STORAGE_KEY, String(value)); }}
+          onFoodChange={setFood}
+           cinderAsh={cinderAsh}
+           onCinderAshChange={setCinderAsh}
+           starweaveDistance={starweaveDistance}
+           onStarweaveDistanceChange={setStarweaveDistance}
           onConfigure={() => openProductTab("settings")}`,
   "Combat workspace scenario props",
 );
+if (!app.includes("onCinderAshChange={setCinderAsh}")) {
+  const combatWorkspaceStart = app.indexOf("<CombatWorkspace");
+  const foodProp = "          onFoodChange={setFood}";
+  const foodPropIndex = app.indexOf(foodProp, combatWorkspaceStart);
+  if (combatWorkspaceStart < 0 || foodPropIndex < 0) throw new Error("[t96-scenario] Missing active Combat workspace food prop");
+  const eol = app.includes("\r\n") ? "\r\n" : "\n";
+  app = `${app.slice(0, foodPropIndex)}${[
+    foodProp,
+    "          cinderAsh={cinderAsh}",
+    "          onCinderAshChange={setCinderAsh}",
+    "          starweaveDistance={starweaveDistance}",
+    "          onStarweaveDistanceChange={setStarweaveDistance}",
+  ].join(eol)}${app.slice(foodPropIndex + foodProp.length)}`;
+}
 
 // Starweave's separate distance component is martial-skill scoped just like the
 // stack component. Only exact tooltip endpoints are accepted; no 4–8m curve.

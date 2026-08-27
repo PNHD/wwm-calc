@@ -2,13 +2,15 @@ import fs from "node:fs";
 import "./apply-competitive-v2-compat.mjs";
 
 function patch(path, marker, replacements) {
-  let source = fs.readFileSync(path, "utf8");
+  const raw = fs.readFileSync(path, "utf8");
+  const eol = raw.includes("\r\n") ? "\r\n" : "\n";
+  let source = raw.replace(/\r\n/g, "\n");
   if (source.includes(marker)) return;
   for (const [from, to, label] of replacements) {
     if (!source.includes(from)) throw new Error(`V1 release UI anchor missing: ${label}`);
     source = source.replace(from, to);
   }
-  fs.writeFileSync(path, source, "utf8");
+  fs.writeFileSync(path, eol === "\r\n" ? source.replace(/\n/g, "\r\n") : source, "utf8");
 }
 
 patch("src/product/ProductShell.tsx", "V1_MODEL_ABOUT_PRODUCT_SHELL", [
@@ -32,10 +34,24 @@ patch("src/arena/ArenaWorkspace.tsx", "V1_MODEL_ABOUT_ARENA", [
   ],
   [
     `<div className="arena-patch"><span>GLOBAL</span><strong>2.0</strong></div></header>`,
-    `<div className="arena-patch"><span>GLOBAL</span><strong>2.0</strong></div><ModelAbout workspace="ARENA" page={route} path={profile.path} /></header>`,
+    `<div className="arena-patch"><span>GLOBAL</span><strong>2.1</strong></div><ModelAbout workspace="ARENA" page={route} path={profile.path} /></header>`,
     "Arena ModelAbout action",
   ],
 ]);
+
+{
+  const path = "src/arena/ArenaWorkspace.tsx";
+  const raw = fs.readFileSync(path, "utf8");
+  const eol = raw.includes("\r\n") ? "\r\n" : "\n";
+  const source = raw.replace(/\r\n/g, "\n");
+  const next = source
+    .replaceAll(`<div className="arena-patch"><span>GLOBAL</span><strong>2.0</strong></div>`, `<div className="arena-patch"><span>GLOBAL</span><strong>2.1</strong></div>`)
+    .replaceAll(`<div className="arena-patch"><span>GLOBAL</span><strong>2.0 V2</strong></div>`, `<div className="arena-patch"><span>GLOBAL</span><strong>2.1 V2</strong></div>`);
+  if (!next.includes(`<div className="arena-patch"><span>GLOBAL</span><strong>2.1 V2</strong></div>`) || !next.includes("V1_MODEL_ABOUT_ARENA")) {
+    throw new Error("V1 release UI current Arena patch contract missing");
+  }
+  fs.writeFileSync(path, eol === "\r\n" ? next.replace(/\n/g, "\r\n") : next, "utf8");
+}
 
 patch("src/arena/ArenaWorkspace.tsx", "V1_ARENA_LIBRARY_COMPARE_CONSUMER", [
   [

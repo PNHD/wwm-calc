@@ -3,6 +3,14 @@ import fs from 'node:fs';
 const path = 'src/App.tsx';
 let source = fs.readFileSync(path, 'utf8');
 
+const normalizeEol = (value) => value.replace(/\r\n/g, '\n');
+const hasNormalized = (value, expected) => normalizeEol(value).includes(expected);
+const replaceNormalized = (value, from, to, label) => {
+  if (!hasNormalized(value, from)) throw new Error(`[jade-objectives-cache] ${label}`);
+  const eol = value.includes('\r\n') ? '\r\n' : '\n';
+  return value.replace(from.replaceAll('\n', eol), to.replaceAll('\n', eol));
+};
+
 const before = `  const jadeScenarioForCombo = (combo: GearItem[]) => ({
     ...jadeScenario,
     attunementBonuses: jadeAttunementsForCombo(combo),
@@ -29,17 +37,19 @@ const after = `  const jadeScenarioForCombo = (combo: GearItem[]) => {
     };
   };`;
 
-if (!source.includes(after)) {
-  if (!source.includes(before)) {
-    throw new Error('[jade-objectives-cache] Missing generated Jade scenario helper anchor.');
-  }
-  source = source.replace(before, after);
+const hasCurrentObjectiveCacheHelper = hasNormalized(source, 'const jadeScenarioForCombo = (combo: GearItem[]) => {')
+  && hasNormalized(source, 'const objectiveScenario = jadeObjective === JADE_OBJECTIVES.SHORT_FIGHT_BURST')
+  && hasNormalized(source, 'const gearSignature = combo.map((gear) => gear.id).sort().join(",")')
+  && hasNormalized(source, '|${gearSignature}`');
+
+if (!hasCurrentObjectiveCacheHelper) {
+  source = replaceNormalized(source, before, after, 'Missing generated Jade scenario helper anchor.');
 }
 
-if (!source.includes('const gearSignature = combo.map((gear) => gear.id).sort().join(",")')) {
+if (!hasNormalized(source, 'const gearSignature = combo.map((gear) => gear.id).sort().join(",")')) {
   throw new Error('[jade-objectives-cache] Gear signature cache key missing.');
 }
-if (!source.includes('jadeObjective === JADE_OBJECTIVES.SHORT_FIGHT_BURST')) {
+if (!hasNormalized(source, 'jadeObjective === JADE_OBJECTIVES.SHORT_FIGHT_BURST')) {
   throw new Error('[jade-objectives-cache] Short-fight objective scenario missing.');
 }
 

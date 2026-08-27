@@ -5,16 +5,26 @@ const timelinePath = "src/utils/rotationTimeline.ts";
 let app = fs.readFileSync(appPath, "utf8");
 let timeline = fs.readFileSync(timelinePath, "utf8");
 
+if (app.includes("starweavePieces >= 2") && app.includes("timelineResult.total")) {
+  console.log("[t96-product] Already applied; preserving downstream scenario transforms.");
+  process.exit(0);
+}
+
 function replaceRequired(source, from, to, label) {
-  if (source.includes(to)) return source;
-  if (!source.includes(from)) throw new Error(`[t96-product] Missing patch anchor: ${label}`);
-  return source.replace(from, to);
+  const normalizedSource = source.replace(/\r\n/g, "\n");
+  if (normalizedSource.includes(to)) return source;
+  if (!normalizedSource.includes(from)) throw new Error(`[t96-product] Missing patch anchor: ${label}`);
+  const eol = source.includes("\r\n") ? "\r\n" : "\n";
+  return source.replace(from.replaceAll("\n", eol), to.replaceAll("\n", eol));
 }
 
 function replaceRegexRequired(source, pattern, to, label) {
-  if (typeof to === "string" && source.includes(to)) return source;
-  if (!pattern.test(source)) throw new Error(`[t96-product] Missing regex anchor: ${label}`);
-  return source.replace(pattern, to);
+  const normalizedSource = source.replace(/\r\n/g, "\n");
+  if (typeof to === "string" && normalizedSource.includes(to)) return source;
+  const eolPattern = new RegExp(pattern.source.replaceAll("\\n", "\\r?\\n"), pattern.flags);
+  if (!eolPattern.test(source)) throw new Error(`[t96-product] Missing regex anchor: ${label}`);
+  const eol = source.includes("\r\n") ? "\r\n" : "\n";
+  return source.replace(eolPattern, typeof to === "string" ? to.replaceAll("\n", eol) : to);
 }
 
 // The timeline owns conditional Starweave, Yi River and Tang Melody for the T96

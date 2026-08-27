@@ -15,6 +15,16 @@ export interface ArsenalRow {
   equipped: boolean;
   grade: string;
   score: number;
+  rollQuality?: number;
+  buildFit?: number;
+  modeledContribution?: number;
+  recognizedLines?: number;
+  usefulLines?: number;
+  unknownLines?: number;
+  sourceLabel?: string;
+  warnings?: string[];
+  gearOrigin?: string;
+  rollQualityAvailable?: boolean;
 }
 
 interface ArsenalWorkspaceProps {
@@ -120,8 +130,9 @@ export default function ArsenalWorkspace({
       </section>
 
       {selectedItem && <section className="gear-inspector" aria-label="Selected gear analyzer">
-        <header><div><span className="product-kicker">Selected gear</span><h2>{selectedItem.name}</h2><p>{selectedItem.slotLabel} / {selectedItem.setName} / {selectedItem.quality}</p></div><strong>{selectedItem.grade}<small>{selectedItem.score.toFixed(2)}%</small></strong></header>
+        <header><div><span className="product-kicker">Selected gear</span><h2>{selectedItem.name}</h2><p>{selectedItem.slotLabel} / {selectedItem.setName} / {selectedItem.quality}</p></div><strong>{selectedItem.grade}<small>{selectedItem.score.toFixed(1)} T96 score</small></strong></header>
         <div className="gear-inspector-layout">
+          <div className="gear-inspector-advice"><small>{selectedItem.sourceLabel ?? "Gear score"}</small><strong>{selectedItem.usefulLines ?? 0}/{selectedItem.recognizedLines ?? selectedItem.subs.length} useful verified lines</strong><span>Modeled contribution {(selectedItem.modeledContribution ?? 0).toFixed(1)}% · Build fit {(selectedItem.buildFit ?? 0).toFixed(1)}% · {selectedItem.rollQualityAvailable === false ? "Roll diagnostic N/A" : `Roll diagnostic ${(selectedItem.rollQuality ?? 0).toFixed(1)}%`}</span>{selectedItem.warnings?.map((warning) => <span key={warning}>{warning}</span>)}</div>
           <div className="gear-inspector-stats">{selectedItem.subs.slice(0, 6).map((sub, index) => <span key={`${sub.type}-${index}`}><i>{index + 1}</i><strong>{sub.type}{sub.tuned ? " (tuned)" : ""}</strong><b>{sub.value}</b></span>)}</div>
           <div className="gear-inspector-advice"><small>Reroll calculator</small><label><span>Path</span><select value={rerollPath} onChange={(event) => setRerollPath(event.target.value)}><option value="build">{selectedItem.slotLabel} path</option><option value="bamboocut">Bamboocut path</option><option value="general">General path</option></select></label><strong>{weakestSub && bestMissing ? `${weakestSub.type} -> ${bestMissing.name}` : "No verified upgrade found"}</strong><span>{bestMissing ? `About +${Math.round(bestMissing.dps).toLocaleString()} DPS for one Global max roll.` : "Current lines already cover the ranked priorities."}</span></div>
           <div className="gear-inspector-actions">
@@ -149,7 +160,7 @@ export default function ArsenalWorkspace({
             ))}
           </div>
           <div className="arsenal-analysis-actions">
-            <div><small>Weakest slot</small><strong>{analysis.at(-1)?.slot ?? "-"}</strong><span>{analysis.at(-1)?.score.toFixed(2) ?? "0.00"}% graduation contribution</span></div>
+            <div><small>Weakest slot</small><strong>{analysis.at(-1)?.slot ?? "-"}</strong><span>{analysis.at(-1)?.score.toFixed(2) ?? "0.00"} T96 gear score</span></div>
             {advisedItem && <div><small>Reroll advisor</small><strong>{advisedItem.name}</strong><span>{weakestSub && bestMissing ? `${weakestSub.type} -> ${bestMissing.name} (about +${Math.round(bestMissing.dps).toLocaleString()} DPS/roll)` : "No clear reroll upgrade from current priority data."}</span></div>}
             {advisedItem && <button type="button" onClick={() => onEdit(advisedItem.id)}>Edit selected gear</button>}
             <button type="button" onClick={onOpenCompare}>Compare one replacement</button>
@@ -205,6 +216,7 @@ export default function ArsenalWorkspace({
               </div>
               <footer>
                 <button type="button" className="arsenal-equip-command" onClick={(event) => { event.stopPropagation(); onEquip(row.id); }}>{row.equipped ? <><Check size={13} aria-hidden="true" /> Equipped</> : "Equip"}</button>
+                {row.sourceLabel && <span title={row.sourceLabel}>{row.gearOrigin === "relaid" ? "Relaid" : row.gearOrigin === "native-t96" ? "Native T96" : "T96"}</span>}
                 {row.mastery !== undefined && <span>MM {row.mastery}</span>}
                 <button type="button" title={`Edit ${row.name}`} aria-label={`Edit ${row.name}`} onClick={(event) => { event.stopPropagation(); onEdit(row.id); }}>
                   <Pencil size={16} aria-hidden="true" />

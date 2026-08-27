@@ -1,9 +1,11 @@
 import React from "react";
 
+type JadeObjective = "expected-dps" | "short-fight-burst" | "speedrun-ceiling" | "team-dps";
+
 interface Props {
   result: any;
-  objective: string;
-  onObjectiveChange: (value: string) => void;
+  objective: JadeObjective;
+  onObjectiveChange: (value: JadeObjective) => void;
   scenario: any;
   onScenarioChange: (patch: Record<string, unknown>) => void;
   advice: string[];
@@ -25,13 +27,13 @@ export default function JadeHealthPanel({ result, objective, onObjectiveChange, 
     <section className="mb-4 rounded-xl border border-teal-900/60 bg-[#141719] p-4" data-testid="jade-health-panel">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-teal-400">Silkbind-Jade · Global 2.0</div>
+          <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-teal-400">Silkbind-Jade · Global 2.1</div>
           <h3 className="mt-1 text-base font-extrabold text-slate-100">Jade Health</h3>
           <p className="mt-1 max-w-2xl text-[11px] text-slate-500">State/resource priority planner. Damage events are priced by the shared product outcome engine; community targets are advisory only.</p>
         </div>
         <label className="text-[10px] uppercase tracking-wider text-slate-500">
           Objective
-          <select className="ml-2 rounded-md border border-[#30343b] bg-[#0f1114] px-2 py-1.5 text-xs normal-case text-slate-200" value={objective} onChange={(e) => onObjectiveChange(e.target.value)}>
+          <select className="ml-2 rounded-md border border-[#30343b] bg-[#0f1114] px-2 py-1.5 text-xs normal-case text-slate-200" value={objective} onChange={(e) => onObjectiveChange(e.target.value as JadeObjective)}>
             <option value="expected-dps">Expected DPS</option>
             <option value="short-fight-burst">Short-fight Burst</option>
             <option value="speedrun-ceiling">Speedrun Ceiling · community</option>

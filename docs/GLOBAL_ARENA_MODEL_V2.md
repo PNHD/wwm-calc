@@ -1,7 +1,7 @@
 # Global Arena Model V2
 
-Reviewed: 2026-08-18  
-Target: current Global client / Global 2.0  
+Current Global 2.1 envelope reviewed through 2026-08-24
+Target: current Global client / Global 2.1
 Status: supersedes shallow Arena assumptions in `GLOBAL_ARENA_MODEL.md` where this document conflicts.
 
 ## Evidence policy
@@ -11,6 +11,7 @@ V2 uses: `CONFIRMED_CLIENT`, `CONFIRMED_OFFICIAL`, `OFFICIAL_BUT_SCOPE_UNRESOLVE
 Official/current sources reviewed completely for the mechanics encoded here:
 
 - Apr 30 Arena/Guild War Optimization — https://www.wherewindsmeetgame.com/m/news/official/PVP427.html
+- May 8 publisher Optimizations & Fixes — Steam publisher feed; Linhe split US West from the original Yougu grouping
 - May 22 Cross-Server Matchmaking — https://www.wherewindsmeetgame.com/news/official/522update.html
 - May 27 Patch — https://www.wherewindsmeetgame.com/news/official/527update.html
 - May 28 Version 1.7 Path/Arena Balance — https://www.wherewindsmeetgame.com/news/official/Adjustment528.html
@@ -36,7 +37,7 @@ A 2v2/5v5 Arena environment is exposed by the official Healing Dummy. This is a 
 
 ## Battlegroups and cross-server
 
-Current official battlegroups encoded as data:
+Current battlegroups are encoded as data. Apr 30 initially published four groups; the May 8 publisher update added Linhe for US West, producing the five-group mapping used below:
 
 - Yougu — US East
 - Linhe — US West

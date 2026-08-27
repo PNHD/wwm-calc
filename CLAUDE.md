@@ -2,8 +2,8 @@
 
 WWM Calc / WWM Build Lab is the fan-made Where Winds Meet Global calculator.
 
-- Product version: `1.0.0`
-- Current context: Global 2.0, active calibrated profile Tier 96
+- Product version: `1.1.0`
+- Current context: Global 2.1, active calibrated profile Tier 96
 - Canonical production: https://wonton-wwm.pages.dev/ (Cloudflare Pages)
 - Repository: https://github.com/PNHD/wwm-calc
 

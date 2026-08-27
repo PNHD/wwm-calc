@@ -145,7 +145,7 @@ export const GLOBAL_T96_OBSERVED_GEAR = [
     slot: "Helmet",
     name: "Nightfarer Helm",
     quality: "gold",
-    set: "none",
+    set: "calmwaters",
     mastery: 913,
     isEquipped: true,
     subs: [
@@ -162,7 +162,7 @@ export const GLOBAL_T96_OBSERVED_GEAR = [
     slot: "Chest",
     name: "Nightfarer Armor",
     quality: "gold",
-    set: "none",
+    set: "calmwaters",
     mastery: 1106,
     isEquipped: true,
     subs: [
@@ -175,11 +175,28 @@ export const GLOBAL_T96_OBSERVED_GEAR = [
     ],
   },
   {
+    id: "t96-observed-chest-1129",
+    slot: "Chest",
+    name: "Nightfarer Armor 1129",
+    quality: "gold",
+    set: "calmwaters",
+    mastery: 1129,
+    isEquipped: false,
+    subs: [
+      { type: "Crit Rate", val: "7.3%" },
+      { type: "Agility", val: "46.4" },
+      { type: "Min Phys Atk", val: "61.4" },
+      { type: "Max Phys Atk", val: "67.3", isTuned: true },
+      { type: "Min Bamboocut Atk", val: "35.6" },
+      { type: "Attuned Bonus", val: "5.2%" },
+    ],
+  },
+  {
     id: "t96-observed-greaves",
     slot: "Greaves",
     name: "Mistridge Greaves",
     quality: "gold",
-    set: "none",
+    set: "calmwaters",
     mastery: 959,
     isEquipped: true,
     subs: [
@@ -196,7 +213,7 @@ export const GLOBAL_T96_OBSERVED_GEAR = [
     slot: "Bracers",
     name: "Nightfarer Bracers",
     quality: "gold",
-    set: "none",
+    set: "calmwaters",
     mastery: 887,
     isEquipped: true,
     subs: [
@@ -217,5 +234,5 @@ export const GLOBAL_T96_OBSERVED_PRESET_META = {
   buildKey: "bamboocut-dust",
   evidence: "observed",
   isGraduationTarget: false,
-  note: "Captured without food, medicine, party, guild, or temporary buffs. Static Inner Way attributes are included in the raw panel; keep Inner Ways empty until the exact four tooltips are imported.",
+  note: "The default panel is the unbuffed 1106-chest capture. The preset also contains the observed 1129 chest as a spare candidate. Phantom Rally, Morale Chant, Towline Sweep, Song of Tang, Starweave, and Calmwaters are all backed by current Global client evidence.",
 } as const;

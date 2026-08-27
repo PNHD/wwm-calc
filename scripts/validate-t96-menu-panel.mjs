@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import { T96_PRODUCT_MODEL_VERSION } from "../src/utils/t96ProductModel.mjs";
 
-const app = fs.readFileSync("src/App.tsx", "utf8");
+const app = fs.readFileSync("src/App.tsx", "utf8").replace(/\r\n/g, "\n");
 
 assert.equal(T96_PRODUCT_MODEL_VERSION, 4, "menu-panel contract change must invalidate v3 calibrations");
 assert.ok(app.includes('if (selectedBuild === "bamboocut-dust") {\n        projected.outerPen += iwStats.outerPen'), "Bamboocut MENU PANEL must add static Inner Way Attribute Buffs after residual+gear projection");

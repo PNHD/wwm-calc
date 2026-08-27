@@ -144,11 +144,11 @@ export function buildTimelineBuffs(
   return out;
 }
 
-function starweaveBuff(color: string): TimelineBuff {
+function starweaveBuff(color: string, distanceBonusPct = 0): TimelineBuff {
   return {
     id: "starweave:stacks",
     name: "Starweave · Martial Art Skill Damage",
-    maxDelta: { generalDmg: 15 },
+    maxDelta: { generalDmg: 15 + Math.max(0, Math.min(1, distanceBonusPct)) },
     maxStacks: 5,
     duration: 5,
     ramp: true,
@@ -214,7 +214,10 @@ export function simulateTimeline(
   const isT96Bamboocut = opts.buildKey === "bamboocut-dust";
   const allBuffs = [...buffs];
   if (isT96Bamboocut && opts.weaponStars) {
-    allBuffs.push(starweaveBuff(BUFF_PALETTE[allBuffs.length % BUFF_PALETTE.length]));
+    allBuffs.push(starweaveBuff(
+      BUFF_PALETTE[allBuffs.length % BUFF_PALETTE.length],
+      Number((opts as any).starweaveDistanceBonusPct || 0),
+    ));
   }
 
   const events: { item: RotationItem; start: number; dur: number; ordinal: number }[] = [];
@@ -245,7 +248,7 @@ export function simulateTimeline(
 
   // Bamboocut timeline owns these conditional effects. Passing the old toggles to
   // calcSkill would double-count permanent max Yi River / Song of Tang.
-  const eventOpts: CalcOpts = isT96Bamboocut ? { ...opts, yishui: false, datang: false } : opts;
+  const eventOpts: CalcOpts = isT96Bamboocut ? { ...opts, yishui: false, datang: false, weaponStars: false } : opts;
 
   for (const event of events) {
     const start = Math.max(0, Math.min(window, event.start));

@@ -148,7 +148,7 @@ test("Guild War Library keeps builds and plans distinct and clones without repla
 
   await page.goto(`${BASE}#library/compare/${GVG}/my`, { waitUntil: "networkidle" });
   await expect(page.getByText("ROLE SUITABILITY DELTAS")).toBeVisible();
-  await expect(page.getByText(/not a universal GvG winner/i)).toBeVisible();
+  await expect(page.getByText(/not a universal Guild War winner/i)).toBeVisible();
 });
 
 test("Versioned share landing, legacy migration, malformed rejection and legacy GvG read-only landing", async ({ page, context }) => {
@@ -197,13 +197,14 @@ test("Versioned share landing, legacy migration, malformed rejection and legacy 
 test("Recently Updated is freshness-based and progressive filters cover weapon tier and objective", async ({ page }) => {
   await page.goto(`${BASE}#library/recent`, { waitUntil: "networkidle" });
   await expect(page.getByTestId("library-landing")).toBeVisible();
-  await expect(page.locator(".library-card")).toHaveCount(5);
+  await expect(page.locator(".library-card")).toHaveCount(8);
   await page.getByRole("button", { name: "Filters" }).click();
   await page.getByRole("button", { name: /More filters/ }).click();
   const filters = page.getByRole("region", { name: "Library filters" });
   await filters.getByLabel("Weapon").selectOption({ label: "Vernal Umbrella" });
-  await expect(page.locator(".library-card")).toHaveCount(1);
+  await expect(page.locator(".library-card")).toHaveCount(2);
   await expect(page.locator(".library-card").getByRole("heading", { name: "Silkbind-Jade", exact: true })).toBeVisible();
+  await expect(page.locator(".library-card").getByRole("heading", { name: "Silkbind-Jade Arena", exact: true })).toBeVisible();
   await filters.getByLabel("Weapon").selectOption("");
   await filters.getByLabel("Tier").selectOption({ label: "T96" });
   await expect(page.locator(".library-card")).toHaveCount(1);

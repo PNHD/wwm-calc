@@ -1,8 +1,8 @@
 # WWM Calc V1 Release Readiness
 
-Product version: **1.0.0**  
-Game context: **Global 2.0**  
-Release-hardening review date: **2026-08-18**
+Product version: **1.1.0**
+Game context: **Global 2.1**
+Release-hardening review date: **2026-08-22**
 
 ## Supported first-class workspaces
 

@@ -1,3 +1,5 @@
+import "./validate-competitive-storage-v2.mjs";
+import "./validate-competitive-v2.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import {
@@ -176,8 +178,8 @@ test("Arena clone/load sanitization cannot overwrite active profile implicitly",
 
 test("History persists locally, bounds payloads and reports sample size", () => {
   const storage = fakeStorage();
-  saveArenaHistory([{ id: "h1", date: "2026-08-18", patch: "2.0", mode: "1v1", opponentPath: "Bamboocut-Wind", result: "WIN", durationSeconds: 70, notes: "Observed" }], storage);
-  const rows = loadArenaHistory(storage); assert.equal(rows.length, 1); assert.equal(rows[0].result, "WIN");
+  saveArenaHistory([{ id: "h1", date: "2026-08-18", patch: "2.0", mode: "PERCEPTION_FOREST", opponentPath: "Bamboocut-Wind", result: "WIN", durationSeconds: 70, notes: "Observed" }], storage); // COMPETITIVE_V2_ARENA_HISTORY_MODE_TEST
+  const rows = loadArenaHistory(storage); assert.equal(rows.length, 1); assert.equal(rows[0].result, "WIN"); assert.equal(rows[0].mode, "PERCEPTION_FOREST"); // COMPETITIVE_V2_ARENA_HISTORY_MODE_ASSERT
   assert.ok(storage.getItem(ARENA_HISTORY_KEY));
 });
 

@@ -1,7 +1,15 @@
 import fs from "node:fs";
 
-function read(path) { return fs.readFileSync(path, "utf8"); }
-function write(path, value) { fs.writeFileSync(path, value, "utf8"); }
+const lineEndings = new Map();
+function read(path) {
+  const raw = fs.readFileSync(path, "utf8");
+  lineEndings.set(path, raw.includes("\r\n") ? "\r\n" : "\n");
+  return raw.replace(/\r\n/g, "\n");
+}
+function write(path, value) {
+  const eol = lineEndings.get(path) || "\n";
+  fs.writeFileSync(path, eol === "\r\n" ? value.replace(/\n/g, "\r\n") : value, "utf8");
+}
 function replaceOnce(source, from, to, label) {
   if (!source.includes(from)) throw new Error(`V1 hardening anchor missing: ${label}`);
   return source.replace(from, to);

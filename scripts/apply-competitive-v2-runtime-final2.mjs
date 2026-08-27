@@ -1,14 +1,17 @@
+// COMPETITIVE_V2_QADIR_LITERAL_NORMALIZED
 import fs from "node:fs";
 
 function read(path) { return fs.readFileSync(path, "utf8"); }
 function write(path, source) { fs.writeFileSync(path, source, "utf8"); }
 function replaceContract(path, marker, before, after, label) {
-  let source = read(path);
+  const raw = read(path);
+  const eol = raw.includes("\r\n") ? "\r\n" : "\n";
+  let source = raw.replace(/\r\n/g, "\n");
   if (source.includes(marker)) return;
   if (!source.includes(before)) throw new Error(`Competitive V2 final2: ${label} anchor missing`);
   source = source.replace(before, after);
   if (!source.includes(marker)) throw new Error(`Competitive V2 final2: ${label} marker missing after patch`);
-  write(path, source);
+  write(path, eol === "\r\n" ? source.replace(/\n/g, "\r\n") : source);
 }
 
 // The V1 hardening generator creates this sanitizer before Competitive V2 runs.
@@ -95,8 +98,8 @@ replaceContract(
 replaceContract(
   "scripts/runtime-workspace-ux.spec.mjs",
   "COMPETITIVE_V2_WORKSPACE_OBJECTIVE_MAP_SCOPE",
-  `  await gvg(page, "Strategy"); await expect(page.getByTestId("gvg-strategy")).toBeVisible(); await expect(page.locator('[data-objective-id="BULWARK"]')).toBeVisible(); await page.screenshot({ path: \`${qaDir}/1440-gvg-v2-strategy.png\`, fullPage: true });`,
-  `  await gvg(page, "Strategy"); await expect(page.getByTestId("gvg-strategy")).toBeVisible(); await expect(page.getByTestId("gvg-objective-map" /* COMPETITIVE_V2_WORKSPACE_OBJECTIVE_MAP_SCOPE */).locator('button[data-objective-id="BULWARK"]')).toBeVisible(); await page.screenshot({ path: \`${qaDir}/1440-gvg-v2-strategy.png\`, fullPage: true });`,
+  `  await gvg(page, "Strategy"); await expect(page.getByTestId("gvg-strategy")).toBeVisible(); await expect(page.locator('[data-objective-id="BULWARK"]')).toBeVisible(); await page.screenshot({ path: \`\${qaDir}/1440-gvg-v2-strategy.png\`, fullPage: true });`,
+  `  await gvg(page, "Strategy"); await expect(page.getByTestId("gvg-strategy")).toBeVisible(); await expect(page.getByTestId("gvg-objective-map" /* COMPETITIVE_V2_WORKSPACE_OBJECTIVE_MAP_SCOPE */).locator('button[data-objective-id="BULWARK"]')).toBeVisible(); await page.screenshot({ path: \`\${qaDir}/1440-gvg-v2-strategy.png\`, fullPage: true });`,
   "workspace Guild War objective map scope",
 );
 

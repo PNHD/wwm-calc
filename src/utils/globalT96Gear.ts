@@ -1,4 +1,5 @@
 import { GLOBAL_T96_ROLL_CAPS } from "../data/globalT96Rules";
+import { classifyGlobalT96GearOrigin, globalT96GearOriginLabel, type GlobalT96GearOrigin } from "../data/globalT96GearCompatibility";
 
 export interface GlobalT96GearLine {
   type: string;
@@ -27,6 +28,8 @@ export interface GlobalT96GearScore {
   sourceLabel: string;
   lines: GlobalT96LineScore[];
   warnings: string[];
+  gearOrigin: GlobalT96GearOrigin;
+  rollQualityAvailable: boolean;
 }
 
 const parseNumber = (value: string): number => {
@@ -44,6 +47,8 @@ const canonicalStat = (type: string): string | null => {
   if (key.includes("minphysatk") || key.includes("minouteratk")) return "minOuter";
   if (key.includes("physpen") || key.includes("outerpen")) return "outerPen";
   if (key.includes("formlesspen") || key.includes("attrpen") || key.includes("elementpen")) return "elementPen";
+  if (key.includes("maxvoidatk") || key.includes("maximumvoidattack")) return "maxElement";
+  if (key.includes("minvoidatk") || key.includes("minimumvoidattack")) return "minElement";
   if (key.includes("critrate") || key === "crit") return "crit";
   if (key.includes("affinityrate") || key === "affinity") return "affinity";
   if (key.includes("precision")) return "precision";
@@ -149,50 +154,63 @@ export function scoreGlobalT96Gear(
   lines: GlobalT96GearLine[],
   buildKey: string,
   modeledContributionPct = 0,
+  slot = "",
 ): GlobalT96GearScore {
+  const gearOrigin = classifyGlobalT96GearOrigin(slot, lines);
   const scored = lines.map<GlobalT96LineScore>((line) => {
     const stat = canonicalStat(line.type);
     const value = parseNumber(line.val);
-    const cap = stat ? CAP_BY_STAT[stat] ?? null : null;
+    const standardCap = stat ? CAP_BY_STAT[stat] ?? null : null;
+    const cap = gearOrigin === "relaid" ? null : standardCap;
     const wrongElement = isWrongElement(line.type, buildKey);
     const weight = stat ? (wrongElement ? 0.05 : fitWeight(buildKey, stat)) : 0;
     const rollPct = cap && cap > 0 ? Math.max(0, Math.min(125, value / cap * 100)) : null;
     const useful = weight >= 0.55;
     const reason = !stat
       ? "No verified T96 cap for this line"
-      : wrongElement
-        ? "Off-element line for the selected path"
-        : useful
-          ? "Matches the selected build priority"
-          : "Recognized T96 line with low build value";
+      : gearOrigin === "relaid"
+        ? "Recognized line; Relaid Modulating cap is not verified"
+        : wrongElement
+          ? "Off-element line for the selected path"
+          : useful
+            ? "Matches the selected build priority"
+            : "Recognized T96 line with low build value";
     return { type: line.type, value, cap, rollPct, fitWeight: weight, useful, reason };
   });
 
-  const recognized = scored.filter((line) => line.cap !== null);
-  const rollQuality = recognized.length
-    ? recognized.reduce((sum, line) => sum + Math.min(100, line.rollPct ?? 0), 0) / recognized.length
+  const recognizedLineCount = lines.filter((line) => canonicalStat(line.type) !== null).length;
+  const capScored = scored.filter((line) => line.cap !== null);
+  const rollQualityAvailable = gearOrigin !== "relaid" && capScored.length > 0;
+  const rollQuality = rollQualityAvailable
+    ? capScored.reduce((sum, line) => sum + Math.min(100, line.rollPct ?? 0), 0) / capScored.length
     : 0;
   const buildFit = scored.length
     ? scored.reduce((sum, line) => sum + line.fitWeight * 100, 0) / scored.length
     : 0;
   const modeledContribution = Math.max(0, Math.min(100, modeledContributionPct / 7 * 100));
-  const overall = rollQuality * 0.5 + buildFit * 0.35 + modeledContribution * 0.15;
-  const unknownLines = scored.filter((line) => line.cap === null).length;
+  // Item caps are diagnostic only. Build selection is driven by the modeled
+  // panel/rotation contribution, with build-fit used only as a small tie-breaker.
+  const overall = modeledContribution * 0.85 + buildFit * 0.15;
+  const unknownLines = Math.max(0, scored.length - recognizedLineCount);
   const warnings: string[] = [];
-  if (unknownLines) warnings.push(`${unknownLines} line(s) are excluded because no verified Global T96 cap is available.`);
+  if (unknownLines) warnings.push(`${unknownLines} line(s) have no cap diagnostic; their entered values still contribute to the panel and optimizer.`);
+  if (gearOrigin === "relaid") warnings.push("Relaid Modulating caps are lower than standard T96 caps and are not yet verified; roll quality is intentionally shown as N/A.");
+  if (gearOrigin === "mixed") warnings.push("This weapon mixes native Void and historical Path stat pools; review the OCR result before trusting its score.");
   if (scored.some((line) => line.reason.startsWith("Off-element"))) warnings.push("Off-element attribute attack is heavily discounted for this path.");
-  if (!recognized.length) warnings.push("This item cannot be roll-scored from the verified 100上 table yet.");
+  if (recognizedLineCount === 0) warnings.push("This item cannot be roll-scored from the verified 100上 table yet.");
 
   return {
     overall,
     rollQuality,
     buildFit,
     modeledContribution,
-    recognizedLines: recognized.length,
+    recognizedLines: recognizedLineCount,
     usefulLines: scored.filter((line) => line.useful).length,
     unknownLines,
-    sourceLabel: "Global T96 verified · 100上",
+    sourceLabel: `Panel-first Global T96 · ${globalT96GearOriginLabel(gearOrigin)}`,
     lines: scored,
     warnings,
+    gearOrigin,
+    rollQualityAvailable,
   };
 }
