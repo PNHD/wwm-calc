@@ -18,7 +18,7 @@ const branch = process.env.CF_PAGES_BRANCH
 
 const info = {
   product: "Where Winds Meet Build Calculator",
-  dataVersion: "Global 2.1 · Tier 96 · 100上 calibration",
+  dataVersion: "Global 2.1 context · Tier 96 · accepted T96 fixture",
   schemaVersion: 1,
   commit,
   shortCommit: commit === "unknown" ? "unknown" : commit.slice(0, 8),

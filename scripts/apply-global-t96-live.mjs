@@ -34,8 +34,8 @@ function replaceRequired(source, from, to, label) {
 // - Attribute DMG Bonus 11%
 let calc = read(files.calc);
 calc = calc.replaceAll(
-  '  "405|0.65b": makeTier(t100U, 405, 26, 28, "Tier 96 / Lv100 Global 2.0", "Global in-game calibration + Excel 各等级模板: 100上", false, 131, 263, 120, 240, 150),',
-  '  "405|0.65b": makeTier(t100U, 405, 26, 28, "Tier 96 / Lv100 Global 2.1", "Global in-game calibration + Excel 各等级模板: 100上", false, 131, 263, 120, 240, 150),',
+  '  "405|0.65b": makeTier(t100U, 405, 26, 28, "Tier 96 / Lv100 Global 2.0", "Existing accepted T96 calibration fixture + Excel 各等级模板: 100上", false, 131, 263, 120, 240, 150),',
+  '  "405|0.65b": makeTier(t100U, 405, 26, 28, "Tier 96 / Lv100 Global 2.1", "Existing accepted T96 calibration fixture + Excel 各等级模板: 100上", false, 131, 263, 120, 240, 150),',
 );
 calc = replaceRequired(
   calc,
@@ -46,7 +46,7 @@ calc = replaceRequired(
 calc = replaceRequired(
   calc,
   '  "405|0.65b": makeTier(t100U, 405, 26, 28, "Tier 96 / Lv100 Upper CN Ref", "Excel 各等级模板: 100上", true, 131, 263, 120, 240, 150),',
-  '  "405|0.65b": makeTier(t100U, 405, 26, 28, "Tier 96 / Lv100 Global 2.1", "Global in-game calibration + Excel 各等级模板: 100上", false, 131, 263, 120, 240, 150),',
+  '  "405|0.65b": makeTier(t100U, 405, 26, 28, "Tier 96 / Lv100 Global 2.1", "Existing accepted T96 calibration fixture + Excel 各等级模板: 100上", false, 131, 263, 120, 240, 150),',
   "activate 100-upper Global tier",
 );
 calc = replaceRequired(

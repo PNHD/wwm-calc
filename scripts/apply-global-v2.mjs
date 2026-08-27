@@ -36,7 +36,7 @@ function replaceRegexRequired(source, pattern, replacement, label) {
 // Tier model: make the existing 95上/T96 dataset the current Global default,
 // retain T91 only as a legacy comparison, and stop calling T96 a preview.
 let calc = read(files.calc);
-const calcAlreadyAtLiveT96 = /"405\|0\.65b": makeTier\(t100U, 405, 26, 28, "Tier 96 \/ Lv100 Global 2\.[01]", "Global in-game calibration \+ Excel 各等级模板: 100上", false, 131, 263, 120, 240, 150\),/.test(calc.replace(/\r\n/g, "\n"))
+const calcAlreadyAtLiveT96 = /"405\|0\.65b": makeTier\(t100U, 405, 26, 28, "Tier 96 \/ Lv100 Global 2\.[01]", "(?:Global in-game calibration|Existing accepted T96 calibration fixture) \+ Excel 各等级模板: 100上", false, 131, 263, 120, 240, 150\),/.test(calc.replace(/\r\n/g, "\n"))
   && calc.includes('const t96 = TIERS["405|0.65b"];');
 if (!calcAlreadyAtLiveT96) {
 calc = replaceRequired(

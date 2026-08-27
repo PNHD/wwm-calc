@@ -1,6 +1,6 @@
 # Silkbind-Jade Global 2.1 — current availability addendum
 
-Evidence cutoff: 2026-08-22.
+Current V1.1 evidence cutoff: 2026-08-24.
 
 The July 23 Global 2.0 balance notes describe the intended T96 Vernal Umbrella redesign: legacy Special/Charged coverage was intended to merge into a Frequent Ballistic family and a Light/Heavy + derived family was intended to be added.
 

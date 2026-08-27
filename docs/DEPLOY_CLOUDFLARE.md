@@ -33,7 +33,7 @@ https://wonton-wwm.pages.dev/build-info.json
 
 Verify these fields:
 
-- `dataVersion` is `Global 2.1 · Tier 96 · 100上 calibration`
+- `dataVersion` is `Global 2.1 context · Tier 96 · accepted T96 fixture`
 - `shortCommit` matches the expected `main` commit
 - `branch` is `main` for the production deployment
 - `builtAt` is recent

@@ -50,7 +50,7 @@ export const TIERS: { [key: string]: TierConstants } = {
   "350|0.45-t96": makeTier(t96, 350, 20, 24, "Lv95 Upper Legacy Reference (not current Global T96)", "Excel 各等级模板: 95上", true),
   "307|0.3": makeTier(t90, 307, 20, 24, "Tier 86 / Lv90", "Excel 各等级模板: 90", false, 114, 229, 70, 140),
   "405|0.65": makeTier(t100L, 405, 26, 28, "Tier 96 / Lv100 Lower CN Ref", "Excel 各等级模板: 100下", true, 131, 263, 120, 240, 150),
-  "405|0.65b": makeTier(t100U, 405, 26, 28, "Tier 96 / Lv100 Global 2.1", "Global in-game calibration + Excel 各等级模板: 100上", false, 131, 263, 120, 240, 150),
+  "405|0.65b": makeTier(t100U, 405, 26, 28, "Tier 96 / Lv100 Global 2.1", "Existing accepted T96 calibration fixture + Excel 各等级模板: 100上", false, 131, 263, 120, 240, 150),
   "559|1.15": makeTier(t100L, 559, 26, 28, "CN Lv105 Reference", "CN class sheets / boss def 559", true, 131, 263, 120, 240, 150),
 };
 
