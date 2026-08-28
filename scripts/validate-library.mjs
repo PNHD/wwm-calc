@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { patchFreshness } from "../src/library/model.ts";
+import { stripTypeScriptTypes } from "node:module";
+
+const modelSource = fs.readFileSync(new URL("../src/library/model.ts", import.meta.url), "utf8");
+const modelJavaScript = stripTypeScriptTypes(modelSource, { mode: "strip" });
+const { patchFreshness } = await import(`data:text/javascript;base64,${Buffer.from(modelJavaScript).toString("base64")}`);
 
 const file = "public/data/library-v1.json";
 const library = JSON.parse(fs.readFileSync(file, "utf8"));
@@ -73,6 +77,8 @@ assert.equal(calibrated.build.panel.minOuter, 1614);
 assert.equal(calibrated.build.panel.maxOuter, 2777);
 assert.equal(calibrated.build.panel.prec, 122.1);
 assert.equal(calibrated.build.panel.attunedBonus, 20);
+const currentGlobal21 = { ...calibrated, patch: library.currentPatch, maturity: calibrated.maturity.filter((value) => value !== "OUTDATED") };
+assert.equal(patchFreshness(currentGlobal21), "CURRENT", "Current Global 2.1 entries without OUTDATED maturity must remain current");
 
 const jade = library.items.find((item) => item.id === REQUIRED[1]);
 assert.equal(jade.source.label, "Ultimate Umbrella Guide — Mun");
@@ -80,6 +86,7 @@ assert.ok(jade.maturity.includes("COMMUNITY_REFERENCE") && jade.maturity.include
 assert.equal(jade.build.modeledDps, undefined, "Community Jade must not invent a DPS number");
 assert.equal(jade.patch, "2.0", "Historical entry provenance must remain intact");
 assert.equal(patchFreshness(jade), "OUTDATED_REFERENCE", "Global 2.0 references must become stale under current Global 2.1");
+assert.equal(patchFreshness({ ...currentGlobal21, maturity: [...currentGlobal21.maturity, "OUTDATED"] }), "OUTDATED_REFERENCE", "Explicitly OUTDATED entries must remain stale");
 
 const gvg = library.items.find((item) => item.id === REQUIRED[2]);
 assert.ok(gvg.maturity.includes("EXPERIMENTAL"));
