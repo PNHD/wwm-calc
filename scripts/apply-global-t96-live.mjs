@@ -193,13 +193,9 @@ app = app.replaceAll(
   'score: scoreGlobalT96Gear(item.subs, selectedBuild, getGearItemCompareStats(item).totalGradDelta).overall,\n      dpsLoss,',
 );
 
-// Add an explicit observed preset without making it the graduation target.
-app = replaceRequired(
-  app,
-  '            <button type="button" onClick={() => setIsGameImportOpen(true)}>Import game</button>',
-  '            <button type="button" onClick={() => {\n              const now = Date.now();\n              const character: Character = {\n                id: `char-t96-${now}`,\n                name: GLOBAL_T96_OBSERVED_PRESET_META.name,\n                schemes: [{\n                  id: `scheme-t96-${now}`,\n                  name: GLOBAL_T96_OBSERVED_PRESET_META.scheme,\n                  panel: { ...GLOBAL_T96_OBSERVED_PANEL } as PanelStats,\n                  gear: GLOBAL_T96_OBSERVED_GEAR.map((item) => ({ ...item, subs: item.subs.map((sub) => ({ ...sub })) })) as GearItem[],\n                }],\n              };\n              const next = { ...charsData, chars: [...charsData.chars, character], activeCharId: character.id, activeSchemeId: character.schemes[0].id };\n              setCharsData(next);\n              setPanel({ ...GLOBAL_T96_OBSERVED_PANEL } as PanelStats);\n              setSelectedBuild(GLOBAL_T96_OBSERVED_PRESET_META.buildKey);\n              setTierKey(GLOBAL_T96_OBSERVED_PRESET_META.tierKey);\n              setSelectedInnerWays(["", "", "", ""]);\n              localStorage.setItem("wwm_chars_v3", JSON.stringify(next));\n            }}>Load observed T96</button>\n            <button type="button" onClick={() => setIsGameImportOpen(true)}>Import game</button>',
-  "observed preset action",
-);
+// The canonical observed preset action is authored by
+// apply-t96-menu-panel-contract.mjs. Do not inject a second, stale action here:
+// it would clear the observed Inner Ways and duplicate the accessible name.
 write(files.app, app);
 
 let arsenal = read(files.arsenal);

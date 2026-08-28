@@ -4034,26 +4034,6 @@ export default function App() {
               setInnerWayTiers(observedInnerWayTiers);
               localStorage.setItem("wwm_chars_v3", JSON.stringify(next));
             }}>Load observed T96</button>
-            <button type="button" onClick={() => {
-              const now = Date.now();
-              const character: Character = {
-                id: `char-t96-${now}`,
-                name: GLOBAL_T96_OBSERVED_PRESET_META.name,
-                schemes: [{
-                  id: `scheme-t96-${now}`,
-                  name: GLOBAL_T96_OBSERVED_PRESET_META.scheme,
-                  panel: { ...GLOBAL_T96_OBSERVED_PANEL } as PanelStats,
-                  gear: GLOBAL_T96_OBSERVED_GEAR.map((item) => ({ ...item, subs: item.subs.map((sub) => ({ ...sub })) })) as GearItem[],
-                }],
-              };
-              const next = { ...charsData, chars: [...charsData.chars, character], activeCharId: character.id, activeSchemeId: character.schemes[0].id };
-              setCharsData(next);
-              setPanel({ ...GLOBAL_T96_OBSERVED_PANEL } as PanelStats);
-              setSelectedBuild(GLOBAL_T96_OBSERVED_PRESET_META.buildKey);
-              setTierKey(GLOBAL_T96_OBSERVED_PRESET_META.tierKey);
-              setSelectedInnerWays(["", "", "", ""]);
-              localStorage.setItem("wwm_chars_v3", JSON.stringify(next));
-            }}>Load observed T96</button>
             <button type="button" onClick={() => setIsGameImportOpen(true)}>Import game</button>
             <button type="button" onClick={() => setIsBatchOcrModalOpen(true)}>Scan gear</button>
             <button type="button" onClick={() => setIsExportImportModalOpen(true)}>Data</button>

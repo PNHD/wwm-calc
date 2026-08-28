@@ -207,7 +207,7 @@ test("V1 required responsive surfaces render at 1440, 1024 and 390 with Model/Ab
     const about = page.getByTestId("model-about");
     await expect(about).toBeVisible();
     await about.locator("summary").click();
-    await expect(about.getByText("WWM Calc V1", { exact: true })).toBeVisible();
+    await expect(about.getByText("WWM Calc V1.1", { exact: true })).toBeVisible();
     await expect(about.getByRole("link", { name: /Report bad data/i })).toHaveAttribute("href", /github\.com\/PNHD\/wwm-calc\/issues\/new/);
   }
   await assertClean(runtime);
