@@ -11,12 +11,15 @@ const read = (path) => fs.readFileSync(path, "utf8");
 const write = (path, content) => fs.writeFileSync(path, content, "utf8");
 
 function replaceRequired(source, from, to, label) {
-  if (source.includes(to)) return source;
-  if (!source.includes(from)) {
+  const normalized = source.replace(/\r\n/g, "\n");
+  if (label === "parser semantic helper import" && normalized.includes('import { applyGearRowSemantics, type GearSubRole } from "../data/gearAttunement.ts";')) return source;
+  if (normalized.includes(to)) return source;
+  if (!normalized.includes(from)) {
     console.warn(`[t96-row-semantics] Anchor not present after prior migrations: ${label}`);
     return source;
   }
-  return source.replace(from, to);
+  const eol = source.includes("\r\n") ? "\r\n" : "\n";
+  return source.replace(from.replaceAll("\n", eol), to.replaceAll("\n", eol));
 }
 
 // ── 1. Global English OCR: semantic roles + generic weapon allowlist ----------

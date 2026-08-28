@@ -3,10 +3,19 @@ import fs from "node:fs";
 const path = "src/App.tsx";
 let app = fs.readFileSync(path, "utf8");
 
+const normalizeToLf = (value) => value.replace(/\r\n/g, "\n");
+
 const replaceRequired = (from, to, label) => {
-  if (app.includes(to)) return;
-  if (!app.includes(from)) throw new Error(`[bamboocut-best-trust] Missing anchor: ${label}`);
-  app = app.replace(from, to);
+  const normalizedApp = normalizeToLf(app);
+  const normalizedFrom = normalizeToLf(from);
+  const normalizedTo = normalizeToLf(to);
+  if (normalizedApp.includes(normalizedTo)) return;
+
+  const matchCount = normalizedApp.split(normalizedFrom).length - 1;
+  if (matchCount !== 1) throw new Error(`[bamboocut-best-trust] Missing or ambiguous anchor: ${label}`);
+
+  const replaced = normalizedApp.replace(normalizedFrom, normalizedTo);
+  app = app.includes("\r\n") ? replaced.replace(/\n/g, "\r\n") : replaced;
 };
 
 const helperAnchor = `                          const pathMaturity = PATH_MODEL_MATURITY[selectedBuild];
@@ -54,9 +63,10 @@ const alternativeDps = `<span className="font-mono font-bold text-[#f0b400] mr-2
 const alternativeDpsTrust = `<span className="font-mono font-bold text-[#f0b400] mr-2">{Math.round(bestBuildTrustSummary(r).dps).toLocaleString()} DPS<small className="block text-[9.5px] text-slate-500 font-sans">{(() => { const meta = bestBuildTrustSummary(r); return \`\${meta.deltaPct >= 0 ? "+" : ""}\${meta.deltaPct.toFixed(2)}% · \${meta.confidence.label}\`; })()}</small></span>`;
 replaceRequired(alternativeDps, alternativeDpsTrust, "alternative DPS/confidence details");
 
-if (!app.includes("bestBuildResult.slice(1, 3)")) throw new Error("[bamboocut-best-trust] Top 3 limit missing");
-if (!app.includes("Key tradeoffs: {bestTrust.tradeoffs}")) throw new Error("[bamboocut-best-trust] winner tradeoffs missing");
-if (!app.includes("meta.confidence.label")) throw new Error("[bamboocut-best-trust] alternative confidence missing");
+const normalizedApp = normalizeToLf(app);
+if (!normalizedApp.includes("bestBuildResult.slice(1, 3)")) throw new Error("[bamboocut-best-trust] Top 3 limit missing");
+if (!normalizedApp.includes("Key tradeoffs: {bestTrust.tradeoffs}")) throw new Error("[bamboocut-best-trust] winner tradeoffs missing");
+if (!normalizedApp.includes("meta.confidence.label")) throw new Error("[bamboocut-best-trust] alternative confidence missing");
 
 fs.writeFileSync(path, app, "utf8");
 console.log("[bamboocut-best-trust] PASS — Top 3 expose DPS delta, confidence, sets, Attunements and tradeoffs.");

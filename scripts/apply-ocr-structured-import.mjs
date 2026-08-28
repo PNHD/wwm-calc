@@ -10,13 +10,31 @@ const read = (path) => fs.readFileSync(path, "utf8");
 const write = (path, content) => fs.writeFileSync(path, content, "utf8");
 
 function replaceRequired(source, from, to, label) {
-  if (source.includes(to)) return source;
-  if (!source.includes(from)) throw new Error(`[ocr-structured] Missing anchor: ${label}`);
-  return source.replace(from, to);
+  const normalizedSource = source.replace(/\r\n/g, "\n");
+  if (label === "Global English hybrid row parser import" && normalizedSource.includes('import { parseHybridGlobalEnglishRows } from "./ocrGlobalEnglish.ts";')) return source;
+  if (label === "hybrid Global English parser priority" && normalizedSource.includes("const hybridGlobalRows = parseHybridGlobalEnglishRows(text);")) return source;
+  if (label === "structured OCR parent handoff" && normalizedSource.includes("applyGearRowSemantics(item.subs")) return source;
+  if (normalizedSource.includes(to)) return source;
+  if (!normalizedSource.includes(from)) throw new Error(`[ocr-structured] Missing anchor: ${label}`);
+  const eol = source.includes("\r\n") ? "\r\n" : "\n";
+  return source.replace(from.replaceAll("\n", eol), to.replaceAll("\n", eol));
+}
+
+function hasStructuredBatchPayload(source) {
+  const normalized = source.replace(/\r\n/g, "\n");
+  return [
+    /rawText:\s*it\.rawText\s*\|\|\s*lines\.join\("\\n"\)/,
+    /fileName:\s*it\.fileName/,
+    /slot:\s*it\.slot/,
+    /mastery:\s*it\.mastery/,
+    /subs:\s*it\.subs\.filter\(\(sub\)\s*=>\s*sub\.type\s*!==\s*"Other"\s*&&\s*sub\.val\)\.map\(\(sub\)\s*=>\s*\(\{\s*\.\.\.sub\s*\}\)\)/,
+  ].every((pattern) => pattern.test(normalized));
 }
 
 function replaceRegexRequired(source, pattern, to, label) {
-  if (typeof to === "string" && source.includes(to)) return source;
+  const normalizedSource = source.replace(/\r\n/g, "\n");
+  const normalizedTarget = typeof to === "string" ? to.replace(/\r\n/g, "\n") : null;
+  if (normalizedTarget && (normalizedSource.includes(normalizedTarget) || (label === "structured batch payload" && hasStructuredBatchPayload(normalizedSource)))) return source;
   if (!pattern.test(source)) throw new Error(`[ocr-structured] Missing regex anchor: ${label}`);
   return source.replace(pattern, to);
 }

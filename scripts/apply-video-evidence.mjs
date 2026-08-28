@@ -15,9 +15,11 @@ function write(path, content) {
 }
 
 function replaceRequired(source, from, to, label) {
-  if (source.includes(to)) return source;
-  if (!source.includes(from)) throw new Error(`[video-evidence] Missing patch anchor: ${label}`);
-  return source.replace(from, to);
+  const normalizedSource = source.replace(/\r\n/g, "\n");
+  if (normalizedSource.includes(to)) return source;
+  if (!normalizedSource.includes(from)) throw new Error(`[video-evidence] Missing patch anchor: ${label}`);
+  const eol = source.includes("\r\n") ? "\r\n" : "\n";
+  return source.replace(from.replaceAll("\n", eol), to.replaceAll("\n", eol));
 }
 
 let app = read(files.app);
@@ -82,8 +84,10 @@ const spareChest = `  {
 if (!preset.includes('id: "t96-observed-chest-1129"')) {
   const anchor = `  {
     id: "t96-observed-greaves",`;
-  if (!preset.includes(anchor)) throw new Error("[video-evidence] Missing observed greaves insertion anchor");
-  preset = preset.replace(anchor, spareChest + anchor);
+  const normalizedPreset = preset.replace(/\r\n/g, "\n");
+  if (!normalizedPreset.includes(anchor)) throw new Error("[video-evidence] Missing observed greaves insertion anchor");
+  const eol = preset.includes("\r\n") ? "\r\n" : "\n";
+  preset = preset.replace(anchor.replaceAll("\n", eol), `${spareChest}${anchor}`.replaceAll("\n", eol));
 }
 
 preset = replaceRequired(

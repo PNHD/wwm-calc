@@ -1,14 +1,14 @@
-// Auto-extracted from 燕云调律计算器 (NGA Violetta). Where Winds Meet Global Lv95/Tier91.
+// Auto-extracted from 燕云调律计算器 (NGA Violetta), migrated for Global 2.0 / Tier 96.
 // Damage formula: multiplicative zones. Pen: (pen-res)/200 (or /100 if negative).
 
 export const WWM_DATA = {
   "_meta": {
     "source": "燕云调律计算器 by NGA Violetta (停更 / no longer updated)",
-    "extractedFor": "Where Winds Meet Global — Lv95 character / Tier 91 gear (column 95下), plus provisional Tier 96 preview from column 95上",
+    "extractedFor": "Where Winds Meet Global 2.1 — current Tier 96 uses column 100上; columns 95下/95上 remain legacy references",
     "damageFormula": "DMG = base — critZone — affZone — dmgUpZone — independentZone — dmgReduceZone — penZone — dingyinZone — deepenZone (multiplicative zones, per 伤害公式 sheet)",
     "penFormula": "(pen - resistance) / 100 if positive, else / 200",
     "judgeResFormula": "precision = 65% + otherPrec/(1+judgeRes); panelCrit = crit/(1+judgeRes)",
-    "note": "Class graduation panels & marginal gains computed at native CN level (100/105). Tier constants below cover 95下 (T91 Global) and 95上 (provisional T96 preview)."
+    "note": "Global screenshots verify 100上 for current T96 base/effective-rate constants and the workbook supplies verified 100上 roll caps. Class graduation panels and encounter resistance values remain legacy/CN-derived references until validated with Global dummy parses."
   },
   "tiers": {
     "95下": {

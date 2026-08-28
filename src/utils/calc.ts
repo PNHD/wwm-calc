@@ -1,6 +1,7 @@
 import { PanelStats, TierConstants, SkillDefinition, RotationItem } from "../types";
 import { WWM_DATA } from "../data/wwmData";
 import { ClassConfig, SkillData } from "../data/referenceData";
+import { GLOBAL_V2_SKILL_OUTCOME_RULES } from "../data/globalV2CombatEvidence";
 
 const t95 = WWM_DATA.tiers["95下"];
 const t96 = WWM_DATA.tiers["95上"];
@@ -45,11 +46,11 @@ const makeTier = (
 });
 
 export const TIERS: { [key: string]: TierConstants } = {
-  "350|0.45": makeTier(t95, 350, 20, 24, "Tier 91 / Lv95 Global", "Excel 各等级模板: 95下"),
-  "350|0.45-t96": makeTier(t96, 350, 20, 24, "Tier 96 / Lv95 Global Preview", "Excel 各等级模板: 95上", true),
+  "350|0.45": makeTier(t95, 350, 20, 24, "Tier 91 / Lv95 Global (Legacy)", "Excel 各等级模板: 95下", true),
+  "350|0.45-t96": makeTier(t96, 350, 20, 24, "Lv95 Upper Legacy Reference (not current Global T96)", "Excel 各等级模板: 95上", true),
   "307|0.3": makeTier(t90, 307, 20, 24, "Tier 86 / Lv90", "Excel 各等级模板: 90", false, 114, 229, 70, 140),
   "405|0.65": makeTier(t100L, 405, 26, 28, "Tier 96 / Lv100 Lower CN Ref", "Excel 各等级模板: 100下", true, 131, 263, 120, 240, 150),
-  "405|0.65b": makeTier(t100U, 405, 26, 28, "Tier 96 / Lv100 Upper CN Ref", "Excel 各等级模板: 100上", true, 131, 263, 120, 240, 150),
+  "405|0.65b": makeTier(t100U, 405, 26, 28, "Tier 96 / Lv100 Global 2.1", "Existing accepted T96 calibration fixture + Excel 各等级模板: 100上", false, 131, 263, 120, 240, 150),
   "559|1.15": makeTier(t100L, 559, 26, 28, "CN Lv105 Reference", "CN class sheets / boss def 559", true, 131, 263, 120, 240, 150),
 };
 
@@ -413,10 +414,9 @@ export function getRotationForBuild(buildKey?: string): RotationItem[] {
 
 export function getRotationTimeForBuild(buildKey?: string): number {
   const cnClass = BUILD_MAP_TO_CHINESE[buildKey || "bamboocut-dust"] || "破竹尘";
-  // T91 Global parses run 60s on training dummy. Override CN's 78.5s default
-  // so DPS expectation matches user-side parses.
-  const T91_OVERRIDE_TIME: Record<string, number> = { "破竹尘": 60.0 };
-  if (T91_OVERRIDE_TIME[cnClass]) return T91_OVERRIDE_TIME[cnClass];
+  // Global training-dummy parses use a 60s comparison window.
+  const GLOBAL_OVERRIDE_TIME: Record<string, number> = { "破竹尘": 60.0 };
+  if (GLOBAL_OVERRIDE_TIME[cnClass]) return GLOBAL_OVERRIDE_TIME[cnClass];
   const cfg = ClassConfig.ROTATIONS[cnClass];
   if (cfg && cfg.useTime !== undefined) {
     return cfg.useTime;
@@ -460,6 +460,15 @@ export function calcSkill(
 
   if (!sk) return { perHit: 0, total: 0, breakdown: { crit: 0, aff: 0, normal: 0, abrasion: 0 }, sim: { pCrit: 0, pAff: 0, pWhite: 0, pGraze: 0, critHit: 0, affHit: 0, normHit: 0, grazeHit: 0, casts: 0 } };
   if (opts.skillOverride) sk = { ...sk, ...opts.skillOverride };
+
+  // The base Effective Critical Rate remains capped before Direct Critical is
+  // added. Only explicit current-Global skill exceptions are applied here; all
+  // unverified DoT/summon/settlement sources keep the normal formula rather than
+  // being guessed into forced Crit/Affinity behavior.
+  const outcomeRule = GLOBAL_V2_SKILL_OUTCOME_RULES[rot.name]?.rule;
+  if (outcomeRule === "guaranteed-critical" && sk.force !== "crit") {
+    sk = { ...sk, force: "crit" };
+  }
 
   const set = opts.set;
   // Armor 4pc applies ALONGSIDE the weapon 4pc (the game allows one of each). When
@@ -518,8 +527,11 @@ export function calcSkill(
     weapBonus += ((panel[key] as number) || 0) / 100;
   }
 
-  // Stars Align is a WEAPON set (2pc on weapons) — independent of armor 4pc.
-  // Apply if user-selected armor set is "stars" OR if opts.weaponStars=true (auto-detected from equipped weapons).
+  // Starweave is the current Global name for the legacy internal key "stars".
+  // Five stacks of the explicit +3% Martial Art Skill component = +15%.
+  // The separate distance component (above 4m, up to +1% at 8m per tooltip)
+  // is intentionally not hidden inside this constant; target distance needs an
+  // explicit scenario input before it can be credited safely.
   const csBonus = (set === "stars" || (opts as any).weaponStars) ? 0.15 : 0;
   const spinBonus = sk.special === "spin" ? 0.12 : 0;
 
@@ -600,7 +612,7 @@ export function calcSkill(
   const minPz_e = Math.max(0, minPzTot * pzMult - tier.def);
   const maxPz_e = Math.max(0, maxPzTot * pzMult - tier.def);
 
-  // Global T91 calibration: off-element attribute attack uses the physical ratio.
+  // Global calibration: off-element attribute attack uses the physical ratio.
   const offMinFrac = minPzTot > 0 ? Math.min(1, (panel.offPzMin || 0) / minPzTot) : 0;
   const offMaxFrac = maxPzTot > 0 ? Math.min(1, (panel.offPzMax || 0) / maxPzTot) : 0;
   const eleRatioMin = sk.eleRatio * (1 - offMinFrac) + sk.outerRatio * offMinFrac;
@@ -649,10 +661,10 @@ export function calcSkill(
   return { perHit, total, breakdown, sim };
 }
 
-// T91 Global graduated DPS per build, extracted DIRECTLY from the source spreadsheet
-// (sheet "95级常见流派非竞速养成计算 2025.9.1") that spongem.com is based on.
-// These are the AUTHORITATIVE "fully graduated T91" DPS numbers for each class.
-const T91_GRAD_DPS: Record<string, number> = {
+// Legacy T91 graduated DPS anchors from the source spreadsheet.
+// Global 2.0/T96 does not publish authoritative graduation DPS, so these are
+// normalized against the active tier and shown as an estimate rather than fact.
+const LEGACY_T91_GRAD_DPS: Record<string, number> = {
   "bamboocut-dust":   39117,
   "bellstrike-splendor": 34053,
   "silkbind-jade":    35321,
@@ -677,29 +689,28 @@ function penMultiplier(pen: number, resistance: number): number {
 }
 
 function tierBaselineScale(tier: TierConstants): number {
-  const t91 = TIERS["350|0.45"];
-  if (!tier || tier.name === t91.name) return 1;
+  const t96 = TIERS["405|0.65b"];
+  if (!tier || tier.name === t96.name) return 1;
 
   const tierOuter = tier.baseMinOuter + tier.baseMaxOuter;
-  const t91Outer = t91.baseMinOuter + t91.baseMaxOuter;
-  const outerScale = t91Outer > 0 ? tierOuter / t91Outer : 1;
+  const t96Outer = t96.baseMinOuter + t96.baseMaxOuter;
+  const outerScale = t96Outer > 0 ? tierOuter / t96Outer : 1;
 
   const tierElemDmg = 1 + tier.pzDmgBase / 100;
-  const t91ElemDmg = 1 + t91.pzDmgBase / 100;
-  const elemDmgScale = t91ElemDmg > 0 ? tierElemDmg / t91ElemDmg : 1;
+  const t96ElemDmg = 1 + t96.pzDmgBase / 100;
+  const elemDmgScale = t96ElemDmg > 0 ? tierElemDmg / t96ElemDmg : 1;
 
   const tierPen = penMultiplier(tier.pzPenBase, tier.attrRes);
-  const t91Pen = penMultiplier(t91.pzPenBase, t91.attrRes);
-  const penScale = t91Pen > 0 ? tierPen / t91Pen : 1;
+  const t96Pen = penMultiplier(t96.pzPenBase, t96.attrRes);
+  const penScale = t96Pen > 0 ? tierPen / t96Pen : 1;
 
   return outerScale * elemDmgScale * penScale;
 }
 
 export function calcBaseline(tier: TierConstants, buildKey?: string, _refPanel?: PanelStats): number {
   const key = buildKey || "bamboocut-dust";
-  const dps = T91_GRAD_DPS[key] || T91_GRAD_DPS["bamboocut-dust"];
-  // T91 uses exact workbook DPS. Preview/reference tiers use a normalized baseline
-  // so graduation percent compares against the active tier instead of silently
-  // retaining the T91 denominator.
+  const dps = LEGACY_T91_GRAD_DPS[key] || LEGACY_T91_GRAD_DPS["bamboocut-dust"];
+  // This remains an estimated benchmark until a verified Global T96 graduation
+  // dataset is available. Never present it as an authoritative parse target.
   return dps * tierBaselineScale(tier) * getRotationTimeForBuild(key);
 }

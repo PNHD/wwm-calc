@@ -56,7 +56,7 @@ if (!arenaV2.includes("V1_STORAGE_RECOVERY_ARENA_UI")) {
 }
 
 const gvgV2Path = "src/product/GuildWarWorkspace.tsx";
-let gvgV2 = fs.readFileSync(gvgV2Path, "utf8");
+let gvgV2 = fs.readFileSync(gvgV2Path, "utf8").replace(/\r\n/g, "\n");
 if (!gvgV2.includes("V1_STORAGE_RECOVERY_GVG_UI")) {
   gvgV2 = `// V1_STORAGE_RECOVERY_GVG_UI — Competitive V2 implements the recovery UI contract directly.\n${gvgV2}`;
   gvgV2 = gvgV2.replace(
@@ -141,7 +141,7 @@ if (cssChanged) {
 // contract aligned with the larger curated dataset instead of treating valid Arena
 // content as a PvE/Guild War regression.
 const libraryTestPath = "scripts/runtime-library-acceptance.spec.mjs";
-let libraryTest = fs.readFileSync(libraryTestPath, "utf8");
+let libraryTest = fs.readFileSync(libraryTestPath, "utf8").replace(/\r\n/g, "\n");
 const recentNeedle = `  await expect(page.locator(".library-card")).toHaveCount(5);`;
 const recentReplacement = `  await expect(page.locator(".library-card")).toHaveCount(8);`;
 if (!libraryTest.includes(recentReplacement)) {

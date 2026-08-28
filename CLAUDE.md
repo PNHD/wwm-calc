@@ -2,8 +2,8 @@
 
 WWM Calc / WWM Build Lab is the fan-made Where Winds Meet Global calculator.
 
-- Product version: `1.0.0`
-- Current context: Global 2.0, active calibrated profile Tier 96
+- Product version: `1.1.0`
+- Current context: Global 2.1, active calibrated profile Tier 96
 - Canonical production: https://wonton-wwm.pages.dev/ (Cloudflare Pages)
 - Repository: https://github.com/PNHD/wwm-calc
 
@@ -19,7 +19,7 @@ Unsupported or unverified mechanics remain explicitly modeled, reference-only, o
 
 - Inner Ways are in-combat buffs and remain separate from character-menu stats and their multiplier buckets.
 - `computeGearPanel` remains the source of the automatically computed equipped-gear panel; do not reintroduce a manual/auto toggle.
-- Cultivation retains a historical Global T91 / 95下 reference model: `GRAD95_COUNTS` contains verified historical graduation substat counts; current count = summed gear substat value / historical 95下 max roll, and target = the historical verified graduation count. Preserve Cultivation Summary, Tuned Substat Summary, and Cultivation Advice with these semantics. They are not the active Global 2.0 / Tier 96 calibration; do not migrate them to value caps, T96 caps, or another model without a separate evidence-backed task.
+- Cultivation retains a historical Global T91 / 95下 reference model: `GRAD95_COUNTS` contains verified historical graduation substat counts; current count = summed gear substat value / historical 95下 max roll, and target = the historical verified graduation count. Preserve Cultivation Summary, Tuned Substat Summary, and Cultivation Advice with these semantics. They are not the active Global 2.1 / Tier 96 calibration, reviewed through 2026-08-24; do not migrate them to value caps, T96 caps, or another model without a separate evidence-backed task.
 - The removed Swap Sim and Rotation Sim tabs must not be restored. The user-approved Rotations editor is a separate current sub-tab and may remain.
 - OCR Vietnamese/Chinese strings are functional keyword matching for supported clients; do not remove them as translation cleanup.
 - `src/utils/englishCalc.ts` is not an authoritative reference unless current imports make it one.

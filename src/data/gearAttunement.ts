@@ -15,6 +15,8 @@ export interface WeaponAttunementDefinition {
 export const WEAPON_ATTUNEMENTS: WeaponAttunementDefinition[] = [
   { id: "everspring-umbrella", family: "umbrella", statKey: "Umb Martial Art Skill DMG Boost", weaponName: "Everspring Umbrella", aliases: ["everspring umbrella"], displayName: "Everspring Umbrella — Martial Art Skill DMG Boost" },
   { id: "vernal-umbrella", family: "umbrella", statKey: "Umb Martial Art Skill DMG Boost", weaponName: "Vernal Umbrella", aliases: ["vernal umbrella"], displayName: "Vernal Umbrella — Martial Art Skill DMG Boost" },
+  { id: "vernal-frequent-projectile", family: "umbrella", statKey: "Vernal Frequent Projectile DMG Boost", weaponName: "Vernal Umbrella", aliases: ["vernal umbrella frequent projectile dmg boost", "frequent projectile dmg boost", "vernal umbrella frequent ballistic dmg boost", "frequent ballistic dmg boost", "vernal umbrella special skill dmg boost", "special skill damage boost", "ninefold spring special skill dmg bonus", "vernal umbrella charged skill dmg boost", "charged skill damage boost"], displayName: "Vernal Umbrella — Frequent Projectile DMG Boost" },
+  { id: "vernal-light-heavy-derived", family: "umbrella", statKey: "Vernal Light Heavy Derived DMG Boost", weaponName: "Vernal Umbrella", aliases: ["vernal umbrella light heavy attack varied combo dmg boost", "vernal umbrella light heavy follow up dmg boost", "light heavy attack varied combo dmg boost"], displayName: "Vernal Umbrella — Light/Heavy Attack & Varied Combo DMG Boost" },
   { id: "soulshade-umbrella", family: "umbrella", statKey: "Umb Martial Art Skill DMG Boost", weaponName: "Soulshade Umbrella", aliases: ["soulshade umbrella"], displayName: "Soulshade Umbrella — Martial Art Skill DMG Boost" },
 
   { id: "unfettered-rope-dart", family: "rope-dart", statKey: "Rope Dart Martial Art Skill DMG Boost", weaponName: "Unfettered Rope Dart", aliases: ["unfettered rope dart"], displayName: "Unfettered Rope Dart — Martial Art Skill DMG Boost" },
@@ -52,8 +54,39 @@ const normalize = (value: string): string => value
   .replace(/\s+/g, " ")
   .trim();
 
+const LEGACY_VERNAL_ATTUNEMENT_IDS: Record<string, string> = {
+  "vernal-high-frequency-ballistic": "vernal-frequent-projectile",
+  "vernal-special": "vernal-frequent-projectile",
+  "vernal-special-t96": "vernal-frequent-projectile",
+  "vernal-charged": "vernal-frequent-projectile",
+  "vernal-charged-t96": "vernal-frequent-projectile",
+};
+
+const VERNAL_FREQUENT_PROJECTILE_STAT_KEY = "Vernal Frequent Projectile DMG Boost";
+const LEGACY_VERNAL_ATTUNEMENT_TEXT = new Set([
+  VERNAL_FREQUENT_PROJECTILE_STAT_KEY,
+  "Vernal Frequent Ballistic DMG Boost",
+  "Vernal Special Skill DMG Boost",
+  "Vernal Charged Skill DMG Boost",
+  "Vernal Umbrella Frequent Ballistic DMG Boost",
+  "Vernal Umbrella Special Skill DMG Boost",
+  "Vernal Umbrella Charged Skill DMG Boost",
+  "Ninefold Spring: Special Skill DMG Bonus",
+].map(normalize));
+
+const migrateLegacyVernalAttunement = <T extends SemanticGearSubLike>(row: T): T => {
+  const migratedId = row.attunementId ? LEGACY_VERNAL_ATTUNEMENT_IDS[row.attunementId] : undefined;
+  const legacyText = LEGACY_VERNAL_ATTUNEMENT_TEXT.has(normalize(row.type));
+  if (!migratedId && !legacyText) return row;
+  return {
+    ...row,
+    type: VERNAL_FREQUENT_PROJECTILE_STAT_KEY,
+    attunementId: "vernal-frequent-projectile",
+  };
+};
+
 export const getWeaponAttunementById = (id?: string): WeaponAttunementDefinition | undefined =>
-  id ? WEAPON_ATTUNEMENTS.find((entry) => entry.id === id) : undefined;
+  id ? WEAPON_ATTUNEMENTS.find((entry) => entry.id === (LEGACY_VERNAL_ATTUNEMENT_IDS[id] ?? id)) : undefined;
 
 export const getDefaultWeaponAttunementForStatKey = (statKey: string): WeaponAttunementDefinition | undefined =>
   WEAPON_ATTUNEMENTS.find((entry) => entry.statKey === statKey);
@@ -62,11 +95,14 @@ export const isAttunementStatKey = (statKey: string): boolean => ATTUNEMENT_STAT
 
 export const matchWeaponAttunementText = (text: string): WeaponAttunementDefinition | null => {
   const value = normalize(text);
-  if (!value.includes("martial art skill dmg")) return null;
-  for (const entry of WEAPON_ATTUNEMENTS) {
-    if (entry.aliases.some((alias) => value.includes(normalize(alias)))) return entry;
-  }
-  return null;
+  const hasGenericMartialArtSkill = value.includes("martial art skill dmg") || value.includes("martial art skill damage");
+  const matches = WEAPON_ATTUNEMENTS.flatMap((entry) => entry.aliases
+    .map((alias) => ({ entry, alias: normalize(alias) }))
+    .filter(({ alias }) => value.includes(alias))
+    .filter(({ entry }) => entry.statKey !== "Umb Martial Art Skill DMG Boost" || hasGenericMartialArtSkill),
+  );
+  matches.sort((a, b) => b.alias.length - a.alias.length);
+  return matches[0]?.entry ?? null;
 };
 
 export interface SemanticGearSubLike {
@@ -83,22 +119,23 @@ export interface SemanticGearSubLike {
 export const applyGearRowSemantics = <T extends SemanticGearSubLike>(rows: T[]): T[] => {
   let normalIndex = 0;
   return rows.map((row, index) => {
-    const definition = getWeaponAttunementById(row.attunementId);
-    const attunement = row.role === "attunement" || isAttunementStatKey(row.type);
+    const migrated = migrateLegacyVernalAttunement(row);
+    const definition = getWeaponAttunementById(migrated.attunementId);
+    const attunement = migrated.role === "attunement" || isAttunementStatKey(migrated.type);
     const role: GearSubRole = attunement ? "attunement" : normalIndex++ === 0 ? "primary" : "additional";
-    const isRetuned = attunement ? false : Boolean(row.isRetuned ?? row.isTuned);
+    const isRetuned = attunement ? false : Boolean(migrated.isRetuned ?? migrated.isTuned);
     return {
-      ...row,
+      ...migrated,
       role,
-      sourceOrder: row.sourceOrder ?? index,
+      sourceOrder: migrated.sourceOrder ?? index,
       isRetuned,
       // Keep the legacy field synchronized so existing calculation/import code
       // can remain untouched while saved profiles migrate non-destructively.
       isTuned: isRetuned,
       // Never guess a specific weapon for legacy family-level stat keys. Exact
       // player-facing identity is retained only when OCR/manual input provided it.
-      attunementId: attunement ? row.attunementId : undefined,
-      displayName: attunement ? row.displayName ?? definition?.displayName : row.displayName,
+      attunementId: attunement ? migrated.attunementId : undefined,
+      displayName: attunement ? migrated.displayName ?? definition?.displayName : migrated.displayName,
     };
   });
 };

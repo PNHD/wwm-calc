@@ -1,9 +1,11 @@
 import fs from "node:fs";
 
 function patch(source, needle, replacement, label) {
-  if (source.includes(replacement)) return source;
-  if (!source.includes(needle)) throw new Error(`Arena Library migration anchor missing: ${label}`);
-  return source.replace(needle, replacement);
+  const normalized = source.replace(/\r\n/g, "\n");
+  if (normalized.includes(replacement)) return source;
+  if (!normalized.includes(needle)) throw new Error(`Arena Library migration anchor missing: ${label}`);
+  const eol = source.includes("\r\n") ? "\r\n" : "\n";
+  return source.replace(needle.replaceAll("\n", eol), replacement.replaceAll("\n", eol));
 }
 
 {
@@ -55,7 +57,7 @@ function patch(source, needle, replacement, label) {
   const ids = new Set((library.items || []).map((item) => item.id));
   const base = {
     type: "ARENA_BUILD", workspace: "ARENA", region: "Global", patch: "2.0", tier: "Arena Reference",
-    createdDate: "2026-08-18", lastReviewedDate: "2026-08-18", librarySchemaVersion: 1, buildSchemaVersion: 1,
+    createdDate: "2026-08-18", lastReviewedDate: "2026-08-24", librarySchemaVersion: 1, buildSchemaVersion: 1,
     maturity: ["OFFICIAL_REFERENCE", "MODELED"], featured: false,
     source: { label: "WWM Calc Global Arena evidence model", kind: "WWM_CALC", note: "Mechanic/reference profile only. No rank, win-rate or fabricated gear claim." },
   };

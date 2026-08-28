@@ -19,7 +19,7 @@ test("Global T96 observed runtime state exposes panel, complete-build comparison
   // Workspace V2 intentionally starts at a decision-oriented PvE overview.
   // Enter Gear before exercising the unchanged T96 runtime fixture.
   await page.getByLabel("PvE navigation").getByRole("button", { name: /^Gear/ }).click();
-  const loadObserved = page.getByRole("button", { name: /Load observed T96/i });
+  const loadObserved = page.getByRole("button", { name: "Load observed T96", exact: true });
   await expect(loadObserved).toBeVisible();
   await loadObserved.click();
   await page.waitForTimeout(500);

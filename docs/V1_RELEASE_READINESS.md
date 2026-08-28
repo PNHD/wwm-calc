@@ -1,8 +1,8 @@
 # WWM Calc V1 Release Readiness
 
-Product version: **1.0.0**  
-Game context: **Global 2.0**  
-Release-hardening review date: **2026-08-18**
+Product version: **1.1.0**
+Game context: **Global 2.1**
+Release-hardening evidence review cutoff: **2026-08-24**
 
 ## Supported first-class workspaces
 
@@ -38,7 +38,7 @@ Training Terrace persists independently in `wwm_training_terrace_state_v1`. A co
 
 ## Patch, tier and evidence assumptions
 
-- Global product context is **2.0**.
+- Global product context is **2.1**.
 - Arena evidence is pinned to the existing `2.0 / 2026-08-07` evidence catalog where that catalog is the source of a mechanic.
 - PvE tier/scenario remains explicit in the active build context; calibrated T96 fixtures do not silently become another tier.
 - Library entries retain their own patch, tier, last-reviewed date, source and maturity. `OUTDATED REFERENCE` is shown when an entry is not current for the active Library patch.

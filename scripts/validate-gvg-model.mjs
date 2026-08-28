@@ -110,6 +110,8 @@ const profiles = { normal: { id: "normal", attack: 10 }, arena: { id: "arena", s
 assert.deepEqual(selectAttunementProfile(profiles, "NORMAL"), profiles.normal);
 assert.deepEqual(selectAttunementProfile(profiles, "ARENA"), profiles.arena);
 assert.equal(selectAttunementProfile(profiles, "ARENA").attack, undefined);
+assert.equal(selectAttunementProfile(profiles, "UNKNOWN"), null);
+assert.equal(defaultWorkspace().attunementProfiles.gvgSelected, "UNKNOWN"); // COMPETITIVE_V2_GVG_ATTUNEMENT_UNKNOWN_TEST
 
 // Role-specific ranking is intentionally non-universal.
 const bamboocut = getBamboocutDustProfile(3);
@@ -155,6 +157,19 @@ const legacy = { version: 0, legacyReference: "wwm_chars_v3" };
 assert.deepEqual(migrateWorkspace(legacy), migrateWorkspace(legacy));
 assert.equal(migrateWorkspace(legacy).scenario, "GUILD_WAR");
 assert.equal(defaultWorkspace().scenario, "GUILD_WAR");
+const unknownAttunementWorkspace = migrateWorkspace({ ...defaultWorkspace(), roster: [{ id: "attune-unknown", name: "Unknown profile", roles: [], weapons: [], gvgSelectedProfile: "UNKNOWN" }] });
+assert.equal(unknownAttunementWorkspace.roster[0].gvgSelectedProfile, "UNKNOWN"); // COMPETITIVE_V2_GVG_ATTUNEMENT_SANITIZER_TEST
+
+// Workspace-level applicability remains UNKNOWN until it is explicitly established.
+const workspaceUnknownBefore = defaultWorkspace();
+const workspaceUnknownAfter = migrateWorkspace(workspaceUnknownBefore);
+assert.equal(workspaceUnknownBefore.attunementProfiles.gvgSelected, "UNKNOWN");
+assert.equal(workspaceUnknownAfter.attunementProfiles.gvgSelected, "UNKNOWN");
+assert.equal(selectAttunementProfile(workspaceUnknownAfter.attunementProfiles, workspaceUnknownAfter.attunementProfiles.gvgSelected), null);
+assert.deepEqual(
+  migrateWorkspace(JSON.parse(JSON.stringify(workspaceUnknownAfter))),
+  workspaceUnknownAfter,
+); // COMPETITIVE_V2_GVG_WORKSPACE_ATTUNEMENT_UNKNOWN_REGRESSION
 
 console.log(JSON.stringify({
   ok: true,

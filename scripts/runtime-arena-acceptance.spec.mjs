@@ -8,11 +8,12 @@ const visualDir = "visual-qa/arena-v2";
 async function seedArena(page) {
   const state = defaultArenaState();
   state.onboardingComplete = true;
-  await page.addInitScript((value) => {
+  await page.goto(base, { waitUntil: "domcontentloaded" });
+  await page.evaluate((value) => {
     localStorage.setItem("wwm_arena_state_v1", JSON.stringify(value));
     localStorage.removeItem("wwm_arena_mode_v2");
     localStorage.removeItem("wwm_arena_history_v1");
-  }, state);
+  }, state); // COMPETITIVE_V2_ARENA_ONE_SHOT_SEED
 }
 async function noOverflow(page) { const row = await page.evaluate(() => ({ inner: innerWidth, scroll: document.documentElement.scrollWidth })); expect(row.scroll).toBeLessThanOrEqual(row.inner + 1); }
 
@@ -63,7 +64,7 @@ async function noOverflow(page) { const row = await page.evaluate(() => ({ inner
   await expect(page.getByTestId("arena-build")).toBeVisible();
   await expect(page.getByText("Optimizer locked", { exact: true })).toBeVisible();
   await expect(page.getByText(/NEEDS CURRENT CLIENT DATA/i).first()).toBeVisible();
-  await expect(page.getByText(/NO UNIVERSAL WINNER/i)).toBeVisible();
+  await expect(page.getByText("NO UNIVERSAL WINNER", { exact: true } /* COMPETITIVE_V2_NO_UNIVERSAL_WINNER_SELECTOR */)).toBeVisible();
   await expect(page.getByText(/Normal \+ Arena stacking = OFF/i)).toBeVisible();
   expect((await page.locator("body").innerText()).includes("PvE modeled DPS is" )).toBe(false);
 
@@ -123,6 +124,7 @@ async function noOverflow(page) { const row = await page.evaluate(() => ({ inner
   await page.getByLabel("Notes").fill("Observed Arena V2 fixture");
   await page.getByRole("button", { name: /Save local match/i }).click();
   await expect(page.getByText(/n=1; descriptive record only/i)).toBeVisible();
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem("wwm_arena_history_v1") || "[]")[0]?.mode)).toBe("PERCEPTION_FOREST"); // COMPETITIVE_V2_ARENA_HISTORY_RUNTIME_MODE
   await page.reload({ waitUntil: "networkidle" });
   await expect(page.getByText("Observed Arena V2 fixture", { exact: true })).toBeVisible();
 

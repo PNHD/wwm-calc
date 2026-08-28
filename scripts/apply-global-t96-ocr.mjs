@@ -16,14 +16,33 @@ function write(path, content) {
   fs.writeFileSync(path, content, "utf8");
 }
 
+function dedupeOcrSlotHelpers(source) {
+  const helpers = [...source.matchAll(/const OCR_SLOT_OPTIONS = \[/g)];
+  if (helpers.length < 2) return source;
+  if (helpers.length !== 2) throw new Error("[global-t96-ocr] Unexpected OCR slot-helper count.");
+  const duplicateStart = helpers[1].index;
+  const statCatalogStart = source.indexOf("const OCR_STAT_OPTIONS", duplicateStart);
+  if (statCatalogStart < 0) throw new Error("[global-t96-ocr] Duplicate OCR slot helper has no stat catalog boundary.");
+  return source.slice(0, duplicateStart) + source.slice(statCatalogStart);
+}
+
 function replaceRequired(source, from, to, label) {
-  if (source.includes(to)) return source;
-  if (!source.includes(from)) throw new Error(`[global-t96-ocr] Missing patch anchor: ${label}`);
-  return source.replace(from, to);
+  const normalizedSource = source.replace(/\r\n/g, "\n");
+  if (normalizedSource.includes(to)) return source;
+  if (label === "T96 OCR slot and Void stat catalog" && normalizedSource.includes("const OCR_SLOT_OPTIONS") && normalizedSource.includes("const isWeaponOcrSlot")) {
+    if ([...normalizedSource.matchAll(/const OCR_SLOT_OPTIONS = \[/g)].length !== 1) throw new Error("[global-t96-ocr] OCR slot-helper deduplication did not converge.");
+    return source;
+  }
+  if (label === "slot-aware OCR stat options" && normalizedSource.includes("options={filterGlobalT96StatOptions(OCR_STAT_OPTIONS, item.slot)}")) return source;
+  if (label === "select viewport position" && normalizedSource.includes("const spaceBelow = Math.max(0, window.innerHeight - r.bottom - viewportPadding);")) return source;
+  if (label === "gear form Void/path hint" && normalizedSource.includes("Relaid weapons legitimately retain their historical")) return source;
+  if (!normalizedSource.includes(from)) throw new Error(`[global-t96-ocr] Missing patch anchor: ${label}`);
+  const eol = source.includes("\r\n") ? "\r\n" : "\n";
+  return source.replace(from.replaceAll("\n", eol), to.replaceAll("\n", eol));
 }
 
 // ── Batch OCR UI -------------------------------------------------------------
-let ocr = read(files.ocr);
+let ocr = dedupeOcrSlotHelpers(read(files.ocr));
 ocr = replaceRequired(
   ocr,
   'const OCR_STAT_OPTIONS: { value: string; label: string; group?: string }[] = [\n  { value: "Other", label: "Select Stat / Empty" },',

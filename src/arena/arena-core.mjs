@@ -1,5 +1,8 @@
+import { cloneBoundedJson, isPlainRecord, readJsonStorage } from "../product/storage-registry.js";
+
+// V1_STORAGE_HARDENING_ARENA
 export const ARENA_SCHEMA_VERSION = 1;
-export const ARENA_PATCH = "2.0 / 2026-08-07";
+export const ARENA_PATCH = "2.1 / reviewed through 2026-08-24";
 export const ARENA_STORAGE_KEY = "wwm_arena_state_v1";
 export const ARENA_LEGACY_MODE_KEY = "wwm_arena_mode_v2";
 export const ARENA_HISTORY_KEY = "wwm_arena_history_v1";
@@ -134,7 +137,7 @@ export const ARENA_REFERENCE_PRESETS = Object.freeze(Object.values(PATH_PROFILES
   patch: "2.0",
   source: "WWM Calc Arena mechanic reference",
   maturity: profile.path === "Bamboocut-Dust" ? "OFFICIAL + MODELED" : "MODELED REFERENCE",
-  lastReviewed: "2026-08-18",
+  lastReviewed: "2026-08-24",
   gear: null,
 }))); 
 
@@ -337,12 +340,54 @@ export function defaultArenaState() {
   };
 }
 
+const V2_ARENA_MODES = ["1V1_ARENA", "3V3_ARENA", "GROUP_STRATEGY", "5V5_ARENA", "PERCEPTION_FOREST", "TRAINING_TERRACE"];
+let arenaStorageRecovery = "";
+export function consumeArenaStorageRecovery() {
+  const message = arenaStorageRecovery;
+  arenaStorageRecovery = "";
+  return message;
+}
+
 export function loadArenaState(storage = globalThis?.localStorage) {
-  try {
-    const raw = storage?.getItem?.(ARENA_STORAGE_KEY);
-    if (!raw) return defaultArenaState();
-    return sanitizeArenaState(JSON.parse(raw));
-  } catch { return defaultArenaState(); }
+  const result = readJsonStorage(ARENA_STORAGE_KEY, {
+    storage,
+    ownerLabel: "Arena",
+    recoveryMessage: "Some saved Arena data could not be loaded.",
+    fallback: defaultArenaState,
+    maxChars: 256 * 1024,
+    bounds: { maxDepth: 8, maxArray: 300, maxKeys: 120, maxString: 32 * 1024 },
+    validate: (value) => {
+      if (!isPlainRecord(value)) return "Arena state must be an object.";
+      const version = value.schemaVersion == null ? 0 : Number(value.schemaVersion);
+      if (!Number.isInteger(version) || version < 0) return "Invalid Arena schema version.";
+      if (version > ARENA_SCHEMA_VERSION) return "Unsupported future Arena schema v" + version + ".";
+      return "";
+    },
+    migrate: (value) => {
+      const version = value.schemaVersion == null ? 0 : Number(value.schemaVersion);
+      const safe = sanitizeArenaState(value);
+      const legacyMode = !V2_ARENA_MODES.includes(value.activeModeV2) ? storage?.getItem?.(ARENA_LEGACY_MODE_KEY) : null;
+      const consumedLegacyMode = V2_ARENA_MODES.includes(legacyMode);
+      if (consumedLegacyMode) safe.activeModeV2 = legacyMode;
+      if (version === 0) {
+        return { value: safe, migrated: true, backup: true, message: "Saved Arena data was migrated to schema v1." };
+      }
+      const normalized = consumedLegacyMode || JSON.stringify(safe) !== JSON.stringify(value);
+      return {
+        value: safe,
+        recovered: normalized && !consumedLegacyMode,
+        migrated: consumedLegacyMode,
+        backup: normalized,
+        message: consumedLegacyMode ? "Saved Arena mode was migrated into canonical Arena state." : normalized ? "Some saved Arena data was normalized to the supported V1 schema." : "",
+        reason: normalized ? "Arena state contained unsupported or invalid fields." : "ok",
+      };
+    },
+  });
+  if (result.migrated && V2_ARENA_MODES.includes(result.value.activeModeV2)) {
+    try { storage?.setItem?.(ARENA_STORAGE_KEY, JSON.stringify(result.value)); storage?.removeItem?.(ARENA_LEGACY_MODE_KEY); } catch {}
+  }
+  arenaStorageRecovery = result.recoveryMessage;
+  return result.value;
 }
 
 export function saveArenaState(state, storage = globalThis?.localStorage) {
@@ -353,6 +398,11 @@ export function saveArenaState(state, storage = globalThis?.localStorage) {
 
 function cleanText(value, max = 120) { return String(value ?? "").replace(/[<>]/g, "").slice(0, max); }
 function allowedPath(path) { return PATH_PROFILES[path] ? path : "Bamboocut-Dust"; }
+function safeArenaGearSnapshot(value) {
+  if (!isPlainRecord(value)) return null;
+  try { return cloneBoundedJson(value, { maxDepth: 6, maxArray: 80, maxKeys: 80, maxString: 4_000, maxChars: 96 * 1024 }); }
+  catch { return null; }
+}
 function sanitizeArenaState(input) {
   const base = defaultArenaState();
   if (!input || typeof input !== "object" || Array.isArray(input)) return base;
@@ -365,13 +415,14 @@ function sanitizeArenaState(input) {
       arenaAttunementIds: (Array.isArray(p?.arenaAttunementIds) ? p.arenaAttunementIds : []).filter((id) => ARENA_ATTUNEMENTS.some((a) => a.id === id)).slice(0, 8),
       mysticSkills: (Array.isArray(p?.mysticSkills) ? p.mysticSkills : []).map((v) => cleanText(v, 80)).slice(0, 8),
       innerWays: (Array.isArray(p?.innerWays) ? p.innerWays : []).map((v) => cleanText(v, 80)).slice(0, 8),
-      gearSnapshot: p?.gearSnapshot && typeof p.gearSnapshot === "object" ? JSON.parse(JSON.stringify(p.gearSnapshot)) : null,
+      gearSnapshot: safeArenaGearSnapshot(p?.gearSnapshot),
       battlegroup: cleanText(p?.battlegroup || "Jiangzhu", 40), latency: ["Low latency", "Moderate latency", "High latency"].includes(p?.latency) ? p.latency : "Moderate latency",
       arenaDimensions: sanitizeDimensions(p?.arenaDimensions),
     };
-  });
-  const activeModeV2 = ["1V1_ARENA", "3V3_ARENA", "GROUP_STRATEGY", "5V5_ARENA", "PERCEPTION_FOREST", "TRAINING_TERRACE"].includes(input.activeModeV2) ? input.activeModeV2 : base.activeModeV2;
-  return { schemaVersion: ARENA_SCHEMA_VERSION, patch: ARENA_PATCH, activeProfileId: profiles.some((p) => p.id === input.activeProfileId) ? input.activeProfileId : profiles[0]?.id, profiles, activeModeV2, opponentPath: allowedPath(input.opponentPath || base.opponentPath), objective: cleanText(input.objective || base.objective, 40), onboardingComplete: Boolean(input.onboardingComplete) };
+  }).filter((profile, index, rows) => rows.findIndex((other) => other.id === profile.id) === index);
+  const safeProfiles = profiles.length ? profiles : base.profiles;
+  const activeModeV2 = V2_ARENA_MODES.includes(input.activeModeV2) ? input.activeModeV2 : base.activeModeV2;
+  return { schemaVersion: ARENA_SCHEMA_VERSION, patch: ARENA_PATCH, activeProfileId: safeProfiles.some((p) => p.id === input.activeProfileId) ? input.activeProfileId : safeProfiles[0]?.id, profiles: safeProfiles, activeModeV2, opponentPath: allowedPath(input.opponentPath || base.opponentPath), objective: cleanText(input.objective || base.objective, 40), onboardingComplete: Boolean(input.onboardingComplete) };
 }
 function sanitizeDimensions(input) {
   const out = {};
@@ -424,7 +475,7 @@ export function sanitizeHistoryEntry(entry) {
   if (!entry || typeof entry !== "object") throw new Error("Invalid history entry");
   return {
     id: cleanText(entry.id || `match-${Date.now()}`, 64), date: cleanText(entry.date || new Date().toISOString().slice(0, 10), 10), patch: cleanText(entry.patch || ARENA_PATCH, 40),
-    mode: ARENA_MODES.includes(entry.mode) ? entry.mode : "1v1", battlegroup: cleanText(entry.battlegroup || "", 40), opponentPath: allowedPath(entry.opponentPath),
+    mode: [...ARENA_MODES, "1V1_ARENA", "3V3_ARENA", "GROUP_STRATEGY", "5V5_ARENA", "PERCEPTION_FOREST", "TRAINING_TERRACE"].includes(entry.mode) ? entry.mode : "1v1", /* COMPETITIVE_V2_ARENA_HISTORY_MODE_IDS */ battlegroup: cleanText(entry.battlegroup || "", 40), opponentPath: allowedPath(entry.opponentPath),
     opponentWeapons: (Array.isArray(entry.opponentWeapons) ? entry.opponentWeapons : []).map((v) => cleanText(v, 80)).slice(0, 2), result: ["WIN", "LOSS", "DRAW", "UNKNOWN"].includes(entry.result) ? entry.result : "UNKNOWN",
     durationSeconds: Math.min(7200, Math.max(0, Number(entry.durationSeconds) || 0)), myBuildRef: cleanText(entry.myBuildRef || "", 64), arenaAttunementRef: cleanText(entry.arenaAttunementRef || "", 120), notes: cleanText(entry.notes || "", 1000),
     observed: { damageDealt: boundedMetric(entry.observed?.damageDealt), damageTaken: boundedMetric(entry.observed?.damageTaken), healing: boundedMetric(entry.observed?.healing), qiBreaks: boundedMetric(entry.observed?.qiBreaks), executes: boundedMetric(entry.observed?.executes), revives: boundedMetric(entry.observed?.revives) },

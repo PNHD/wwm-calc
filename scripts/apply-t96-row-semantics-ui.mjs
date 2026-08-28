@@ -2,12 +2,15 @@ import fs from "node:fs";
 
 const path = "src/App.tsx";
 let source = fs.readFileSync(path, "utf8");
+const normalizeEol = (value) => value.replace(/\r\n/g, "\n");
 
 const replaceRegexOnce = (regex, replacement, label) => {
-  if (typeof replacement === "string" && source.includes(replacement)) return;
-  const matches = source.match(regex);
+  const normalized = normalizeEol(source);
+  if (typeof replacement === "string" && normalized.includes(replacement)) return;
+  const matches = normalized.match(regex);
   if (!matches) throw new Error(`[t96-row-semantics-ui] Missing structural match: ${label}`);
-  source = source.replace(regex, replacement);
+  const eol = source.includes("\r\n") ? "\r\n" : "\n";
+  source = normalized.replace(regex, replacement).replace(/\n/g, eol);
 };
 
 // `apply-global-v2-finalize` makes the initial row type slot-aware. The semantic

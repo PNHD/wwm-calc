@@ -1,12 +1,14 @@
+// V1_STORAGE_RECOVERY_ARENA_UI — Competitive V2 implements the recovery UI contract directly.
 import { useEffect, useMemo, useState } from "react";
 import {
   Activity, ArrowLeftRight, BookOpen, ChevronRight, Crosshair, Database, Download, History,
   Info, Library, MoreHorizontal, Play, Save, Shield, ShieldCheck, Swords, Upload,
 } from "lucide-react";
 import "./arena.css";
+import ModelAbout from "../product/ModelAbout"; // V1_MODEL_ABOUT_ARENA
 import {
   ARENA_HISTORY_KEY, ARENA_PATCH, ARENA_STORAGE_KEY, PATH_PROFILES,
-  decodeArenaShare, encodeArenaShare, loadArenaHistory, loadArenaState, readPveInventorySnapshot,
+  consumeArenaStorageRecovery, decodeArenaShare, encodeArenaShare, loadArenaHistory, loadArenaState, readPveInventorySnapshot,
   saveArenaHistory, saveArenaState,
 } from "./arena-core.mjs";
 import {
@@ -16,6 +18,7 @@ import {
   P0_CLIENT_CAPTURE_CHECKLIST, applyCombatEvent, attunementDecision, canOptimizeNumericStats,
   createArenaCombatState, matchupAnalysis, validate3v3Rules,
 } from "../competitive/competitive-v2.mjs";
+// COMPETITIVE_V2_ARENA_STORAGE_GUARDS
 
 type Route = "overview" | "build" | "matchups" | "compare" | "simulation" | "history" | "attunement" | "skills" | "evidence" | "reference" | "transfer";
 type ArenaState = ReturnType<typeof loadArenaState>;
@@ -89,7 +92,37 @@ function Matchups({ mode, profile, opponent, setOpponent }: { mode: ArenaModeV2;
 }
 function ListBlock({ title, rows }: { title: string; rows: string[] }) { return <div><strong>{title}</strong>{rows.length ? <ul>{rows.map((row) => <li key={row}>{row}</li>)}</ul> : <p className="arena-muted">No current evidence-backed claim.</p>}</div>; }
 
-function Compare({ mode }: { mode: ArenaModeV2 }) { const guard = canOptimizeNumericStats(mode); return <div data-testid="arena-compare"><SectionHeader eyebrow="Arena V2 / Compare" title="Tradeoff compare" copy="Compare mechanic envelopes; do not import 1106/1129 PvE DPS ordering as Arena truth."/><article className="arena-card"><h3>Build A vs Build B</h3><div className="arena-two-col"><div><strong>A</strong><p>Burst / conversion / pressure focus.</p></div><div><strong>B</strong><p>Survival / Qi economy / peel focus.</p></div></div><p><strong>NO UNIVERSAL WINNER.</strong> Select the mode and matchup objective before deciding.</p>{!guard.allowed && <Unknown>Numeric stat delta comparison is disabled because selected-mode stat applicability is unresolved.</Unknown>}</article></div>; }
+type ArenaLibraryCompareDescriptor = { entryId: string; path: string; mode: string; role: string; source: string };
+
+function readArenaLibraryCompareDescriptorV2(): ArenaLibraryCompareDescriptor | null {
+  const key = "wwm_arena_library_compare_v1";
+  const decode = (raw: string | null): ArenaLibraryCompareDescriptor | null => {
+    if (!raw || raw.length > 4096) return null;
+    try {
+      const value = JSON.parse(raw);
+      if (!value || typeof value !== "object" || Array.isArray(value) || Object.getPrototypeOf(value) !== Object.prototype) return null;
+      if (["__proto__", "prototype", "constructor"].some((name) => Object.prototype.hasOwnProperty.call(value, name))) return null;
+      const path = typeof value.path === "string" && PATH_COMPETITIVE_PROFILES[value.path] ? value.path : "";
+      const mode = typeof value.mode === "string" && ["1v1", "3v3", "5v5"].includes(value.mode) ? value.mode : "";
+      if (!path || !mode) return null;
+      return { entryId: String(value.entryId || "library-reference").slice(0, 120), path, mode, role: String(value.role || "Community Reference").replace(/[<>]/g, "").slice(0, 120), source: String(value.source || "Community Library").replace(/[<>]/g, "").slice(0, 160) };
+    } catch { return null; }
+  };
+  try { const session = decode(sessionStorage.getItem(key)); if (session) return session; } catch {}
+  try {
+    const descriptor = decode(localStorage.getItem(key));
+    localStorage.removeItem(key);
+    if (descriptor) { sessionStorage.setItem(key, JSON.stringify(descriptor)); return descriptor; }
+  } catch {}
+  return null;
+}
+
+function Compare({ mode }: { mode: ArenaModeV2 }) {
+  const guard = canOptimizeNumericStats(mode);
+  const libraryReference = useMemo(() => readArenaLibraryCompareDescriptorV2(), []); // V1_ARENA_LIBRARY_COMPARE_CONSUMER
+  const buildB = libraryReference ? (libraryReference.role || "Community Reference") + " · Community Reference" : "Build B · Local tradeoff candidate";
+  return <div data-testid="arena-compare"><SectionHeader eyebrow="Arena V2 / Compare" title="Tradeoff compare" copy="Compare mechanic envelopes; do not import 1106/1129 PvE DPS ordering as Arena truth."/><article className="arena-card"><div className="arena-compare-pickers"><label>BUILD A<select aria-label="BUILD A" value="active" aria-readonly="true"><option value="active">Active Arena Build</option></select></label><ArrowLeftRight size={22}/><label>BUILD B<select aria-label="BUILD B" value={libraryReference ? "library" : "candidate"} aria-readonly="true"><option value={libraryReference ? "library" : "candidate"}>{buildB}</option></select></label></div>{libraryReference && <div className="arena-validation" data-testid="arena-library-reference"><Info size={16}/> Community Library reference loaded for comparison only: <strong>{libraryReference.path}</strong> · {libraryReference.role} · {libraryReference.source}. It was not cloned or made active.</div>}<h3>Build A vs Build B</h3><div className="arena-two-col"><div><strong>A</strong><p>Burst / conversion / pressure focus.</p></div><div><strong>B</strong><p>{libraryReference ? libraryReference.path + " reference mechanics for " + libraryReference.mode + "." : "Survival / Qi economy / peel focus."}</p></div></div><p><strong>NO UNIVERSAL WINNER.</strong> Select the mode and matchup objective before deciding.</p><p className="arena-muted">PvE modeled DPS is intentionally excluded from Arena comparison.</p>{!guard.allowed && <Unknown>Numeric stat delta comparison is disabled because selected-mode stat applicability is unresolved.</Unknown>}</article></div>;
+}
 
 function Simulation() {
   let state = createArenaCombatState({ hp: 70, qi: 70, state: "HIT_STAGGER", tags: ["CONTROLLED"] });
@@ -108,7 +141,20 @@ function Attunement({ mode }: { mode: ArenaModeV2 }) { const row = attunementDec
 
 function EvidenceView() { return <div data-testid="arena-evidence"><SectionHeader eyebrow="Arena V2 / Evidence" title="Current Global evidence matrix" copy="UNKNOWN is a product state, not a gap hidden behind a slider."/><div className="arena-reference-grid">{EVIDENCE_MATRIX.filter((row) => row.mode !== "GUILD_WAR").map((row) => <article className="arena-card" key={row.id}><div className="arena-result-head"><span className="arena-kicker">{row.mode}</span><EvidenceBadge value={row.evidence}/></div><h4>{row.claim}</h4><p>{row.scope}</p><small>{row.source} · {row.sourceDate}</small></article>)}</div><article className="arena-card"><h3>Minimum client capture</h3><ul>{P0_CLIENT_CAPTURE_CHECKLIST.filter((row) => /3v3|Arena|Group Strategy|Player Target/i.test(row)).map((row) => <li key={row}>{row}</li>)}</ul></article></div>; }
 
-function ReferenceBuilds() { return <div data-testid="arena-reference"><SectionHeader eyebrow="Arena V2 / Paths" title="Evidence-backed competitive path catalog" copy="Only profiles supportable by current evidence are shown; missing paths are not filled with fake ratings."/><div className="arena-reference-grid">{Object.entries(PATH_COMPETITIVE_PROFILES).map(([path, data]: any) => <article className="arena-card" key={path}><div className="arena-result-head"><div><span className="arena-kicker">PATH</span><h3>{path}</h3></div><EvidenceBadge value={data.evidence}/></div><p>{data.weapons.join(" + ")} · {data.range}</p><ListBlock title="Control / stagger" rows={[...data.stagger,...data.control]}/><ListBlock title="Defensive states" rows={[...data.tenacity,...data.superArmor,...data.shielding]}/><ListBlock title="Unknown / counters" rows={data.counters}/></article>)}</div></div>; }
+function ReferenceBuilds({ state, setState, mode }: { state: ArenaState; setState: (s: ArenaState) => void; mode: ArenaModeV2 }) {
+  const clone = (path: string, data: any) => {
+    if (state.profiles.length >= 12) return;
+    const id = `arena-ref-clone-${Date.now()}`;
+    const next = {
+      id, name: `${path} Arena Reference`, path,
+      weapons: Array.isArray(data.weapons) ? data.weapons.slice() : [],
+      mode: legacyMode(mode), normalAttunementProfile: null, arenaAttunementIds: [],
+      mysticSkills: [], innerWays: [], gearSnapshot: null, battlegroup: "Jiangzhu", latency: "Moderate latency",
+    };
+    setState({ ...state, profiles: [...state.profiles, next] } as ArenaState);
+  }; // V1_ARENA_REFERENCE_CLONE_V2
+  return <div data-testid="arena-reference"><SectionHeader eyebrow="Arena V2 / Paths" title="Evidence-backed competitive path catalog" copy="Only profiles supportable by current evidence are shown; missing paths are not filled with fake ratings."/><div className="arena-reference-grid">{Object.entries(PATH_COMPETITIVE_PROFILES).map(([path, data]: any) => <article className="arena-card" key={path}><div className="arena-result-head"><div><span className="arena-kicker">PATH</span><h3>{path}</h3></div><EvidenceBadge value={data.evidence}/></div><p>{data.weapons.join(" + ")} · {data.range}</p><ListBlock title="Control / stagger" rows={[...data.stagger,...data.control]}/><ListBlock title="Defensive states" rows={[...data.tenacity,...data.superArmor,...data.shielding]}/><ListBlock title="Unknown / counters" rows={data.counters}/><button type="button" disabled={state.profiles.length >= 12} onClick={() => clone(path, data)}>Clone to my workspace</button></article>)}</div></div>;
+}
 
 function HistoryView({ profile, mode }: { profile: any; mode: ArenaModeV2 }) {
   const [rows, setRows] = useState<any[]>(() => loadArenaHistory()); const [opponent, setOpponent] = useState(PATHS[1] || PATHS[0]); const [result, setResult] = useState("WIN"); const [notes, setNotes] = useState(""); const [duration, setDuration] = useState("");
@@ -123,15 +169,15 @@ function SharedLanding({ token, state, setState }: { token: string; state: Arena
 function Inspector({ mode, profile, opponent }: { mode: ArenaModeV2; profile: any; opponent: string }) { const attune = attunementDecision(mode); return <aside className="arena-inspector" aria-label="Arena context inspector"><span className="arena-kicker">MODE CONTEXT</span><h3>{ARENA_MODE_RULES[mode].label}</h3><div className="arena-inspector-row"><span>Path</span><strong>{profile.path}</strong></div><div className="arena-inspector-row"><span>Opponent</span><strong>{opponent}</strong></div><div className="arena-inspector-row"><span>Attunement</span><strong>{evidenceLabel(attune.arena)}</strong></div><div className="arena-inspector-row"><span>Stat optimizer</span><strong>{canOptimizeNumericStats(mode).allowed ? "AVAILABLE" : "LOCKED"}</strong></div><hr/><small>{COMPETITIVE_PATCH}</small></aside>; }
 
 export default function ArenaWorkspace() {
-  const [route, setRoute] = useState<Route>(() => routeFromHash()); const [state, setStateRaw] = useState<ArenaState>(() => loadArenaState()); const profile = state.profiles.find((p: any) => p.id === state.activeProfileId) || state.profiles[0];
+  const [route, setRoute] = useState<Route>(() => routeFromHash()); const [state, setStateRaw] = useState<ArenaState>(() => loadArenaState()); const [storageRecovery] = useState(() => consumeArenaStorageRecovery()); const profile = state.profiles.find((p: any) => p.id === state.activeProfileId) || state.profiles[0];
   const [mode, setModeRaw] = useState<ArenaModeV2>(() => initialMode(state, profile)); const [opponent, setOpponentRaw] = useState(state.opponentPath || PATHS.find((p) => p !== profile.path) || PATHS[0]); const [moreOpen, setMoreOpen] = useState(false);
   const setState = (next: ArenaState) => setStateRaw(saveArenaState(next));
   const setMode = (next: ArenaModeV2) => { setModeRaw(next); setState({ ...state, activeModeV2: next, profiles: state.profiles.map((p: any) => p.id === state.activeProfileId ? { ...p, mode: legacyMode(next) } : p) } as ArenaState); };
   const setOpponent = (next: string) => { setOpponentRaw(next); setState({ ...state, opponentPath: next } as ArenaState); };
   useEffect(() => { const onHash = () => { setRoute(routeFromHash()); setMoreOpen(false); }; addEventListener("hashchange", onHash); return () => removeEventListener("hashchange", onHash); }, []);
   const sharedToken = sharedTokenFromHash(); if (sharedToken) return <SharedLanding token={sharedToken} state={state} setState={setState}/>;
-  const content: Record<Route, React.ReactNode> = { overview: <Overview mode={mode} setMode={setMode} profile={profile} state={state}/>, build: <Build mode={mode} profile={profile} state={state} setState={setState}/>, matchups: <Matchups mode={mode} profile={profile} opponent={opponent} setOpponent={setOpponent}/>, compare: <Compare mode={mode}/>, simulation: <Simulation/>, history: <HistoryView profile={profile} mode={mode}/>, attunement: <Attunement mode={mode}/>, skills: <Mechanics mode={mode}/>, evidence: <EvidenceView/>, reference: <ReferenceBuilds/>, transfer: <Transfer profile={profile}/> };
-  return <div className="arena-root" data-testid="arena-workspace"><header className="arena-topbar"><button className="arena-brand" type="button" onClick={() => go("overview")}><span>WWM</span><div><strong>WWM Calc</strong><small>Competitive Modes V2</small></div></button><WorkspaceSwitcher/><div className="arena-patch"><span>GLOBAL</span><strong>2.0 V2</strong></div></header><div className="arena-layout"><aside className="arena-rail"><nav aria-label="Arena navigation">{PRIMARY.map(({ id, label, icon: Icon }) => <button type="button" key={id} className={route === id ? "is-active" : ""} onClick={() => go(id)}><Icon size={17}/><span>{label}</span></button>)}</nav><div className="arena-more"><span>MORE</span>{SECONDARY.map((item) => <button type="button" key={item.id} className={route === item.id ? "is-active" : ""} onClick={() => go(item.id)}>{item.label}</button>)}</div></aside><main className="arena-main"><div className="arena-card" style={{ marginBottom: 16 }}><ModePicker mode={mode} onChange={setMode}/></div>{content[route]}</main><Inspector mode={mode} profile={profile} opponent={opponent}/></div><nav className="arena-mobile-nav" aria-label="Arena mobile navigation"><button className={route === "build" ? "is-active" : ""} onClick={() => go("build")}><Shield size={18}/>Build</button><button className={route === "matchups" ? "is-active" : ""} onClick={() => go("matchups")}><Crosshair size={18}/>Matchups</button><button className={route === "compare" ? "is-active" : ""} onClick={() => go("compare")}><ArrowLeftRight size={18}/>Compare</button><button className={route === "history" ? "is-active" : ""} onClick={() => go("history")}><History size={18}/>History</button><button className={moreOpen ? "is-active" : ""} onClick={() => setMoreOpen(!moreOpen)}><MoreHorizontal size={18}/>More</button></nav>{moreOpen && <div className="arena-mobile-more" role="dialog" aria-label="Arena more navigation"><button onClick={() => go("overview")}><Activity size={16}/>Overview</button>{SECONDARY.map((item) => <button key={item.id} onClick={() => go(item.id)}><ChevronRight size={15}/>{item.label}</button>)}</div>}</div>;
+  const content: Record<Route, React.ReactNode> = { overview: <Overview mode={mode} setMode={setMode} profile={profile} state={state}/>, build: <Build mode={mode} profile={profile} state={state} setState={setState}/>, matchups: <Matchups mode={mode} profile={profile} opponent={opponent} setOpponent={setOpponent}/>, compare: <Compare mode={mode}/>, simulation: <Simulation/>, history: <HistoryView profile={profile} mode={mode}/>, attunement: <Attunement mode={mode}/>, skills: <Mechanics mode={mode}/>, evidence: <EvidenceView/>, reference: <ReferenceBuilds state={state} setState={setState} mode={mode}/>, transfer: <Transfer profile={profile}/> };
+  return <div className="arena-root" data-testid="arena-workspace"><header className="arena-topbar"><button className="arena-brand" type="button" onClick={() => go("overview")}><span>WWM</span><div><strong>WWM Calc</strong><small>Competitive Modes V2</small></div></button><WorkspaceSwitcher/><div className="arena-patch"><span>GLOBAL</span><strong>2.1 V2</strong></div><ModelAbout workspace="ARENA" page={route} path={profile.path} /></header><div className="arena-layout"><aside className="arena-rail"><nav aria-label="Arena navigation">{PRIMARY.map(({ id, label, icon: Icon }) => <button type="button" key={id} className={route === id ? "is-active" : ""} onClick={() => go(id)}><Icon size={17}/><span>{label}</span></button>)}</nav><div className="arena-more"><span>MORE</span>{SECONDARY.map((item) => <button type="button" key={item.id} className={route === item.id ? "is-active" : ""} onClick={() => go(item.id)}>{item.label}</button>)}</div></aside><main className="arena-main">{storageRecovery && <div className="arena-validation bad" role="status"><Info size={16}/><span>{storageRecovery}</span></div>}<div className="arena-card" style={{ marginBottom: 16 }}><ModePicker mode={mode} onChange={setMode}/></div>{content[route]}</main><Inspector mode={mode} profile={profile} opponent={opponent}/></div><nav className="arena-mobile-nav" aria-label="Arena mobile navigation"><button className={route === "build" ? "is-active" : ""} onClick={() => go("build")}><Shield size={18}/>Build</button><button className={route === "matchups" ? "is-active" : ""} onClick={() => go("matchups")}><Crosshair size={18}/>Matchups</button><button className={route === "compare" ? "is-active" : ""} onClick={() => go("compare")}><ArrowLeftRight size={18}/>Compare</button><button className={route === "history" ? "is-active" : ""} onClick={() => go("history")}><History size={18}/>History</button><button className={moreOpen ? "is-active" : ""} onClick={() => setMoreOpen(!moreOpen)}><MoreHorizontal size={18}/>More</button></nav>{moreOpen && <div className="arena-mobile-more" role="dialog" aria-label="Arena more navigation"><button onClick={() => go("overview")}><Activity size={16}/>Overview</button>{SECONDARY.map((item) => <button key={item.id} onClick={() => go(item.id)}><ChevronRight size={15}/>{item.label}</button>)}</div>}</div>;
 }
 
 export { ARENA_HISTORY_KEY, ARENA_STORAGE_KEY };

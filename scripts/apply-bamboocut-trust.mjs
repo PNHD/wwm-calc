@@ -2,16 +2,21 @@ import fs from "node:fs";
 
 const path = "src/App.tsx";
 let app = fs.readFileSync(path, "utf8");
+const normalizeEol = (value) => value.replace(/\r\n/g, "\n");
+const hasNormalized = (value, expected) => normalizeEol(value).includes(expected);
 
 const required = (from, to, label) => {
-  if (app.includes(to)) return;
-  if (!app.includes(from)) throw new Error(`[bamboocut-trust] Missing patch anchor: ${label}`);
-  app = app.replace(from, to);
+  if (hasNormalized(app, to)) return;
+  if (!hasNormalized(app, from)) throw new Error(`[bamboocut-trust] Missing patch anchor: ${label}`);
+  const eol = app.includes("\r\n") ? "\r\n" : "\n";
+  app = app.replace(from.replaceAll("\n", eol), to.replaceAll("\n", eol));
 };
 const requiredRegex = (re, to, label) => {
-  if (typeof to === "string" && app.includes(to)) return;
-  if (!re.test(app)) throw new Error(`[bamboocut-trust] Missing regex anchor: ${label}`);
-  app = app.replace(re, to);
+  const normalized = normalizeEol(app);
+  if (typeof to === "string" && normalized.includes(to)) return;
+  if (!re.test(normalized)) throw new Error(`[bamboocut-trust] Missing regex anchor: ${label}`);
+  const eol = app.includes("\r\n") ? "\r\n" : "\n";
+  app = normalized.replace(re, to).replace(/\n/g, eol);
 };
 
 if (!app.includes('from "./data/modelTrust"')) {
@@ -20,19 +25,21 @@ if (!app.includes('from "./data/modelTrust"')) {
 
 // Combat-only Attunement must not be summed into the displayed Specified Weapon
 // Martial row merely because its semantic display name contains the same words.
-requiredRegex(
-  /(const sumGearSubs = \(gear: GearItem\[\]\)[\s\S]*?item\.subs\.forEach\(?sub\)? => \{\n)(\s*const key = SUB_MAP\[sub\.type\];)/,
-  `$1      const isAttunementRow = (sub as any).role === "attunement" || sub.type === "Attuned Bonus" || Boolean((sub as any).attunementId);
+if (!hasNormalized(app, 'const isAttunementRow = (sub as any).role === "attunement"')) {
+  requiredRegex(
+    /(const sumGearSubs = \(gear: GearItem\[\]\)[\s\S]*?item\.subs\.forEach\(?sub\)? => \{\n)(\s*const key = SUB_MAP\[sub\.type\];)/,
+    `$1      const isAttunementRow = (sub as any).role === "attunement" || sub.type === "Attuned Bonus" || Boolean((sub as any).attunementId);
       if (isAttunementRow) {
         const value = parseVal(sub.val);
         if (Number.isFinite(value)) sums.attunedBonus = (sums.attunedBonus || 0) + value;
         return;
       }
 $2`,
-  "attunement aggregation boundary",
-);
+    "attunement aggregation boundary",
+  );
+}
 
-if (!/const computeGearPanel[\s\S]*?next\.attunedBonus = Number\(gearSum\.attunedBonus\)/.test(app)) {
+if (!/const computeGearPanel[\s\S]*?next\.attunedBonus = Number\(gearSum\.attunedBonus\)/.test(normalizeEol(app))) {
   requiredRegex(
     /(const computeGearPanel = \([\s\S]*?)(\n\s*return next;\n\s*};)/,
     `$1

@@ -3,6 +3,14 @@ import fs from "node:fs";
 const path = "src/App.tsx";
 let source = fs.readFileSync(path, "utf8");
 
+const normalizeEol = (value) => value.replace(/\r\n/g, "\n");
+const hasNormalized = (value, expected) => normalizeEol(value).includes(expected);
+const replaceNormalized = (value, from, to, label) => {
+  if (!hasNormalized(value, from)) throw new Error(`[t96-stat-priority] ${label} not found`);
+  const eol = value.includes("\r\n") ? "\r\n" : "\n";
+  return value.replace(from.replaceAll("\n", eol), to.replaceAll("\n", eol));
+};
+
 const oldBlock = `    const totalFor = (p: PanelStats) => {
       let total = 0;
       getRotationForBuild(selectedBuild).forEach((item) => {
@@ -60,19 +68,20 @@ const newBlock = `    const totalFor = (p: PanelStats) => {
       return total;
     };`;
 
-if (!source.includes(newBlock)) {
-  if (!source.includes(oldBlock)) throw new Error("[t96-stat-priority] totalFor anchor not found");
-  source = source.replace(oldBlock, newBlock);
+const hasBamboocutTimeline = hasNormalized(source, 'if (selectedBuild === "bamboocut-dust")')
+  && hasNormalized(source, 'conditionalBuffs = buildTimelineBuffs(selectedInnerWays, innerWayTiers)');
+if (!hasNormalized(source, newBlock) && !hasBamboocutTimeline) {
+  source = replaceNormalized(source, oldBlock, newBlock, "totalFor anchor");
 }
 
 const oldDeps = `  }, [adjustedPanel, activeTier, datang, yishui, selectedBuild, baselineScore, rotationStats.gradRate, rotationStats.totalDmg]);`;
 const newDeps = `  }, [adjustedPanel, activeTier, datang, yishui, selectedBuild, baselineScore, rotationStats.gradRate, rotationStats.totalDmg, selectedInnerWays, innerWayTiers, cinderAsh, starweaveDistanceBonusPct]);`;
-if (!source.includes(newDeps)) {
-  if (!source.includes(oldDeps)) throw new Error("[t96-stat-priority] dependency anchor not found");
-  source = source.replace(oldDeps, newDeps);
+const hasExtendedCurrentDeps = hasNormalized(source, 'starweaveDistanceBonusPct, jadeObjective, jadeScenario]);');
+if (!hasNormalized(source, newDeps) && !hasExtendedCurrentDeps) {
+  source = replaceNormalized(source, oldDeps, newDeps, "dependency anchor");
 }
 
-if (!source.includes("conditionalBuffs = buildTimelineBuffs")) throw new Error("[t96-stat-priority] timeline evaluator not generated");
-if (!source.includes("starweaveDistanceBonusPct")) throw new Error("[t96-stat-priority] distance scenario did not reach stat priority");
+if (!hasNormalized(source, "conditionalBuffs = buildTimelineBuffs")) throw new Error("[t96-stat-priority] timeline evaluator not generated");
+if (!hasNormalized(source, "starweaveDistanceBonusPct")) throw new Error("[t96-stat-priority] distance scenario did not reach stat priority");
 fs.writeFileSync(path, source, "utf8");
 console.log("[t96-stat-priority] PASS — marginal stat value uses the same Bamboocut scenario timeline as optimizer ranking.");

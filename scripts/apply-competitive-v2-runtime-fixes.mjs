@@ -29,7 +29,7 @@ function replaceContract(path, marker, before, after, label) {
 {
   const path = "src/arena/ArenaWorkspace.tsx";
   const marker = "V1_ARENA_REFERENCE_CLONE_V2";
-  let source = read(path);
+  let source = read(path).replace(/\r\n/g, "\n");
   if (!source.includes(marker)) {
     const start = source.indexOf("function ReferenceBuilds() {");
     const end = source.indexOf("\n\nfunction HistoryView", start);
@@ -52,7 +52,7 @@ function replaceContract(path, marker, before, after, label) {
 {
   const path = "src/gvg/model.js";
   const marker = "COMPETITIVE_V2_GVG_ATTUNEMENT_UNKNOWN_DEFAULT";
-  let source = read(path);
+  let source = read(path).replace(/\r\n/g, "\n");
   if (!source.includes(marker)) {
     const selectBefore = `export function selectAttunementProfile(profiles, selected) {\n  if (selected === "ARENA") return profiles?.arena ?? null;\n  return profiles?.normal ?? null;\n}`;
     const selectAfter = `export function selectAttunementProfile(profiles, selected) {\n  if (selected === "ARENA") return profiles?.arena ?? null;\n  if (selected === "NORMAL") return profiles?.normal ?? null;\n  return null;\n}`;

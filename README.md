@@ -14,7 +14,7 @@ The project is under active development. Some systems are already modeled and re
 
 ## Current data profile
 
-The active Tier 96 profile is calibrated for **Global 2.0 · Tier 96** and uses the workbook's Lv100 Upper (`100上`) constants only where they have been cross-checked against current Global evidence.
+The current product context is **Global 2.1 · Tier 96**. The previously accepted Bamboocut T96 calibration fixture is retained in that context because this release has no accepted Global 2.1 evidence authorizing a recalibration. It uses the workbook's Lv100 Upper (`100上`) constants only where they have been cross-checked against current Global evidence.
 
 Examples currently represented include:
 

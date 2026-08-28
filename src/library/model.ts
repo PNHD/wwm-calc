@@ -1,7 +1,7 @@
 export const LIBRARY_SCHEMA_VERSION = 1 as const;
 export const BUILD_SHARE_SCHEMA_VERSION = 2 as const;
 export const CURRENT_GAME_REGION = "Global";
-export const CURRENT_GAME_PATCH = "2.0";
+export const CURRENT_GAME_PATCH = "2.1";
 export const MAX_SHARED_PAYLOAD_BYTES = 48 * 1024;
 export const MAX_LIBRARY_ITEMS = 100;
 export const MAX_ROSTER = 30;
@@ -11,6 +11,7 @@ export const MAX_TEXT = 280;
 
 export const LIBRARY_TYPES = [
   "PVE_BUILD",
+  "ARENA_BUILD",
   "GVG_BUILD",
   "REFERENCE_BUILD",
   "COMMUNITY_BUILD",
@@ -30,7 +31,7 @@ export const MATURITY = [
 
 export type LibraryType = typeof LIBRARY_TYPES[number];
 export type Maturity = typeof MATURITY[number];
-export type LibraryWorkspaceKind = "PVE" | "GVG";
+export type LibraryWorkspaceKind = "PVE" | "ARENA" | "GVG";
 
 export interface LibrarySource {
   label: string;
@@ -80,6 +81,7 @@ export interface LibraryEntry {
   path?: string;
   weapons?: string[];
   role?: string;
+  arenaMode?: "1v1" | "3v3" | "5v5";
   objective?: string;
   region: string;
   patch: string;
@@ -105,7 +107,7 @@ export interface LibraryDocument {
 
 export interface SharedBuildEnvelope {
   schemaVersion: number;
-  kind: "PVE_BUILD" | "GVG_PLAN";
+  kind: "PVE_BUILD" | "ARENA_BUILD" | "GVG_PLAN";
   sharedAt: string;
   source: "USER_SHARED" | "LIBRARY";
   entry: LibraryEntry;
@@ -179,7 +181,7 @@ export function validateLibraryEntry(value: unknown): { valid: boolean; errors: 
   if (containsForbiddenKey(value)) errors.push("entry contains forbidden object keys");
   if (!boundedString(value.id, 96) || !/^[a-z0-9-]+$/.test(String(value.id))) errors.push("invalid id");
   if (!TYPE_SET.has(String(value.type))) errors.push("invalid type");
-  if (value.workspace !== "PVE" && value.workspace !== "GVG") errors.push("invalid workspace");
+  if (value.workspace !== "PVE" && value.workspace !== "ARENA" && value.workspace !== "GVG") errors.push("invalid workspace");
   if (!boundedString(value.title, 120)) errors.push("invalid title");
   if (!boundedString(value.region, 40)) errors.push("invalid region");
   if (!boundedString(value.patch, 40)) errors.push("invalid patch");
@@ -191,6 +193,7 @@ export function validateLibraryEntry(value: unknown): { valid: boolean; errors: 
   if (!plainObject(value.source) || !boundedString(value.source.label, 180) || !SOURCE_KINDS.has(String(value.source.kind))) errors.push("invalid source");
   if (plainObject(value.source) && value.source.url !== undefined && !isSafeExternalUrl(String(value.source.url))) errors.push("unsafe source url");
   if (value.weapons !== undefined && !stringArray(value.weapons, 4, 80)) errors.push("invalid entry weapons");
+  if (value.arenaMode !== undefined && value.arenaMode !== "1v1" && value.arenaMode !== "3v3" && value.arenaMode !== "5v5") errors.push("invalid Arena mode");
   if (value.tags !== undefined && !stringArray(value.tags, 12, 60)) errors.push("invalid tags");
   errors.push(...validateSnapshot(value.build, value.workspace as LibraryWorkspaceKind));
   return { valid: errors.length === 0, errors };
@@ -233,6 +236,7 @@ function cloneWhitelistedEntry(entry: LibraryEntry): LibraryEntry {
     path: entry.path,
     weapons: entry.weapons,
     role: entry.role,
+    arenaMode: entry.arenaMode,
     objective: entry.objective,
     region: entry.region,
     patch: entry.patch,
@@ -254,7 +258,7 @@ export function createSharedBuildEnvelope(entry: LibraryEntry, privacy?: SharedB
   if (!validation.valid) throw new Error(`Cannot share invalid build: ${validation.errors[0]}`);
   return {
     schemaVersion: BUILD_SHARE_SCHEMA_VERSION,
-    kind: entry.workspace === "PVE" ? "PVE_BUILD" : "GVG_PLAN",
+    kind: entry.workspace === "PVE" ? "PVE_BUILD" : entry.workspace === "ARENA" ? "ARENA_BUILD" : "GVG_PLAN",
     sharedAt: new Date().toISOString(),
     source: "LIBRARY",
     entry: cloneWhitelistedEntry(entry),
@@ -292,7 +296,7 @@ function migrateLegacyEnvelope(value: Record<string, unknown>): SharedBuildEnvel
   if (!validation.valid) return null;
   return {
     schemaVersion: BUILD_SHARE_SCHEMA_VERSION,
-    kind: candidate.workspace === "PVE" ? "PVE_BUILD" : "GVG_PLAN",
+    kind: candidate.workspace === "PVE" ? "PVE_BUILD" : candidate.workspace === "ARENA" ? "ARENA_BUILD" : "GVG_PLAN",
     sharedAt: typeof value.sharedAt === "string" ? value.sharedAt.slice(0, 40) : new Date(0).toISOString(),
     source: "USER_SHARED",
     entry: cloneWhitelistedEntry(candidate),
@@ -311,7 +315,7 @@ export function decodeSharedBuild(value: string): { valid: boolean; envelope?: S
       return { valid: true, envelope: migrated, migrated: true };
     }
     if (parsed.schemaVersion !== BUILD_SHARE_SCHEMA_VERSION) throw new Error("This shared build uses an unsupported schema version.");
-    if (parsed.kind !== "PVE_BUILD" && parsed.kind !== "GVG_PLAN") throw new Error("Invalid shared build type.");
+    if (parsed.kind !== "PVE_BUILD" && parsed.kind !== "ARENA_BUILD" && parsed.kind !== "GVG_PLAN") throw new Error("Invalid shared build type.");
     if (!plainObject(parsed.entry)) throw new Error("Shared build is missing its build payload.");
     const validation = validateLibraryEntry(parsed.entry);
     if (!validation.valid) throw new Error(validation.errors[0]);

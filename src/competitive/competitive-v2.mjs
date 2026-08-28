@@ -1,4 +1,4 @@
-export const COMPETITIVE_PATCH = "Global 2.0 / reviewed 2026-08-18";
+export const COMPETITIVE_PATCH = "Global 2.1 / reviewed through 2026-08-24";
 
 export const EVIDENCE_STATE = Object.freeze({
   CONFIRMED_CLIENT: "CONFIRMED_CLIENT",
@@ -433,7 +433,7 @@ export function effectAllowed(scope, mode) {
 }
 
 export const EVIDENCE_MATRIX = Object.freeze([
-  { id: "arena-battlegroups", mode: "ARENA", patch: "2026-04-30+", source: "Official PVP427", sourceDate: "2026-04-30", claim: "Five current battlegroups and server mapping", scope: "Global Arena/Guild War", numeric: null, evidence: OFFICIAL, implementation: IMPLEMENTATION_STATE.ENCODED },
+  { id: "arena-battlegroups", mode: "ARENA", patch: "2026-05-08+", source: "Official publisher Steam — May 8 Optimizations & Fixes", sourceDate: "2026-05-08", claim: "Linhe was added for US West, leaving five current battlegroups and the current server mapping", scope: "Global Arena/Guild War", numeric: null, evidence: OFFICIAL, implementation: IMPLEMENTATION_STATE.ENCODED },
   { id: "arena-1v1-247", mode: "1V1_ARENA", patch: "2026-04-30+", source: "Official PVP427", sourceDate: "2026-04-30", claim: "1v1 available 24/7", scope: "schedule", numeric: null, evidence: OFFICIAL, implementation: IMPLEMENTATION_STATE.ENCODED },
   { id: "arena-cross-server", mode: "ARENA", patch: "2026-05-22+", source: "Official 522update", sourceDate: "2026-05-22", claim: "Cross-server toggle, timeout expansion, host-server rule", scope: "matchmaking", numeric: null, evidence: OFFICIAL, implementation: IMPLEMENTATION_STATE.ENCODED },
   { id: "arena-level-adjustment", mode: "3V3_ARENA/GROUP_STRATEGY", patch: "2026-05-27+", source: "Official 527update", sourceDate: "2026-05-27", claim: "Modes are Level Adjustment contexts for custom Mystic branch trial; exact stat normalization not published", scope: "normalization", numeric: null, evidence: UNRESOLVED, implementation: IMPLEMENTATION_STATE.GUARDED_UNKNOWN },
@@ -453,8 +453,8 @@ export const EVIDENCE_MATRIX = Object.freeze([
   { id: "gvg-ex", mode: "GUILD_WAR", patch: "1.7+", source: "Official 527update", sourceDate: "2026-05-27", claim: "Current EX effects and 120→80 / 90→60 cooldown-family rule", scope: "Martial Art Techniques", numeric: null, evidence: OFFICIAL, implementation: IMPLEMENTATION_STATE.ENCODED },
   { id: "gvg-command-costs", mode: "GUILD_WAR", patch: "1.7+", source: "Official 527update", sourceDate: "2026-05-27", claim: "Command cost/CD changed; exact current values not published in reviewed evidence", scope: "Commander", numeric: null, evidence: UNKNOWN, implementation: IMPLEMENTATION_STATE.GUARDED_UNKNOWN },
   { id: "gvg-bamboocut-death-fix", mode: "GUILD_WAR", patch: "2.0 Aug2", source: "Official 723update rolling patch", sourceDate: "2026-08-02", claim: "Bamboocut-Dust must not continuously Immobilize after death", scope: "path regression", numeric: null, evidence: OFFICIAL, implementation: IMPLEMENTATION_STATE.ENCODED },
-  { id: "gvg-attunement", mode: "GUILD_WAR", patch: "current", source: "Official sources reviewed", sourceDate: "2026-08-18 review", claim: "Normal/Arena Attunement applicability to Guild War is not established", scope: "build applicability", numeric: null, evidence: UNKNOWN, implementation: IMPLEMENTATION_STATE.GUARDED_UNKNOWN },
-  { id: "gvg-victory-order", mode: "GUILD_WAR", patch: "current", source: "Community claims conflict / no current official rule found", sourceDate: "2026-08-18 review", claim: "Exact current victory/tiebreak ordering remains manual/current-unknown", scope: "victory", numeric: null, evidence: UNKNOWN, implementation: IMPLEMENTATION_STATE.GUARDED_UNKNOWN },
+  { id: "gvg-attunement", mode: "GUILD_WAR", patch: "current", source: "Official sources reviewed", sourceDate: "2026-08-24 review", claim: "Normal/Arena Attunement applicability to Guild War is not established", scope: "build applicability", numeric: null, evidence: UNKNOWN, implementation: IMPLEMENTATION_STATE.GUARDED_UNKNOWN },
+  { id: "gvg-victory-order", mode: "GUILD_WAR", patch: "current", source: "Community claims conflict / no current official rule found", sourceDate: "2026-08-24 review", claim: "Exact current victory/tiebreak ordering remains manual/current-unknown", scope: "victory", numeric: null, evidence: UNKNOWN, implementation: IMPLEMENTATION_STATE.GUARDED_UNKNOWN },
   { id: "old-green-points", mode: "GUILD_WAR", patch: "historical", source: "MetaForge Jan 2026", sourceDate: "2026-01", claim: "Green Points terminology is historical; current official terminology is Fun Coins", scope: "terminology", numeric: null, evidence: EVIDENCE_STATE.OUTDATED, implementation: IMPLEMENTATION_STATE.HISTORICAL_ONLY },
 ]);
 

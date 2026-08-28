@@ -116,10 +116,15 @@ assert.equal(duplicateBitter, teammateOnly);
 // 16. Blind Shattered Spring maintenance does not automatically win.
 assert.ok(dps(basePanel,{pursuitPolicy:'maintain-5'}) <= dps(basePanel,{pursuitPolicy:'leftover'}) * 1.01);
 
-// 17/18. Semantic attunement coverage + legacy aliases are non-destructive.
-assert.equal(jadeAttunementCovers('Vernal Umbrella Frequent Ballistic DMG Boost','spring-away'),true);
-assert.equal(jadeAttunementCovers('Vernal Umbrella Frequent Ballistic DMG Boost','fan-pursuit'),false);
-assert.equal(resolveJadeAttunementFamily('Ninefold Spring: Special Skill DMG Bonus')?.id,'vernal-special');
+// 17–20. Global 2.1 current coverage and non-destructive legacy migration.
+assert.equal(resolveJadeAttunementFamily('Vernal Umbrella Frequent Projectile DMG Boost')?.id,'vernal-frequent-projectile');
+assert.equal(resolveJadeAttunementFamily('Ninefold Spring: Special Skill DMG Bonus')?.id,'vernal-frequent-projectile');
+assert.equal(resolveJadeAttunementFamily('Vernal Umbrella Charged Skill DMG Boost')?.id,'vernal-frequent-projectile');
+assert.equal(jadeAttunementCovers('vernal-special','spring-away'),true);
+assert.equal(jadeAttunementCovers('vernal-charged','unfading-flower'),true);
+assert.equal(jadeAttunementCovers('vernal-frequent-projectile','fan-pursuit'),false);
+assert.equal(jadeAttunementCovers('vernal-light-heavy-derived','umbrella-heavy-light'),true);
+assert.equal(jadeAttunementCovers('vernal-light-heavy-derived','spring-away'),false);
 
 // 19. Existing Bamboocut 1106/1129 observed fixtures remain exact.
 assert.equal(OBSERVED_PANEL_1106.minOuter,1614);
@@ -141,4 +146,4 @@ const elapsed=performance.now()-start;
 assert.ok(keys.size>300);
 assert.ok(elapsed<5000,`Jade optimizer smoke exceeded 5s: ${elapsed.toFixed(1)}ms`);
 
-console.log(JSON.stringify({ok:true,model:'Silkbind-Jade Global 2.0',tests:23,performanceMs:Math.round(elapsed*10)/10,distinctCacheKeys:keys.size},null,2));
+console.log(JSON.stringify({ok:true,model:'Silkbind-Jade Global 2.1',tests:23,performanceMs:Math.round(elapsed*10)/10,distinctCacheKeys:keys.size},null,2));

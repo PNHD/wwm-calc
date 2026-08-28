@@ -1,8 +1,8 @@
 # WWM Calc V1 Product Surface Audit
 
 Release-hardening baseline: `92c2f3184538553b1ba58c03fc57fd1a5dd5137e`  
-Product: WWM Calc 1.0.0 · Global 2.0  
-Audit date: 2026-08-18
+Product: WWM Calc 1.1.0 · Global 2.1
+Current V1.1 audit cutoff: 2026-08-24
 
 ## Scope and release rule
 

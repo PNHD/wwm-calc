@@ -17,9 +17,25 @@ function write(path, content) {
 }
 
 function replaceRequired(source, from, to, label) {
-  if (source.includes(to)) return source;
-  if (!source.includes(from)) throw new Error(`[global-v2-finalize] Missing patch anchor: ${label}`);
-  return source.replace(from, to);
+  const normalizedSource = source.replace(/\r\n/g, "\n");
+  if (normalizedSource.includes(to)) return source;
+  if (label === "Relaid score weighting" && normalizedSource.includes("const overall = modeledContribution * 0.85 + buildFit * 0.15;")) return source;
+  if (label === "Relaid score warnings" && normalizedSource.includes("line(s) have no cap diagnostic")) return source;
+  if (label === "scorer result source" && normalizedSource.includes("sourceLabel: `Panel-first Global T96 · ${globalT96GearOriginLabel(gearOrigin)}`")) return source;
+  if (label === "arsenal relaid score explanation" && normalizedSource.includes("Roll diagnostic N/A")) return source;
+  if (label === "block invalid OCR import" && normalizedSource.includes("it.slot === \"Auto\" || validateGlobalT96GearLines")) return source;
+  if (!normalizedSource.includes(from)) throw new Error(`[global-v2-finalize] Missing patch anchor: ${label}`);
+  const eol = source.includes("\r\n") ? "\r\n" : "\n";
+  return source.replace(from.replaceAll("\n", eol), to.replaceAll("\n", eol));
+}
+
+const finalizerAlreadyApplied = read(files.ocr).includes("filterGlobalT96StatOptions(OCR_STAT_OPTIONS, item.slot)")
+  && read(files.app).includes("globalT96GearOriginLabel")
+  && read(files.scorer).includes("rollQualityAvailable")
+  && read(files.arsenal).includes("gearOrigin?: string;");
+if (finalizerAlreadyApplied) {
+  console.log("[global-v2-finalize] Already applied; preserving downstream semantic transforms.");
+  process.exit(0);
 }
 
 // ── Batch OCR validation ------------------------------------------------------

@@ -1,7 +1,18 @@
+import {
+  applyGearRowSemantics,
+  matchWeaponAttunementText,
+  type GearSubRole,
+} from "../data/gearAttunement.ts";
+
 export interface GlobalEnglishOcrSub {
   type: string;
   val: string;
   isTuned?: boolean;
+  isRetuned?: boolean;
+  role?: GearSubRole;
+  sourceOrder?: number;
+  attunementId?: string;
+  displayName?: string;
   sourceIndex: number;
   sourceEnd: number;
 }
@@ -41,7 +52,8 @@ const normalizeNumber = (type: string, rawValue: string, percentLike = false): s
   // Repair only known percentage-like families and only when the repaired value
   // is plausible for that family at current/legacy endgame tiers. Flat attack,
   // Power, Agility, Momentum, etc. are never divided by ten here.
-  const maxPlausible = PERCENT_MAX[type];
+  const maxPlausible = PERCENT_MAX[type]
+    ?? (type.includes("Martial Art Skill DMG Boost") ? 8 : undefined);
   const repaired = value / 10;
   const shouldRepairDroppedDecimal = (percentLike || PERCENT_LIKE_TYPES.has(type))
     && !cleaned.includes(".")
@@ -199,7 +211,20 @@ export const parseGlobalEnglishStatSpans = (text: string): GlobalEnglishOcrSub[]
     );
     if (!duplicate) deduped.push(candidate);
   }
-  return deduped;
+  const semantic = applyGearRowSemantics(deduped) as GlobalEnglishOcrSub[];
+  semantic.forEach((row, index) => {
+    row.sourceOrder = index;
+    if (row.role !== "attunement") return;
+    row.isRetuned = false;
+    row.isTuned = false;
+    const context = normalized.slice(row.sourceIndex, Math.min(normalized.length, row.sourceEnd + 96));
+    const definition = matchWeaponAttunementText(context);
+    if (definition) {
+      row.attunementId = definition.id;
+      row.displayName = definition.displayName;
+    }
+  });
+  return semantic;
 };
 
 type SourceLine = {
@@ -246,9 +271,26 @@ const normalizeLabel = (value: string): string => value
 
 const hasAll = (label: string, words: string[]): boolean => words.every((word) => label.includes(word));
 
-const classifyUnresolvedEnglishRow = (context: string): { type: string; percentLike?: boolean } | null => {
+const classifyUnresolvedEnglishRow = (context: string): {
+  type: string;
+  percentLike?: boolean;
+  role?: GearSubRole;
+  attunementId?: string;
+  displayName?: string;
+} | null => {
   const label = normalizeLabel(context);
   if (!label) return null;
+
+  const attunement = matchWeaponAttunementText(context);
+  if (attunement) {
+    return {
+      type: attunement.statKey,
+      percentLike: true,
+      role: "attunement",
+      attunementId: attunement.id,
+      displayName: attunement.displayName,
+    };
+  }
 
   if (hasAll(label, ["everspring", "umbrella"]) && hasAll(label, ["martial", "art", "skill", "dmg"])) {
     return { type: "Umb Martial Art Skill DMG Boost", percentLike: true };
@@ -330,7 +372,11 @@ export const parseHybridGlobalEnglishRows = (text: string): GlobalEnglishOcrSub[
     const candidate: GlobalEnglishOcrSub = {
       type: classification.type,
       val,
-      isTuned: explicitRetuned(context),
+      isTuned: classification.role === "attunement" ? false : explicitRetuned(context),
+      isRetuned: classification.role === "attunement" ? false : explicitRetuned(context),
+      role: classification.role,
+      attunementId: classification.attunementId,
+      displayName: classification.displayName,
       sourceIndex,
       sourceEnd,
     };
@@ -349,11 +395,18 @@ export const parseHybridGlobalEnglishRows = (text: string): GlobalEnglishOcrSub[
     if (!duplicate) deduped.push(candidate);
   }
 
+  const semantic = applyGearRowSemantics(deduped) as GlobalEnglishOcrSub[];
   let tunedSeen = false;
-  deduped.forEach((row) => {
-    if (!row.isTuned) return;
-    if (tunedSeen) row.isTuned = false;
+  semantic.forEach((row, index) => {
+    row.sourceOrder = index;
+    if (row.role === "attunement") {
+      row.isRetuned = false;
+      row.isTuned = false;
+      return;
+    }
+    if (!row.isRetuned) return;
+    if (tunedSeen) { row.isRetuned = false; row.isTuned = false; }
     else tunedSeen = true;
   });
-  return deduped;
+  return semantic;
 };

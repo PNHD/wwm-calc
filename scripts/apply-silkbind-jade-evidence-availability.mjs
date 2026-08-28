@@ -6,28 +6,23 @@ let model = fs.readFileSync(modelPath, 'utf8');
 let att = fs.readFileSync(attPath, 'utf8');
 
 function replaceRequired(source, from, to, label) {
-  if (source.includes(to)) return source;
-  if (!source.includes(from)) throw new Error(`[jade-evidence] Missing anchor: ${label}`);
-  return source.replace(from, to);
+  const normalizedSource = source.replace(/\r\n/g, "\n");
+  if (normalizedSource.includes(to)) return source;
+  if (!normalizedSource.includes(from)) throw new Error(`[jade-evidence] Missing anchor: ${label}`);
+  const eol = source.includes("\r\n") ? "\r\n" : "\n";
+  return source.replace(from.replaceAll("\n", eol), to.replaceAll("\n", eol));
 }
 
-// Latest official evidence available to this model is the July 24 correction:
-// the mistakenly displayed Frequent Ballistic and Light/Heavy+derived rows were
-// corrected to Charged and Special, while the former two were explicitly still
-// missing from the Attunement pool. Preserve their semantic families for legacy /
-// intended-design compatibility, but do not advertise them as currently obtainable.
-model = replaceRequired(
-  model,
-  "'vernal-high-frequency-ballistic': { id:'vernal-high-frequency-ballistic', activeAtT96:true, provenance:PROVENANCE.CONFIRMED_OFFICIAL,",
-  "'vernal-high-frequency-ballistic': { id:'vernal-high-frequency-ballistic', activeAtT96:false, availability:'OFFICIAL_POOL_FIX_PENDING', provenance:PROVENANCE.CONFIRMED_OFFICIAL,",
-  'Frequent Ballistic current availability',
-);
-model = replaceRequired(
-  model,
-  "'vernal-light-heavy-derived': { id:'vernal-light-heavy-derived', activeAtT96:true, provenance:PROVENANCE.CONFIRMED_OFFICIAL,",
-  "'vernal-light-heavy-derived': { id:'vernal-light-heavy-derived', activeAtT96:false, availability:'OFFICIAL_POOL_FIX_PENDING', provenance:PROVENANCE.CONFIRMED_OFFICIAL,",
-  'Light/Heavy derived current availability',
-);
+// Global 2.1 makes the intended T96 pool current. Special and Charged are
+// legacy identities only; the model must resolve each saved row to one canonical
+// Frequent Projectile family without inventing a coefficient.
+const legacyFamilies = `  'vernal-high-frequency-ballistic': { id:'vernal-high-frequency-ballistic', activeAtT96:true, provenance:PROVENANCE.CONFIRMED_OFFICIAL, displayAliases:['Vernal Umbrella Frequent Ballistic DMG Boost','Vernal Umbrella Frequent Projectile DMG Boost','Frequent Ballistic DMG Boost','Frequent Projectile DMG Boost'], legacyAliases:[], covers:['spring-away','unfading-flower'] },
+  'vernal-special': { id:'vernal-special', activeAtT96:true, provenance:PROVENANCE.CONFIRMED_OFFICIAL, displayAliases:['Vernal Umbrella Special Skill DMG Boost','Special Skill Damage Boost'], legacyAliases:['Ninefold Spring: Special Skill DMG Bonus'], covers:['unfading-flower'] },
+  'vernal-charged': { id:'vernal-charged', activeAtT96:true, provenance:PROVENANCE.CONFIRMED_OFFICIAL, displayAliases:['Vernal Umbrella Charged Skill DMG Boost','Charged Skill Damage Boost'], legacyAliases:[], covers:['spring-away'] },
+  'vernal-light-heavy-derived': { id:'vernal-light-heavy-derived', activeAtT96:true, provenance:PROVENANCE.CONFIRMED_OFFICIAL, displayAliases:['Vernal Umbrella Light/Heavy Attack & Varied Combo DMG Boost','Vernal Umbrella Light/Heavy Follow-up DMG Boost','Light/Heavy Attack & Varied Combo DMG Boost'], legacyAliases:[], covers:['umbrella-light','umbrella-heavy-light'] },`;
+const currentFamilies = `  'vernal-frequent-projectile': { id:'vernal-frequent-projectile', activeAtT96:true, provenance:PROVENANCE.CONFIRMED_OFFICIAL, displayAliases:['Vernal Umbrella Frequent Projectile DMG Boost','Frequent Projectile DMG Boost'], legacyAliases:['Vernal Umbrella Frequent Ballistic DMG Boost','Frequent Ballistic DMG Boost','Vernal Umbrella Special Skill DMG Boost','Special Skill Damage Boost','Ninefold Spring: Special Skill DMG Bonus','Vernal Umbrella Charged Skill DMG Boost','Charged Skill Damage Boost'], covers:['spring-away','unfading-flower'] },
+  'vernal-light-heavy-derived': { id:'vernal-light-heavy-derived', activeAtT96:true, provenance:PROVENANCE.CONFIRMED_OFFICIAL, displayAliases:['Vernal Umbrella Light/Heavy Attack & Varied Combo DMG Boost','Vernal Umbrella Light/Heavy Follow-up DMG Boost','Light/Heavy Attack & Varied Combo DMG Boost'], legacyAliases:[], covers:['umbrella-light','umbrella-heavy-light'] },`;
+model = replaceRequired(model, legacyFamilies, currentFamilies, 'Global 2.1 Vernal Attunement families');
 
 // Account for the official 1.7 Forsaken Fame change without fabricating a base
 // coefficient. The +45% PvE modifier and Endurance recovery are recorded in the
@@ -46,20 +41,18 @@ model = replaceRequired(
   'Forsaken Fame official multiplier',
 );
 
-// The manual current-T96 Attunement selector must expose only the families that
-// official July 24 evidence supports as actually present. Semantic resolution of
-// the other two remains in the Jade path model for non-destructive saved data.
-const unavailableCurrentRows = [
-  '  { id: "vernal-high-frequency-ballistic", family: "umbrella", statKey: "Vernal Frequent Ballistic DMG Boost", weaponName: "Vernal Umbrella", aliases: ["vernal umbrella frequent ballistic dmg boost", "vernal umbrella frequent projectile dmg boost", "frequent ballistic dmg boost", "frequent projectile dmg boost"], displayName: "Vernal Umbrella — Frequent Ballistic DMG Boost" },\n',
-  '  { id: "vernal-light-heavy-derived", family: "umbrella", statKey: "Vernal Light Heavy Derived DMG Boost", weaponName: "Vernal Umbrella", aliases: ["vernal umbrella light heavy attack varied combo dmg boost", "vernal umbrella light heavy follow up dmg boost", "light heavy attack varied combo dmg boost"], displayName: "Vernal Umbrella — Light/Heavy + Derived DMG Boost" },\n',
-];
-for (const row of unavailableCurrentRows) att = att.replace(row, '');
+// Earlier generated states can still carry the old current selector rows. They
+// are removed here; aliases in the canonical row preserve imports and saved data.
+for (const id of ['vernal-high-frequency-ballistic', 'vernal-special-t96', 'vernal-charged-t96']) {
+  att = att.replace(new RegExp(`  \\{ id: "${id}",[^\\n]*\\n`, 'g'), '');
+}
 
-if (!model.includes("activeAtT96:false, availability:'OFFICIAL_POOL_FIX_PENDING'")) throw new Error('[jade-evidence] Availability correction missing.');
+if (!model.includes("'vernal-frequent-projectile': { id:'vernal-frequent-projectile', activeAtT96:true")) throw new Error('[jade-evidence] Global 2.1 Frequent Projectile contract missing.');
+if (model.includes('OFFICIAL_POOL_FIX_PENDING')) throw new Error('[jade-evidence] Superseded pool-pending availability remains.');
 if (!model.includes("'forsaken-fame'")) throw new Error('[jade-evidence] Forsaken Fame contract missing.');
-if (att.includes('id: "vernal-high-frequency-ballistic"') || att.includes('id: "vernal-light-heavy-derived"')) throw new Error('[jade-evidence] Unavailable T96 rows still exposed in current selector.');
-if (!att.includes('id: "vernal-special-t96"') || !att.includes('id: "vernal-charged-t96"')) throw new Error('[jade-evidence] Current Special/Charged rows missing.');
+if (!att.includes('id: "vernal-frequent-projectile"') || !att.includes('id: "vernal-light-heavy-derived"')) throw new Error('[jade-evidence] Current Global 2.1 selector rows missing.');
+if (att.includes('id: "vernal-high-frequency-ballistic"') || att.includes('id: "vernal-special-t96"') || att.includes('id: "vernal-charged-t96"')) throw new Error('[jade-evidence] Legacy Vernal rows still exposed in current selector.');
 
 fs.writeFileSync(modelPath, model, 'utf8');
 fs.writeFileSync(attPath, att, 'utf8');
-console.log('[jade-evidence] PASS — current T96 Attunement availability follows July 24 evidence; Forsaken Fame 1.7 effect is explicitly accounted for without fabricated base damage.');
+console.log('[jade-evidence] PASS — Global 2.1 exposes Frequent Projectile and Light/Heavy current families; legacy Special/Charged resolve through aliases without fabricated coefficients.');

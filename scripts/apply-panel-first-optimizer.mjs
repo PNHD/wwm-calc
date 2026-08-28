@@ -10,18 +10,30 @@ const read = (path) => fs.readFileSync(path, "utf8");
 const write = (path, content) => fs.writeFileSync(path, content, "utf8");
 
 function replaceRequired(source, from, to, label) {
-  if (source.includes(to)) return source;
-  if (!source.includes(from)) throw new Error(`[panel-first] Missing patch anchor: ${label}`);
-  return source.replace(from, to);
+  const normalizedSource = source.replace(/\r\n/g, "\n");
+  if (normalizedSource.includes(to)) return source;
+  if (!normalizedSource.includes(from)) throw new Error(`[panel-first] Missing patch anchor: ${label}`);
+  const eol = source.includes("\r\n") ? "\r\n" : "\n";
+  return source.replace(from.replaceAll("\n", eol), to.replaceAll("\n", eol));
 }
 
 function replaceRegexRequired(source, pattern, to, label) {
-  if (typeof to === "string" && source.includes(to)) return source;
-  if (!pattern.test(source)) throw new Error(`[panel-first] Missing regex anchor: ${label}`);
-  return source.replace(pattern, to);
+  const normalizedSource = source.replace(/\r\n/g, "\n");
+  if (typeof to === "string" && normalizedSource.includes(to)) return source;
+  const eolPattern = new RegExp(pattern.source.replaceAll("\\n", "\\r?\\n"), pattern.flags);
+  if (!eolPattern.test(source)) throw new Error(`[panel-first] Missing regex anchor: ${label}`);
+  const eol = source.includes("\r\n") ? "\r\n" : "\n";
+  return source.replace(eolPattern, typeof to === "string" ? to.replaceAll("\n", eol) : to);
 }
 
 let app = read(files.app);
+const panelFirstAlreadyApplied = app.includes("PANEL_MODEL_VERSION")
+  && app.includes("const compareRotationTime = getRotationTimeForBuild(selectedBuild);")
+  && read(files.scorer).includes("const overall = modeledContribution * 0.85 + buildFit * 0.15;");
+if (panelFirstAlreadyApplied) {
+  console.log("[panel-first] Already applied; preserving downstream product transforms.");
+  process.exit(0);
+}
 app = replaceRequired(
   app,
   'import { SPEEDRUN_BOSSES, SPEEDRUN_PLAYBOOK } from "./data/speedrunGuide";',

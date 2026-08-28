@@ -4,9 +4,11 @@ const path = "src/utils/ocrParser.ts";
 let source = fs.readFileSync(path, "utf8");
 
 function replaceRequired(from, to, label) {
-  if (source.includes(to)) return;
-  if (!source.includes(from)) throw new Error(`[ocr-regression] Missing anchor: ${label}`);
-  source = source.replace(from, to);
+  const normalizedSource = source.replace(/\r\n/g, "\n");
+  if (normalizedSource.includes(to)) return;
+  if (!normalizedSource.includes(from)) throw new Error(`[ocr-regression] Missing anchor: ${label}`);
+  const eol = source.includes("\r\n") ? "\r\n" : "\n";
+  source = source.replace(from.replaceAll("\n", eol), to.replaceAll("\n", eol));
 }
 
 replaceRequired(

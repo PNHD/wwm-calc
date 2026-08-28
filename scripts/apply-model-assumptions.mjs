@@ -4,11 +4,14 @@ const path = "src/App.tsx";
 let source = fs.readFileSync(path, "utf8");
 
 function replaceRegexRequired(pattern, replacement, label) {
-  if (!pattern.test(source)) {
-    if (source.includes(replacement)) return;
+  const normalizedSource = source.replace(/\r\n/g, "\n");
+  if (typeof replacement === "string" && normalizedSource.includes(replacement)) return;
+  const eolPattern = new RegExp(pattern.source.replaceAll("\\n", "\\r?\\n"), pattern.flags);
+  if (!eolPattern.test(source)) {
     throw new Error(`[model-assumptions] Missing regex anchor: ${label}`);
   }
-  source = source.replace(pattern, replacement);
+  const eol = source.includes("\r\n") ? "\r\n" : "\n";
+  source = source.replace(eolPattern, typeof replacement === "string" ? replacement.replaceAll("\n", eol) : replacement);
 }
 
 function addTierFoodProps(componentName) {

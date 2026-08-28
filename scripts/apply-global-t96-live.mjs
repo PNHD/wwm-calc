@@ -16,9 +16,14 @@ function write(path, content) {
 }
 
 function replaceRequired(source, from, to, label) {
-  if (source.includes(to)) return source;
-  if (!source.includes(from)) throw new Error(`[global-t96-live] Missing patch anchor: ${label}`);
-  return source.replace(from, to);
+  const normalizedSource = source.replace(/\r\n/g, "\n");
+  if (normalizedSource.includes(to)) return source;
+  if (label === "arsenal T96 score" && normalizedSource.includes("scoreGlobalT96Gear(item.subs, selectedBuild, contribution, item.slot)")) return source;
+  if (label === "arsenal row score fields" && normalizedSource.includes("gearOrigin?: string;")) return source;
+  if (label === "score explanation panel" && (normalizedSource.includes("Roll quality N/A (Relaid cap needed)") || normalizedSource.includes("Roll diagnostic N/A"))) return source;
+  if (!normalizedSource.includes(from)) throw new Error(`[global-t96-live] Missing patch anchor: ${label}`);
+  const eol = source.includes("\r\n") ? "\r\n" : "\n";
+  return source.replace(from.replaceAll("\n", eol), to.replaceAll("\n", eol));
 }
 
 // User-provided Global screenshots prove that current Tier 96 uses the Lv100
@@ -28,6 +33,10 @@ function replaceRequired(source, from, to, label) {
 // - Attribute Penetration 22
 // - Attribute DMG Bonus 11%
 let calc = read(files.calc);
+calc = calc.replaceAll(
+  '  "405|0.65b": makeTier(t100U, 405, 26, 28, "Tier 96 / Lv100 Global 2.0", "Existing accepted T96 calibration fixture + Excel 各等级模板: 100上", false, 131, 263, 120, 240, 150),',
+  '  "405|0.65b": makeTier(t100U, 405, 26, 28, "Tier 96 / Lv100 Global 2.1", "Existing accepted T96 calibration fixture + Excel 各等级模板: 100上", false, 131, 263, 120, 240, 150),',
+);
 calc = replaceRequired(
   calc,
   '  "350|0.45-t96": makeTier(t96, 350, 20, 24, "Tier 96 Global 2.0", "Excel 各等级模板: 95上 / Global 2.0", false),',
@@ -37,7 +46,7 @@ calc = replaceRequired(
 calc = replaceRequired(
   calc,
   '  "405|0.65b": makeTier(t100U, 405, 26, 28, "Tier 96 / Lv100 Upper CN Ref", "Excel 各等级模板: 100上", true, 131, 263, 120, 240, 150),',
-  '  "405|0.65b": makeTier(t100U, 405, 26, 28, "Tier 96 / Lv100 Global 2.0", "Global in-game calibration + Excel 各等级模板: 100上", false, 131, 263, 120, 240, 150),',
+  '  "405|0.65b": makeTier(t100U, 405, 26, 28, "Tier 96 / Lv100 Global 2.1", "Existing accepted T96 calibration fixture + Excel 各等级模板: 100上", false, 131, 263, 120, 240, 150),',
   "activate 100-upper Global tier",
 );
 calc = replaceRequired(
@@ -64,8 +73,8 @@ app = app.replaceAll('Nameless Sword (Tier 96 Grad +10)', 'Nameless Sword (Legac
 
 // Keep old graduation allocation/panel targets available, but make their legacy
 // status explicit. They are not used as verified T96 roll caps.
-app = app.replaceAll('GRAD95_COUNTS', 'LEGACY_GRAD95_COUNTS');
-app = app.replaceAll('GRAD95_PANEL', 'LEGACY_GRAD95_PANEL');
+app = app.replace(/\b(?:LEGACY_)*GRAD95_COUNTS\b/g, 'LEGACY_GRAD95_COUNTS');
+app = app.replace(/\b(?:LEGACY_)*GRAD95_PANEL\b/g, 'LEGACY_GRAD95_PANEL');
 app = app.replaceAll('ROLL_95', 'ROLL_T96');
 app = app.replaceAll('Max single-substat roll at 95下', 'Verified max single-substat roll at Global T96 / 100上');
 app = app.replaceAll('95下 max single-roll per gear substat', 'Global T96 / 100上 max single-roll per gear substat');
@@ -132,9 +141,12 @@ app = app.replaceAll(
   'Precision Rate. Base 65% not reduced by resist. Panel 116% → ~100% effective. Cap = 100%.',
   'Precision Rate. Effective = 65% + (panel − 65%) ÷ 1.65. About 122.8% panel reaches 100% at Global T96.',
 );
-app = app.replaceAll('Edition: Global (T91 now / T96 preview)', 'Edition: Global 2.0 · Tier 96');
-app = app.replaceAll('Global (T91 now / T96 preview)', 'Global 2.0 · Tier 96');
-app = app.replaceAll('General Theorycrafting Guide · T91 Global (http://spongem.com/yysls/)', 'General Theorycrafting Guide · T96 Global 2.0');
+app = app.replaceAll('Edition: Global (T91 now / T96 preview)', 'Edition: Global 2.1 · Tier 96');
+app = app.replaceAll('Edition: Global 2.0 · Tier 96', 'Edition: Global 2.1 · Tier 96');
+app = app.replaceAll('Global (T91 now / T96 preview)', 'Global 2.1 · Tier 96');
+app = app.replaceAll('Global 2.0 · Tier 96', 'Global 2.1 · Tier 96');
+app = app.replaceAll('General Theorycrafting Guide · T91 Global (http://spongem.com/yysls/)', 'General Theorycrafting Guide · T96 Global 2.1');
+app = app.replaceAll('General Theorycrafting Guide · T96 Global 2.0', 'General Theorycrafting Guide · T96 Global 2.1');
 app = app.replaceAll('e.g., 51.2% for T91', 'use the selected T96 boss resistance; exact dungeon caps remain encounter-specific');
 app = app.replaceAll(
   'Caps use the verified Global T91 graduated panel from the official sheet. Progress over 100% means you already exceed the target for that stat. Attribute tiles track gear substats.',
@@ -181,13 +193,9 @@ app = app.replaceAll(
   'score: scoreGlobalT96Gear(item.subs, selectedBuild, getGearItemCompareStats(item).totalGradDelta).overall,\n      dpsLoss,',
 );
 
-// Add an explicit observed preset without making it the graduation target.
-app = replaceRequired(
-  app,
-  '            <button type="button" onClick={() => setIsGameImportOpen(true)}>Import game</button>',
-  '            <button type="button" onClick={() => {\n              const now = Date.now();\n              const character: Character = {\n                id: `char-t96-${now}`,\n                name: GLOBAL_T96_OBSERVED_PRESET_META.name,\n                schemes: [{\n                  id: `scheme-t96-${now}`,\n                  name: GLOBAL_T96_OBSERVED_PRESET_META.scheme,\n                  panel: { ...GLOBAL_T96_OBSERVED_PANEL } as PanelStats,\n                  gear: GLOBAL_T96_OBSERVED_GEAR.map((item) => ({ ...item, subs: item.subs.map((sub) => ({ ...sub })) })) as GearItem[],\n                }],\n              };\n              const next = { ...charsData, chars: [...charsData.chars, character], activeCharId: character.id, activeSchemeId: character.schemes[0].id };\n              setCharsData(next);\n              setPanel({ ...GLOBAL_T96_OBSERVED_PANEL } as PanelStats);\n              setSelectedBuild(GLOBAL_T96_OBSERVED_PRESET_META.buildKey);\n              setTierKey(GLOBAL_T96_OBSERVED_PRESET_META.tierKey);\n              setSelectedInnerWays(["", "", "", ""]);\n              localStorage.setItem("wwm_chars_v3", JSON.stringify(next));\n            }}>Load observed T96</button>\n            <button type="button" onClick={() => setIsGameImportOpen(true)}>Import game</button>',
-  "observed preset action",
-);
+// The canonical observed preset action is authored by
+// apply-t96-menu-panel-contract.mjs. Do not inject a second, stale action here:
+// it would clear the observed Inner Ways and duplicate the accessible name.
 write(files.app, app);
 
 let arsenal = read(files.arsenal);
@@ -213,10 +221,14 @@ arsenal = arsenal.replaceAll('% graduation contribution', ' T96 gear score');
 write(files.arsenal, arsenal);
 
 let data = read(files.data);
+data = data.replaceAll(
+  '"extractedFor": "Where Winds Meet Global 2.0 — current Tier 96 uses column 100上; columns 95下/95上 remain legacy references",',
+  '"extractedFor": "Where Winds Meet Global 2.1 — current Tier 96 uses column 100上; columns 95下/95上 remain legacy references",',
+);
 data = replaceRequired(
   data,
   '"extractedFor": "Where Winds Meet Global 2.0 — Tier 96 current dataset (column 95上), with Tier 91 legacy comparison (95下)",',
-  '"extractedFor": "Where Winds Meet Global 2.0 — current Tier 96 uses column 100上; columns 95下/95上 remain legacy references",',
+  '"extractedFor": "Where Winds Meet Global 2.1 — current Tier 96 uses column 100上; columns 95下/95上 remain legacy references",',
   "data current tier metadata",
 );
 data = replaceRequired(

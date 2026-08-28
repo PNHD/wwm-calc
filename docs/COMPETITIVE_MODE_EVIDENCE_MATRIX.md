@@ -1,6 +1,6 @@
 # Competitive Mode Evidence Matrix
 
-Reviewed: 2026-08-18. Machine-readable source of truth: `src/competitive/competitive-v2.mjs` → `EVIDENCE_MATRIX`.
+Current Global 2.1 envelope reviewed through 2026-08-24. Machine-readable source of truth: `src/competitive/competitive-v2.mjs` → `EVIDENCE_MATRIX`.
 
 This document records the evidence hierarchy and the current Global claims used by Arena/Guild War V2. Earlier docs remain historical provenance; a conflicting earlier claim is superseded by this matrix rather than silently deleted.
 
@@ -20,7 +20,7 @@ This document records the evidence hierarchy and the current Global claims used 
 
 | ID | Mode | Current claim | State | Implementation |
 |---|---|---|---|---|
-| arena-battlegroups | Arena/GW | Yougu/Yunya/Canglang/Linhe/Jiangzhu mapping | CONFIRMED_OFFICIAL | encoded metadata |
+| arena-battlegroups | Arena/GW | May 8 publisher update added Linhe (US West), yielding Yougu/Yunya/Canglang/Linhe/Jiangzhu mapping | CONFIRMED_OFFICIAL | encoded metadata |
 | arena-1v1-247 | 1v1 | 24/7 | CONFIRMED_OFFICIAL | encoded |
 | arena-cross-server | Arena | toggle, timeout expansion, host-server behavior | CONFIRMED_OFFICIAL | encoded metadata |
 | arena-level-adjustment | 3v3/Group Strategy | Level Adjustment context exists; exact stat normalization unpublished | OFFICIAL_BUT_SCOPE_UNRESOLVED | UNKNOWN guard |
