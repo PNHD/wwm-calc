@@ -1,6 +1,8 @@
 # Competitive Mode Evidence Matrix
 
-Current Global 2.1 envelope reviewed through 2026-08-24. Machine-readable source of truth: `src/competitive/competitive-v2.mjs` → `EVIDENCE_MATRIX`.
+Accepted Global 2.1 calculator/competitive evidence is reviewed through 2026-08-24. Machine-readable source of truth: `src/competitive/competitive-v2.mjs` → `EVIDENCE_MATRIX`.
+
+Official game news was checked through 2026-09-02 as a freshness watch. This does not extend the accepted model-evidence cutoff: the post-cutoff news reviewed in that pass did not justify coefficient or model changes, and new content or skills are not automatically modeled. The P0 `UNKNOWN` facts below remain unresolved unless current-client evidence is supplied.
 
 This document records the evidence hierarchy and the current Global claims used by Arena/Guild War V2. Earlier docs remain historical provenance; a conflicting earlier claim is superseded by this matrix rather than silently deleted.
 

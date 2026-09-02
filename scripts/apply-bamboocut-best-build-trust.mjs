@@ -68,5 +68,5 @@ if (!normalizedApp.includes("bestBuildResult.slice(1, 3)")) throw new Error("[ba
 if (!normalizedApp.includes("Key tradeoffs: {bestTrust.tradeoffs}")) throw new Error("[bamboocut-best-trust] winner tradeoffs missing");
 if (!normalizedApp.includes("meta.confidence.label")) throw new Error("[bamboocut-best-trust] alternative confidence missing");
 
-fs.writeFileSync(path, app, "utf8");
+if (fs.readFileSync(path, "utf8") !== app) fs.writeFileSync(path, app, "utf8");
 console.log("[bamboocut-best-trust] PASS — Top 3 expose DPS delta, confidence, sets, Attunements and tradeoffs.");
