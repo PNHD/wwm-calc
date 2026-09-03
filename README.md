@@ -37,6 +37,8 @@ Game data is applied in this order:
 4. Observed player/dummy fixtures
 5. Community or CN references, never applied automatically when they conflict with Global
 
+The accepted Global 2.1 calculator evidence is reviewed through **2026-08-24**. Official game news was checked through **2026-09-02** as a freshness watch; that later check did not establish new calculator coefficients or resolve unsupported mechanics. New post-cutoff content, skills, events, or progression systems are not automatically modeled.
+
 A complete current Global T96 **Relaid Modulating cap table** has not been verified. Relaid items therefore show roll quality as **N/A** instead of being compared against an invented or stale cap.
 
 Relevant evidence and migration notes live under `docs/`, including:
