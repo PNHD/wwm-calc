@@ -4,6 +4,10 @@ Accepted Global 2.1 calculator/competitive evidence is reviewed through 2026-08-
 
 Official game news was checked through 2026-09-02 as a freshness watch. This does not extend the accepted model-evidence cutoff: the post-cutoff news reviewed in that pass did not justify coefficient or model changes, and new content or skills are not automatically modeled. The P0 `UNKNOWN` facts below remain unresolved unless current-client evidence is supplied.
 
+## September 3 current-Global intake
+
+`Bamboocut - Draught` is current Global content. `Skystrike Gauntlets` and `Riven Twinblades` are recognized current martial arts. Arena Season 4 is **Forge Ahead II** metadata only. Draught has no numerical mechanics in this model: current-client full martial-art/move descriptions, breakthrough or tier effects, relevant Inner Way and gear-set tooltips, and a clean combat parse if needed are required before DPS, graduation, ranking, or optimizer output can be modeled. The model-evidence cutoff remains 2026-08-24 and the official-news check remains 2026-09-02.
+
 This document records the evidence hierarchy and the current Global claims used by Arena/Guild War V2. Earlier docs remain historical provenance; a conflicting earlier claim is superseded by this matrix rather than silently deleted.
 
 ## Evidence states

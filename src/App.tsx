@@ -35,7 +35,7 @@ import {
   Crosshair,
 } from "lucide-react";
 import { PanelStats, TierConstants, RotationItem, SkillDefinition } from "./types";
-import { TIERS, calcSkill, calcBaseline, getRotationForBuild, getRotationTimeForBuild, SKILL_DB } from "./utils/calc";
+import { TIERS, calcSkill, calcBaseline, getRotationForBuild, getRotationTimeForBuild, SKILL_DB, UNMODELED_PATHS } from "./utils/calc";
 import { simulateRotation } from "./utils/timelineEngine";
 import { simulateTimeline, buildTimelineBuffs } from "./utils/rotationTimeline";
 import { previewSkill } from "./utils/skillPreview";
@@ -1473,6 +1473,7 @@ export default function App() {
     }
     return "bamboocut-dust";
   });
+  const selectedBuildIsUnmodeled = UNMODELED_PATHS.has(selectedBuild);
 
   useEffect(() => {
     localStorage.setItem("wwm_selected_build", selectedBuild);
@@ -3266,6 +3267,10 @@ export default function App() {
   const [bestBuildEta, setBestBuildEta] = useState<number | null>(null);
 
   const runBestBuild = async () => {
+    if (selectedBuildIsUnmodeled) {
+      setBestBuildResult(null);
+      return;
+    }
     setBestBuildRunning(true);
     setBestBuildResult(null);
     setBestBuildProgress(0);
@@ -4538,9 +4543,15 @@ export default function App() {
                 {Object.entries(BUILD_PROFILES).map(([key, b]) => (
                   <option key={key} value={key}>{b.label}{ESTIMATED_BUILDS.has(key) ? " (est.)" : ""}</option>
                 ))}
+                <option value="bamboocut-draught">Bamboocut - Draught (current Global · numerical model unavailable)</option>
               </select>
             </div>
           </div>
+          {selectedBuildIsUnmodeled && (
+            <div role="status" className="text-[12px] text-[#f0b400] mt-2">
+              Bamboocut - Draught is current Global content, but its numerical model is UNKNOWN. DPS, graduation, ranking, and optimizer recommendations are unavailable until current-client evidence is supplied: full martial-art and move tooltips, breakthrough/tier effects, relevant Inner Way and gear-set tooltips, and a clean combat parse if needed.
+            </div>
+          )}
           <button
             onClick={() => setCalibOpen(true)}
             className="secondary-btn workspace-build-group"
@@ -7225,7 +7236,9 @@ export default function App() {
                             Considers all <b>{getActiveGear().length} gear pieces</b> in this scheme, including unequipped inventory. Smaller pools are searched exactly; large pools use a full-pool beam search so no item is discarded before combination scoring.
                           </p>
                         </div>
-                        {!bestBuildRunning && (
+                        {selectedBuildIsUnmodeled ? (
+                          <div role="status" className="text-[12px] text-[#f0b400] mb-3">Best Build is unavailable: Bamboocut - Draught has no numerical model and cannot be ranked using another path's coefficients.</div>
+                        ) : !bestBuildRunning && (
                           <button onClick={runBestBuild} className="primary-btn" style={{ marginBottom: 12 }}>
                             {bestBuildResult ? "Re-run search" : "Find best build"}
                           </button>

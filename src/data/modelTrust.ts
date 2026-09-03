@@ -11,7 +11,7 @@ export const MODEL_EVIDENCE_LEVELS = [
 export type ModelEvidenceLevel = typeof MODEL_EVIDENCE_LEVELS[number];
 export type RecommendationConfidence = "HIGH" | "MEDIUM" | "CLOSE CALL" | "EXPERIMENTAL";
 export type BuildOwnership = "MY BUILD" | "REFERENCE BUILD" | "COMMUNITY BUILD";
-export type ModelMaturity = "CALIBRATED" | "MODELED" | "EXPERIMENTAL";
+export type ModelMaturity = "CALIBRATED" | "MODELED" | "EXPERIMENTAL" | "UNMODELED";
 
 export interface PathModelMaturity {
   pathKey: string;
@@ -23,6 +23,14 @@ export interface PathModelMaturity {
 }
 
 export const PATH_MODEL_MATURITY: Record<string, PathModelMaturity> = {
+  "bamboocut-draught": {
+    pathKey: "bamboocut-draught",
+    label: "Bamboocut - Draught",
+    ownership: "REFERENCE BUILD",
+    maturity: "UNMODELED",
+    evidence: ["OFFICIAL", "UNKNOWN"],
+    summary: "Current Global path recognized September 3. Skystrike Gauntlets and Riven Twinblades are known, but current-client mechanics are required before numerical modeling.",
+  },
   "bamboocut-dust": {
     pathKey: "bamboocut-dust",
     label: "Bamboocut-Dust",
