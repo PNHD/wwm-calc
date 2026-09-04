@@ -27,9 +27,24 @@ function replaceRegexRequired(source, pattern, to, label) {
 }
 
 let app = read(files.app);
-const panelFirstAlreadyApplied = app.includes("PANEL_MODEL_VERSION")
-  && app.includes("const compareRotationTime = getRotationTimeForBuild(selectedBuild);")
-  && read(files.scorer).includes("const overall = modeledContribution * 0.85 + buildFit * 0.15;");
+const normalizedApp = app.replace(/\r\n/g, "\n");
+const scorerSource = read(files.scorer).replace(/\r\n/g, "\n");
+const panelFirstAppInvariants = [
+  "power * GLOBAL_ATTRIBUTE_CONVERSIONS.power.minOuterPerPoint",
+  "momentum * GLOBAL_ATTRIBUTE_CONVERSIONS.momentum.affinityRatePerPoint",
+  "agility * GLOBAL_ATTRIBUTE_CONVERSIONS.agility.critRatePerPoint",
+  "s.panelModelVersion !== PANEL_MODEL_VERSION",
+  "panelModelVersion: PANEL_MODEL_VERSION",
+  "const candidateCombo = [",
+  "comboInCombat(candidateCombo)",
+  "const deltaDps = candidateDps - currentCompareDps;",
+];
+// Downstream product transforms may wrap nullable model inputs before they reach
+// the already-migrated comparison. Detect the panel-first result itself instead
+// of requiring the original pre-downstream call spelling.
+const panelFirstAlreadyApplied = panelFirstAppInvariants.every((invariant) => normalizedApp.includes(invariant))
+  && /const\s+compareRotationTime\s*=\s*(?:getRotationTimeForBuild|modeledDurationOrZero)\(\s*selectedBuild\s*\)\s*;/.test(normalizedApp)
+  && scorerSource.includes("const overall = modeledContribution * 0.85 + buildFit * 0.15;");
 if (panelFirstAlreadyApplied) {
   console.log("[panel-first] Already applied; preserving downstream product transforms.");
   process.exit(0);

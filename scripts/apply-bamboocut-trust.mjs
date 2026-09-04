@@ -11,6 +11,19 @@ const required = (from, to, label) => {
   const eol = app.includes("\r\n") ? "\r\n" : "\n";
   app = app.replace(from.replaceAll("\n", eol), to.replaceAll("\n", eol));
 };
+const requiredWithinComboInCombat = (from, to, label) => {
+  const normalized = normalizeEol(app);
+  const start = normalized.indexOf("  const comboInCombat = ");
+  const end = normalized.indexOf("\n  const gradRateForGearCombo = ", start);
+  if (start < 0 || end < 0) throw new Error(`[bamboocut-trust] Missing patch anchor: ${label}`);
+
+  const block = normalized.slice(start, end);
+  if (block.includes(to)) return;
+  if (!block.includes(from)) throw new Error(`[bamboocut-trust] Missing patch anchor: ${label}`);
+
+  const eol = app.includes("\r\n") ? "\r\n" : "\n";
+  app = `${normalized.slice(0, start)}${block.replace(from, to)}${normalized.slice(end)}`.replace(/\n/g, eol);
+};
 const requiredRegex = (re, to, label) => {
   const normalized = normalizeEol(app);
   if (typeof to === "string" && normalized.includes(to)) return;
@@ -59,9 +72,9 @@ required(
   '    (p as any).weaponStars = weaponSet === "stars";\n    if (diagnostics?.panelOverride) p = { ...p, ...diagnostics.panelOverride };\n\n    if (selectedBuild === "bamboocut-dust") {',
   "panel override hook",
 );
-required(
-  '      const buffs = buildTimelineBuffs(selectedInnerWays, innerWayTiers);\n      const window = getRotationTimeForBuild(selectedBuild);',
-  '      const buffs = buildTimelineBuffs(selectedInnerWays, innerWayTiers).filter((buff) => !diagnostics?.excludedBuffIds?.includes(buff.id));\n      const window = getRotationTimeForBuild(selectedBuild);',
+requiredWithinComboInCombat(
+  "      const buffs = buildTimelineBuffs(selectedInnerWays, innerWayTiers);",
+  "      const buffs = buildTimelineBuffs(selectedInnerWays, innerWayTiers).filter((buff) => !diagnostics?.excludedBuffIds?.includes(buff.id));",
   "conditional mechanic exclusion",
 );
 required(

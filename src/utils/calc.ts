@@ -2,6 +2,7 @@ import { PanelStats, TierConstants, SkillDefinition, RotationItem } from "../typ
 import { WWM_DATA } from "../data/wwmData";
 import { ClassConfig, SkillData } from "../data/referenceData";
 import { GLOBAL_V2_SKILL_OUTCOME_RULES } from "../data/globalV2CombatEvidence";
+import { isPathModeled } from "../data/pathCatalog";
 
 const t95 = WWM_DATA.tiers["95下"];
 const t96 = WWM_DATA.tiers["95上"];
@@ -403,12 +404,8 @@ export const ROTATION: RotationItem[] = [
 
 export const ROTATION_TIME = 60.0;
 
-// Current Global content can be known before its current-client mechanics are
-// modeled. These paths must never inherit a different path's rotation or DPS.
-export const UNMODELED_PATHS = new Set(["bamboocut-draught"]);
-
-export function getRotationForBuild(buildKey?: string): RotationItem[] {
-  if (buildKey && UNMODELED_PATHS.has(buildKey)) return [];
+export function getRotationForBuild(buildKey?: string): RotationItem[] | null {
+  if (!isPathModeled(buildKey)) return null;
   const cnClass = BUILD_MAP_TO_CHINESE[buildKey || "bamboocut-dust"] || "破竹尘";
   const cfg = ClassConfig.ROTATIONS[cnClass];
   if (cfg && cfg.rotation) {
@@ -417,8 +414,8 @@ export function getRotationForBuild(buildKey?: string): RotationItem[] {
   return ROTATION;
 }
 
-export function getRotationTimeForBuild(buildKey?: string): number {
-  if (buildKey && UNMODELED_PATHS.has(buildKey)) return 0;
+export function getRotationTimeForBuild(buildKey?: string): number | null {
+  if (!isPathModeled(buildKey)) return null;
   const cnClass = BUILD_MAP_TO_CHINESE[buildKey || "bamboocut-dust"] || "破竹尘";
   // Global training-dummy parses use a 60s comparison window.
   const GLOBAL_OVERRIDE_TIME: Record<string, number> = { "破竹尘": 60.0 };
@@ -713,9 +710,9 @@ function tierBaselineScale(tier: TierConstants): number {
   return outerScale * elemDmgScale * penScale;
 }
 
-export function calcBaseline(tier: TierConstants, buildKey?: string, _refPanel?: PanelStats): number {
+export function calcBaseline(tier: TierConstants, buildKey?: string, _refPanel?: PanelStats): number | null {
   const key = buildKey || "bamboocut-dust";
-  if (UNMODELED_PATHS.has(key)) return 0;
+  if (!isPathModeled(key)) return null;
   const dps = LEGACY_T91_GRAD_DPS[key] || LEGACY_T91_GRAD_DPS["bamboocut-dust"];
   // This remains an estimated benchmark until a verified Global T96 graduation
   // dataset is available. Never present it as an authoritative parse target.

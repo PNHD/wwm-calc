@@ -4,6 +4,10 @@ const path = "src/App.tsx";
 let app = fs.readFileSync(path, "utf8");
 
 const normalizeToLf = (value) => value.replace(/\r\n/g, "\n");
+const codeOnly = (value) => value
+  .replace(/\/\*[\s\S]*?\*\//g, "")
+  .replace(/\/\/[^\n]*/g, "");
+const count = (value, pattern) => [...value.matchAll(pattern)].length;
 
 const replaceRequired = (from, to, label) => {
   const normalizedApp = normalizeToLf(app);
@@ -22,7 +26,7 @@ const helperAnchor = `                          const pathMaturity = PATH_MODEL_
                           // Best Build recommendation confidence`;
 const helperBlock = `                          const pathMaturity = PATH_MODEL_MATURITY[selectedBuild];
                           const bestBuildTrustSummary = (entry: { gear: GearItem[]; rate: number }) => {
-                            const dps = entry.rate / 100 * baselineScore / getRotationTimeForBuild(selectedBuild);
+                            const dps = entry.rate / 100 * baselineScore / modeledDurationOrZero(selectedBuild);
                             const deltaPct = rotationStats.dps > 0 ? (dps - rotationStats.dps) / rotationStats.dps * 100 : 0;
                             const confidence = recommendationConfidence({ pathKey: selectedBuild, deltaPct, panelCalibrated: selectedBuild === "bamboocut-dust" || Boolean(activeScheme?.baseOverride), materialUnknowns: selectedBuild === "bamboocut-dust" ? BAMBOOCUT_MODEL_UNKNOWNS : [] });
                             const sets = detectSet4pc(entry.gear);
@@ -49,11 +53,13 @@ replaceRequired(
   "winner trust details",
 );
 
-replaceRequired(
-  `bestBuildResult.slice(1, 6).map((r, idx) => (`,
-  `bestBuildResult.slice(1, 3).map((r, idx) => (`,
-  "Top 3 result limit",
-);
+if (!normalizeToLf(app).includes(`bestBuildEntries.slice(1, 3).map((r, idx) => (`)) {
+  replaceRequired(
+    `bestBuildResult.slice(1, 6).map((r, idx) => (`,
+    `bestBuildEntries.slice(1, 3).map((r, idx) => (`,
+    "Top 3 result limit",
+  );
+}
 
 const alternativeName = `<span className="text-slate-300 truncate flex-1 px-2" title={r.gear.map(g => g.name).join(", ")}>{r.gear.map(g => g.name).join(" · ")}</span>`;
 const alternativeNameTrust = `<span className="text-slate-300 truncate flex-1 px-2" title={r.gear.map(g => g.name).join(", ")}>{r.gear.map(g => g.name).join(" · ")}<small className="block text-[9.5px] text-slate-500">{(() => { const meta = bestBuildTrustSummary(r); return \`Sets: \${meta.setLabel} · Attunements: \${meta.attunements} · Tradeoffs: \${meta.tradeoffs}\`; })()}</small></span>`;
@@ -63,10 +69,19 @@ const alternativeDps = `<span className="font-mono font-bold text-[#f0b400] mr-2
 const alternativeDpsTrust = `<span className="font-mono font-bold text-[#f0b400] mr-2">{Math.round(bestBuildTrustSummary(r).dps).toLocaleString()} DPS<small className="block text-[9.5px] text-slate-500 font-sans">{(() => { const meta = bestBuildTrustSummary(r); return \`\${meta.deltaPct >= 0 ? "+" : ""}\${meta.deltaPct.toFixed(2)}% · \${meta.confidence.label}\`; })()}</small></span>`;
 replaceRequired(alternativeDps, alternativeDpsTrust, "alternative DPS/confidence details");
 
-const normalizedApp = normalizeToLf(app);
-if (!normalizedApp.includes("bestBuildResult.slice(1, 3)")) throw new Error("[bamboocut-best-trust] Top 3 limit missing");
-if (!normalizedApp.includes("Key tradeoffs: {bestTrust.tradeoffs}")) throw new Error("[bamboocut-best-trust] winner tradeoffs missing");
-if (!normalizedApp.includes("meta.confidence.label")) throw new Error("[bamboocut-best-trust] alternative confidence missing");
+const executable = codeOnly(normalizeToLf(app));
+if (count(executable, /\bconst\s+bestBuildTrustSummary\s*=/g) !== 1) throw new Error("[bamboocut-best-trust] missing or duplicate Top 3 trust helper");
+const helperStart = executable.indexOf("const bestBuildTrustSummary");
+const helperEnd = executable.indexOf("const bestTrust =", helperStart);
+const helper = executable.slice(helperStart, helperEnd);
+for (const predicate of ["modeledDurationOrZero(selectedBuild)", "recommendationConfidence(", "detectSet4pc(entry.gear)", "entry.gear.map(attunementSummary)", "PANEL_COMPARE_FIELDS.map(", "dps, deltaPct, confidence, setLabel, attunements", "tradeoffs:"]) {
+  if (!helper.includes(predicate)) throw new Error(`[bamboocut-best-trust] incomplete trust helper: ${predicate}`);
+}
+if (helper.includes("getRotationTimeForBuild(selectedBuild)")) throw new Error("[bamboocut-best-trust] obsolete duration capability in trust helper");
+if (count(executable, /bestBuildEntries\.slice\(1,\s*3\)\.map\(/g) !== 1 || executable.includes("bestBuildResult.slice(")) throw new Error("[bamboocut-best-trust] invalid Top 3 result ownership or bound");
+for (const predicate of ["bestTrust.deltaPct", "bestTrust.confidence.label", "bestTrust.setLabel", "bestTrust.attunements", "bestTrust.tradeoffs", "bestBuildTrustSummary(r).dps", "meta.deltaPct", "meta.confidence.label", "meta.setLabel", "meta.attunements", "meta.tradeoffs"]) {
+  if (!executable.includes(predicate)) throw new Error(`[bamboocut-best-trust] missing trust presentation: ${predicate}`);
+}
 
 if (fs.readFileSync(path, "utf8") !== app) fs.writeFileSync(path, app, "utf8");
-console.log("[bamboocut-best-trust] PASS — Top 3 expose DPS delta, confidence, sets, Attunements and tradeoffs.");
+console.log("[bamboocut-best-trust] PASS — semantic Top 3 trust predicates verified.");

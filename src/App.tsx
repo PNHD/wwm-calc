@@ -35,7 +35,8 @@ import {
   Crosshair,
 } from "lucide-react";
 import { PanelStats, TierConstants, RotationItem, SkillDefinition } from "./types";
-import { TIERS, calcSkill, calcBaseline, getRotationForBuild, getRotationTimeForBuild, SKILL_DB, UNMODELED_PATHS } from "./utils/calc";
+import { TIERS, calcSkill, calcBaseline, getRotationForBuild, getRotationTimeForBuild, SKILL_DB } from "./utils/calc";
+import { canRenderBestBuildResult, createProductPathCatalog, getNumericalPathAvailability, isBestBuildEligible, isPathModeled } from "./data/pathCatalog";
 import { simulateRotation } from "./utils/timelineEngine";
 import { simulateTimeline, buildTimelineBuffs } from "./utils/rotationTimeline";
 import { previewSkill } from "./utils/skillPreview";
@@ -1473,10 +1474,24 @@ export default function App() {
     }
     return "bamboocut-dust";
   });
-  const selectedBuildIsUnmodeled = UNMODELED_PATHS.has(selectedBuild);
+  const numericalPathAvailability = getNumericalPathAvailability(selectedBuild);
+  const selectedBuildIsUnmodeled = !numericalPathAvailability.numericalModelAvailable;
+  // Legacy calculators remain mounted alongside the product workspaces.  They
+  // receive an empty input only after the capability boundary has made the
+  // product route unavailable; no numerical result is surfaced for that route.
+  const modeledRotationOrEmpty = (buildKey: string) => getRotationForBuild(buildKey) ?? [];
+  const modeledDurationOrZero = (buildKey: string) => getRotationTimeForBuild(buildKey) ?? 0;
+  const modeledBaselineOrZero = (tier: TierConstants, buildKey: string) => calcBaseline(tier, buildKey) ?? 0;
 
   useEffect(() => {
     localStorage.setItem("wwm_selected_build", selectedBuild);
+  }, [selectedBuild]);
+  useEffect(() => {
+    if (!isPathModeled(selectedBuild)) {
+      setActiveProductTab("settings");
+      setWorkspace("build");
+      setIsGradModalOpen(false);
+    }
   }, [selectedBuild]);
 
   const [innerWaysFilter, setInnerWaysFilter] = useState<"recommended" | "all">("recommended");
@@ -1665,7 +1680,7 @@ export default function App() {
 
   const computeTotalDamage = (p: PanelStats) => {
     let totalDmg = 0;
-    getRotationForBuild(selectedBuild).forEach((item) => {
+    modeledRotationOrEmpty(selectedBuild).forEach((item) => {
       const { total } = calcSkill(item, p, activeTier, {
         set: p.set || "gold",
         datang,
@@ -2268,7 +2283,7 @@ export default function App() {
     bitterSeasons: selectedInnerWays.includes("bitter_seasons"),
   }), [jadeScenarioOverrides, selectedInnerWays]);
   const getScenarioRotationForBuild = (buildKey: typeof selectedBuild) =>
-    getRotationForBuild(buildKey).filter((item) => cinderAsh || !["Divinecraft - Fire", "Fire - Solid Foundation"].includes(item.name));
+    modeledRotationOrEmpty(buildKey).filter((item) => cinderAsh || !["Divinecraft - Fire", "Fire - Solid Foundation"].includes(item.name));
   const [yishuiPen, setYishuiPen] = useState<boolean>(() => {
     const config = getCustomConfig();
     return config?.yishuiPen ?? true;
@@ -2800,14 +2815,14 @@ export default function App() {
   // 3. Baseline = authoritative T91/Lv95 graduated DPS per build, normalized by
   //    tier constants for preview/reference tiers. See calcBaseline / T91_GRAD_DPS.
   const baselineScore = useMemo(() => {
-    return calcBaseline(activeTier, selectedBuild);
+    return modeledBaselineOrZero(activeTier, selectedBuild);
   }, [activeTier, selectedBuild]);
 
   // 4. Compute rotation damage. Global T96 Bamboocut-Dust uses the same event
   // timeline as Gear Compare / Best Build so ranking and the displayed DPS cannot drift.
   const rotationStats = useMemo(() => {
     const rotation = getScenarioRotationForBuild(selectedBuild);
-    const window = getRotationTimeForBuild(selectedBuild);
+    const window = modeledDurationOrZero(selectedBuild);
     const comp = { crit: 0, aff: 0, normal: 0, abrasion: 0 };
 
     if (selectedBuild === "bamboocut-dust") {
@@ -2896,7 +2911,7 @@ export default function App() {
 
   // ── Skill Damage Preview (read-only): per-cast damage by outcome ────────────
   const skillPreview = useMemo(() => {
-    return getRotationForBuild(selectedBuild).map(item => {
+    return modeledRotationOrEmpty(selectedBuild).map(item => {
       const { sim } = calcSkill(item, adjustedPanel, activeTier, {
         set: adjustedPanel.set, datang, yishui, buildKey: selectedBuild,
         weaponStars: (adjustedPanel as any).weaponStars,
@@ -2936,7 +2951,7 @@ export default function App() {
   // Reset the variant selection when the build changes.
   useEffect(() => { setGuideVariant(""); }, [selectedBuild]);
 
-  const effectiveRotation = editedRotation ?? getRotationForBuild(selectedBuild);
+  const effectiveRotation = editedRotation ?? modeledRotationOrEmpty(selectedBuild);
   const buildRotationPresets = rotationPresets[selectedBuild] ?? [];
   const saveRotationPreset = () => {
     const name = prompt("Rotation preset name:");
@@ -2967,14 +2982,14 @@ export default function App() {
   };
 
   const rotationSim = useMemo(() => {
-    const rotation = editedRotation ?? getRotationForBuild(selectedBuild);
+    const rotation = editedRotation ?? modeledRotationOrEmpty(selectedBuild);
     const opts = {
       set: adjustedPanel.set, datang, yishui,
       buildKey: selectedBuild,
       weaponStars: (adjustedPanel as any).weaponStars,
       armorSet: (adjustedPanel as any).armorSet,
     } as any;
-    return simulateRotation(rotation, adjustedPanel, activeTier, opts, getRotationTimeForBuild(selectedBuild));
+    return simulateRotation(rotation, adjustedPanel, activeTier, opts, modeledDurationOrZero(selectedBuild));
   }, [editedRotation, adjustedPanel, activeTier, datang, yishui, selectedBuild]);
 
   // ── Buff-uptime timeline simulator ───────────────────────────────────────────
@@ -2989,7 +3004,7 @@ export default function App() {
     // its abilities have a priced T91-Global equivalent, so pricing it directly
     // under-counts (partial mapping) — it is surfaced read-only in DPS Compare, not
     // used to drive DPS here. An explicit edit always wins.
-    const rotation = editedRotation ?? getRotationForBuild(selectedBuild);
+    const rotation = editedRotation ?? modeledRotationOrEmpty(selectedBuild);
     const simBase: PanelStats = { ...adjustedPanel };
     const d = iwStats;
     simBase.outerPen -= d.outerPen; simBase.pzPen -= d.pzPen; simBase.crit -= d.crit;
@@ -3005,12 +3020,12 @@ export default function App() {
       weaponStars: (adjustedPanel as any).weaponStars,
       armorSet: (adjustedPanel as any).armorSet,
     } as any;
-    return simulateTimeline(rotation, simBase, buffs, activeTier, opts, getRotationTimeForBuild(selectedBuild), timingOverrides);
+    return simulateTimeline(rotation, simBase, buffs, activeTier, opts, modeledDurationOrZero(selectedBuild), timingOverrides);
   }, [editedRotation, adjustedPanel, iwStats, selectedInnerWays, innerWayTiers, activeTier, datang, yishui, selectedBuild, timingOverrides]);
 
   // Seed from the build default on first edit, then mutate a copy.
   const editRotation = (mutate: (r: RotationItem[]) => RotationItem[]) =>
-    setEditedRotation(prev => mutate((prev ?? getRotationForBuild(selectedBuild)).map(it => ({ ...it }))));
+    setEditedRotation(prev => mutate((prev ?? modeledRotationOrEmpty(selectedBuild)).map(it => ({ ...it }))));
   const setSkillCount = (i: number, count: number) =>
     editRotation(r => { r[i] = { ...r[i], count: Math.max(0, count) }; return r; });
   const removeSkill = (i: number) =>
@@ -3026,7 +3041,7 @@ export default function App() {
   // a later phase).
   const buildSkillNames = useMemo(() => {
     const seen = new Set<string>(); const out: string[] = [];
-    for (const it of getRotationForBuild(selectedBuild)) if (!seen.has(it.name)) { seen.add(it.name); out.push(it.name); }
+    for (const it of modeledRotationOrEmpty(selectedBuild)) if (!seen.has(it.name)) { seen.add(it.name); out.push(it.name); }
     return out;
   }, [selectedBuild]);
 
@@ -3061,7 +3076,7 @@ export default function App() {
   const [addSkillName, setAddSkillName] = useState<string>("");
   const addSkillToRotation = (name: string) => {
     if (!name) return;
-    const tmpl = getRotationForBuild(selectedBuild).find(it => it.name === name);
+    const tmpl = modeledRotationOrEmpty(selectedBuild).find(it => it.name === name);
     const item: RotationItem = tmpl ? { ...tmpl } : { name, count: 1, isDingyin: false, generalBonus: 0, yishui: 0, tiaozhan: 1 };
     editRotation(r => { r.push(item); return r; });
   };
@@ -3073,7 +3088,7 @@ export default function App() {
     if (selectedInnerWays.length === 0) return [];
     const rotate = (panel: PanelStats) => {
       let t = 0;
-      getRotationForBuild(selectedBuild).forEach(item => {
+      modeledRotationOrEmpty(selectedBuild).forEach(item => {
         t += calcSkill(item, panel, activeTier, {
           set: (panel as any).set, datang, yishui, buildKey: selectedBuild,
           weaponStars: (panel as any).weaponStars,
@@ -3083,7 +3098,7 @@ export default function App() {
       return t;
     };
     const baseTotal = rotationStats.totalDmg;
-    const rotTime = getRotationTimeForBuild(selectedBuild);
+    const rotTime = modeledDurationOrZero(selectedBuild);
     const list = selectedInnerWays.map(id => {
       const iw = INNER_WAYS.find(it => it.id === id);
       const tierNum = innerWayTiers[id] ?? 6;
@@ -3181,9 +3196,9 @@ export default function App() {
     if (selectedBuild === "bamboocut-dust") {
       p.iwGeneralDmg = 0; p.iwOuterPen = 0; p.iwPzPen = 0; p.iwPzDmg = 0;
       const buffs = buildTimelineBuffs(selectedInnerWays, innerWayTiers).filter((buff) => !diagnostics?.excludedBuffIds?.includes(buff.id));
-      const window = getRotationTimeForBuild(selectedBuild);
+      const window = modeledDurationOrZero(selectedBuild);
       const timelineResult = simulateTimeline(
-        getRotationForBuild(selectedBuild),
+        modeledRotationOrEmpty(selectedBuild),
         p,
         buffs,
         activeTier,
@@ -3207,7 +3222,7 @@ export default function App() {
     p.outerDmg += iwStats.outerDmg; p.pzDmg += iwStats.pzDmg; p.iwGeneralDmg = iwStats.generalDmg;
     p.prec += iwStats.prec; p.minOuter += iwStats.minOuter; p.maxOuter += iwStats.maxOuter;
     let totalDmg = 0;
-    getRotationForBuild(selectedBuild).forEach(item => {
+    modeledRotationOrEmpty(selectedBuild).forEach(item => {
       totalDmg += calcSkill(item, p, activeTier, { set: p.set, datang, yishui, buildKey: selectedBuild, weaponStars: (p as any).weaponStars, armorSet: (p as any).armorSet } as any).total;
     });
     return { total: totalDmg, crit: p.crit };
@@ -3224,26 +3239,26 @@ export default function App() {
   const bestRingForCombo = (combo: GearItem[]) => {
     let best = RING_OPTS[0]; let bestTotal = -Infinity;
     for (const option of RING_OPTS) { const total = comboInCombat(combo, option.key).total; if (total > bestTotal) { best = option; bestTotal = total; } }
-    return { ...best, dps: bestTotal / getRotationTimeForBuild(selectedBuild), current: best.key === bowSelect };
+    return { ...best, dps: bestTotal / modeledDurationOrZero(selectedBuild), current: best.key === bowSelect };
   };
   const gearContrib = useMemo(() => {
     const all = getActiveGear(); const equipped = all.filter((item) => isItemEquipped(item, all));
-    const base = comboInCombat(equipped).total; const duration = getRotationTimeForBuild(selectedBuild);
+    const base = comboInCombat(equipped).total; const duration = modeledDurationOrZero(selectedBuild);
     return equipped.map((item) => { const reduced = comboInCombat(equipped.filter((other) => other !== item)).total; return { slot: item.slot, name: item.name, lossDps: (base - reduced) / duration, lossPct: base ? (base - reduced) / base * 100 : 0 }; }).sort((a, b) => b.lossDps - a.lossDps);
   }, [activeScheme?.gear, panel, food, bowSelect, iwStats, activeTier, datang, yishui, selectedBuild, baselineScore, jadeObjective, jadeScenario]);
   const bowCompare = useMemo(() => {
-    const all = getActiveGear(); const equipped = all.filter((item) => isItemEquipped(item, all)); const duration = getRotationTimeForBuild(selectedBuild);
+    const all = getActiveGear(); const equipped = all.filter((item) => isItemEquipped(item, all)); const duration = modeledDurationOrZero(selectedBuild);
     const current = comboInCombat(equipped, bowSelect).total / duration;
     return [...RING_OPTS, { key: "none", label: "None" }].map((option) => { const dps = comboInCombat(equipped, option.key === "none" ? "" : option.key).total / duration; return { ...option, dps, delta: dps - current, active: option.key === bowSelect }; });
   }, [activeScheme?.gear, panel, food, bowSelect, iwStats, activeTier, datang, yishui, selectedBuild, jadeObjective, jadeScenario]);
   const armorSetCompare = useMemo(() => {
-    const current = (adjustedPanel.set as string) || "none"; const duration = getRotationTimeForBuild(selectedBuild);
+    const current = (adjustedPanel.set as string) || "none"; const duration = modeledDurationOrZero(selectedBuild);
     const sets = ["stars", "jadeware", "ivorybloom", "rainwhisper", "eaglerise", "swallowreturn", "shakenhill", "swallowcall", "mistwillow", "none"];
     const score = (key: string) => {
       const candidate: any = { ...adjustedPanel, set: key, weaponStars: key === "stars" };
       const remove = (ARMOR_SETS as any)[current]?.stat2pc || {}; const add = (ARMOR_SETS as any)[key]?.stat2pc || {};
       for (const stat in remove) candidate[stat] = (candidate[stat] || 0) - remove[stat]; for (const stat in add) candidate[stat] = (candidate[stat] || 0) + add[stat];
-      return getRotationForBuild(selectedBuild).reduce((total, item) => total + calcSkill(item, candidate, activeTier, { set: key, datang, yishui, buildKey: selectedBuild, weaponStars: candidate.weaponStars, armorSet: (candidate as any).armorSet } as any).total, 0) / duration;
+      return modeledRotationOrEmpty(selectedBuild).reduce((total, item) => total + calcSkill(item, candidate, activeTier, { set: key, datang, yishui, buildKey: selectedBuild, weaponStars: candidate.weaponStars, armorSet: (candidate as any).armorSet } as any).total, 0) / duration;
     };
     const baseline = score(current); return sets.map((key) => { const dps = score(key); return { key, name: (ARMOR_SETS as any)[key]?.name || key, dps, delta: dps - baseline, active: key === current, modeled: key === "none" || key !== "mistwillow" }; }).sort((a, b) => b.dps - a.dps);
   }, [adjustedPanel, activeTier, datang, yishui, selectedBuild]);
@@ -3253,24 +3268,40 @@ export default function App() {
     return SLOTS.map((slot) => ({ slot: slot.name, mainStat: BIS_STAT_LABELS[SLOT_MAIN_STAT[slot.name]] || SLOT_MAIN_STAT[slot.name], subPriority }));
   }, [cultivateClass]);
   const runSimulation = () => {
-    const runs = Math.max(1, Math.min(2000, Math.round(simRuns) || 100)); const duration = getRotationTimeForBuild(selectedBuild);
-    const skills = getRotationForBuild(selectedBuild).map((item) => calcSkill(item, adjustedPanel, activeTier, { set: adjustedPanel.set, datang, yishui, buildKey: selectedBuild, weaponStars: (adjustedPanel as any).weaponStars } as any).sim);
+    const runs = Math.max(1, Math.min(2000, Math.round(simRuns) || 100)); const duration = modeledDurationOrZero(selectedBuild);
+    const skills = modeledRotationOrEmpty(selectedBuild).map((item) => calcSkill(item, adjustedPanel, activeTier, { set: adjustedPanel.set, datang, yishui, buildKey: selectedBuild, weaponStars: (adjustedPanel as any).weaponStars } as any).sim);
     const totals: number[] = []; let hits = 0; let damage = 0; const outcomes = { crit: [0, 0], aff: [0, 0], normal: [0, 0], abrasion: [0, 0] };
     for (let run = 0; run < runs; run++) { let total = 0; for (const skill of skills) for (let cast = 0; cast < skill.casts; cast++) { const roll = Math.random(); const outcome = roll < skill.pCrit ? "crit" : roll < skill.pCrit + skill.pAff ? "aff" : roll < skill.pCrit + skill.pAff + skill.pGraze ? "abrasion" : "normal"; const value = outcome === "crit" ? skill.critHit : outcome === "aff" ? skill.affHit : outcome === "abrasion" ? skill.grazeHit : skill.normHit; total += value; hits++; damage += value; outcomes[outcome][0]++; outcomes[outcome][1] += value; } totals.push(total); }
     totals.sort((a, b) => a - b); const percentile = (fraction: number) => totals[Math.min(totals.length - 1, Math.floor(fraction * totals.length))]; const mean = totals.reduce((sum, value) => sum + value, 0) / runs; const expected = rotationStats.totalDmg || 1; const percent = (value: number, denominator: number) => denominator ? value / denominator * 100 : 0;
     setSimResult({ runs, hitsPerRun: Math.round(hits / runs), duration, expectedDps: expected / duration, avgDps: mean / duration, bestDps: totals.at(-1)! / duration, worstDps: totals[0] / duration, p25: percentile(.25) / duration, p50: percentile(.5) / duration, p75: percentile(.75) / duration, diffPct: (mean - expected) / expected * 100, rangePct: percent((totals.at(-1)! - totals[0]) / 2, mean), dist: Object.fromEntries(Object.entries(outcomes).map(([key, [count, total]]) => [key, { hit: percent(count, hits), dmg: percent(total, damage) }])) });
   };
 
-  const [bestBuildResult, setBestBuildResult] = useState<{ rate: number; gear: GearItem[] }[] | null>(null);
+  const [bestBuildResult, setBestBuildResult] = useState<{ pathKey: string; entries: { rate: number; gear: GearItem[] }[] } | null>(null);
   const [bestBuildRunning, setBestBuildRunning] = useState(false);
   const [bestBuildProgress, setBestBuildProgress] = useState(0);
   const [bestBuildEta, setBestBuildEta] = useState<number | null>(null);
+  const bestBuildRequestId = useRef(0);
+
+  useEffect(() => {
+    bestBuildRequestId.current += 1;
+    if (!isBestBuildEligible(selectedBuild)) {
+      setBestBuildResult(null);
+      setBestBuildRunning(false);
+      setBestBuildProgress(0);
+      setBestBuildEta(null);
+    }
+  }, [selectedBuild]);
+  const bestBuildEntries = canRenderBestBuildResult(selectedBuild, bestBuildResult?.pathKey)
+    ? bestBuildResult?.entries ?? null
+    : null;
 
   const runBestBuild = async () => {
-    if (selectedBuildIsUnmodeled) {
+    if (!isBestBuildEligible(selectedBuild)) {
       setBestBuildResult(null);
       return;
     }
+    const requestPathKey = selectedBuild;
+    const requestId = ++bestBuildRequestId.current;
     setBestBuildRunning(true);
     setBestBuildResult(null);
     setBestBuildProgress(0);
@@ -3289,10 +3320,12 @@ export default function App() {
     const missingSlots = SLOT_ORDER.filter((slot) => bySlot[slot].length === 0);
     if (missingSlots.length) {
       console.warn("[best-build] No valid complete build: missing " + missingSlots.join(", "));
-      setBestBuildResult([]);
-      setBestBuildProgress(100);
-      setBestBuildEta(null);
-      setBestBuildRunning(false);
+        if (bestBuildRequestId.current === requestId && selectedBuild === requestPathKey) {
+          setBestBuildResult({ pathKey: requestPathKey, entries: [] });
+          setBestBuildProgress(100);
+          setBestBuildEta(null);
+          setBestBuildRunning(false);
+        }
       return;
     }
 
@@ -3349,10 +3382,12 @@ export default function App() {
       }
       top.push(...beam.slice(0, 10));
     }
-    setBestBuildProgress(100);
-    setBestBuildEta(null);
-    setBestBuildResult(top);
-    setBestBuildRunning(false);
+    if (bestBuildRequestId.current === requestId && selectedBuild === requestPathKey) {
+      setBestBuildProgress(100);
+      setBestBuildEta(null);
+      setBestBuildResult({ pathKey: requestPathKey, entries: top });
+      setBestBuildRunning(false);
+    }
   };
 
   // 5. Live Stat Priority: % graduation gain/loss per substat roll, computed against the CURRENT panel
@@ -3423,7 +3458,7 @@ export default function App() {
             armorSet: (p as any).armorSet ?? (adjustedPanel as any).armorSet,
             starweaveDistanceBonusPct,
           } as any,
-          getRotationTimeForBuild(selectedBuild),
+          modeledDurationOrZero(selectedBuild),
         ).total;
       }
 
@@ -3454,7 +3489,7 @@ export default function App() {
 
     const baseGrad = rotationStats.gradRate;
     const baseTotal = rotationStats.totalDmg;
-    const rotTime = getRotationTimeForBuild(selectedBuild);
+    const rotTime = modeledDurationOrZero(selectedBuild);
 
     const rows = STAT_ROLLS.map(({ key, label, roll, unit }) => {
       const cur = adjustedPanel[key] as number;
@@ -3485,7 +3520,7 @@ export default function App() {
     profPanel.iwPzDmg = iwStats.pzDmg;
 
     let totalDmg = 0;
-    getRotationForBuild(buildKey).forEach((item) => {
+    modeledRotationOrEmpty(buildKey).forEach((item) => {
       const { total } = calcSkill(item, profPanel, activeTier, {
         set: profPanel.set || "gold",
         datang,
@@ -3495,8 +3530,8 @@ export default function App() {
       totalDmg += total;
     });
 
-    const dps = totalDmg / getRotationTimeForBuild(buildKey);
-    const gradRate = (totalDmg / calcBaseline(activeTier, buildKey)) * 100;
+    const dps = totalDmg / modeledDurationOrZero(buildKey);
+    const gradRate = (totalDmg / modeledBaselineOrZero(activeTier, buildKey)) * 100;
 
     return {
       dps,
@@ -3649,7 +3684,7 @@ export default function App() {
       return left.name.localeCompare(right.name);
     });
   const equippedGear = activeGear.filter((item) => isItemEquipped(item, activeGear));
-  const compareRotationTime = getRotationTimeForBuild(selectedBuild);
+  const compareRotationTime = modeledDurationOrZero(selectedBuild);
   const currentCompareCombat = comboInCombat(equippedGear);
   const currentCompareDps = compareRotationTime > 0 ? currentCompareCombat.total / compareRotationTime : 0;
   const menuPanelForCombo = (combo: GearItem[]) => {
@@ -3878,7 +3913,7 @@ export default function App() {
 
   const gearAnalysis = equippedGear.map((item) => {
     const removedRate = gradRateForGearCombo(equippedGear.filter((candidate) => candidate.id !== item.id));
-    const removedDps = removedRate / 100 * baselineScore / getRotationTimeForBuild(selectedBuild);
+    const removedDps = removedRate / 100 * baselineScore / modeledDurationOrZero(selectedBuild);
     const dpsLoss = Math.max(0, rotationStats.dps - removedDps);
     return {
       slot: getSlotLabel(item.slot),
@@ -3889,16 +3924,11 @@ export default function App() {
       lossPct: rotationStats.dps ? dpsLoss / rotationStats.dps * 100 : 0,
     };
   }).sort((left, right) => right.dpsLoss - left.dpsLoss);
-  const buildOptions = Object.entries(BUILD_PROFILES).map(([id, build]) => ({
-    id,
-    label: build.label,
-    weapons: build.weapons,
-    tier: build.tier,
-    estimated: ESTIMATED_BUILDS.has(id),
-  }));
+  const buildOptions = createProductPathCatalog(BUILD_PROFILES, ESTIMATED_BUILDS);
+  const selectedProductPath = buildOptions.find((path) => path.id === selectedBuild);
   const innerWayOptions = [...INNER_WAYS]
     .sort((left, right) => {
-      const category = BUILD_PROFILES[selectedBuild as keyof typeof BUILD_PROFILES].label.toUpperCase();
+      const category = selectedProductPath?.label.toUpperCase() ?? "";
       return Number(right.cat === category) - Number(left.cat === category) || left.name.localeCompare(right.name);
     })
     .map((innerWay) => ({
@@ -3936,6 +3966,12 @@ export default function App() {
     { label: `Net ${innerAttrName(selectedBuild)} Penetration`, menu: "-", combat: fmtCombatStat(netPzPen, true), derived: true },
   ];
   const openProductTab = (tab: ProductTab) => {
+    if (selectedBuildIsUnmodeled && tab !== "settings" && tab !== "profile") {
+      setActiveProductTab("settings");
+      setWorkspace("build");
+      setIsGradModalOpen(false);
+      return;
+    }
     setActiveProductTab(tab);
     setIsGradModalOpen(false);
     setIsSimOpen(false);
@@ -4047,10 +4083,10 @@ export default function App() {
         )}
         context={{
           tier: activeTier.name,
-          build: BUILD_PROFILES[selectedBuild as keyof typeof BUILD_PROFILES]?.label ?? selectedBuild,
+          build: selectedProductPath?.label ?? selectedBuild,
           scheme: activeScheme?.name ?? "Scheme",
           innerWays: selectedInnerWays.filter(Boolean).length,
-          estimate: Math.round(rotationStats.dps).toLocaleString(),
+          estimate: selectedBuildIsUnmodeled ? "UNKNOWN" : Math.round(rotationStats.dps).toLocaleString(),
         }}
       />
 
@@ -4110,7 +4146,9 @@ export default function App() {
         <BuildWorkspace
           builds={buildOptions}
           selectedBuild={selectedBuild}
-          buildNotes={BUILD_PROFILES[selectedBuild as keyof typeof BUILD_PROFILES].notes}
+          buildNotes={selectedBuildIsUnmodeled
+            ? "Current Global path recognized. Numerical model unavailable / UNKNOWN."
+            : BUILD_PROFILES[selectedBuild as keyof typeof BUILD_PROFILES]?.notes ?? "Modeled profile metadata unavailable."}
           weaponSet={setAllWeapon}
           armorSet={setAllArmor}
           weaponSets={WEAPON_SET_KEYS.map((id) => ({ id, label: getSetName(id) }))}
@@ -4128,7 +4166,14 @@ export default function App() {
           equipped={arsenalRows.filter((item) => item.equipped).map((item) => ({ slot: item.slotLabel, name: item.name, image: item.image }))}
           innerWays={selectedInnerWayViews}
           innerWayOptions={innerWayOptions}
-          onBuildChange={setSelectedBuild}
+          onBuildChange={(pathKey) => {
+            setSelectedBuild(pathKey);
+            if (!isPathModeled(pathKey)) {
+              setActiveProductTab("settings");
+              setWorkspace("build");
+              setIsGradModalOpen(false);
+            }
+          }}
           onWeaponSetChange={setSetAllWeapon}
           onArmorSetChange={setSetAllArmor}
           onApplySets={applySetToAll}
@@ -4159,7 +4204,7 @@ export default function App() {
           modeled={rotationStats.dps * dpsEff}
           totalDamage={rotationStats.totalDmg}
           graduation={rotationStats.gradRate}
-          duration={getRotationTimeForBuild(selectedBuild)}
+          duration={modeledDurationOrZero(selectedBuild)}
           efficiency={dpsEff}
           food={food}
               foodMin={activeTier.foodMin}
@@ -4540,10 +4585,9 @@ export default function App() {
                 id="class-select"
                 title="Select build path"
               >
-                {Object.entries(BUILD_PROFILES).map(([key, b]) => (
-                  <option key={key} value={key}>{b.label}{ESTIMATED_BUILDS.has(key) ? " (est.)" : ""}</option>
+                {buildOptions.map((build) => (
+                  <option key={build.id} value={build.id}>{build.label}{build.estimated ? " (est.)" : ""}{build.capability === "UNMODELED" ? " (numerical model unavailable)" : ""}</option>
                 ))}
-                <option value="bamboocut-draught">Bamboocut - Draught (current Global · numerical model unavailable)</option>
               </select>
             </div>
           </div>
@@ -5540,7 +5584,7 @@ export default function App() {
                   {/* Tab Panes */}
                   {gradModalActiveTab === "rotations" && (() => {
                     const buildLabel = (BUILD_PROFILES as any)[selectedBuild]?.label || selectedBuild;
-                    const rotWindow = getRotationTimeForBuild(selectedBuild);
+                    const rotWindow = modeledDurationOrZero(selectedBuild);
                     const bd = rotationSim.breakdown;
                     const bdTot = (bd.crit + bd.aff + bd.normal + bd.abrasion) || 1;
                     const dDps = rotationSim.dps - rotationStats.dps;
@@ -5555,7 +5599,7 @@ export default function App() {
                         </p>
                       </div>
                       <div className="analysis-file-actions" aria-label="Manage rotation">
-                        <button type="button" onClick={() => setEditedRotation(getRotationForBuild(selectedBuild).map((item) => ({ ...item })))}>Create custom rotation</button>
+                        <button type="button" onClick={() => setEditedRotation(modeledRotationOrEmpty(selectedBuild).map((item) => ({ ...item })))}>Create custom rotation</button>
                         <label>Reference preset<select value={activeRotationPresetId} onChange={(event) => event.target.value ? useRotationPreset(event.target.value) : (setEditedRotation(null), setActiveRotationPresetId(""))}><option value="">Built-in reference</option>{buildRotationPresets.map((preset) => <option key={preset.id} value={preset.id}>{preset.name}</option>)}</select></label>
                         <button type="button" onClick={saveRotationPreset}>Save preset</button>
                         <button type="button" disabled={!activeRotationPresetId} onClick={renameRotationPreset}>Rename</button>
@@ -5577,7 +5621,7 @@ export default function App() {
                       {/* ── BUFF-UPTIME TIMELINE SIMULATOR ── */}
                       {(() => {
                         const ts = timelineSim;
-                        const win = getRotationTimeForBuild(selectedBuild);
+                        const win = modeledDurationOrZero(selectedBuild);
                         const SKILL_COLORS = ['#e05a41','#e0b45a','#4fb27c','#bd8fdb','#5f97c6','#4fc9c0','#d68f5f','#9ab04f','#c96b8f','#6b8fc9','#c9a84f','#4f9ec9'];
                         const colorOf = (name: string) => SKILL_COLORS[Math.abs([...name].reduce((a,c)=>a+c.charCodeAt(0),0)) % SKILL_COLORS.length];
                         const rampBuffs = ts.perBuff.filter(b => b.ramp);
@@ -5797,7 +5841,7 @@ export default function App() {
                     }
                     // App default DPS for the same inputs (sanity anchor).
                     const appTotal = computeTotalDamage(adjustedPanel);
-                    const appTime = getRotationTimeForBuild(selectedBuild);
+                    const appTime = modeledDurationOrZero(selectedBuild);
                     const appDps = appTime > 0 ? appTotal / appTime : 0;
                     const tiers = Object.keys(ROTATIONS_WWM[wwmKey]);
                     const opts = { set: adjustedPanel.set || "gold", datang, yishui };
@@ -6509,7 +6553,7 @@ export default function App() {
                 // like statPriorityList, so simulated upgrades read in real grad-%.
                 const gradForPanel = (p: PanelStats): number => {
                   let total = 0;
-                  getRotationForBuild(selectedBuild).forEach((item) => {
+                  modeledRotationOrEmpty(selectedBuild).forEach((item) => {
                     const { total: dmg } = calcSkill(item, p, activeTier, {
                       set: p.set || adjustedPanel.set,
                       datang, yishui, buildKey: selectedBuild,
@@ -7240,7 +7284,7 @@ export default function App() {
                           <div role="status" className="text-[12px] text-[#f0b400] mb-3">Best Build is unavailable: Bamboocut - Draught has no numerical model and cannot be ranked using another path's coefficients.</div>
                         ) : !bestBuildRunning && (
                           <button onClick={runBestBuild} className="primary-btn" style={{ marginBottom: 12 }}>
-                            {bestBuildResult ? "Re-run search" : "Find best build"}
+                            {bestBuildEntries ? "Re-run search" : "Find best build"}
                           </button>
                         )}
                         {bestBuildRunning && (
@@ -7257,14 +7301,14 @@ export default function App() {
                             <div className="text-[11px] text-slate-500 mt-1">Chunked search keeps the UI responsive while combinations are evaluated.</div>
                           </div>
                         )}
-                        {bestBuildResult && bestBuildResult.length > 0 && (() => {
-                          const best = bestBuildResult[0];
-                          const bestModeledDps = best ? best.rate / 100 * baselineScore / getRotationTimeForBuild(selectedBuild) : 0;
+                        {bestBuildEntries && bestBuildEntries.length > 0 && (() => {
+                          const best = bestBuildEntries[0];
+                          const bestModeledDps = best ? best.rate / 100 * baselineScore / modeledDurationOrZero(selectedBuild) : 0;
                           const bestDeltaPct = rotationStats.dps > 0 ? (bestModeledDps - rotationStats.dps) / rotationStats.dps * 100 : 0;
                           const bestConfidence = recommendationConfidence({ pathKey: selectedBuild, deltaPct: bestDeltaPct, panelCalibrated: selectedBuild === "bamboocut-dust" || Boolean(activeScheme?.baseOverride), materialUnknowns: selectedBuild === "bamboocut-dust" ? BAMBOOCUT_MODEL_UNKNOWNS : [] });
                           const pathMaturity = PATH_MODEL_MATURITY[selectedBuild];
                           const bestBuildTrustSummary = (entry: { gear: GearItem[]; rate: number }) => {
-                            const dps = entry.rate / 100 * baselineScore / getRotationTimeForBuild(selectedBuild);
+                            const dps = entry.rate / 100 * baselineScore / modeledDurationOrZero(selectedBuild);
                             const deltaPct = rotationStats.dps > 0 ? (dps - rotationStats.dps) / rotationStats.dps * 100 : 0;
                             const confidence = recommendationConfidence({ pathKey: selectedBuild, deltaPct, panelCalibrated: selectedBuild === "bamboocut-dust" || Boolean(activeScheme?.baseOverride), materialUnknowns: selectedBuild === "bamboocut-dust" ? BAMBOOCUT_MODEL_UNKNOWNS : [] });
                             const sets = detectSet4pc(entry.gear);
@@ -7322,11 +7366,11 @@ export default function App() {
                                   style={{ marginTop: 12 }}
                                 >Equip this build</button>
                               </div>
-                              {bestBuildResult.length > 1 && (
+                              {bestBuildEntries.length > 1 && (
                                 <div>
                                   <h4 className="text-[12px] font-bold text-slate-400 uppercase tracking-wide mb-2">Top alternatives</h4>
                                   <div className="space-y-1">
-                                    {bestBuildResult.slice(1, 3).map((r, idx) => (
+                                    {bestBuildEntries.slice(1, 3).map((r, idx) => (
                                       <div key={idx} className="flex items-center justify-between bg-[#1a1a1d]/40 border border-[#23262c] rounded px-3 py-1.5 text-[11.5px]">
                                         <span className="text-slate-400">#{idx + 2}</span>
                                         <span className="text-slate-300 truncate flex-1 px-2" title={r.gear.map(g => g.name).join(", ")}>{r.gear.map(g => g.name).join(" · ")}<small className="block text-[9.5px] text-slate-500">{(() => { const meta = bestBuildTrustSummary(r); return `Sets: ${meta.setLabel} · Attunements: ${meta.attunements} · Tradeoffs: ${meta.tradeoffs}`; })()}</small></span>
@@ -7344,7 +7388,7 @@ export default function App() {
                             </div>
                           );
                         })()}
-                        {bestBuildResult && bestBuildResult.length === 0 && (
+                        {bestBuildEntries && bestBuildEntries.length === 0 && (
                           <div className="text-slate-500 text-sm">No gear in the pool to search. Add gear via the 🛡 Gear tab.</div>
                         )}
                       </div>

@@ -1,7 +1,7 @@
 import { Check, Gauge, Search, Settings2, X } from "lucide-react";
 import { useState } from "react";
 
-interface BuildOption { id: string; label: string; weapons: string; tier: string; estimated: boolean }
+interface BuildOption { id: string; label: string; weapons: string; tier: string; estimated: boolean; capability: "MODELED" | "UNMODELED"; currentGlobal?: true }
 interface InnerWayOption { id: string; name: string; image?: string; category: string; trigger: string; effect: string; recommended: boolean }
 interface SelectedInnerWay extends InnerWayOption { tier: number }
 
@@ -44,7 +44,7 @@ interface BuildWorkspaceProps {
 export default function BuildWorkspace(props: BuildWorkspaceProps) {
   const [pickerIndex, setPickerIndex] = useState<number | null>(null);
   const [query, setQuery] = useState("");
-  const current = props.builds.find((build) => build.id === props.selectedBuild) ?? props.builds[0];
+  const current = props.builds.find((build) => build.id === props.selectedBuild);
   const pickerOptions = props.innerWayOptions.filter((option) => option.name.toLowerCase().includes(query.toLowerCase()));
   const foodMin = props.foodMin ?? 120;
   const foodMax = props.foodMax ?? 240;
@@ -73,9 +73,17 @@ export default function BuildWorkspace(props: BuildWorkspaceProps) {
 
         <div className="build-main-column">
           <section className="build-summary-band">
-            <div><small>Selected path</small><strong>{current.label}</strong><span>{current.weapons}</span></div>
+            <div><small>Selected path</small><strong>{current?.label ?? props.selectedBuild}</strong><span>{current?.weapons ?? "Path metadata unavailable"}</span></div>
             <p>{props.buildNotes}</p>
           </section>
+
+          {current?.capability === "UNMODELED" ? (
+            <section className="build-config-section" role="status">
+              <div className="product-section-heading"><div><h2>Numerical model unavailable</h2><p>This current-Global martial path is selectable, but no modeled rotation, duration, DPS, graduation, stat priority, gear simulation, ranking, or Best Build result is available.</p></div></div>
+              <p><strong>Best Build unavailable.</strong> It cannot be ranked using another path&apos;s coefficients.</p>
+              <p className="text-[12px] text-slate-400">Known recognition metadata: {current.weapons}. Numerical mechanics will remain UNKNOWN until current-client evidence is available.</p>
+            </section>
+          ) : <>
 
           <section className="build-config-section">
             <div className="product-section-heading"><div><h2>Combat settings</h2><p>Panel and target assumptions used by comparison and optimization.</p></div></div>
@@ -124,6 +132,7 @@ export default function BuildWorkspace(props: BuildWorkspaceProps) {
               ))}
             </div>
           </section>
+          </>}
         </div>
       </div>
       {pickerIndex !== null && (
