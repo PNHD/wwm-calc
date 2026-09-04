@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import { declarationsNamed, enclosingFunction, methodCallNamed, parseTsx, ts, visit } from "./source-invariant-ast.mjs";
 
 const files = {
   app: "src/App.tsx",
@@ -29,20 +30,42 @@ function replaceRegexRequired(source, pattern, to, label) {
 let app = read(files.app);
 const normalizedApp = app.replace(/\r\n/g, "\n");
 const scorerSource = read(files.scorer).replace(/\r\n/g, "\n");
+const hasExecutableReplacementComparison = (source) => {
+  const sourceFile = parseTsx(source);
+  const candidates = declarationsNamed(sourceFile, "candidateCombo");
+  if (candidates.length !== 1 || !ts.isArrayLiteralExpression(candidates[0].initializer)) return false;
+  const owner = enclosingFunction(candidates[0]);
+  if (!owner || !ts.isArrowFunction(owner) || !methodCallNamed(owner.parent, "map")) return false;
+  const replacement = candidates[0].initializer;
+  const hasSlotReplacement = replacement.elements.some((element) => ts.isSpreadElement(element)
+    && methodCallNamed(element.expression, "filter"))
+    && replacement.elements.some((element) => ts.isIdentifier(element) && element.text === "item");
+  const hasCandidateCombat = visit(owner.body, (node) => ts.isCallExpression(node)
+    && ts.isIdentifier(node.expression)
+    && node.expression.text === "comboInCombat"
+    && ts.isIdentifier(node.arguments[0])
+    && node.arguments[0].text === "candidateCombo");
+  const hasDelta = declarationsNamed(sourceFile, "deltaDps").some((declaration) => enclosingFunction(declaration) === owner
+    && ts.isBinaryExpression(declaration.initializer)
+    && declaration.initializer.operatorToken.kind === ts.SyntaxKind.MinusToken
+    && ts.isIdentifier(declaration.initializer.left)
+    && declaration.initializer.left.text === "candidateDps"
+    && ts.isIdentifier(declaration.initializer.right)
+    && declaration.initializer.right.text === "currentCompareDps");
+  return hasSlotReplacement && hasCandidateCombat && hasDelta;
+};
 const panelFirstAppInvariants = [
   "power * GLOBAL_ATTRIBUTE_CONVERSIONS.power.minOuterPerPoint",
   "momentum * GLOBAL_ATTRIBUTE_CONVERSIONS.momentum.affinityRatePerPoint",
   "agility * GLOBAL_ATTRIBUTE_CONVERSIONS.agility.critRatePerPoint",
   "s.panelModelVersion !== PANEL_MODEL_VERSION",
   "panelModelVersion: PANEL_MODEL_VERSION",
-  "const candidateCombo = [",
-  "comboInCombat(candidateCombo)",
-  "const deltaDps = candidateDps - currentCompareDps;",
 ];
 // Downstream product transforms may wrap nullable model inputs before they reach
 // the already-migrated comparison. Detect the panel-first result itself instead
 // of requiring the original pre-downstream call spelling.
 const panelFirstAlreadyApplied = panelFirstAppInvariants.every((invariant) => normalizedApp.includes(invariant))
+  && hasExecutableReplacementComparison(normalizedApp)
   && /const\s+compareRotationTime\s*=\s*(?:getRotationTimeForBuild|modeledDurationOrZero)\(\s*selectedBuild\s*\)\s*;/.test(normalizedApp)
   && scorerSource.includes("const overall = modeledContribution * 0.85 + buildFit * 0.15;");
 if (panelFirstAlreadyApplied) {

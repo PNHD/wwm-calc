@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import { declarationsNamed, methodCallNamed, parseTsx, ts } from "./source-invariant-ast.mjs";
 
 const path = "src/App.tsx";
 let source = fs.readFileSync(path, "utf8");
@@ -14,6 +15,25 @@ const replaceNormalized = (value, from, to, label) => {
 const importAnchor = 'import { SPEEDRUN_BOSSES, SPEEDRUN_PLAYBOOK } from "./data/speedrunGuide";';
 const compatibilityImport = 'import { validateGlobalT96GearLines } from "./data/globalT96GearCompatibility";';
 const requiredSlotOrder = 'const SLOT_ORDER = ["Umbrella", "Rope Dart", "Disc", "Pendant", "Helmet", "Chest", "Bracers", "Greaves"];';
+const hasExecutableValidGearFilter = (source) => {
+  const sourceFile = parseTsx(source);
+  const pools = declarationsNamed(sourceFile, "pool");
+  if (pools.length !== 1 || !methodCallNamed(pools[0].initializer, "filter")) return false;
+  const predicate = pools[0].initializer.arguments[0];
+  if (!predicate || !ts.isArrowFunction(predicate) || !ts.isBinaryExpression(predicate.body)) return false;
+  const { left, right, operatorToken } = predicate.body;
+  if (operatorToken.kind !== ts.SyntaxKind.EqualsEqualsEqualsToken || right.kind !== ts.SyntaxKind.NumericLiteral || right.text !== "0") return false;
+  if (!ts.isPropertyAccessExpression(left) || left.name.text !== "length") return false;
+  if (!ts.isPropertyAccessExpression(left.expression) || left.expression.name.text !== "errors") return false;
+  const validation = left.expression.expression;
+  return ts.isCallExpression(validation)
+    && ts.isIdentifier(validation.expression)
+    && validation.expression.text === "validateGlobalT96GearLines"
+    && validation.arguments.length === 2
+    && validation.arguments.every((argument) => ts.isPropertyAccessExpression(argument)
+      && ts.isIdentifier(argument.expression)
+      && argument.expression.text === "item");
+};
 const validityInvariants = (value) => {
   const normalized = normalizeEol(value);
   const requestGuard = "bestBuildRequestId.current === requestId && selectedBuild === requestPathKey";
@@ -24,7 +44,7 @@ const validityInvariants = (value) => {
     && normalized.includes("setBestBuildResult({ pathKey: requestPathKey, entries: top });");
   return {
     compatibilityImport: normalized.includes(compatibilityImport),
-    validGearFilter: normalized.includes("validateGlobalT96GearLines(item.slot, item.subs).errors.length === 0"),
+    validGearFilter: hasExecutableValidGearFilter(normalized),
     requiredSlotOrder: normalized.includes(requiredSlotOrder),
     completeSlotDetection: normalized.includes("const missingSlots = SLOT_ORDER.filter((slot) => bySlot[slot].length === 0);")
       && normalized.includes('console.warn("[best-build] No valid complete build: missing " + missingSlots.join(", "));'),

@@ -1,9 +1,28 @@
 import fs from "node:fs";
+import { declarationsNamed, enclosingFunction, methodCallNamed, parseTsx, propertyName, ts } from "./source-invariant-ast.mjs";
 
 const path = "src/App.tsx";
 let app = fs.readFileSync(path, "utf8");
 const normalizeEol = (value) => value.replace(/\r\n/g, "\n");
 const hasNormalized = (value, expected) => normalizeEol(value).includes(expected);
+const hasExecutableExcludedBuffFilter = (source) => {
+  const sourceFile = parseTsx(source);
+  const combos = declarationsNamed(sourceFile, "comboInCombat");
+  if (combos.length !== 1 || !ts.isArrowFunction(combos[0].initializer)) return false;
+  const buffs = declarationsNamed(sourceFile, "buffs").filter((declaration) => enclosingFunction(declaration) === combos[0].initializer);
+  if (buffs.length !== 1 || !methodCallNamed(buffs[0].initializer, "filter")) return false;
+  const predicate = buffs[0].initializer.arguments[0];
+  if (!predicate || !ts.isArrowFunction(predicate) || !ts.isPrefixUnaryExpression(predicate.body)
+    || predicate.body.operator !== ts.SyntaxKind.ExclamationToken || !methodCallNamed(predicate.body.operand, "includes")) return false;
+  const excluded = predicate.body.operand.expression;
+  const argument = predicate.body.operand.arguments[0];
+  return propertyName(excluded) === "includes"
+    && propertyName(excluded.expression) === "excludedBuffIds"
+    && ts.isPropertyAccessExpression(argument)
+    && ts.isIdentifier(argument.expression)
+    && argument.expression.text === "buff"
+    && argument.name.text === "id";
+};
 
 const required = (from, to, label) => {
   if (hasNormalized(app, to)) return;
@@ -18,7 +37,7 @@ const requiredWithinComboInCombat = (from, to, label) => {
   if (start < 0 || end < 0) throw new Error(`[bamboocut-trust] Missing patch anchor: ${label}`);
 
   const block = normalized.slice(start, end);
-  if (block.includes(to)) return;
+  if (hasExecutableExcludedBuffFilter(normalized)) return;
   if (!block.includes(from)) throw new Error(`[bamboocut-trust] Missing patch anchor: ${label}`);
 
   const eol = app.includes("\r\n") ? "\r\n" : "\n";

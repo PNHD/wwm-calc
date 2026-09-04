@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -18,6 +18,7 @@ const createFixture = async (generatorText, appText) => {
   await mkdir(path.join(fixture, "scripts"), { recursive: true });
   await mkdir(path.join(fixture, "src"), { recursive: true });
   await writeFile(path.join(fixture, "scripts", generatorName), generatorText, "utf8");
+  await copyFile(path.join(root, "scripts", "source-invariant-ast.mjs"), path.join(fixture, "scripts", "source-invariant-ast.mjs"));
   await writeFile(path.join(fixture, "src", "App.tsx"), appText, "utf8");
   return fixture;
 };
@@ -25,7 +26,7 @@ const createFixture = async (generatorText, appText) => {
 const runGenerator = (fixture) => spawnSync(
   process.execPath,
   [path.join(fixture, "scripts", generatorName)],
-  { cwd: fixture, encoding: "utf8" },
+  { cwd: fixture, encoding: "utf8", env: { ...process.env, WWM_SOURCE_INVARIANT_TYPESCRIPT_RESOLVER: path.join(root, "package.json") } },
 );
 
 const outputOf = (result) => `${result.stderr || ""}\n${result.stdout || ""}`;
@@ -87,7 +88,15 @@ try {
   assert.notEqual(misleading.status, 0, "unrelated excludedBuffIds text must not hide a corrupted real filter");
   assert.match(outputOf(misleading), /Missing patch anchor: conditional mechanic exclusion/, "misleading-token corruption must fail at the scoped invariant");
 
-  console.log("[bamboocut-trust-generator] PASS — reproduced the legacy RED anchor; current Draught source is two-run byte-idempotent; valid pre-transform filtering is repaired; misleading-token corruption fails closed; modeledDurationOrZero is preserved.");
+  const reviewerApp = currentApp.replace(
+    filteredBuffs,
+    "      const buffs = buildTimelineBuffs(selectedInnerWays, innerWayTiers).map((buff) => buff);\n      /*\n      const buffs = buildTimelineBuffs(selectedInnerWays, innerWayTiers).filter((buff) => !diagnostics?.excludedBuffIds?.includes(buff.id));\n      */",
+  );
+  const reviewerFixture = await createFixture(generatorText, reviewerApp);
+  fixtures.push(reviewerFixture);
+  assert.notEqual(runGenerator(reviewerFixture).status, 0, "an in-block comment must not satisfy the comboInCombat exclusion filter");
+
+  console.log("[bamboocut-trust-generator] PASS — current source is two-run byte-idempotent; valid pre-transform filtering is repaired; misleading-token and reviewer in-block-comment corruptions fail closed; modeledDurationOrZero is preserved.");
 } finally {
   await Promise.all(fixtures.map((fixture) => rm(fixture, { recursive: true, force: true })));
 }

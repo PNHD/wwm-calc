@@ -34,6 +34,7 @@ import GvgSharePrivacyPanel from "./GvgSharePrivacyPanel";
 import GvgSharedLanding from "./GvgSharedLanding";
 import LibraryWorkspace from "./LibraryWorkspace";
 import ModelAbout from "./ModelAbout"; // V1_MODEL_ABOUT_PRODUCT_SHELL
+import { getNumericalPathAvailability } from "../data/pathCatalog";
 import "./model-assumptions.css";
 import "./workspace-redesign.css";
 import "./workspaces/compare-v2.css";
@@ -125,7 +126,7 @@ interface ProductShellProps {
   onNavigate: (tab: ProductTab) => void;
   roleControl: ReactNode;
   actions: ReactNode;
-  context: { tier: string; build: string; scheme: string; innerWays: number; estimate: string };
+  context: { tier: string; build: string; pathKey: string; scheme: string; innerWays: number; estimate: string };
 }
 
 interface StoredShellState {
@@ -242,6 +243,7 @@ function PveOverview({ context, onNavigate, showOnboarding, onOpenLibrary }: {
   onOpenLibrary: (hash?: string) => void;
 }) {
   const completeInnerWays = context.innerWays >= 4;
+  const availability = getNumericalPathAvailability(context.pathKey);
   return (
     <main className="workspace-overview workspace-overview-pve" data-testid="pve-overview" id="main-content">
       <header className="workspace-overview-heading">
@@ -259,10 +261,10 @@ function PveOverview({ context, onNavigate, showOnboarding, onOpenLibrary }: {
 
       <div className="workspace-overview-grid">
         <section className="workspace-hero-card">
-          <div className="workspace-card-heading"><span>MY BUILD</span><b className="workspace-status-chip is-modeled">MODELED</b></div>
+          <div className="workspace-card-heading"><span>MY BUILD</span><b className={`workspace-status-chip ${availability.numericalModelAvailable ? "is-modeled" : "is-attention"}`}>{availability.capability}</b></div>
           <h2>{context.build}</h2>
           <p>{context.scheme}</p>
-          <div className="workspace-primary-metric"><small>Modeled DPS</small><strong>{context.estimate}<em>/s</em></strong></div>
+          <div className="workspace-primary-metric"><small>{availability.numericalModelAvailable ? "Modeled DPS" : "Numerical model"}</small><strong>{availability.numericalModelAvailable ? <>{context.estimate}<em>/s</em></> : "Unavailable"}</strong></div>
           <div className="workspace-inline-meta"><span>{context.tier}</span><span>{context.innerWays}/4 Inner Ways</span></div>
           <button type="button" className="workspace-text-action" onClick={() => onNavigate("build")}>Edit build configuration <ChevronRight size={14} /></button>
         </section>
@@ -287,7 +289,9 @@ function PveOverview({ context, onNavigate, showOnboarding, onOpenLibrary }: {
           <div className="workspace-card-heading"><span>NEXT ACTIONS</span></div>
           <button type="button" onClick={() => onOpenLibrary("#library/pve")}><span><strong>Compare with Reference</strong><small>Open a sourced build without changing My Build.</small></span><ChevronRight size={16} /></button>
           <button type="button" onClick={() => onNavigate("compare")}><span><strong>Compare a gear piece</strong><small>See the winner and why it wins.</small></span><ChevronRight size={16} /></button>
-          <button type="button" onClick={() => onNavigate("best-build")}><span><strong>Run Best Build</strong><small>Search complete combinations by modeled DPS.</small></span><ChevronRight size={16} /></button>
+          {availability.numericalModelAvailable
+            ? <button type="button" onClick={() => onNavigate("best-build")}><span><strong>Run Best Build</strong><small>Search complete combinations by modeled DPS.</small></span><ChevronRight size={16} /></button>
+            : <button type="button" disabled aria-label="Best Build unavailable: numerical model unavailable"><span><strong>Best Build unavailable</strong><small>Numerical model unavailable for this current Global path.</small></span></button>}
           <button type="button" onClick={() => onNavigate("gear")}><span><strong>Review weak slots</strong><small>Manage equipped gear and inventory.</small></span><ChevronRight size={16} /></button>
         </section>
       </div>
@@ -372,6 +376,7 @@ function PveInspector({ context, page, collapsed, onToggle, onNavigate }: {
   onNavigate: (view: PveView) => void;
 }) {
   if (page === "overview") return null;
+  const availability = getNumericalPathAvailability(context.pathKey);
   const next: Record<PveView, { label: string; view: PveView }> = {
     overview: { label: "Open Build", view: "build" }, build: { label: "Manage Gear", view: "gear" }, gear: { label: "Compare Candidate", view: "compare" }, compare: { label: "Run Best Build", view: "best-build" }, "best-build": { label: "Review Combat", view: "combat" }, combat: { label: "Open Simulation", view: "simulation" }, simulation: { label: "Review Rotations", view: "rotations" }, rotations: { label: "Open Simulation", view: "simulation" }, "skill-editor": { label: "Review Combat", view: "combat" }, team: { label: "Review Combat", view: "combat" }, profile: { label: "Back to Overview", view: "overview" },
   };
@@ -381,9 +386,11 @@ function PveInspector({ context, page, collapsed, onToggle, onNavigate }: {
       {!collapsed && <>
         <div className="workspace-inspector-label">CURRENT BUILD</div>
         <h2>{context.build}</h2><p>{context.scheme}</p>
-        <div className="workspace-inspector-metric"><small>Modeled DPS</small><strong>{context.estimate}<em>/s</em></strong><span className="workspace-status-chip is-modeled">MODELED</span></div>
+        <div className="workspace-inspector-metric"><small>{availability.numericalModelAvailable ? "Modeled DPS" : "Numerical model"}</small><strong>{availability.numericalModelAvailable ? <>{context.estimate}<em>/s</em></> : "Unavailable"}</strong><span className={`workspace-status-chip ${availability.numericalModelAvailable ? "is-modeled" : "is-attention"}`}>{availability.capability}</span></div>
         <dl><dt>Data</dt><dd>{context.tier}</dd><dt>Inner Ways</dt><dd>{context.innerWays}/4</dd><dt>Context</dt><dd>{page === "combat" ? "Menu + conditional combat" : page.replaceAll("-", " ")}</dd></dl>
-        <button type="button" className="workspace-primary-action" onClick={() => onNavigate(next[page].view)}>{next[page].label}<ChevronRight size={14} /></button>
+        {availability.numericalModelAvailable || next[page].view !== "best-build"
+          ? <button type="button" className="workspace-primary-action" onClick={() => onNavigate(next[page].view)}>{next[page].label}<ChevronRight size={14} /></button>
+          : <button type="button" className="workspace-primary-action" disabled aria-label="Best Build unavailable: numerical model unavailable">Best Build unavailable</button>}
         <details className="workspace-inspector-details"><summary>Evidence & assumptions</summary><p>Model, calibration and provenance details remain available in the relevant tool instead of occupying the primary decision surface.</p></details>
       </>}
     </aside>
@@ -528,7 +535,7 @@ export default function ProductShell({ active, onNavigate, roleControl, actions,
       {workspace !== "library" && <div className="workspace-context-bar">
         <button type="button" className="workspace-mobile-switch" onClick={() => switchWorkspace(workspace === "pve" ? "gvg" : "pve")}><span>{workspace === "pve" ? "PvE" : "Guild War"}</span><ChevronDown size={14} /></button>
         <span>{workspace === "pve" ? "PvE" : "Guild War"} <b>/</b> {workspace === "pve" ? pveTitle : gvgTitle}</span>
-        {workspace === "pve" && <section className="product-context" role="region" aria-label="Current build context"><span><small>Build</small><strong>{context.build}</strong></span><span><small>Inner Ways</small><strong>{context.innerWays}/4</strong></span><span className="product-context-metric"><small>Modeled DPS</small><strong>{context.estimate}/s</strong></span></section>}
+        {workspace === "pve" && <section className="product-context" role="region" aria-label="Current build context"><span><small>Build</small><strong>{context.build}</strong></span><span><small>Inner Ways</small><strong>{context.innerWays}/4</strong></span><span className="product-context-metric"><small>{getNumericalPathAvailability(context.pathKey).numericalModelAvailable ? "Modeled DPS" : "Numerical model"}</small><strong>{getNumericalPathAvailability(context.pathKey).numericalModelAvailable ? `${context.estimate}/s` : "Unavailable"}</strong></span></section>}
       </div>}
 
       {workspace === "pve" && <ContextNavigation label="PvE" primary={PVE_PRIMARY} secondary={PVE_SECONDARY} active={pveView} onNavigate={goPve} />}

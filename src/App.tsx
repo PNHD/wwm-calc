@@ -4084,6 +4084,7 @@ export default function App() {
         context={{
           tier: activeTier.name,
           build: selectedProductPath?.label ?? selectedBuild,
+          pathKey: selectedBuild,
           scheme: activeScheme?.name ?? "Scheme",
           innerWays: selectedInnerWays.filter(Boolean).length,
           estimate: selectedBuildIsUnmodeled ? "UNKNOWN" : Math.round(rotationStats.dps).toLocaleString(),

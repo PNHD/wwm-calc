@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import { callNamed, declarationsNamed, enclosingFunction, hasLiteralFalseAncestor, isDescendantOf, parseTsx, ts } from "./source-invariant-ast.mjs";
 
 const path = "src/App.tsx";
 let app = fs.readFileSync(path, "utf8");
@@ -8,6 +9,19 @@ const codeOnly = (value) => value
   .replace(/\/\*[\s\S]*?\*\//g, "")
   .replace(/\/\/[^\n]*/g, "");
 const count = (value, pattern) => [...value.matchAll(pattern)].length;
+const hasReachableOwnedTrustHelper = (source) => {
+  const sourceFile = parseTsx(source);
+  const helpers = declarationsNamed(sourceFile, "bestBuildTrustSummary");
+  if (helpers.length !== 1 || !ts.isArrowFunction(helpers[0].initializer) || hasLiteralFalseAncestor(helpers[0])) return false;
+  const owner = enclosingFunction(helpers[0]);
+  if (!owner || hasLiteralFalseAncestor(owner)) return false;
+  let uses = 0;
+  ts.forEachChild(owner.body, function walk(node) {
+    if (callNamed(node, "bestBuildTrustSummary") && isDescendantOf(node, owner) && !hasLiteralFalseAncestor(node)) uses += 1;
+    ts.forEachChild(node, walk);
+  });
+  return uses >= 2;
+};
 
 const replaceRequired = (from, to, label) => {
   const normalizedApp = normalizeToLf(app);
@@ -70,6 +84,7 @@ const alternativeDpsTrust = `<span className="font-mono font-bold text-[#f0b400]
 replaceRequired(alternativeDps, alternativeDpsTrust, "alternative DPS/confidence details");
 
 const executable = codeOnly(normalizeToLf(app));
+if (!hasReachableOwnedTrustHelper(normalizeToLf(app))) throw new Error("[bamboocut-best-trust] trust helper must be uniquely owned by the live Best Build scope");
 if (count(executable, /\bconst\s+bestBuildTrustSummary\s*=/g) !== 1) throw new Error("[bamboocut-best-trust] missing or duplicate Top 3 trust helper");
 const helperStart = executable.indexOf("const bestBuildTrustSummary");
 const helperEnd = executable.indexOf("const bestTrust =", helperStart);

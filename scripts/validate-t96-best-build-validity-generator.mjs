@@ -13,6 +13,7 @@ const createFixture = async () => {
   await mkdir(path.join(fixture, "scripts"), { recursive: true });
   await mkdir(path.join(fixture, "src"), { recursive: true });
   await copyFile(generatorPath, path.join(fixture, "scripts", generatorName));
+  await copyFile(path.join(root, "scripts", "source-invariant-ast.mjs"), path.join(fixture, "scripts", "source-invariant-ast.mjs"));
   await copyFile(path.join(root, "src", "App.tsx"), path.join(fixture, "src", "App.tsx"));
   return fixture;
 };
@@ -20,7 +21,7 @@ const createFixture = async () => {
 const runGenerator = (fixture) => spawnSync(
   process.execPath,
   [path.join(fixture, "scripts", generatorName)],
-  { cwd: fixture, encoding: "utf8" },
+  { cwd: fixture, encoding: "utf8", env: { ...process.env, WWM_SOURCE_INVARIANT_TYPESCRIPT_RESOLVER: path.join(root, "package.json") } },
 );
 
 const corruptions = [
@@ -28,6 +29,11 @@ const corruptions = [
     label: "valid-gear filter",
     from: "validateGlobalT96GearLines(item.slot, item.subs).errors.length === 0",
     to: "true /* corrupted valid-gear filter */",
+  },
+  {
+    label: "reviewer comment-only valid-gear filter",
+    from: "validateGlobalT96GearLines(item.slot, item.subs).errors.length === 0",
+    to: "true /* validateGlobalT96GearLines(item.slot, item.subs).errors.length === 0 */",
   },
   {
     label: "complete-slot handling",

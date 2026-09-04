@@ -17,7 +17,12 @@ function stabilizeV1RuntimeAcceptance() {
 
   const disclosureLegacy = `    const about = page.getByTestId("model-about");\n    await expect(about).toBeVisible();\n    await about.locator("summary").click();\n    await expect(about.getByText("WWM Calc V1.1", { exact: true })).toBeVisible();\n    await expect(about.getByRole("link", { name: /Report bad data/i })).toHaveAttribute("href", /github\\.com\\/PNHD\\/wwm-calc\\/issues\\/new/);`;
   const disclosureStable = `    const about = page.getByTestId("model-about");\n    const aboutHeading = about.getByText("WWM Calc V1.1", { exact: true });\n    await expect(about).toBeVisible();\n    if (await about.evaluate((element) => element.open)) {\n      await about.locator("summary").click();\n      await expect(aboutHeading).toBeHidden();\n    }\n    await about.locator("summary").click();\n    await expect(aboutHeading).toBeVisible();\n    await expect(about.getByRole("link", { name: /Report bad data/i })).toHaveAttribute("href", /github\\.com\\/PNHD\\/wwm-calc\\/issues\\/new/);`;
-  if (source.includes(disclosureLegacy)) source = source.replace(disclosureLegacy, disclosureStable);
+  const normalized = source.replace(/\r\n/g, "\n");
+  if (!normalized.includes(disclosureStable)) {
+    if (!normalized.includes(disclosureLegacy)) throw new Error("[v1-terminology] runtime About disclosure anchor missing");
+    const updated = normalized.replace(disclosureLegacy, disclosureStable);
+    source = source.includes("\r\n") ? updated.replace(/\n/g, "\r\n") : updated;
+  }
   fs.writeFileSync(path, source, "utf8");
 }
 

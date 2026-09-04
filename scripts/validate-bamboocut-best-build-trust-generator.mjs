@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
 const root = process.cwd(), name = "apply-bamboocut-best-build-trust.mjs", fixtures = [];
 const norm = (s) => s.replace(/\r\n/g, "\n");
-const fixture = async (generator, app) => { const dir = await mkdtemp(path.join(os.tmpdir(), "wwm-best-trust-")); fixtures.push(dir); await mkdir(path.join(dir, "scripts"), { recursive: true }); await mkdir(path.join(dir, "src"), { recursive: true }); await writeFile(path.join(dir, "scripts", name), generator); await writeFile(path.join(dir, "src", "App.tsx"), app); return dir; };
-const run = (dir) => spawnSync(process.execPath, [path.join(dir, "scripts", name)], { cwd: dir, encoding: "utf8" });
+const fixture = async (generator, app) => { const dir = await mkdtemp(path.join(os.tmpdir(), "wwm-best-trust-")); fixtures.push(dir); await mkdir(path.join(dir, "scripts"), { recursive: true }); await mkdir(path.join(dir, "src"), { recursive: true }); await writeFile(path.join(dir, "scripts", name), generator); await copyFile(path.join(root, "scripts", "source-invariant-ast.mjs"), path.join(dir, "scripts", "source-invariant-ast.mjs")); await writeFile(path.join(dir, "src", "App.tsx"), app); return dir; };
+const run = (dir) => spawnSync(process.execPath, [path.join(dir, "scripts", name)], { cwd: dir, encoding: "utf8", env: { ...process.env, WWM_SOURCE_INVARIANT_TYPESCRIPT_RESOLVER: path.join(root, "package.json") } });
 const fail = async (generator, app, label) => assert.notEqual(run(await fixture(generator, app)).status, 0, `${label} must fail closed`);
 
 try {
@@ -31,5 +31,8 @@ try {
   await fail(generator, current.replace("bestTrust.tradeoffs", "bestTrust.missingTradeoffs"), "missing winner metadata");
   await fail(generator, current.replace("meta.tradeoffs", "meta.missingTradeoffs"), "missing alternative metadata");
   await fail(generator, current.replace("bestTrust.tradeoffs", "bestTrust.missingTradeoffs // bestTrust.tradeoffs\n                          const misleading = 'bestBuildTrustSummary bestBuildEntries.slice(1, 3) meta.tradeoffs';"), "misleading tokens");
+  await fail(generator, current
+    .replace("                          const pathMaturity = PATH_MODEL_MATURITY[selectedBuild];", "                          if (false) {\n                          const pathMaturity = PATH_MODEL_MATURITY[selectedBuild];")
+    .replace("                          // Best Build recommendation confidence", "                          // Best Build recommendation confidence\n                          }"), "literal-unreachable helper");
   console.log("[bamboocut-best-build-trust-generator] PASS — RED, current/idempotency, legacy migration, ownership, and all fail-closed corruptions passed.");
 } finally { await Promise.all(fixtures.map((dir) => rm(dir, { recursive: true, force: true }))); }

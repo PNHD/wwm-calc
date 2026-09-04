@@ -16,6 +16,7 @@ const createFixture = async () => {
   const fixture = await mkdtemp(path.join(os.tmpdir(), "wwm-panel-first-generator-"));
   await mkdir(path.join(fixture, "scripts"), { recursive: true });
   await copyFile(generatorPath, path.join(fixture, "scripts", "apply-panel-first-optimizer.mjs"));
+  await copyFile(path.join(root, "scripts", "source-invariant-ast.mjs"), path.join(fixture, "scripts", "source-invariant-ast.mjs"));
   for (const relativePath of fixtureFiles) {
     const target = path.join(fixture, relativePath);
     await mkdir(path.dirname(target), { recursive: true });
@@ -27,7 +28,7 @@ const createFixture = async () => {
 const runGenerator = (fixture) => spawnSync(
   process.execPath,
   [path.join(fixture, "scripts", "apply-panel-first-optimizer.mjs")],
-  { cwd: fixture, encoding: "utf8" },
+  { cwd: fixture, encoding: "utf8", env: { ...process.env, WWM_SOURCE_INVARIANT_TYPESCRIPT_RESOLVER: path.join(root, "package.json") } },
 );
 
 const snapshot = async (fixture) => Object.fromEntries(await Promise.all(
@@ -71,7 +72,17 @@ try {
   assert.notEqual(rejected.status, 0, "generator must reject a transformed source missing a required panel-first invariant");
   assert.match(`${rejected.stderr}\n${rejected.stdout}`, /full replacement gear comparison/, "rejection must identify the unavailable required transform");
 
-  console.log("[panel-first-generator-regression] PASS — Draught-aware source is byte-idempotent across two runs and corrupted panel-first semantics fail closed.");
+  const reviewerFixture = await createFixture();
+  fixtures.push(reviewerFixture);
+  const reviewerAppPath = path.join(reviewerFixture, "src", "App.tsx");
+  const reviewerApp = (await readFile(reviewerAppPath, "utf8")).replace(
+    "const candidateCombo = [",
+    "const corruptedCandidateCombo = [ // const candidateCombo = [",
+  );
+  await writeFile(reviewerAppPath, reviewerApp, "utf8");
+  assert.notEqual(runGenerator(reviewerFixture).status, 0, "comment-only candidateCombo text must not satisfy the executable replacement invariant");
+
+  console.log("[panel-first-generator-regression] PASS — Draught-aware source is byte-idempotent; ordinary and reviewer comment-only candidateCombo corruptions fail closed.");
 } finally {
   await Promise.all(fixtures.map((fixture) => rm(fixture, { recursive: true, force: true })));
 }
