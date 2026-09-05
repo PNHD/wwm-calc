@@ -1,5 +1,16 @@
 import fs from "node:fs";
 
+function writePreservingEol(path, source) {
+  const original = fs.readFileSync(path, "utf8");
+  const eol = original.includes("\r\n") ? "\r\n" : "\n";
+  const hasFinalNewline = original.endsWith("\n") || original.endsWith("\r");
+  const normalized = source.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  const body = normalized.endsWith("\n") ? normalized.slice(0, -1) : normalized;
+  const output = `${body.replaceAll("\n", eol)}${hasFinalNewline ? eol : ""}`;
+  if (Buffer.from(original, "utf8").equals(Buffer.from(output, "utf8"))) return;
+  fs.writeFileSync(path, output, "utf8");
+}
+
 const path = "src/product/ProductShell.tsx";
 let source = fs.readFileSync(path, "utf8");
 const marker = 'aria-label="Open Arena workspace"';
@@ -159,7 +170,7 @@ if (!libraryTest.includes(weaponReplacement)) {
   if (!libraryTest.includes(weaponNeedle)) throw new Error("Arena migration: Library weapon-filter acceptance anchor not found");
   libraryTest = libraryTest.replace(weaponNeedle, weaponReplacement);
 }
-fs.writeFileSync(libraryTestPath, libraryTest, "utf8");
+writePreservingEol(libraryTestPath, libraryTest);
 console.log("Arena Library runtime acceptance contract applied");
 
 // Competitive V2 validator is chained through the already-authoritative Arena model

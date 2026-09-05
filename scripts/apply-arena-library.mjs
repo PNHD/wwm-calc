@@ -1,5 +1,16 @@
 import fs from "node:fs";
 
+function writePreservingEol(path, source) {
+  const original = fs.readFileSync(path, "utf8");
+  const eol = original.includes("\r\n") ? "\r\n" : "\n";
+  const hasFinalNewline = original.endsWith("\n") || original.endsWith("\r");
+  const normalized = source.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  const body = normalized.endsWith("\n") ? normalized.slice(0, -1) : normalized;
+  const output = `${body.replaceAll("\n", eol)}${hasFinalNewline ? eol : ""}`;
+  if (Buffer.from(original, "utf8").equals(Buffer.from(output, "utf8"))) return;
+  fs.writeFileSync(path, output, "utf8");
+}
+
 function patch(source, needle, replacement, label) {
   const normalized = source.replace(/\r\n/g, "\n");
   if (normalized.includes(replacement)) return source;
@@ -67,7 +78,7 @@ function patch(source, needle, replacement, label) {
     { ...base, id: "silkbind-jade-arena-ranged-control", title: "Silkbind-Jade Arena", subtitle: "Ranged / Control mechanic reference", path: "Silkbind-Jade", weapons: ["Vernal Umbrella", "Inkwell Fan"], arenaMode: "1v1", role: "Ranged Control", objective: "1v1 ranged matchup planning", tags: ["arena","1v1","ranged","control","mobility"], maturity: ["MODELED"], build: { path: "Silkbind-Jade", weapons: ["Vernal Umbrella", "Inkwell Fan"], confidence: "MODELED REFERENCE", scenario: "Global Version 2.0 Arena", gear: [], attunements: [], why: ["Mechanic-only profile for range, control and mobility comparisons."], assumptions: ["No exact item-level gear or community tier position is asserted."], evidence: ["Current Global Arena system rules; Path role remains modeled pending stronger client calibration."] } },
   ];
   for (const entry of entries) if (!ids.has(entry.id)) library.items.push(entry);
-  fs.writeFileSync(path, `${JSON.stringify(library, null, 2)}\n`, "utf8");
+  writePreservingEol(path, `${JSON.stringify(library, null, 2)}\n`);
 }
 
 console.log("Arena Community Library integration applied");
