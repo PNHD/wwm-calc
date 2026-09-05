@@ -210,19 +210,26 @@ function ContextNavigation<T extends string>({
   secondary,
   active,
   onNavigate,
+  isUnavailable = () => false,
 }: {
   label: string;
   primary: NavItem<T>[];
   secondary: NavItem<T>[];
   active: T;
   onNavigate: (key: T) => void;
+  isUnavailable?: (key: T) => boolean;
 }) {
-  const renderButton = ({ key, label: itemLabel, hint, icon: Icon }: NavItem<T>) => (
-    <button key={key} type="button" className={active === key ? "is-active" : ""} aria-current={active === key ? "page" : undefined} onClick={() => onNavigate(key)}>
+  const renderButton = ({ key, label: itemLabel, hint, icon: Icon }: NavItem<T>) => {
+    const unavailable = isUnavailable(key);
+    const label = unavailable ? `${itemLabel} unavailable` : itemLabel;
+    const detail = unavailable ? "Numerical model unavailable" : hint;
+    return (
+    <button key={key} type="button" disabled={unavailable} aria-disabled={unavailable || undefined} aria-label={unavailable ? `${itemLabel} unavailable: numerical model unavailable` : undefined} className={`${active === key ? "is-active" : ""}${unavailable ? " is-unavailable" : ""}`} aria-current={active === key ? "page" : undefined} onClick={() => onNavigate(key)} style={unavailable ? { cursor: "not-allowed", opacity: 0.45 } : undefined}>
       <Icon size={17} strokeWidth={1.8} aria-hidden="true" />
-      <span><strong>{itemLabel}</strong><small>{hint}</small></span>
+      <span><strong>{label}</strong><small>{detail}</small></span>
     </button>
-  );
+    );
+  };
 
   return (
     <aside className="workspace-context-nav" aria-label={`${label} navigation`}>
@@ -513,6 +520,8 @@ export default function ProductShell({ active, onNavigate, roleControl, actions,
 
   const pveTitle = [...PVE_PRIMARY, ...PVE_SECONDARY].find((item) => item.key === pveView)?.label ?? "Overview";
   const gvgTitle = [...GVG_PRIMARY, ...GVG_SECONDARY].find((item) => item.key === gvgView)?.label ?? "Overview";
+  const pveAvailability = getNumericalPathAvailability(context.pathKey);
+  const isUnavailablePveNavigation = (key: PveView) => key === "best-build" && !pveAvailability.numericalModelAvailable;
   const mobilePve: PveView[] = ["build", "gear", "compare", "best-build"];
   const mobileGvg: GvgView[] = ["roster", "strategy", "timeline", "matches"];
 
@@ -538,7 +547,7 @@ export default function ProductShell({ active, onNavigate, roleControl, actions,
         {workspace === "pve" && <section className="product-context" role="region" aria-label="Current build context"><span><small>Build</small><strong>{context.build}</strong></span><span><small>Inner Ways</small><strong>{context.innerWays}/4</strong></span><span className="product-context-metric"><small>{getNumericalPathAvailability(context.pathKey).numericalModelAvailable ? "Modeled DPS" : "Numerical model"}</small><strong>{getNumericalPathAvailability(context.pathKey).numericalModelAvailable ? `${context.estimate}/s` : "Unavailable"}</strong></span></section>}
       </div>}
 
-      {workspace === "pve" && <ContextNavigation label="PvE" primary={PVE_PRIMARY} secondary={PVE_SECONDARY} active={pveView} onNavigate={goPve} />}
+      {workspace === "pve" && <ContextNavigation label="PvE" primary={PVE_PRIMARY} secondary={PVE_SECONDARY} active={pveView} onNavigate={goPve} isUnavailable={isUnavailablePveNavigation} />}
       {workspace === "gvg" && <ContextNavigation label="Guild War" primary={GVG_PRIMARY} secondary={GVG_SECONDARY} active={gvgView} onNavigate={goGvg} />}
 
       {workspace === "pve" && <PveInspector context={context} page={pveView} collapsed={inspectorCollapsed} onToggle={() => setInspectorCollapsed((value) => !value)} onNavigate={goPve} />}
@@ -553,7 +562,8 @@ export default function ProductShell({ active, onNavigate, roleControl, actions,
       {workspace !== "library" && <nav className="workspace-mobile-nav" aria-label={`${workspace === "pve" ? "PvE" : "Guild War"} mobile navigation`}>
         {workspace === "pve" ? mobilePve.map((key) => {
           const item = PVE_PRIMARY.find((candidate) => candidate.key === key)!; const Icon = item.icon;
-          return <button type="button" key={key} className={pveView === key ? "is-active" : ""} aria-current={pveView === key ? "page" : undefined} onClick={() => goPve(key)}><Icon size={18} /><span>{item.label === "Best Build" ? "Best" : item.label}</span></button>;
+          const unavailable = isUnavailablePveNavigation(key);
+          return <button type="button" key={key} disabled={unavailable} aria-disabled={unavailable || undefined} aria-label={unavailable ? "Best Build unavailable: numerical model unavailable" : undefined} className={`${pveView === key ? "is-active" : ""}${unavailable ? " is-unavailable" : ""}`} aria-current={pveView === key ? "page" : undefined} onClick={() => goPve(key)} style={unavailable ? { cursor: "not-allowed", opacity: 0.45 } : undefined}><Icon size={18} /><span>{unavailable ? "Unavailable" : item.label === "Best Build" ? "Best" : item.label}</span></button>;
         }) : mobileGvg.map((key) => {
           const item = GVG_PRIMARY.find((candidate) => candidate.key === key)!; const Icon = item.icon;
           return <button type="button" key={key} className={gvgView === key ? "is-active" : ""} aria-current={gvgView === key ? "page" : undefined} onClick={() => goGvg(key)}><Icon size={18} /><span>{item.label === "Match Log" ? "Matches" : item.label}</span></button>;
