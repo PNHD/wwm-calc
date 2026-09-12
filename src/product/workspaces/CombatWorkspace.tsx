@@ -52,13 +52,13 @@ export default function CombatWorkspace(props: CombatWorkspaceProps) {
       </header>
 
       <section className="combat-metrics" aria-label="Damage estimates">
-        <div className="is-primary"><span><Crosshair size={16} aria-hidden="true" /> Modeled rotation DPS</span><strong>{Math.round(props.ceiling).toLocaleString()}<small>/s</small></strong><p>This unscaled value drives Gear Compare, Stat Priority and Best Build.</p></div>
+        <div className="is-primary"><span><Crosshair size={16} aria-hidden="true" /> Modeled rotation DPS</span><strong>{Math.round(props.ceiling).toLocaleString()}<small>/s</small></strong><p>This unscaled value drives currently enabled optimization tools.</p></div>
         <div><span><Activity size={16} aria-hidden="true" /> Parse projection</span><strong>{Math.round(parseProjection).toLocaleString()}<small>/s</small></strong><p>Presentation only: modeled DPS × {Math.round(props.efficiency * 100)}% execution scaling.</p></div>
         <div><span><Timer size={16} aria-hidden="true" /> Recorded parse</span><label><input inputMode="numeric" value={recorded} onChange={(event) => setRecorded(event.target.value.replace(/\D/g, ""))} placeholder="Enter DPS" /><small>/s</small></label><p>{parsed ? `${Math.round((parsed / Math.max(1, props.ceiling)) * 100)}% of modeled rotation DPS` : "Optional comparison; never changes the optimizer."}</p></div>
       </section>
 
       <section className="combat-assumptions product-assumption-panel">
-        <div className="product-section-heading"><div><h2>Active combat assumptions</h2><p>These inputs are shared by current DPS, Gear Compare, Stat Priority and Best Build.</p></div><button type="button" className="product-secondary-button" onClick={props.onConfigure}>Configure build</button></div>
+        <div className="product-section-heading"><div><h2>Active combat assumptions</h2><p>These inputs are shared by current DPS and currently enabled optimization tools.</p></div><button type="button" className="product-secondary-button" onClick={props.onConfigure}>Configure build</button></div>
         <div className="combat-assumption-grid is-compact">
           <label className="product-switch"><input type="checkbox" checked={props.food} onChange={(event) => props.onFoodChange(event.target.checked)} /><span aria-hidden="true" /><strong>Attack-Boosting Food<small>+{foodMin} Min / +{foodMax} Max Physical Attack</small></strong></label>
           <label className="product-switch"><input type="checkbox" checked={cinderAsh} disabled={!props.onCinderAshChange} onChange={(event) => props.onCinderAshChange?.(event.target.checked)} /><span aria-hidden="true" /><strong>Cinder Ash<small>Includes observed Divinecraft / Fire sources; never blanket +4% Physical damage</small></strong></label>
@@ -104,12 +104,12 @@ export default function CombatWorkspace(props: CombatWorkspaceProps) {
           <div className="details-choice-group"><small>Weapon set</small>{props.sets.slice(0, 5).map((item) => <span key={item.name} className={item.active ? "is-active" : ""}><strong>{item.name}{item.active ? " (current)" : ""}</strong><b>{Math.round(item.value).toLocaleString()} DPS</b><em>{item.detail}</em></span>)}</div>
           <div className="details-choice-group"><small>Ring</small>{props.rings.map((item) => <span key={item.name} className={item.active ? "is-active" : ""}><strong>{item.name}{item.active ? " (current)" : ""}</strong><b>{Math.round(item.value).toLocaleString()} DPS</b></span>)}</div>
         </article>
-        <article>
+        {props.priorities.length > 0 && <article>
           <header><TrendingUp size={18} aria-hidden="true" /><div><h2>Stat priority</h2><p>Marginal modeled DPS from one additional Global max roll on the current complete build/scenario.</p></div></header>
           <div className="details-priority-list">
             {props.priorities.slice(0, 10).map((item, index) => <span key={item.name}><i>{index + 1}</i><strong>{item.name}</strong><small>{item.detail}</small><b>+{Math.round(item.value).toLocaleString()}</b></span>)}
           </div>
-        </article>
+        </article>}
       </section>
     </main>
   );

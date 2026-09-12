@@ -55,9 +55,8 @@ const WEAPON_NAME_TO_PREFIX: Record<string, string> = {
 const BUILD_WEAPON_TYPES: Record<string, [string, string]> = {
   "bamboocut-dust": ["Umbrella", "Rope Dart"], "bellstrike-umbra": ["Sword", "Spear"],
   "bellstrike-splendor": ["Sword", "Spear"], "bamboocut-wind": ["Dual Blades", "Rope Dart"],
-  "stonesplit-might": ["Hengdao", "Modao"], "silkbind-jade": ["Umbrella", "Fan"],
-  "silkbind-deluge": ["Umbrella", "Fan"], "bamboocut-kite": ["Gauntlets", "Rope Dart"],
-  "stonesplit-awe": ["Modao", "Spear"], "stonesplit-pure-datang": ["Hengdao", "Modao"],
+  "stonesplit-might": ["Mo Blade", "Spear"], "stonesplit-strength": ["Hengdao", "Mo Blade"], "silkbind-jade": ["Umbrella", "Fan"],
+  "silkbind-deluge": ["Umbrella", "Fan"],
 };
 const WEAPON_STAT_KEY_RE = /^(umb|rope|sword|spear|fan|twinblades|modao|hengdao|gauntlets)(All|Martial|Special|Charged)$/;
 
@@ -67,7 +66,7 @@ function computeTotalDmg(
   opts: { datang?: boolean; yishui?: boolean; buildKey?: string }
 ) {
   let total = 0;
-  getRotationForBuild(opts.buildKey).forEach(item => {
+  (getRotationForBuild(opts.buildKey) ?? []).forEach(item => {
     const { total: dmg } = calcSkill(item, p, tier, {
       set: p.set || "stars",
       datang: opts.datang,

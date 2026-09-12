@@ -35,10 +35,10 @@ import {
   Crosshair,
 } from "lucide-react";
 import { PanelStats, TierConstants, RotationItem, SkillDefinition } from "./types";
-import { TIERS, calcSkill, calcBaseline, getRotationForBuild, getRotationTimeForBuild, SKILL_DB } from "./utils/calc";
-import { canRenderBestBuildResult, createProductPathCatalog, getNumericalPathAvailability, isBestBuildEligible, isPathModeled } from "./data/pathCatalog";
+import { TIERS, calcSkill, calcBaseline, createBestBuildCalculationIdentity, getNumericalUnavailable, getRotationForBuild, getRotationTimeForBuild, getSkillForBuild, isBestBuildRequestCurrent } from "./utils/calc";
+import { createProductPathCatalog, getCanonicalGlobalPath, getModeledPathMetadata, isProductCapabilityEnabled, type ProductCapability } from "./data/pathCatalog";
 import { simulateRotation } from "./utils/timelineEngine";
-import { simulateTimeline, buildTimelineBuffs } from "./utils/rotationTimeline";
+import { simulateTimeline, buildTimelineBuffs, type TimelineResult, type TimelineUnavailableResult } from "./utils/rotationTimeline";
 import { previewSkill } from "./utils/skillPreview";
 import { INNER_WAYS } from "./data/innerways";
 import { INNER_WAY_IMAGES, WEAPON_IMAGES_G8, MYSTIC_SKILL_IMAGES, ARMOR_SET_IMAGES } from "./data/game8Images";
@@ -61,6 +61,7 @@ import StatSwapSimulator from "./components/StatSwapSimulator";
 import SearchableSelect from "./components/SearchableSelect";
 import { classifyGlobalT96GearOrigin, filterGlobalT96StatOptions, globalT96GearOriginLabel } from "./data/globalT96GearCompatibility";
 import ProductShell, { type ProductTab } from "./product/ProductShell";
+import PathProvenance from "./product/PathProvenance";
 import ArsenalWorkspace, { type ArsenalRow } from "./product/workspaces/ArsenalWorkspace";
 import GearCompareWorkspace, { type GearCompareRow } from "./product/workspaces/GearCompareWorkspace";
 import BuildWorkspace from "./product/workspaces/BuildWorkspace";
@@ -76,12 +77,23 @@ import JadeHealthPanel from "./product/workspaces/JadeHealthPanel";
 import {
   JADE_OBJECTIVES,
   JADE_SKILL_TEMPLATES,
+  compareJadeScenarioResults,
   evaluateSilkbindJadeCached,
   jadeBuildAdvice,
   resolveJadeAttunementFamily,
 } from "./pathModels/silkbindJade.mjs";
 import { validateGlobalT96GearLines } from "./data/globalT96GearCompatibility";
 import { GLOBAL_ATTRIBUTE_CONVERSIONS, PANEL_MODEL_VERSION } from "./data/panelOptimizationEvidence";
+
+export function missingTimingUnavailableState(result: TimelineResult): TimelineUnavailableResult | null {
+  return "reason" in result ? result : null;
+}
+
+export function numericalUnavailableMessage(result: TimelineUnavailableResult): string {
+  if (result.reason === "INVALID_TIMING_OVERRIDE") return `Invalid timing override for ${result.invalidTiming.join(", ")}. Enter a positive finite value.`;
+  if (result.reason === "MISSING_PATH_SKILL_MODEL") return `Coefficient model unavailable for ${result.missingSkills.join(", ")}.`;
+  return `Explicit timing is required for ${result.missingTiming.join(", ")}.`;
+}
 
 const downloadJson = (name: string, value: unknown) => {
   const url = URL.createObjectURL(new Blob([JSON.stringify(value, null, 2)], { type: "application/json" }));
@@ -93,18 +105,15 @@ const downloadJson = (name: string, value: unknown) => {
 };
 
 // Constants
-const PATH_ICONS: Record<string, string> = {
+export const PATH_ICONS: Record<string, string> = {
   "bellstrike-splendor": "https://static0.fextralifeimages.com/file/wherewindsmeet/8/8a/Bellstrike-splendor.png",
   "bellstrike-umbra":    "https://static0.fextralifeimages.com/file/wherewindsmeet/b/b6/Bellstrike-umbra.png",
   "silkbind-deluge":     "https://static0.fextralifeimages.com/file/wherewindsmeet/6/6b/Silkbind-deluge.png",
   "silkbind-jade":       "https://static0.fextralifeimages.com/file/wherewindsmeet/e/ec/Silkbind-jade.png",
   "bamboocut-wind":      "https://static0.fextralifeimages.com/file/wherewindsmeet/9/9f/Bamboocut-wind.png",
   "stonesplit-might":    "https://static0.fextralifeimages.com/file/wherewindsmeet/d/d1/Stonesplit-might.png",
+  "stonesplit-strength": "https://static0.fextralifeimages.com/file/wherewindsmeet/9/96/Stonesplit-strength-path-where-winds-meet-wiki-guide.webp",
   "bamboocut-dust":      "https://static0.fextralifeimages.com/file/wherewindsmeet/0/05/Bamboocut-dust-where-winds-meet-wiki-guide.webp",
-  "stonesplit-scale":    "https://static0.fextralifeimages.com/file/wherewindsmeet/9/96/Stonesplit-strength-path-where-winds-meet-wiki-guide.webp",
-  "bamboocut-kite":      "https://static0.fextralifeimages.com/file/wherewindsmeet/9/9f/Bamboocut-wind.png",
-  "stonesplit-awe":      "https://static0.fextralifeimages.com/file/wherewindsmeet/d/d1/Stonesplit-might.png",
-  "stonesplit-pure-datang": "https://static0.fextralifeimages.com/file/wherewindsmeet/9/96/Stonesplit-strength-path-where-winds-meet-wiki-guide.webp",
 };
 
 const WEAPON_ICONS: Record<string, string> = {
@@ -126,18 +135,15 @@ const WEAPON_ICONS: Record<string, string> = {
   "phalanxbane-blade":    "https://img.game8.co/4331132/6ed777b5efce723ef006466cd0af82b4.png/show",
 };
 
-const BUILD_WEAPONS: Record<string, [string, string]> = {
+export const BUILD_WEAPONS: Record<string, [string, string]> = {
   "bamboocut-dust":     ["everspring-umbrella", "unfettered-rope-dart"],
   "bamboocut-wind":     ["infernal-twinblades", "mortal-rope-dart"],
   "bellstrike-splendor":["nameless-sword", "nameless-spear"],
   "bellstrike-umbra":   ["strategic-sword", "heavenquaker-spear"],
-  "silkbind-jade":      ["inkwell-fan", "vernal-umbrella"],
-  "silkbind-deluge":    ["panacea-fan", "soulshade-umbrella"],
-  "stonesplit-might":   ["snowparting-blade", "phalanxbane-blade"],
-  "stonesplit-scale":   ["snowparting-blade", "phalanxbane-blade"],
-  "bamboocut-kite":     ["heavenstrike-gauntlets", "unfettered-rope-dart"],
-  "stonesplit-awe":     ["thundercry-blade", "stormbreaker-spear"],
-  "stonesplit-pure-datang": ["thundercry-blade", "snowparting-blade"],
+  "silkbind-jade":      ["vernal-umbrella", "inkwell-fan"],
+  "silkbind-deluge":    ["soulshade-umbrella", "panacea-fan"],
+  "stonesplit-might":   ["thundercry-blade", "stormbreaker-spear"],
+  "stonesplit-strength": ["snowparting-blade", "phalanxbane-blade"],
 };
 
 const CLASS_WEAPONS: Record<string, string[]> = {
@@ -161,7 +167,7 @@ const PREDEFINED_WEAPONS = [
   { id: "fan-upgraded-t91", name: "Inkwell Fan (Graduation)", min: 1740, max: 4580 },
 ];
 
-const BUILD_TIPS: Record<string, string[]> = {
+export const BUILD_TIPS: Record<string, string[]> = {
   "bamboocut-dust": [
     "🎯 Max Phys ATK → 4046 is the graduation target",
     "🔩 Phys Pen → 51.2% net (panel value - 20 boss resist)",
@@ -176,12 +182,16 @@ const BUILD_TIPS: Record<string, string[]> = {
     "✦ Attuned Bonus: Strategic Sword Skill DMG — stack on all gear",
     "⚠️ DO NOT use Eaglerise set if Affinity procs are rare",
   ],
-  "stonesplit-might": [
-    "🎯 Max Phys ATK → 3500+ target",
-    "⚠️ Avoid Attr ATK (Bamboocut/Bellstrike/Silkbind) — useless",
-    "⚠️ Max 2 Agility substats — diminishing returns after",
-    "🛡 Prioritize survivability over pure DPS for this path",
-  ],
+};
+
+const legacyAnalysisCapability: Partial<Record<string, ProductCapability>> = {
+  compare: "gearCompare",
+  priority: "statPriority",
+  cultivate: "statPriority",
+  "skill-editor": "skillPreview",
+  transmute: "statPriority",
+  bis: "bestBuild",
+  "best-build": "bestBuild",
 };
 
 const STAT_TOOLTIPS: Record<string, string> = {
@@ -205,17 +215,13 @@ const GRAD_MARKERS = [
 ];
 
 
-const ATTUNED_BONUS_LABEL: Record<string, string> = {
+export const ATTUNED_BONUS_LABEL: Record<string, string> = {
   "bamboocut-dust": "Drunken Spring: Skill DMG Bonus (Attuned Weapon Bonus)",
   "bamboocut-wind": "Chestnut Wanderer: Rat DMG Bonus (Attuned Weapon Bonus)",
-  "bamboocut-kite": "Heavenstrike: Charge Skill DMG Bonus (Attuned Weapon Bonus)",
   "bellstrike-umbra": "Ji Ju Nine Swords: Bleed DMG Bonus (Attuned Weapon Bonus)",
   "bellstrike-splendor": "Nameless Swordplay: Charge Skill DMG Bonus (Attuned Weapon Bonus)",
   "silkbind-jade": "Vernal Umbrella: T96 semantic Attunement (family-aware)",
   "silkbind-deluge": "River Pharmacopoeia: Healing Bonus (Attuned Weapon Bonus)",
-  "stonesplit-might": "Ten Directions Array: Charge Skill DMG Bonus (Attuned Weapon Bonus)",
-  "stonesplit-awe": "Alas Swordplay: Charge Skill DMG Bonus (Attuned Weapon Bonus)",
-  "stonesplit-pure-datang": "Snowparting Blade: Derivation DMG Bonus (Attuned Weapon Bonus)",
 };
 
 // Legacy character-menu sample retained only as an editable starting point;
@@ -374,17 +380,15 @@ const SLOT_IMAGES: Record<string, string> = {
   "Pendant":   "icon/icon4.jpg"
 };
 
-const BUILD_WEAPON_TYPES: Record<string, [string, string]> = {
+export const BUILD_WEAPON_TYPES: Record<string, [string, string]> = {
   "bamboocut-dust": ["Umbrella", "Rope Dart"],
   "bellstrike-umbra": ["Sword", "Spear"],
   "bellstrike-splendor": ["Sword", "Spear"],
   "bamboocut-wind": ["Dual Blades", "Rope Dart"],
-  "stonesplit-might": ["Hengdao", "Modao"],
+  "stonesplit-might": ["Mo Blade", "Spear"],
+  "stonesplit-strength": ["Hengdao", "Mo Blade"],
   "silkbind-jade": ["Umbrella", "Fan"],
   "silkbind-deluge": ["Umbrella", "Fan"],
-  "bamboocut-kite": ["Gauntlets", "Rope Dart"],
-  "stonesplit-awe": ["Modao", "Spear"],
-  "stonesplit-pure-datang": ["Hengdao", "Modao"],
 };
 
 // Weapon display name -> panel-stat key prefix (umbAll/umbMartial/...).
@@ -409,7 +413,7 @@ const INNER_ATTR_BY_BUILD: Record<string, string> = {
   "bamboocut-dust": "Bamboocut", "bamboocut-wind": "Bamboocut", "bamboocut-kite": "Bamboocut",
   "bellstrike-umbra": "Bellstrike", "bellstrike-splendor": "Bellstrike",
   "silkbind-jade": "Silkbind", "silkbind-deluge": "Silkbind",
-  "stonesplit-might": "Stonesplit", "stonesplit-awe": "Stonesplit", "stonesplit-pure-datang": "Stonesplit",
+  "stonesplit-might": "Stonesplit", "stonesplit-strength": "Stonesplit",
 };
 const innerAttrName = (buildKey: string): string => INNER_ATTR_BY_BUILD[buildKey] || "Bamboocut";
 
@@ -437,7 +441,7 @@ const formatIwTrigger = (trigger?: string): string => {
 };
 
 // Builds whose T91 graduation DPS is estimated (no dedicated Lv95 source row yet).
-const ESTIMATED_BUILDS = new Set(["bamboocut-kite", "stonesplit-pure-datang"]);
+const ESTIMATED_BUILDS = new Set<string>();
 const DEFAULT_DPS_EFFICIENCY = 1;
 const EXECUTION_SCALING_STORAGE_KEY = "wwm_execution_scaling_v2";
 const savedDpsEfficiency = () => {
@@ -456,16 +460,15 @@ const savedDpsEfficiency = () => {
 // WWM_DATA.classes uses an older naming scheme. Map each key to the canonical
 // build name (same labels as the main path dropdown) for consistent display.
 // Mappings derived from each class's attuned weapon pair (not guessed).
-const CLASS_DISPLAY_NAME: Record<string, string> = {
+export const CLASS_DISPLAY_NAME: Record<string, string> = {
   "Bamboocut-Dust": "Bamboocut-Dust",
   "Bamboocut-Wind": "Bamboocut-Wind",
   "Nameless": "Bellstrike-Splendor",        // Nameless Sword + Nameless Spear
   "Nine-Nine": "Bellstrike-Umbra",          // Strategic Sword + Heavenquaker Spear
   "Jade": "Silkbind-Jade",                  // Inkwell Fan + Vernal Umbrella
   "Pure-Healer": "Silkbind-Deluge (Healer)",// Panacea Fan + Soulshade Umbrella
-  "Rocksplit-Jun": "Stonesplit-Might",      // Snowparting + Phalanxbane Blade
-  "Rocksplit-Might": "Stonesplit-Awe",      // Thundercry Blade + Stormbreaker Spear
-  "Bamboocut-Bird": "Bamboocut-Kite (est.)",// Heavenstrike Gauntlets + Rope Dart
+  "Rocksplit-Jun": "Stonesplit-Strength",   // Snowparting + Phalanxbane Blade
+  "Rocksplit-Might": "Stonesplit-Might",    // Thundercry Blade + Stormbreaker Spear
 };
 const classDisplayName = (key: string): string => CLASS_DISPLAY_NAME[key] || key;
 
@@ -976,76 +979,42 @@ const sanitizeChars = <T,>(data: T): T => {
 };
 // ---------------------------------------------------------------------------
 
-const BUILD_PROFILES = {
+export const BUILD_PROFILES = {
   "bamboocut-dust": {
-    label: "Bamboocut-Dust", weapons: "Everspring Umbrella + Unfettered Rope Dart",
     tier: "T0 AoE", color: "text-[#f0b400]",
     gradTargets: { maxOuter: 3050, minOuter: 1340, outerPen: 42.0, crit: 116.9, aff: 14.7, critDmg: 54 },
     notes: "T91 Global graduation target. Priority: Max Phys ATK → Phys Pen → Bamboocut ATK. Crit ~116%+ panel to cap at 80% eff.",
     priorityStats: ["maxOuter","outerPen","crit","critDmg","maxPz","umbMartial"],
   },
   "bellstrike-umbra": {
-    label: "Bellstrike-Umbra", weapons: "Strategic Sword + Heavenquaker Spear",
     tier: "T0 Single", color: "text-indigo-400",
     gradTargets: { maxOuter: 3160, minOuter: 1425, outerPen: 37.0, crit: 95.4, aff: 71.6, critDmg: 60 },
     notes: "Priority: Affinity Rate → Max Phys ATK → Crit DMG. Aff cap = 40% eff (need ~58% panel at T96).",
     priorityStats: ["aff","affDmg","maxOuter","crit","outerPen"],
   },
   "bellstrike-splendor": {
-    label: "Bellstrike-Splendor", weapons: "Nameless Sword + Nameless Spear",
     tier: "T1 Easy", color: "text-blue-400",
     gradTargets: { maxOuter: 2830, minOuter: 1185, outerPen: 32.5, crit: 54.4, aff: 43.5, critDmg: 45 },
     notes: "T91 Global. Priority: Max Phys ATK → Crit Rate → Affinity Rate. Forgiving build for beginners.",
     priorityStats: ["maxOuter","crit","aff","outerPen","critDmg"],
   },
   "bamboocut-wind": {
-    label: "Bamboocut-Wind", weapons: "Infernal Twinblades + Mortal Rope Dart",
     tier: "T0 AoE", color: "text-orange-400",
     gradTargets: { maxOuter: 1800, minOuter: 800, outerPen: 40.0, crit: 108.8, aff: 14.5, critDmg: 50 },
     notes: "Priority: Bamboocut ATK → Phys Pen → Crit Rate. Different scaling from Bamboocut-Dust.",
     priorityStats: ["maxPz","pzPen","maxOuter","crit","outerPen"],
   },
-  "stonesplit-might": {
-    label: "Stonesplit-Might", weapons: "Snowparting Blade + Phalanxbane Blade",
-    tier: "T1 Tank", color: "text-stone-400",
-    gradTargets: { maxOuter: 2610, minOuter: 1105, outerPen: 30.5, crit: 81.2, aff: 21.75, critDmg: 45 },
-    notes: "Priority: Max Phys ATK → Crit Rate → Phys Pen. Avoid Attr ATK stats (useless for this path).",
-    priorityStats: ["maxOuter","crit","outerPen","critDmg","allArts"],
-  },
   "silkbind-jade": {
-    label: "Silkbind-Jade", weapons: "Vernal Umbrella + Inkwell Fan",
     tier: "T96 Global 2.1", color: "text-teal-400",
     gradTargets: { maxOuter: 2990, minOuter: 1345, outerPen: 35.5, crit: 107.6, aff: 43.5, critDmg: 50 },
     notes: "Global 2.1: dynamic priority model. Reach effective Precision/Crit needs, then let modeled Jade DPS decide rates vs Physical Attack; no static stat weights.",
     priorityStats: [],
   },
   "silkbind-deluge": {
-    label: "Silkbind-Deluge (Healer)", weapons: "Panacea Fan + Soulshade Umbrella",
     tier: "T1 Healer", color: "text-emerald-400",
     gradTargets: { maxOuter: 2090, minOuter: 950, outerPen: 24.5, crit: 43.5, aff: 29.0, critDmg: 40 },
     notes: "Focus on healing power > personal DPS. Do NOT chase Bamboocut ATK or high pen.",
     priorityStats: ["maxOuter","crit","aff","outerPen","allArts"],
-  },
-  "bamboocut-kite": {
-    label: "Bamboocut-Kite (beta · not in Global yet)", weapons: "Heavenstrike Gauntlets + Unfettered Rope Dart",
-    tier: "T0 AoE", color: "text-[#f0b400]",
-    gradTargets: { maxOuter: 2830, minOuter: 1185, outerPen: 36.5, crit: 116.9, aff: 14.7, critDmg: 54 },
-    notes: "Priority: Max Phys ATK → Bamboocut ATK → Phys Pen. Gauntlets + Rope Dart.",
-    priorityStats: ["maxOuter","outerPen","crit","critDmg","maxPz","ropeMartial"],
-  },
-  "stonesplit-awe": {
-    label: "Stonesplit-Awe", weapons: "Thundercry Blade + Stormbreaker Spear",
-    tier: "T0 Tank", color: "text-red-500",
-    gradTargets: { maxOuter: 2910, minOuter: 1270, outerPen: 34.0, crit: 90.0, aff: 30.0, critDmg: 50 },
-    notes: "Priority: Max Phys ATK → Crit Rate → Phys Pen. Modao + Spear.",
-    priorityStats: ["maxOuter","crit","outerPen","critDmg","allArts"],
-  },
-  "stonesplit-pure-datang": {
-    label: "Stonesplit-Pure Datang", weapons: "Thundercry Blade + Snowparting Blade",
-    tier: "T0 Single", color: "text-rose-600",
-    gradTargets: { maxOuter: 3135, minOuter: 1425, outerPen: 40.5, crit: 100.0, aff: 20.0, critDmg: 55 },
-    notes: "Priority: Max Phys ATK → Crit Rate → Phys Pen. Hengdao + Modao.",
-    priorityStats: ["maxOuter","crit","outerPen","critDmg","allArts"],
   },
 };
 
@@ -1130,14 +1099,14 @@ const ARMOR_SETS = {
     stat2pc: { minOuter: 78 },           // ✅ Global T96 client tooltip
     desc2pc: "2/4: Min Physical ATK +78 (effective from Lv.96)",
     desc4pc: "4/4: Hit boss or 2+ enemies → Starweave stack (+3% Martial Art Skill DMG / stack, 5s, max 5 stacks = +15%). Stack lost on hit.",
-    recommended: ["bamboocut-dust", "bamboocut-kite"],
+    recommended: ["bamboocut-dust"],
   },
   "eaglerise": {
     name: "Hawkwing",
     stat2pc: { aff: 3.7 },               // ✅ confirmed T91
     desc2pc: "2/4: +3.7% Affinity Rate",
     desc4pc: "4/4: Affinity DMG triggers give a stack: +2% Phys ATK/stack (5s, max 5 = +10% Phys ATK)",
-    recommended: ["bamboocut-wind", "stonesplit-might", "bellstrike-umbra"],
+    recommended: ["bamboocut-wind", "bellstrike-umbra"],
   },
   "jadeware": {
     name: "Jadeware",
@@ -1158,7 +1127,7 @@ const ARMOR_SETS = {
     stat2pc: { minOuter: 64 },           // ✅ confirmed T91
     desc2pc: "2/4: Min Physical ATK +64",
     desc4pc: "4/4: Perfect Deflect boosts next skill/heavy attack DMG significantly.",
-    recommended: ["stonesplit-pure-datang"],
+    recommended: [],
   },
   "swallowreturn": {
     name: "Swaying Heights",
@@ -1404,7 +1373,6 @@ export default function App() {
   const [rotationTab, setRotationTab] = useState<"list" | "top">("list");
 
   const [rotSimClass, setRotSimClass] = useState<string>("Bamboocut-Dust");
-  const [cultivateClass, setCultivateClass] = useState<string>("Bamboocut-Dust");
 
   const [tuneCooldowns, setTuneCooldowns] = useState<TuneCooldown[]>(() => {
     try {
@@ -1470,29 +1438,43 @@ export default function App() {
   const [selectedBuild, setSelectedBuild] = useState<string>(() => {
     if (typeof window !== "undefined") {
       const stored = localStorage.getItem("wwm_selected_build");
-      if (stored) return stored;
+      if (stored) return getCanonicalGlobalPath(stored)?.id ?? "UNKNOWN";
     }
     return "bamboocut-dust";
   });
-  const numericalPathAvailability = getNumericalPathAvailability(selectedBuild);
-  const selectedBuildIsUnmodeled = !numericalPathAvailability.numericalModelAvailable;
+  const selectedBuildLegacyClass = Object.entries(CLASS_DISPLAY_NAME).find(([, pathKey]) => pathKey === selectedBuild)?.[0] ?? null;
+  const skillRotationOverridesEnabled = isProductCapabilityEnabled(selectedBuild, "customRotation");
+  const selectedBuildIsUnmodeled = !isProductCapabilityEnabled(selectedBuild, "headlineDps");
   // Legacy calculators remain mounted alongside the product workspaces.  They
   // receive an empty input only after the capability boundary has made the
   // product route unavailable; no numerical result is surfaced for that route.
-  const modeledRotationOrEmpty = (buildKey: string) => getRotationForBuild(buildKey) ?? [];
-  const modeledDurationOrZero = (buildKey: string) => getRotationTimeForBuild(buildKey) ?? 0;
-  const modeledBaselineOrZero = (tier: TierConstants, buildKey: string) => calcBaseline(tier, buildKey) ?? 0;
+  const modeledRotationOrEmpty = (buildKey: string) => isProductCapabilityEnabled(buildKey, "rotationDps") ? getRotationForBuild(buildKey) ?? [] : [];
+  const modeledDurationOrZero = (buildKey: string) => isProductCapabilityEnabled(buildKey, "rotationDps") ? getRotationTimeForBuild(buildKey) ?? 0 : 0;
+  const modeledBaselineOrZero = (tier: TierConstants, buildKey: string) => isProductCapabilityEnabled(buildKey, "headlineDps") ? calcBaseline(tier, buildKey) ?? 0 : 0;
 
   useEffect(() => {
     localStorage.setItem("wwm_selected_build", selectedBuild);
   }, [selectedBuild]);
   useEffect(() => {
-    if (!isPathModeled(selectedBuild)) {
+    if (!isProductCapabilityEnabled(selectedBuild, "headlineDps")) {
       setActiveProductTab("settings");
       setWorkspace("build");
       setIsGradModalOpen(false);
     }
-  }, [selectedBuild]);
+    if (!isProductCapabilityEnabled(selectedBuild, "simulation")) {
+      setIsSimOpen(false);
+      setSimResult(null);
+    }
+    const legacyCapability = legacyAnalysisCapability[gradModalActiveTab];
+    if (legacyCapability && !isProductCapabilityEnabled(selectedBuild, legacyCapability)) {
+      setIsGradModalOpen(false);
+      setTransmuteSubIndex(null);
+    }
+    if (workspace === "compare" && !isProductCapabilityEnabled(selectedBuild, "gearCompare")) {
+      setActiveProductTab("settings");
+      setWorkspace("build");
+    }
+  }, [selectedBuild, gradModalActiveTab, workspace]);
 
   const [innerWaysFilter, setInnerWaysFilter] = useState<"recommended" | "all">("recommended");
   const [innerWaySearch, setInnerWaySearch] = useState("");
@@ -1680,28 +1662,31 @@ export default function App() {
 
   const computeTotalDamage = (p: PanelStats) => {
     let totalDmg = 0;
-    modeledRotationOrEmpty(selectedBuild).forEach((item) => {
-      const { total } = calcSkill(item, p, activeTier, {
+    for (const item of modeledRotationOrEmpty(selectedBuild)) {
+      const result = calcSkill(item, p, activeTier, {
         set: p.set || "gold",
         datang,
         yishui,
         buildKey: selectedBuild,
       });
-      totalDmg += total;
-    });
-    return totalDmg;
+      if (!result.available) return result;
+      totalDmg += result.total;
+    }
+    return { available: true as const, total: totalDmg };
   };
 
   const marginalGain = (statKey: keyof PanelStats, step: number) => {
-    const baseDmg = computeTotalDamage(adjustedPanel);
-    if (baseDmg <= 0) return 0;
+    const baseResult = computeTotalDamage(adjustedPanel);
+    if (!baseResult.available || baseResult.total <= 0) return null;
     const p = { ...adjustedPanel };
     (p[statKey] as number) += step;
-    const newDmg = computeTotalDamage(p);
-    return ((newDmg - baseDmg) / baseDmg) * 100;
+    const nextResult = computeTotalDamage(p);
+    if (!nextResult.available) return null;
+    return ((nextResult.total - baseResult.total) / baseResult.total) * 100;
   };
 
   const getGearItemCompareStats = (item: GearItem) => {
+    if (!isProductCapabilityEnabled(selectedBuild, "gearCompare")) return { available: false as const, reason: "GEAR_COMPARE_DISABLED", totalGradDelta: null, subsWithDeltas: [] };
     let totalGradDelta = 0;
     const subsWithDeltas = item.subs.map(sub => {
       const statKey = SUB_MAP[sub.type];
@@ -1710,6 +1695,7 @@ export default function App() {
       const cleanVal = parseFloat(sub.val.replace(/[^\d.]/g, "")) || 0;
       const step = STEPS[sub.type] || 1;
       const gainPerStep = marginalGain(statKey as keyof PanelStats, step);
+      if (gainPerStep === null) return null;
       const isTuned = !!sub.isTuned;
       const factor = isTuned ? 1.15 : 1.0;
       const delta = (cleanVal / step) * gainPerStep * factor;
@@ -1722,7 +1708,9 @@ export default function App() {
         delta
       };
     });
+    if (subsWithDeltas.some((sub) => sub === null)) return { available: false as const, reason: "NUMERICAL_MODEL_UNAVAILABLE", totalGradDelta: null, subsWithDeltas: [] };
     return {
+      available: true as const,
       totalGradDelta,
       subsWithDeltas
     };
@@ -2391,9 +2379,9 @@ export default function App() {
 
   // Compute dynamically matching weapon categories for selected build
   const recommendedWeaponCategories = useMemo(() => {
-    const build = BUILD_PROFILES[selectedBuild as keyof typeof BUILD_PROFILES];
-    if (!build) return ["General"];
-    const weaponsLower = build.weapons.toLowerCase();
+    const path = getCanonicalGlobalPath(selectedBuild);
+    if (!path) return ["General"];
+    const weaponsLower = `${path.weapon1} ${path.weapon2}`.toLowerCase();
     const cats = ["General"];
     if (weaponsLower.includes("umbrella")) cats.push("Umbrella");
     if (weaponsLower.includes("rope dart")) cats.push("Rope Dart");
@@ -2821,6 +2809,9 @@ export default function App() {
   // 4. Compute rotation damage. Global T96 Bamboocut-Dust uses the same event
   // timeline as Gear Compare / Best Build so ranking and the displayed DPS cannot drift.
   const rotationStats = useMemo(() => {
+    if (!isProductCapabilityEnabled(selectedBuild, "headlineDps")) {
+      return { available: true as const, items: [], totalDmg: 0, dps: 0, gradRate: 0, composition: { crit: 0, aff: 0, normal: 0, abrasion: 0 }, compositionPct: { crit: 0, aff: 0, normal: 0, abrasion: 0 } };
+    }
     const rotation = getScenarioRotationForBuild(selectedBuild);
     const window = modeledDurationOrZero(selectedBuild);
     const comp = { crit: 0, aff: 0, normal: 0, abrasion: 0 };
@@ -2842,6 +2833,7 @@ export default function App() {
         { set: adjustedPanel.set, datang: false, yishui: false, buildKey: selectedBuild, weaponStars: (adjustedPanel as any).weaponStars, armorSet: (adjustedPanel as any).armorSet, starweaveDistanceBonusPct } as any,
         window,
       );
+      if ("reason" in timelineResult) return { ...timelineResult, items: [], totalDmg: 0, dps: 0, gradRate: 0, composition: comp, compositionPct: comp };
       const byName = new Map(timelineResult.perSkill.map((row) => [row.name, row]));
       const items = rotation.map((item) => {
         const row = byName.get(item.name);
@@ -2858,13 +2850,14 @@ export default function App() {
           buildKey: selectedBuild,
           weaponStars: false,
           armorSet: (adjustedPanel as any).armorSet,
-          skillOverride: skillOverrides[item.name],
+          skillOverride: skillRotationOverridesEnabled ? skillOverrides[item.name] : undefined,
         } as any);
         comp.crit += result.breakdown.crit; comp.aff += result.breakdown.aff;
         comp.normal += result.breakdown.normal; comp.abrasion += result.breakdown.abrasion;
       });
       const cTot = comp.crit + comp.aff + comp.normal + comp.abrasion || 1;
       return {
+        available: true as const,
         items,
         totalDmg: timelineResult.total,
         dps: timelineResult.dps,
@@ -2875,33 +2868,40 @@ export default function App() {
     }
 
     if (selectedBuild === "silkbind-jade") {
-      const jadeCurrent = evaluateSilkbindJadeCached(adjustedPanel, jadeScenarioForCombo(equippedGear), jadeObjective, priceJadeEvent);
+      const active = getActiveGear();
+      const jadeCurrent = evaluateSilkbindJadeCached(adjustedPanel, jadeScenarioForCombo(active.filter((item) => isItemEquipped(item, active))), jadeObjective, priceJadeEvent);
+      if (!jadeCurrent.available) return { available: false as const, reason: jadeCurrent.reason, missingTiming: [], invalidTiming: [], missingSkills: jadeCurrent.missingSkills ?? [], items: [], totalDmg: 0, dps: 0, gradRate: 0, composition: comp, compositionPct: comp };
       const items = jadeCurrent.perSkill.map((row: any) => ({
         name: row.name, count: row.events, isDingyin: false, generalBonus: 0, yishui: 0, tiaozhan: 1,
         perHit: row.events ? row.damage / row.events : 0, total: row.damage,
         breakdown: { crit: 0, aff: 0, normal: 0, abrasion: 0 },
       }));
       return {
+        available: true as const,
         items, totalDmg: jadeCurrent.totalDamage, dps: jadeCurrent.dps,
+        scenarioId: jadeCurrent.scenarioId, scenarioContract: jadeCurrent.scenarioContract, duration: jadeCurrent.scenarioContract.durationSeconds,
         gradRate: baselineScore > 0 ? jadeCurrent.totalDamage / baselineScore * 100 : 0,
         composition: comp, compositionPct: { crit: 0, aff: 0, normal: 100, abrasion: 0 },
       };
     }
 
     let totalDmg = 0;
-    const items = rotation.map((item) => {
-      const { perHit, total, breakdown } = calcSkill(item, adjustedPanel, activeTier, {
+    const items = [];
+    for (const item of rotation) {
+      const result = calcSkill(item, adjustedPanel, activeTier, {
         set: adjustedPanel.set, datang, yishui, buildKey: selectedBuild,
         weaponStars: (adjustedPanel as any).weaponStars,
         armorSet: (adjustedPanel as any).armorSet,
-        skillOverride: skillOverrides[item.name],
+        skillOverride: skillRotationOverridesEnabled ? skillOverrides[item.name] : undefined,
       } as any);
-      totalDmg += total;
-      comp.crit += breakdown.crit; comp.aff += breakdown.aff; comp.normal += breakdown.normal; comp.abrasion += breakdown.abrasion;
-      return { ...item, perHit, total, breakdown };
-    });
+      if (!result.available) return { available: false as const, reason: result.reason, missingTiming: [], invalidTiming: [], missingSkills: result.missingSkills, items: [], totalDmg: 0, dps: 0, gradRate: 0, composition: comp, compositionPct: comp };
+      totalDmg += result.total;
+      comp.crit += result.breakdown.crit; comp.aff += result.breakdown.aff; comp.normal += result.breakdown.normal; comp.abrasion += result.breakdown.abrasion;
+      items.push({ ...item, perHit: result.perHit, total: result.total, breakdown: result.breakdown });
+    }
     const cTot = comp.crit + comp.aff + comp.normal + comp.abrasion || 1;
     return {
+      available: true as const,
       items, totalDmg, dps: window > 0 ? totalDmg / window : 0,
       gradRate: baselineScore > 0 ? totalDmg / baselineScore * 100 : 0,
       composition: comp,
@@ -2911,13 +2911,15 @@ export default function App() {
 
   // ── Skill Damage Preview (read-only): per-cast damage by outcome ────────────
   const skillPreview = useMemo(() => {
-    return modeledRotationOrEmpty(selectedBuild).map(item => {
-      const { sim } = calcSkill(item, adjustedPanel, activeTier, {
+    if (!isProductCapabilityEnabled(selectedBuild, "skillPreview")) return [];
+    return modeledRotationOrEmpty(selectedBuild).flatMap(item => {
+      const result = calcSkill(item, adjustedPanel, activeTier, {
         set: adjustedPanel.set, datang, yishui, buildKey: selectedBuild,
         weaponStars: (adjustedPanel as any).weaponStars,
         armorSet: (adjustedPanel as any).armorSet,
       } as any);
-      return { name: item.name, count: item.count, crit: sim.critHit, aff: sim.affHit, normal: sim.normHit, abrasion: sim.grazeHit };
+      if (!result.available) return [];
+      return [{ name: item.name, count: item.count, crit: result.sim.critHit, aff: result.sim.affHit, normal: result.sim.normHit, abrasion: result.sim.grazeHit }];
     });
   }, [adjustedPanel, activeTier, datang, yishui, selectedBuild]);
 
@@ -2927,6 +2929,7 @@ export default function App() {
   // untouched). Re-added as an EDITOR per user request; see CLAUDE.md #7 (distinct
   // from the old Swap/Rotation Sim that was removed).
   const [editedRotation, setEditedRotation] = useState<RotationItem[] | null>(null);
+  const customRotationEnabled = skillRotationOverridesEnabled;
   // Edits are build-specific — discard them when the build changes.
   useEffect(() => { setEditedRotation(null); }, [selectedBuild]);
   useEffect(() => { localStorage.setItem("wwm_skill_overrides", JSON.stringify(skillOverrides)); }, [skillOverrides]);
@@ -2954,6 +2957,7 @@ export default function App() {
   const effectiveRotation = editedRotation ?? modeledRotationOrEmpty(selectedBuild);
   const buildRotationPresets = rotationPresets[selectedBuild] ?? [];
   const saveRotationPreset = () => {
+    if (!customRotationEnabled) return;
     const name = prompt("Rotation preset name:");
     if (!name?.trim()) return;
     const preset: RotationPreset = { id: crypto.randomUUID(), name: name.trim(), rotation: effectiveRotation.map((item) => ({ ...item })) };
@@ -2961,18 +2965,21 @@ export default function App() {
     setActiveRotationPresetId(preset.id);
   };
   const useRotationPreset = (id: string) => {
+    if (!customRotationEnabled) return;
     const preset = buildRotationPresets.find((item) => item.id === id);
     if (!preset) return;
     setEditedRotation(preset.rotation.map((item) => ({ ...item })));
     setActiveRotationPresetId(id);
   };
   const renameRotationPreset = () => {
+    if (!customRotationEnabled) return;
     const preset = buildRotationPresets.find((item) => item.id === activeRotationPresetId);
     const name = preset && prompt("Rename rotation preset:", preset.name);
     if (!preset || !name?.trim()) return;
     setRotationPresets((all) => ({ ...all, [selectedBuild]: (all[selectedBuild] ?? []).map((item) => item.id === preset.id ? { ...item, name: name.trim() } : item) }));
   };
   const duplicateRotationPreset = () => {
+    if (!customRotationEnabled) return;
     const preset = buildRotationPresets.find((item) => item.id === activeRotationPresetId);
     if (!preset) return;
     const copy = duplicatePreset(preset, `${preset.name} copy`);
@@ -2989,8 +2996,8 @@ export default function App() {
       weaponStars: (adjustedPanel as any).weaponStars,
       armorSet: (adjustedPanel as any).armorSet,
     } as any;
-    return simulateRotation(rotation, adjustedPanel, activeTier, opts, modeledDurationOrZero(selectedBuild));
-  }, [editedRotation, adjustedPanel, activeTier, datang, yishui, selectedBuild]);
+    return simulateRotation(rotation, adjustedPanel, activeTier, opts, modeledDurationOrZero(selectedBuild), timingOverrides);
+  }, [editedRotation, adjustedPanel, activeTier, datang, yishui, selectedBuild, timingOverrides]);
 
   // ── Buff-uptime timeline simulator ───────────────────────────────────────────
   // Lays the rotation on a real timeline (cast times from skillTiming) and models
@@ -3024,8 +3031,10 @@ export default function App() {
   }, [editedRotation, adjustedPanel, iwStats, selectedInnerWays, innerWayTiers, activeTier, datang, yishui, selectedBuild, timingOverrides]);
 
   // Seed from the build default on first edit, then mutate a copy.
-  const editRotation = (mutate: (r: RotationItem[]) => RotationItem[]) =>
+  const editRotation = (mutate: (r: RotationItem[]) => RotationItem[]) => {
+    if (!customRotationEnabled) return;
     setEditedRotation(prev => mutate((prev ?? modeledRotationOrEmpty(selectedBuild)).map(it => ({ ...it }))));
+  };
   const setSkillCount = (i: number, count: number) =>
     editRotation(r => { r[i] = { ...r[i], count: Math.max(0, count) }; return r; });
   const removeSkill = (i: number) =>
@@ -3034,11 +3043,8 @@ export default function App() {
     editRotation(r => { const j = i + dir; if (j < 0 || j >= r.length) return r; [r[i], r[j]] = [r[j], r[i]]; return r; });
 
   // ── Phase 3: Skill editor ───────────────────────────────────────────────────
-  // Pick a skill, tweak its coefficients, and see the per-hit damage recompute
-  // live through previewSkill (reuses the verified calcSkill via a temp SKILL_DB
-  // inject — calc.ts and the real skills are never modified). Calculator/preview
-  // ONLY: edits do NOT feed the rotation DPS (that would need an explicit override,
-  // a later phase).
+  // Preview resolves through the selected Path's canonical skill identity and
+  // passes only a temporary calcSkill override; it never alters skill data.
   const buildSkillNames = useMemo(() => {
     const seen = new Set<string>(); const out: string[] = [];
     for (const it of modeledRotationOrEmpty(selectedBuild)) if (!seen.has(it.name)) { seen.add(it.name); out.push(it.name); }
@@ -3055,21 +3061,24 @@ export default function App() {
     setEditorOverrides(prev => ({ ...(prev || {}), [field]: val }));
 
   const skillEditorPreview = useMemo(() => {
-    const orig = editorSkillName ? SKILL_DB[editorSkillName] : undefined;
-    if (!orig) return null;
-    const edited: SkillDefinition = { ...orig, ...(editorOverrides || {}) };
     const opts = {
       set: adjustedPanel.set, datang, yishui,
       buildKey: selectedBuild,
       weaponStars: (adjustedPanel as any).weaponStars,
       armorSet: (adjustedPanel as any).armorSet,
     } as any;
+    const base = previewSkill(editorSkillName, adjustedPanel, activeTier, opts);
+    if (!base.available) return { available: false as const, result: base };
+    const orig = getSkillForBuild(selectedBuild, editorSkillName);
+    if (!orig) return { available: false as const, result: base };
+    const edited: SkillDefinition = { ...orig, ...(editorOverrides || {}) };
+    const sim = previewSkill(editorSkillName, adjustedPanel, activeTier, opts, editorOverrides || undefined);
+    if (!sim.available) return { available: false as const, result: sim };
     return {
-      orig, edited,
-      base: previewSkill(orig, adjustedPanel, activeTier, opts),
-      sim: previewSkill(edited, adjustedPanel, activeTier, opts),
+      available: true as const, orig, edited, base, sim,
     };
   }, [editorSkillName, editorOverrides, adjustedPanel, activeTier, datang, yishui, selectedBuild]);
+  const canApplySkillRotationOverride = skillRotationOverridesEnabled;
 
   // Bonus (Phase 2↔3): add a skill to the edited rotation, cloning the build's
   // default metadata for that skill when present (else a neutral one-cast item).
@@ -3132,7 +3141,7 @@ export default function App() {
   // Scans the whole gear pool (all items, equipped or not) for this scheme,
   // groups by slot, and finds the gear combination with the highest graduation
   // rate. Mirrors the live grad-rate pipeline so its numbers match the panel.
-  const jadeAttunementsForCombo = (combo: GearItem[]) => {
+  function jadeAttunementsForCombo(combo: GearItem[]) {
     const bonuses: Record<string, number> = {};
     combo.forEach((gear) => gear.subs.forEach((sub) => {
       const family = resolveJadeAttunementFamily((sub as any).displayName || sub.type);
@@ -3141,8 +3150,8 @@ export default function App() {
       if (Number.isFinite(value) && value > 0) bonuses[family.id] = (bonuses[family.id] || 0) + value;
     }));
     return bonuses;
-  };
-  const jadeScenarioForCombo = (combo: GearItem[]) => {
+  }
+  function jadeScenarioForCombo(combo: GearItem[]) {
     const objectiveScenario = jadeObjective === JADE_OBJECTIVES.SHORT_FIGHT_BURST
       ? {
           duration: Math.min(Number((jadeScenario as Record<string, any>).duration || 60), 20),
@@ -3154,16 +3163,19 @@ export default function App() {
     return {
       ...jadeScenario,
       ...objectiveScenario,
+      judgeRes: activeTier.judgeRes,
+      targetResistanceSource: activeTier.source,
+      targetResistanceClassification: "PROVISIONAL_SCENARIO",
       attunementBonuses: jadeAttunementsForCombo(combo),
       // Candidate identity is intentionally part of the cache key because two
       // pieces can aggregate to the same visible panel while differing in set /
       // Attunement semantics that are consumed by event pricing.
       cacheSalt: `${activeTier.name}|${food ? 1 : 0}|${bowSelect}|${selectedInnerWays.join(",")}|${gearSignature}`,
     };
-  };
-  const priceJadeEvent = (event: any, eventPanel: PanelStats) => {
+  }
+  function priceJadeEvent(event: any, eventPanel: PanelStats) {
     const appSkill = JADE_SKILL_TEMPLATES[event.id]?.appSkill;
-    if (!appSkill) return 0;
+    if (!appSkill) return { available: false as const, reason: "MISSING_PATH_SKILL_MODEL" as const, missingSkills: [event.name] };
     return calcSkill(
       { name: appSkill, count: 1, isDingyin: false, generalBonus: 0, yishui: 0, tiaozhan: 1 },
       eventPanel,
@@ -3176,13 +3188,13 @@ export default function App() {
         weaponStars: (eventPanel as any).weaponStars ?? (adjustedPanel as any).weaponStars,
         armorSet: (eventPanel as any).armorSet ?? (adjustedPanel as any).armorSet,
       } as any,
-    ).total;
+    );
   };
 
   // ponytail: single source for "gear combo → in-combat panel → rotation total".
   // Mirrors adjustedPanel's buff pipeline; reused by Best Build, gear contribution,
   // and the set/bow comparison tables.
-  const comboInCombat = (combo: GearItem[], bowOverride?: string, diagnostics?: { panelOverride?: Partial<PanelStats>; excludedBuffIds?: string[]; disableStarweave?: boolean }): { total: number; crit: number; perSkill?: { name: string; dmg: number }[] } => {
+  const comboInCombat = (combo: GearItem[], bowOverride?: string, diagnostics?: { panelOverride?: Partial<PanelStats>; excludedBuffIds?: string[]; disableStarweave?: boolean }): { total: number; crit: number; perSkill?: { name: string; dmg: number }[]; scenarioId?: string; scenarioContract?: any; unavailable?: TimelineUnavailableResult } => {
     let p = computeGearPanel(panel, combo, activeScheme?.baseOverride, innerAttrName(selectedBuild));
     if (food) { p.minOuter += activeTier.foodMin; p.maxOuter += activeTier.foodMax; }
     const bow = bowOverride ?? bowSelect;
@@ -3205,6 +3217,7 @@ export default function App() {
         { set: p.set, datang: false, yishui: false, buildKey: selectedBuild, weaponStars: diagnostics?.disableStarweave ? false : (p as any).weaponStars, armorSet: (p as any).armorSet, starweaveDistanceBonusPct } as any,
         window,
       );
+      if ("reason" in timelineResult) return { total: 0, crit: p.crit, unavailable: timelineResult };
       return { total: timelineResult.total, crit: p.crit + iwStats.crit, perSkill: timelineResult.perSkill.map((row) => ({ name: row.name, dmg: row.dmg })) };
     }
 
@@ -3214,7 +3227,8 @@ export default function App() {
       p.outerDmg += iwStats.outerDmg; p.pzDmg += iwStats.pzDmg; p.prec += iwStats.prec;
       p.minOuter += iwStats.minOuter; p.maxOuter += iwStats.maxOuter; p.iwGeneralDmg = 0;
       const jadeResult = evaluateSilkbindJadeCached(p, jadeScenarioForCombo(combo), jadeObjective, priceJadeEvent);
-      return { total: jadeResult.totalDamage, crit: p.crit };
+      if (!jadeResult.available) return { total: 0, crit: p.crit, scenarioId: jadeResult.scenarioId, scenarioContract: jadeResult.scenarioContract, unavailable: { available: false, reason: jadeResult.reason, missingTiming: [], invalidTiming: [], missingSkills: jadeResult.missingSkills ?? [] } };
+      return { total: jadeResult.totalDamage, crit: p.crit, scenarioId: jadeResult.scenarioId, scenarioContract: jadeResult.scenarioContract };
     }
 
     p.outerPen += iwStats.outerPen; p.pzPen += iwStats.pzPen; p.crit += iwStats.crit; p.aff += iwStats.aff;
@@ -3222,15 +3236,32 @@ export default function App() {
     p.outerDmg += iwStats.outerDmg; p.pzDmg += iwStats.pzDmg; p.iwGeneralDmg = iwStats.generalDmg;
     p.prec += iwStats.prec; p.minOuter += iwStats.minOuter; p.maxOuter += iwStats.maxOuter;
     let totalDmg = 0;
-    modeledRotationOrEmpty(selectedBuild).forEach(item => {
-      totalDmg += calcSkill(item, p, activeTier, { set: p.set, datang, yishui, buildKey: selectedBuild, weaponStars: (p as any).weaponStars, armorSet: (p as any).armorSet } as any).total;
-    });
+    for (const item of modeledRotationOrEmpty(selectedBuild)) {
+      const result = calcSkill(item, p, activeTier, { set: p.set, datang, yishui, buildKey: selectedBuild, weaponStars: (p as any).weaponStars, armorSet: (p as any).armorSet } as any);
+      if (!result.available) return { total: 0, crit: p.crit, unavailable: { available: false, reason: result.reason, missingTiming: [], invalidTiming: [], missingSkills: result.missingSkills } };
+      totalDmg += result.total;
+    }
     return { total: totalDmg, crit: p.crit };
   };
 
-  const gradRateForGearCombo = (combo: GearItem[]): number => {
-    const { total: totalDmg } = comboInCombat(combo);
-    return baselineScore > 0 ? (totalDmg / baselineScore) * 100 : 0;
+  const gradRateForGearCombo = (combo: GearItem[]): number | null => {
+    const result = comboInCombat(combo);
+    if (result.unavailable) return null;
+    const totalDmg = result.total;
+    // Optimization ranks direct modeled output. The legacy T91 reference baseline
+    // is intentionally not an input to a current-Global recommendation.
+    return totalDmg;
+  }
+
+  // jade-scenario-guard:best-build
+  const guardedJadeCandidate = (current: ReturnType<typeof comboInCombat>, candidate: ReturnType<typeof comboInCombat>) => {
+    const unavailable = getNumericalUnavailable(current, candidate);
+    if (unavailable) return { ...unavailable, rate: null, durationSeconds: null };
+    if (selectedBuild !== "silkbind-jade") return { available: true as const, rate: candidate.total, scenarioId: undefined, durationSeconds: modeledDurationOrZero(selectedBuild) };
+    const guard = compareJadeScenarioResults(current, candidate);
+    return guard.available
+      ? { available: true as const, rate: candidate.total, scenarioId: candidate.scenarioId, durationSeconds: candidate.scenarioContract.durationSeconds }
+      : { ...guard, rate: null, durationSeconds: null };
   };
 
   const RING_OPTS: { key: string; label: string }[] = [
@@ -3242,32 +3273,71 @@ export default function App() {
     return { ...best, dps: bestTotal / modeledDurationOrZero(selectedBuild), current: best.key === bowSelect };
   };
   const gearContrib = useMemo(() => {
+    if (!isProductCapabilityEnabled(selectedBuild, "gearCompare")) return null;
     const all = getActiveGear(); const equipped = all.filter((item) => isItemEquipped(item, all));
-    const base = comboInCombat(equipped).total; const duration = modeledDurationOrZero(selectedBuild);
-    return equipped.map((item) => { const reduced = comboInCombat(equipped.filter((other) => other !== item)).total; return { slot: item.slot, name: item.name, lossDps: (base - reduced) / duration, lossPct: base ? (base - reduced) / base * 100 : 0 }; }).sort((a, b) => b.lossDps - a.lossDps);
+    const baseResult = comboInCombat(equipped); const duration = modeledDurationOrZero(selectedBuild);
+    if (baseResult.unavailable || duration <= 0) return null;
+    const rows = [];
+    for (const item of equipped) {
+      const reduced = comboInCombat(equipped.filter((other) => other !== item));
+      if (reduced.unavailable) return null;
+      rows.push({ slot: item.slot, name: item.name, lossDps: (baseResult.total - reduced.total) / duration, lossPct: baseResult.total ? (baseResult.total - reduced.total) / baseResult.total * 100 : 0 });
+    }
+    return rows.sort((a, b) => b.lossDps - a.lossDps);
   }, [activeScheme?.gear, panel, food, bowSelect, iwStats, activeTier, datang, yishui, selectedBuild, baselineScore, jadeObjective, jadeScenario]);
   const bowCompare = useMemo(() => {
+    if (!isProductCapabilityEnabled(selectedBuild, "gearCompare")) return null;
     const all = getActiveGear(); const equipped = all.filter((item) => isItemEquipped(item, all)); const duration = modeledDurationOrZero(selectedBuild);
-    const current = comboInCombat(equipped, bowSelect).total / duration;
-    return [...RING_OPTS, { key: "none", label: "None" }].map((option) => { const dps = comboInCombat(equipped, option.key === "none" ? "" : option.key).total / duration; return { ...option, dps, delta: dps - current, active: option.key === bowSelect }; });
+    const currentResult = comboInCombat(equipped, bowSelect);
+    if (currentResult.unavailable || duration <= 0) return null;
+    const current = currentResult.total / duration;
+    const rows = [];
+    for (const option of [...RING_OPTS, { key: "none", label: "None" }]) {
+      const result = comboInCombat(equipped, option.key === "none" ? "" : option.key);
+      if (result.unavailable) return null;
+      const dps = result.total / duration;
+      rows.push({ ...option, dps, delta: dps - current, active: option.key === bowSelect });
+    }
+    return rows;
   }, [activeScheme?.gear, panel, food, bowSelect, iwStats, activeTier, datang, yishui, selectedBuild, jadeObjective, jadeScenario]);
   const armorSetCompare = useMemo(() => {
+    if (!isProductCapabilityEnabled(selectedBuild, "gearCompare")) return null;
     const current = (adjustedPanel.set as string) || "none"; const duration = modeledDurationOrZero(selectedBuild);
     const sets = ["stars", "jadeware", "ivorybloom", "rainwhisper", "eaglerise", "swallowreturn", "shakenhill", "swallowcall", "mistwillow", "none"];
     const score = (key: string) => {
+      if (duration <= 0) return null;
       const candidate: any = { ...adjustedPanel, set: key, weaponStars: key === "stars" };
       const remove = (ARMOR_SETS as any)[current]?.stat2pc || {}; const add = (ARMOR_SETS as any)[key]?.stat2pc || {};
       for (const stat in remove) candidate[stat] = (candidate[stat] || 0) - remove[stat]; for (const stat in add) candidate[stat] = (candidate[stat] || 0) + add[stat];
-      return modeledRotationOrEmpty(selectedBuild).reduce((total, item) => total + calcSkill(item, candidate, activeTier, { set: key, datang, yishui, buildKey: selectedBuild, weaponStars: candidate.weaponStars, armorSet: (candidate as any).armorSet } as any).total, 0) / duration;
+      let total = 0;
+      for (const item of modeledRotationOrEmpty(selectedBuild)) {
+        const result = calcSkill(item, candidate, activeTier, { set: key, datang, yishui, buildKey: selectedBuild, weaponStars: candidate.weaponStars, armorSet: (candidate as any).armorSet } as any);
+        if (!result.available) return null;
+        total += result.total;
+      }
+      return total / duration;
     };
-    const baseline = score(current); return sets.map((key) => { const dps = score(key); return { key, name: (ARMOR_SETS as any)[key]?.name || key, dps, delta: dps - baseline, active: key === current, modeled: key === "none" || key !== "mistwillow" }; }).sort((a, b) => b.dps - a.dps);
+    const baseline = score(current);
+    if (baseline === null) return null;
+    const rows = [];
+    for (const key of sets) {
+      const dps = score(key);
+      if (dps === null) return null;
+      rows.push({ key, name: (ARMOR_SETS as any)[key]?.name || key, dps, delta: dps - baseline, active: key === current, modeled: key === "none" || key !== "mistwillow" });
+    }
+    return rows.sort((a, b) => b.dps - a.dps);
   }, [adjustedPanel, activeTier, datang, yishui, selectedBuild]);
   const bisGear = useMemo(() => {
-    const counts = LEGACY_GRAD95_COUNTS[cultivateClass] || LEGACY_GRAD95_COUNTS["Bamboocut-Dust"];
+    const counts = selectedBuildLegacyClass ? LEGACY_GRAD95_COUNTS[selectedBuildLegacyClass] : null;
+    if (!counts) return [];
     const subPriority = Object.entries(counts).filter(([, value]) => value > 0).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([key]) => BIS_STAT_LABELS[key] || key);
     return SLOTS.map((slot) => ({ slot: slot.name, mainStat: BIS_STAT_LABELS[SLOT_MAIN_STAT[slot.name]] || SLOT_MAIN_STAT[slot.name], subPriority }));
-  }, [cultivateClass]);
+  }, [selectedBuildLegacyClass]);
   const runSimulation = () => {
+    if (!isProductCapabilityEnabled(selectedBuild, "simulation")) {
+      setSimResult(null);
+      return;
+    }
     const runs = Math.max(1, Math.min(2000, Math.round(simRuns) || 100)); const duration = modeledDurationOrZero(selectedBuild);
     const skills = modeledRotationOrEmpty(selectedBuild).map((item) => calcSkill(item, adjustedPanel, activeTier, { set: adjustedPanel.set, datang, yishui, buildKey: selectedBuild, weaponStars: (adjustedPanel as any).weaponStars } as any).sim);
     const totals: number[] = []; let hits = 0; let damage = 0; const outcomes = { crit: [0, 0], aff: [0, 0], normal: [0, 0], abrasion: [0, 0] };
@@ -3276,7 +3346,23 @@ export default function App() {
     setSimResult({ runs, hitsPerRun: Math.round(hits / runs), duration, expectedDps: expected / duration, avgDps: mean / duration, bestDps: totals.at(-1)! / duration, worstDps: totals[0] / duration, p25: percentile(.25) / duration, p50: percentile(.5) / duration, p75: percentile(.75) / duration, diffPct: (mean - expected) / expected * 100, rangePct: percent((totals.at(-1)! - totals[0]) / 2, mean), dist: Object.fromEntries(Object.entries(outcomes).map(([key, [count, total]]) => [key, { hit: percent(count, hits), dmg: percent(total, damage) }])) });
   };
 
-  const [bestBuildResult, setBestBuildResult] = useState<{ pathKey: string; entries: { rate: number; gear: GearItem[] }[] } | null>(null);
+  const bestBuildCalculationIdentity = createBestBuildCalculationIdentity({
+    pathKey: selectedBuild,
+    scenario: selectedBuild === "silkbind-jade" ? jadeScenario : null,
+    objective: selectedBuild === "silkbind-jade" ? jadeObjective : null,
+    tier: activeTier,
+    panel,
+    baseOverride: activeScheme?.baseOverride ?? null,
+    food,
+    bow: bowSelect,
+    innerWays: selectedInnerWays,
+    innerWayTiers: Object.fromEntries(selectedInnerWays.map((id) => [id, innerWayTiers[id] ?? 6])),
+    starweaveDistanceBonusPct,
+    gear: getActiveGear(),
+  });
+  const bestBuildCalculationIdentityRef = useRef(bestBuildCalculationIdentity);
+  bestBuildCalculationIdentityRef.current = bestBuildCalculationIdentity;
+  const [bestBuildResult, setBestBuildResult] = useState<{ pathKey: string; calculationIdentity: string; requestId: number; entries: { rate: number; gear: GearItem[]; scenarioId?: string; durationSeconds?: number }[]; unavailable?: any } | null>(null);
   const [bestBuildRunning, setBestBuildRunning] = useState(false);
   const [bestBuildProgress, setBestBuildProgress] = useState(0);
   const [bestBuildEta, setBestBuildEta] = useState<number | null>(null);
@@ -3284,32 +3370,36 @@ export default function App() {
 
   useEffect(() => {
     bestBuildRequestId.current += 1;
-    if (!isBestBuildEligible(selectedBuild)) {
-      setBestBuildResult(null);
-      setBestBuildRunning(false);
-      setBestBuildProgress(0);
-      setBestBuildEta(null);
-    }
-  }, [selectedBuild]);
-  const bestBuildEntries = canRenderBestBuildResult(selectedBuild, bestBuildResult?.pathKey)
+    setBestBuildResult(null);
+    setBestBuildRunning(false);
+    setBestBuildProgress(0);
+    setBestBuildEta(null);
+  }, [bestBuildCalculationIdentity]);
+  const bestBuildResultIsCurrent = Boolean(bestBuildResult && isBestBuildRequestCurrent(bestBuildCalculationIdentity, bestBuildResult.calculationIdentity, bestBuildRequestId.current, bestBuildResult.requestId));
+  const bestBuildUnavailable = bestBuildResultIsCurrent ? bestBuildResult?.unavailable : null;
+  const bestBuildEntries = !bestBuildUnavailable && bestBuildResultIsCurrent && isProductCapabilityEnabled(selectedBuild, "bestBuild")
     ? bestBuildResult?.entries ?? null
     : null;
 
   const runBestBuild = async () => {
-    if (!isBestBuildEligible(selectedBuild)) {
+    if (!isProductCapabilityEnabled(selectedBuild, "bestBuild")) {
       setBestBuildResult(null);
       return;
     }
     const requestPathKey = selectedBuild;
+    const requestCalculationIdentity = bestBuildCalculationIdentity;
     const requestId = ++bestBuildRequestId.current;
+    const requestIsCurrent = () => isBestBuildRequestCurrent(bestBuildCalculationIdentityRef.current, requestCalculationIdentity, bestBuildRequestId.current, requestId);
     setBestBuildRunning(true);
     setBestBuildResult(null);
     setBestBuildProgress(0);
     setBestBuildEta(null);
     const startedAt = performance.now();
     await new Promise(r => setTimeout(r, 30)); // let UI paint the spinner
+    if (!requestIsCurrent()) return;
 
     const rawPool = getActiveGear();
+    const currentScenario = comboInCombat(rawPool.filter((item) => isItemEquipped(item, rawPool)));
     // Revalidate stored/manual inventory as well as OCR imports. Legacy data can
     // predate the T96 source guard, so a weapon containing both native Void and
     // historical Path lines must never participate in optimizer ranking.
@@ -3320,8 +3410,8 @@ export default function App() {
     const missingSlots = SLOT_ORDER.filter((slot) => bySlot[slot].length === 0);
     if (missingSlots.length) {
       console.warn("[best-build] No valid complete build: missing " + missingSlots.join(", "));
-        if (bestBuildRequestId.current === requestId && selectedBuild === requestPathKey) {
-          setBestBuildResult({ pathKey: requestPathKey, entries: [] });
+        if (requestIsCurrent()) {
+          setBestBuildResult({ pathKey: requestPathKey, calculationIdentity: requestCalculationIdentity, requestId, entries: [] });
           setBestBuildProgress(100);
           setBestBuildEta(null);
           setBestBuildRunning(false);
@@ -3332,16 +3422,20 @@ export default function App() {
     // Small inventories are exact; large inventories use a full-pool beam search.
     const totalCombos = SLOT_ORDER.reduce((n, s) => n * Math.max(1, bySlot[s].length), 1);
     let checked = 0;
-    const top: { rate: number; gear: GearItem[] }[] = [];
+    const top: { rate: number; gear: GearItem[]; scenarioId?: string; durationSeconds?: number }[] = [];
+    let unavailable: any = null;
 
     const recurse = async (idx: number, acc: GearItem[]) => {
+      if (!requestIsCurrent()) return;
       if (idx === SLOT_ORDER.length) {
-        const rate = gradRateForGearCombo(acc);
-        top.push({ rate, gear: [...acc] });
+        const rated = guardedJadeCandidate(currentScenario, comboInCombat(acc));
+        if (!rated.available) { unavailable = rated; return; }
+        top.push({ rate: rated.rate, gear: [...acc], scenarioId: rated.scenarioId, durationSeconds: rated.durationSeconds ?? undefined });
         top.sort((a, b) => b.rate - a.rate);
         if (top.length > 10) top.length = 10;
         checked++;
         if (checked % 500 === 0) {
+          if (!requestIsCurrent()) return;
           const frac = checked / Math.max(1, totalCombos);
           setBestBuildProgress(Math.round(frac * 100));
           const elapsed = (performance.now() - startedAt) / 1000;
@@ -3358,19 +3452,23 @@ export default function App() {
     const EXACT_LIMIT = 120_000;
     if (totalCombos <= EXACT_LIMIT) {
       await recurse(0, []);
+      if (!requestIsCurrent()) return;
     } else {
       // ponytail: all items enter each slot expansion; partial combinations are
       // capped for responsiveness. Raise this only if cross-slot synergy warrants it.
       const BEAM_WIDTH = 1_500;
-      let beam: { rate: number; gear: GearItem[] }[] = [{ rate: 0, gear: [] }];
+      let beam: { rate: number; gear: GearItem[]; scenarioId?: string; durationSeconds?: number }[] = [{ rate: 0, gear: [] }];
       for (let slotIndex = 0; slotIndex < SLOT_ORDER.length; slotIndex++) {
+        if (!requestIsCurrent()) return;
         const options = bySlot[SLOT_ORDER[slotIndex]];
         if (!options.length) throw new Error(`Best Build invariant: missing required slot ${SLOT_ORDER[slotIndex]}`);
-        const expanded: { rate: number; gear: GearItem[] }[] = [];
+        const expanded: { rate: number; gear: GearItem[]; scenarioId?: string; durationSeconds?: number }[] = [];
         for (const partial of beam) {
           for (const item of options) {
             const gear = [...partial.gear, item];
-            expanded.push({ rate: gradRateForGearCombo(gear), gear });
+            const rated = guardedJadeCandidate(currentScenario, comboInCombat(gear));
+            if (!rated.available) { unavailable = rated; continue; }
+            expanded.push({ rate: rated.rate, gear, scenarioId: rated.scenarioId, durationSeconds: rated.durationSeconds ?? undefined });
           }
         }
         expanded.sort((a, b) => b.rate - a.rate);
@@ -3379,19 +3477,30 @@ export default function App() {
         const elapsed = (performance.now() - startedAt) / 1000;
         setBestBuildEta(Math.ceil((elapsed / (slotIndex + 1)) * (SLOT_ORDER.length - slotIndex - 1)));
         await yieldToEventLoop();
+        if (!requestIsCurrent()) return;
       }
       top.push(...beam.slice(0, 10));
     }
-    if (bestBuildRequestId.current === requestId && selectedBuild === requestPathKey) {
+    const candidatesShareScenario = top.every((candidate) => selectedBuild !== "silkbind-jade" || candidate.scenarioId === currentScenario.scenarioId);
+    if (unavailable || !candidatesShareScenario) {
+      if (requestIsCurrent()) {
+        setBestBuildResult({ pathKey: requestPathKey, calculationIdentity: requestCalculationIdentity, requestId, entries: [], unavailable: unavailable || { available: false, value: null, reason: "SCENARIO_MISMATCH" } });
+        setBestBuildRunning(false);
+      }
+      return;
+    }
+    if (requestIsCurrent()) {
       setBestBuildProgress(100);
       setBestBuildEta(null);
-      setBestBuildResult({ pathKey: requestPathKey, entries: top });
+      setBestBuildResult({ pathKey: requestPathKey, calculationIdentity: requestCalculationIdentity, requestId, entries: top });
       setBestBuildRunning(false);
     }
   };
 
   // 5. Live Stat Priority: % graduation gain/loss per substat roll, computed against the CURRENT panel
   const statPriorityList = useMemo(() => {
+    if (!isProductCapabilityEnabled(selectedBuild, "statPriority")) return { base: null, gains: [], losses: [] };
+    if ("reason" in rotationStats) return { base: null, gains: [], losses: [], unavailable: rotationStats };
     const ALL_STAT_ROLLS: { key: keyof PanelStats; label: string; roll: number; unit: string }[] = [
       { key: "maxOuter", label: "Max Phys ATK", roll: 77.8, unit: "" },
       { key: "minOuter", label: "Min Phys ATK", roll: 77.8, unit: "" },
@@ -3436,6 +3545,17 @@ export default function App() {
       return buildPrefixes.includes(m[1]);
     });
 
+    // jade-scenario-guard:stat-priority
+    const statPriorityGear = getActiveGear();
+    const jadeStatScenario = selectedBuild === "silkbind-jade"
+      ? jadeScenarioForCombo(statPriorityGear.filter((item) => isItemEquipped(item, statPriorityGear)))
+      : null;
+    if (jadeStatScenario) {
+      const probe = evaluateSilkbindJadeCached(adjustedPanel, jadeStatScenario, jadeObjective, priceJadeEvent);
+      const guard = compareJadeScenarioResults(rotationStats, probe);
+      if (!guard.available) return { base: null, gains: [], losses: [], unavailable: guard };
+    }
+
     const totalFor = (p: PanelStats) => {
       if (selectedBuild === "bamboocut-dust") {
         // adjustedPanel already contains static Inner Way Attribute Buffs. Feed
@@ -3444,7 +3564,7 @@ export default function App() {
         // Best Build without double-counting deterministic menu-panel stats.
         const conditionalBuffs = buildTimelineBuffs(selectedInnerWays, innerWayTiers)
           .filter((buff) => !buff.id.endsWith(":static"));
-        return simulateTimeline(
+        const result = simulateTimeline(
           getScenarioRotationForBuild(selectedBuild),
           p,
           conditionalBuffs,
@@ -3459,16 +3579,19 @@ export default function App() {
             starweaveDistanceBonusPct,
           } as any,
           modeledDurationOrZero(selectedBuild),
-        ).total;
+        );
+        if ("reason" in result) return null;
+        return result.total;
       }
 
       if (selectedBuild === "silkbind-jade") {
-        return evaluateSilkbindJadeCached(
+        const result = evaluateSilkbindJadeCached(
           p,
-          { ...jadeScenario, cacheSalt: `stat|${activeTier.name}|${jadeObjective}` },
+          { ...jadeStatScenario, cacheSalt: `stat|${activeTier.name}|${jadeObjective}` },
           jadeObjective,
           priceJadeEvent,
-        ).totalDamage;
+        );
+        return compareJadeScenarioResults(rotationStats, result).available ? result.totalDamage : null;
       }
 
       let total = 0;
@@ -3485,31 +3608,33 @@ export default function App() {
       });
       return total;
     };
-    const gradFor = (p: PanelStats) => (totalFor(p) / baselineScore) * 100;
-
-    const baseGrad = rotationStats.gradRate;
     const baseTotal = rotationStats.totalDmg;
-    const rotTime = modeledDurationOrZero(selectedBuild);
+    const rotTime = selectedBuild === "silkbind-jade"
+      ? (rotationStats as any).scenarioContract?.durationSeconds
+      : modeledDurationOrZero(selectedBuild);
 
     const rows = STAT_ROLLS.map(({ key, label, roll, unit }) => {
       const cur = adjustedPanel[key] as number;
       const pUp = { ...adjustedPanel, [key]: cur + roll };
       const upTotal = totalFor(pUp);
-      const gain = (upTotal / baselineScore) * 100 - baseGrad;
+      if (upTotal == null) return null;
+      const gain = baseTotal > 0 ? (upTotal / baseTotal - 1) * 100 : 0;
       const gainDps = (upTotal - baseTotal) / rotTime; // DPS added by one more roll
 
       const pDown = { ...adjustedPanel, [key]: Math.max(0, cur - roll) };
-      const loss = gradFor(pDown) - baseGrad; // negative or ~zero
+      const downTotal = totalFor(pDown);
+      if (downTotal == null) return null;
+      const loss = baseTotal > 0 ? (downTotal / baseTotal - 1) * 100 : 0; // negative or ~zero
 
       return { key, label, roll, unit, gain, gainDps, loss };
-    });
+    }).filter((row): row is NonNullable<typeof row> => row !== null);
 
     return {
-      base: baseGrad,
+      base: 100,
       gains: [...rows].sort((a, b) => b.gain - a.gain),
       losses: [...rows].sort((a, b) => a.loss - b.loss),
     };
-  }, [adjustedPanel, activeTier, datang, yishui, selectedBuild, baselineScore, rotationStats.gradRate, rotationStats.totalDmg, selectedInnerWays, innerWayTiers, cinderAsh, starweaveDistanceBonusPct, jadeObjective, jadeScenario]);
+  }, [adjustedPanel, activeTier, datang, yishui, selectedBuild, rotationStats.totalDmg, selectedInnerWays, innerWayTiers, cinderAsh, starweaveDistanceBonusPct, jadeObjective, jadeScenario]);
 
   // Helper to dynamically calculate stats for any stored profile
   const getDynamicProfileStats = (prof: typeof profiles[0], buildKey = selectedBuild) => {
@@ -3562,8 +3687,8 @@ export default function App() {
     const active = teamMemberIds.map((id, index) => {
       const prof = id ? characterProfiles.find(p => p.id === id) : undefined;
       const buildKey = teamBuilds[index] || selectedBuild;
-      return prof ? { id, name: prof.name, buildKey, dps: getDynamicProfileStats(prof, buildKey).dps } : null;
-    }).filter(Boolean) as { id: string; name: string; buildKey: string; dps: number }[];
+      return prof ? { id, name: prof.name, buildKey, dps: isProductCapabilityEnabled(buildKey, "headlineDps") ? getDynamicProfileStats(prof, buildKey).dps : 0, numericalModelAvailable: isProductCapabilityEnabled(buildKey, "headlineDps") } : null;
+    }).filter(Boolean) as { id: string; name: string; buildKey: string; dps: number; numericalModelAvailable: boolean }[];
     const soloSum = active.reduce((s, m) => s + m.dps, 0);
     const modifiers = applyTeamModifiers(active, { vulnerability: teamVuln, revelryUptime: teamRevelry ? teamRevelryUptime : 0 });
     const teamDps = modifiers.total;
@@ -3635,6 +3760,19 @@ export default function App() {
     return 1 + (effCritRate / 100) * (adjustedPanel.critDmg / 100) + (effAffRate / 100) * (adjustedPanel.affDmg / 100);
   }, [effCritRate, effAffRate, adjustedPanel]);
 
+  if ("reason" in rotationStats) {
+    return <main className="app-root min-h-screen font-sans antialiased p-6" role="status" data-testid="missing-timing-unavailable">
+      <h1 className="text-lg font-bold text-slate-100">Numerical result unavailable</h1>
+      <p className="text-slate-400">{numericalUnavailableMessage(rotationStats as TimelineUnavailableResult)}</p>
+      <PathProvenance pathKey={selectedBuild} />
+      <label className="block text-slate-300">Selected path
+        <select aria-label="Selected path" value={selectedBuild} onChange={(event) => setSelectedBuild(event.target.value)}>
+          {createProductPathCatalog(BUILD_PROFILES, ESTIMATED_BUILDS).map((path) => <option key={path.id} value={path.id}>{path.label}</option>)}
+        </select>
+      </label>
+    </main>;
+  }
+
   const handleStatChange = (key: keyof PanelStats, val: number | string) => {
     setPanel((prev) => ({
       ...prev,
@@ -3643,12 +3781,14 @@ export default function App() {
   };
 
   const activeGear = getActiveGear();
+  const gearCompareEnabled = isProductCapabilityEnabled(selectedBuild, "gearCompare");
   const arsenalRows: ArsenalRow[] = activeGear
     .map((item) => {
-      const contribution = getGearItemCompareStats(item).totalGradDelta;
+      const compare = gearCompareEnabled ? getGearItemCompareStats(item) : null;
+      const contribution = compare?.available ? compare.totalGradDelta ?? undefined : undefined;
       const quality = scoreGlobalT96Gear(item.subs, selectedBuild, contribution, item.slot);
       const score = quality.overall;
-      const grade = score >= 90 ? "S" : score >= 80 ? "A" : score >= 68 ? "B" : score >= 52 ? "C" : "D";
+      const grade = score === null ? "—" : score >= 90 ? "S" : score >= 80 ? "A" : score >= 68 ? "B" : score >= 52 ? "C" : "D";
       return {
         id: item.id,
         slot: item.slot,
@@ -3680,13 +3820,15 @@ export default function App() {
     .sort((left, right) => {
       if (gearSortBy === "mastery") return (right.mastery ?? 0) - (left.mastery ?? 0);
       if (left.equipped !== right.equipped) return Number(right.equipped) - Number(left.equipped);
-      if (left.score !== right.score) return right.score - left.score;
+      if (left.score !== right.score) return (right.score ?? -1) - (left.score ?? -1);
       return left.name.localeCompare(right.name);
     });
   const equippedGear = activeGear.filter((item) => isItemEquipped(item, activeGear));
-  const compareRotationTime = modeledDurationOrZero(selectedBuild);
   const currentCompareCombat = comboInCombat(equippedGear);
-  const currentCompareDps = compareRotationTime > 0 ? currentCompareCombat.total / compareRotationTime : 0;
+  const compareRotationTime = selectedBuild === "silkbind-jade"
+    ? currentCompareCombat.scenarioContract?.durationSeconds ?? null
+    : modeledDurationOrZero(selectedBuild);
+  const currentCompareDps = !currentCompareCombat.unavailable && compareRotationTime && compareRotationTime > 0 ? currentCompareCombat.total / compareRotationTime : null;
   const menuPanelForCombo = (combo: GearItem[]) => {
     const p = computeGearPanel(panel, combo, activeScheme?.baseOverride, innerAttrName(selectedBuild));
     p.outerPen += iwStats.outerPen; p.pzPen += iwStats.pzPen; p.crit += iwStats.crit; p.aff += iwStats.aff;
@@ -3752,9 +3894,13 @@ export default function App() {
       item,
     ];
     const candidateCombat = comboInCombat(candidateCombo);
-    const candidateDps = compareRotationTime > 0 ? candidateCombat.total / compareRotationTime : 0;
-    const deltaDps = candidateDps - currentCompareDps;
-    const deltaPct = currentCompareDps > 0 ? deltaDps / currentCompareDps * 100 : 0;
+    // jade-scenario-guard:gear-compare
+    const scenarioGuard = selectedBuild === "silkbind-jade" ? compareJadeScenarioResults(currentCompareCombat, candidateCombat) : { available: true, reason: null };
+    const numericalUnavailable = getNumericalUnavailable(currentCompareCombat, candidateCombat);
+    const comparisonAvailable = !numericalUnavailable && scenarioGuard.available && Boolean(compareRotationTime && compareRotationTime > 0 && currentCompareDps != null);
+    const candidateDps = comparisonAvailable ? candidateCombat.total / compareRotationTime! : 0;
+    const deltaDps = candidateDps - (currentCompareDps ?? 0);
+    const deltaPct = currentCompareDps && comparisonAvailable ? deltaDps / currentCompareDps * 100 : 0;
     const current = activeGear.find((candidate) => candidate.slot === item.slot && isItemEquipped(candidate, activeGear));
     const candidateMenu = menuPanelForCombo(candidateCombo);
     const panelDelta = PANEL_COMPARE_FIELDS.map(({ key, label }) => {
@@ -3764,14 +3910,14 @@ export default function App() {
     }).filter((row) => Math.abs(row.delta) >= 0.05).sort((left, right) => Math.abs(right.delta) - Math.abs(left.delta));
     const isKnownAB = selectedBuild === "bamboocut-dust" && (item.mastery === 1106 || item.mastery === 1129);
     const marginalPanelRows = isKnownAB ? panelDelta : panelDelta.slice(0, 4);
-    const factorDeltas = marginalPanelRows.map((row) => {
+    const factorDeltas = comparisonAvailable ? marginalPanelRows.map((row) => {
       const field = PANEL_COMPARE_FIELDS.find((entry) => entry.label === row.label);
       if (!field || compareRotationTime <= 0) return { label: row.label, dpsDelta: 0, evidence: "MODELED" };
       const reverted = comboInCombat(candidateCombo, undefined, { panelOverride: { [field.key]: Number(currentDiagnosticPanel[field.key] || 0) } });
       return { label: row.label, dpsDelta: candidateDps - reverted.total / compareRotationTime,
         evidence: row.label === "Everspring Attunement" ? "OFFICIAL + MODELED" : "VERIFIED_PANEL + MODELED",
         note: "Leave-one-factor-out marginal effect; interactions mean rows are not additive static weights." };
-    });
+    }) : [];
     if (isKnownAB && compareRotationTime > 0) {
       const outcomeReverted = comboInCombat(candidateCombo, undefined, { panelOverride: { prec: currentDiagnosticPanel.prec, crit: currentDiagnosticPanel.crit, aff: currentDiagnosticPanel.aff } });
       factorDeltas.push({ label: "Outcome probability (Precision/Critical/Affinity)", dpsDelta: candidateDps - outcomeReverted.total / compareRotationTime, evidence: "VERIFIED_PANEL + MODELED", note: "Joint marginal; do not add to individual outcome-stat rows." });
@@ -3833,9 +3979,12 @@ export default function App() {
       image: (item.slot === "Umbrella" || item.slot === "Rope Dart") ? getWeaponIconUrlByType(item.weaponType, item.slot, selectedBuild) : SLOT_IMAGES[item.slot],
       setName: getSetName(item.set),
       subs: item.subs.map((sub) => ({ type: (sub as any).displayName || sub.type, value: sub.val, tuned: Boolean((sub as any).isRetuned ?? sub.isTuned) })),
-      modeledDps: candidateDps,
-      deltaDps,
-      deltaPct,
+      modeledDps: comparisonAvailable ? candidateDps : undefined,
+      deltaDps: comparisonAvailable ? deltaDps : undefined,
+      deltaPct: comparisonAvailable ? deltaPct : undefined,
+      available: comparisonAvailable,
+      scenarioId: candidateCombat.scenarioId,
+      unavailableReason: comparisonAvailable ? undefined : numericalUnavailable ? numericalUnavailableMessage(numericalUnavailable) : `Scenario comparison unavailable: ${scenarioGuard.reason || "UNRESOLVED_SCENARIO_CONTRACT"}`,
       panelDelta,
       factorDeltas,
       confidence: confidence.label,
@@ -3911,21 +4060,28 @@ export default function App() {
     };
   }
 
-  const gearAnalysis = equippedGear.map((item) => {
-    const removedRate = gradRateForGearCombo(equippedGear.filter((candidate) => candidate.id !== item.id));
-    const removedDps = removedRate / 100 * baselineScore / modeledDurationOrZero(selectedBuild);
-    const dpsLoss = Math.max(0, rotationStats.dps - removedDps);
-    return {
-      slot: getSlotLabel(item.slot),
-      slotKey: item.slot,
-      name: item.name,
-      score: scoreGlobalT96Gear(item.subs, selectedBuild, getGearItemCompareStats(item).totalGradDelta, item.slot).overall,
-      dpsLoss,
-      lossPct: rotationStats.dps ? dpsLoss / rotationStats.dps * 100 : 0,
-    };
-  }).sort((left, right) => right.dpsLoss - left.dpsLoss);
+  const gearAnalysis = !gearCompareEnabled || currentCompareCombat.unavailable
+    ? []
+    : equippedGear.flatMap((item) => {
+      const removedRate = gradRateForGearCombo(equippedGear.filter((candidate) => candidate.id !== item.id));
+      if (removedRate === null) return [];
+      const removedDps = removedRate / 100 * baselineScore / modeledDurationOrZero(selectedBuild);
+      const dpsLoss = Math.max(0, rotationStats.dps - removedDps);
+      const compare = getGearItemCompareStats(item);
+      if (!compare.available) return [];
+      return [{
+        slot: getSlotLabel(item.slot),
+        slotKey: item.slot,
+        name: item.name,
+        score: scoreGlobalT96Gear(item.subs, selectedBuild, compare.totalGradDelta, item.slot).overall,
+        dpsLoss,
+        lossPct: rotationStats.dps ? dpsLoss / rotationStats.dps * 100 : 0,
+      }];
+    }).sort((left, right) => right.dpsLoss - left.dpsLoss);
   const buildOptions = createProductPathCatalog(BUILD_PROFILES, ESTIMATED_BUILDS);
   const selectedProductPath = buildOptions.find((path) => path.id === selectedBuild);
+  const selectedProductPathLabel = selectedProductPath?.label ?? selectedBuild;
+  const selectedBuildProfile = getModeledPathMetadata(selectedBuild, BUILD_PROFILES);
   const innerWayOptions = [...INNER_WAYS]
     .sort((left, right) => {
       const category = selectedProductPath?.label.toUpperCase() ?? "";
@@ -3965,8 +4121,19 @@ export default function App() {
     { label: `${innerAttrName(selectedBuild)} Penetration`, menu: fmtCombatStat(basePanel.pzPen, true), combat: fmtCombatStat(adjustedPanel.pzPen, true) },
     { label: `Net ${innerAttrName(selectedBuild)} Penetration`, menu: "-", combat: fmtCombatStat(netPzPen, true), derived: true },
   ];
+  const openLegacyAnalysis = (tab: string) => {
+    const capability = legacyAnalysisCapability[tab];
+    if (capability && !isProductCapabilityEnabled(selectedBuild, capability)) return;
+    setWorkspace("analysis");
+    setGradModalActiveTab(tab);
+    setIsGradModalOpen(true);
+  };
   const openProductTab = (tab: ProductTab) => {
-    if (selectedBuildIsUnmodeled && tab !== "settings" && tab !== "profile") {
+    const tabCapability: Partial<Record<ProductTab, ProductCapability>> = {
+      details: "headlineDps", "gear-compare": "gearCompare", "inventory-optimizer": "bestBuild", simulation: "simulation", "skill-editor": "skillPreview", team: "headlineDps",
+    };
+    const capability = tabCapability[tab];
+    if ((selectedBuildIsUnmodeled && tab !== "settings" && tab !== "profile") || (capability && !isProductCapabilityEnabled(selectedBuild, capability))) {
       setActiveProductTab("settings");
       setWorkspace("build");
       setIsGradModalOpen(false);
@@ -3988,9 +4155,7 @@ export default function App() {
     else if (tab === "profile") setIsExportImportModalOpen(true);
     else {
       const tool = tab === "inventory-optimizer" ? "best-build" : tab;
-      setWorkspace("analysis");
-      setGradModalActiveTab(tool);
-      setIsGradModalOpen(true);
+      openLegacyAnalysis(tool);
     }
   };
 
@@ -4120,18 +4285,16 @@ export default function App() {
           onAdd={() => openAddModal(gearFilterSlot === "ALL" ? "Umbrella" : gearFilterSlot)}
           analysis={gearAnalysis}
           modeledDps={rotationStats.dps}
-          priorities={statPriorityList.gains.map((item) => ({ name: item.label, dps: item.gainDps }))}
+          priorities={isProductCapabilityEnabled(selectedBuild, "statPriority") ? statPriorityList.gains.map((item) => ({ name: item.label, dps: item.gainDps })) : []}
           onOpenCompare={() => openProductTab("gear-compare")}
           onOpenOptimizer={() => openProductTab("inventory-optimizer")}
           onOpenTransmute={() => {
-            setWorkspace("analysis");
-            setGradModalActiveTab("transmute");
-            setIsGradModalOpen(true);
+            openLegacyAnalysis("transmute");
           }}
         />
       )}
 
-      {workspace === "compare" && (
+      {workspace === "compare" && isProductCapabilityEnabled(selectedBuild, "gearCompare") && (
         <GearCompareWorkspace
           pathKey={selectedBuild}
           rows={compareRows}
@@ -4149,7 +4312,7 @@ export default function App() {
           selectedBuild={selectedBuild}
           buildNotes={selectedBuildIsUnmodeled
             ? "Current Global path recognized. Numerical model unavailable / UNKNOWN."
-            : BUILD_PROFILES[selectedBuild as keyof typeof BUILD_PROFILES]?.notes ?? "Modeled profile metadata unavailable."}
+            : selectedBuildProfile?.notes ?? "Modeled profile metadata unavailable."}
           weaponSet={setAllWeapon}
           armorSet={setAllArmor}
           weaponSets={WEAPON_SET_KEYS.map((id) => ({ id, label: getSetName(id) }))}
@@ -4169,7 +4332,7 @@ export default function App() {
           innerWayOptions={innerWayOptions}
           onBuildChange={(pathKey) => {
             setSelectedBuild(pathKey);
-            if (!isPathModeled(pathKey)) {
+            if (!isProductCapabilityEnabled(pathKey, "headlineDps")) {
               setActiveProductTab("settings");
               setWorkspace("build");
               setIsGradModalOpen(false);
@@ -4205,7 +4368,7 @@ export default function App() {
           modeled={rotationStats.dps * dpsEff}
           totalDamage={rotationStats.totalDmg}
           graduation={rotationStats.gradRate}
-          duration={modeledDurationOrZero(selectedBuild)}
+          duration={selectedBuild === "silkbind-jade" ? rotationStats.duration : modeledDurationOrZero(selectedBuild)}
           efficiency={dpsEff}
           food={food}
               foodMin={activeTier.foodMin}
@@ -4214,9 +4377,9 @@ export default function App() {
           stats={combatStats}
           skills={rotationStats.items.map((item) => ({ name: translateSkillName(item.name), count: item.count, damage: item.total, share: rotationStats.totalDmg ? item.total / rotationStats.totalDmg * 100 : 0 })).sort((left, right) => right.damage - left.damage)}
           innerWays={innerWayContrib.map((item) => ({ name: `${item.name} T${item.tier}`, value: item.lossDps, detail: `${item.lossPct.toFixed(2)}% of total` }))}
-          sets={armorSetCompare.map((item) => ({ name: item.name, value: item.dps, detail: item.modeled ? "Modeled" : "2-piece only", active: item.active, verified: item.modeled }))}
-          rings={bowCompare.map((item) => ({ name: item.label, value: item.dps, detail: `${item.delta >= 0 ? "+" : ""}${Math.round(item.delta).toLocaleString()} vs current`, active: item.active }))}
-          priorities={statPriorityList.gains.map((item) => ({ name: item.label, value: item.gainDps, detail: `One ${item.roll}${item.unit} roll` }))}
+          sets={(armorSetCompare ?? []).map((item) => ({ name: item.name, value: item.dps, detail: item.modeled ? "Modeled" : "2-piece only", active: item.active, verified: item.modeled }))}
+          rings={(bowCompare ?? []).map((item) => ({ name: item.label, value: item.dps, detail: `${item.delta >= 0 ? "+" : ""}${Math.round(item.delta).toLocaleString()} vs current`, active: item.active }))}
+          priorities={isProductCapabilityEnabled(selectedBuild, "statPriority") ? statPriorityList.gains.map((item) => ({ name: item.label, value: item.gainDps, detail: `One ${item.roll}${item.unit} roll` })) : []}
           onEfficiencyChange={(value) => { setDpsEff(value); localStorage.setItem(EXECUTION_SCALING_STORAGE_KEY, String(value)); }}
           onFoodChange={setFood}
           cinderAsh={cinderAsh}
@@ -4249,10 +4412,11 @@ export default function App() {
           calibrated={Boolean(activeScheme?.baseOverride)}
           detailOpen={isGradModalOpen}
           activeTool={gradModalActiveTab}
-          onToolOpen={(id) => {
-            setGradModalActiveTab(id);
-            setIsGradModalOpen(true);
-          }}
+          unavailableTools={Object.keys(legacyAnalysisCapability).filter((tool) => {
+            const capability = legacyAnalysisCapability[tool];
+            return Boolean(capability && !isProductCapabilityEnabled(selectedBuild, capability));
+          })}
+          onToolOpen={openLegacyAnalysis}
         />
       )}
 
@@ -4492,12 +4656,16 @@ export default function App() {
                     const mB = b.mastery !== undefined ? parseInt(b.mastery.toString()) : 0;
                     return mB - mA;
                   }
+                  if (!gearCompareEnabled) return a.name.localeCompare(b.name);
                   // Equipped first, then by grade (grad delta) high → low.
                   const eqA = isItemEquipped(a, getActiveGear()) ? 1 : 0;
                   const eqB = isItemEquipped(b, getActiveGear()) ? 1 : 0;
                   if (eqA !== eqB) return eqB - eqA;
-                  const dB = getGearItemCompareStats(b).totalGradDelta;
-                  const dA = getGearItemCompareStats(a).totalGradDelta;
+                  const bStats = getGearItemCompareStats(b);
+                  const aStats = getGearItemCompareStats(a);
+                  if (!bStats.available || !aStats.available) return a.name.localeCompare(b.name);
+                  const dB = bStats.totalGradDelta;
+                  const dA = aStats.totalGradDelta;
                   if (dB !== dA) return dB - dA;
                   return a.name.localeCompare(b.name);
                 })
@@ -4507,10 +4675,11 @@ export default function App() {
                   const isPurple = item.quality === "purple";
                   const slotObj = SLOTS.find(s => s.name === item.slot);
                   const slotIcon = slotObj?.icon || "🛡";
-                  const { totalGradDelta } = getGearItemCompareStats(item);
+                  const compare = gearCompareEnabled ? getGearItemCompareStats(item) : null;
+                  const totalGradDelta = compare?.available ? compare.totalGradDelta : null;
 
                   // Letter grade from grad delta (per-slot a single piece tops out ~8%).
-                  const grade = totalGradDelta >= 7 ? "S" : totalGradDelta >= 5.5 ? "A" : totalGradDelta >= 4 ? "B" : totalGradDelta >= 2 ? "C" : "D";
+                  const grade = totalGradDelta === null ? null : totalGradDelta >= 7 ? "S" : totalGradDelta >= 5.5 ? "A" : totalGradDelta >= 4 ? "B" : totalGradDelta >= 2 ? "C" : "D";
                   const rarityClass = isGold ? "ga-rarity5" : isPurple ? "ga-rarity4" : "ga-rarity3";
                   const stars = isGold ? "★★★★★" : isPurple ? "★★★★" : "★★★";
                   const hasTuned = item.subs.some(s => s.isTuned);
@@ -4538,10 +4707,10 @@ export default function App() {
                           <h3 className="ga-card__name">{item.name}</h3>
                           <span className="ga-card__slot">{getSlotLabel(item.slot)}{item.weaponType ? ` · ${item.weaponType}` : ""}</span>
                         </div>
-                        <div className={`ga-card__score ga-card__score--${grade}`}>
+                        {grade && <div className={`ga-card__score ga-card__score--${grade}`}>
                           <span className="ga-card__score-grade">{grade}</span>
-                          <span className="ga-card__score-val">{totalGradDelta.toFixed(1)}</span>
-                        </div>
+                          <span className="ga-card__score-val">{totalGradDelta!.toFixed(1)}</span>
+                        </div>}
                       </div>
 
                       <div className="ga-card__subs">
@@ -4560,9 +4729,9 @@ export default function App() {
                             <span className="ga-card__badge" style={{ background: 'rgba(255,215,0,0.12)', color: '#d4b24a', borderColor: 'rgba(255,215,0,0.3)' }} title="Martial Mastery">MM {item.mastery}</span>
                           )}
                         </div>
-                        <span className={`ga-card__delta ${totalGradDelta >= 0 ? "is-up" : "is-down"}`}>
+                        {totalGradDelta !== null && <span className={`ga-card__delta ${totalGradDelta >= 0 ? "is-up" : "is-down"}`}>
                           {totalGradDelta >= 0 ? "+" : ""}{totalGradDelta.toFixed(2)}%
-                        </span>
+                        </span>}
                       </div>
                     </div>
                   );
@@ -4592,11 +4761,12 @@ export default function App() {
               </select>
             </div>
           </div>
-          {selectedBuildIsUnmodeled && (
+          {selectedBuildIsUnmodeled && selectedProductPath && (
             <div role="status" className="text-[12px] text-[#f0b400] mt-2">
-              Bamboocut - Draught is current Global content, but its numerical model is UNKNOWN. DPS, graduation, ranking, and optimizer recommendations are unavailable until current-client evidence is supplied: full martial-art and move tooltips, breakthrough/tier effects, relevant Inner Way and gear-set tooltips, and a clean combat parse if needed.
+              {selectedProductPathLabel} is current Global content, but its numerical model is UNKNOWN. DPS, graduation, ranking, and optimizer recommendations are unavailable until current-client evidence is supplied: full martial-art and move tooltips, breakthrough/tier effects, relevant Inner Way and gear-set tooltips, and a clean combat parse if needed.
             </div>
           )}
+          {selectedBuildIsUnmodeled && !selectedProductPath && <div role="status" className="text-[12px] text-[#f0b400] mt-2">Saved path {selectedBuild} is unsupported legacy data. It was not converted to a current Global path; select one of the canonical paths above.</div>}
           <button
             onClick={() => setCalibOpen(true)}
             className="secondary-btn workspace-build-group"
@@ -4889,7 +5059,7 @@ export default function App() {
           </button>
           {advPanelOpen && <div className="workspace-build-group">
           {/* Gear Contribution — DPS loss if each equipped piece were removed */}
-          {gearContrib.length > 0 && (
+          {gearContrib && gearContrib.length > 0 && (
             <div style={{ marginTop: 12, border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, overflow: "hidden", order: 8 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 10px", background: "rgba(255,255,255,0.03)" }}>
                 <span style={{ fontSize: 11, fontWeight: 700, color: "#f0b400", textTransform: "uppercase", letterSpacing: 0.4 }}>DPS Breakdown by Gear</span>
@@ -4908,7 +5078,7 @@ export default function App() {
           )}
 
           {/* Ring (bow) attribute comparison */}
-          {bowCompare.length > 0 && (
+          {bowCompare && bowCompare.length > 0 && (
             <div style={{ marginTop: 12, border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, overflow: "hidden", order: 9 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 10px", background: "rgba(255,255,255,0.03)" }}>
                 <span style={{ fontSize: 11, fontWeight: 700, color: "#f0b400", textTransform: "uppercase", letterSpacing: 0.4 }}>Ring Attribute</span>
@@ -4927,7 +5097,7 @@ export default function App() {
           )}
 
           {/* Set bonus comparison — W = weapon set, A = armour set (2pc verified; most 4pc not modeled) */}
-          {armorSetCompare.length > 0 && (
+          {armorSetCompare && armorSetCompare.length > 0 && (
             <div style={{ marginTop: 12, border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, overflow: "hidden", order: 10 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 10px", background: "rgba(255,255,255,0.03)" }}>
                 <span style={{ fontSize: 11, fontWeight: 700, color: "#f0b400", textTransform: "uppercase", letterSpacing: 0.4 }}>Weapon Set</span>
@@ -5019,7 +5189,8 @@ export default function App() {
                       key={t.key}
                       type="button"
                       className="anav-btn"
-                      onClick={() => { setGradModalActiveTab(t.key); setIsGradModalOpen(true); }}
+                      disabled={Boolean(legacyAnalysisCapability[t.key] && !isProductCapabilityEnabled(selectedBuild, legacyAnalysisCapability[t.key]))}
+                      onClick={() => openLegacyAnalysis(t.key)}
                     >
                       {t.label}
                     </button>
@@ -5569,23 +5740,30 @@ export default function App() {
                     { key: "dps-compare", label: "WWMath Coverage", tip: "Read-only coverage check for WWMath rotation variants. Partial rows are not used as DPS truth." },
                     { key: "skill-editor", label: "Skill Editor", tip: "Tweak a skill's coefficients and preview its per-hit damage. Calculator only — does not change rotation DPS." },
                     { key: "team", label: "Team", tip: "Compare saved builds side by side." },
-                  ].map(tab => (
-                    <div
+                  ].map(tab => {
+                    const capability = legacyAnalysisCapability[tab.key];
+                    const unavailable = Boolean(capability && !isProductCapabilityEnabled(selectedBuild, capability));
+                    const detail = unavailable ? "Recommendation unavailable pending stronger evidence" : tab.tip;
+                    return <button
                       key={tab.key}
+                      type="button"
+                      disabled={unavailable}
                       className={`grad-tab ${gradModalActiveTab === tab.key ? "active" : ""}`}
-                      onClick={() => setGradModalActiveTab(tab.key)}
-                      title={tab.tip}
+                      onClick={() => openLegacyAnalysis(tab.key)}
+                      title={detail}
+                      aria-label={unavailable ? `${tab.label} unavailable: ${detail.toLowerCase()}` : undefined}
                     >
-                      {tab.label}
-                      <span title={tab.tip} style={{ marginLeft: 4, opacity: 0.55, fontSize: '0.85em', cursor: 'help' }}>ⓘ</span>
-                    </div>
-                  ))}
+                      {unavailable ? `${tab.label} unavailable` : tab.label}
+                      <span title={detail} style={{ marginLeft: 4, opacity: 0.55, fontSize: '0.85em', cursor: 'help' }}>ⓘ</span>
+                    </button>;
+                  })}
                 </div>
                 <div className="grad-tab-content" style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
                   {/* Tab Panes */}
                   {gradModalActiveTab === "rotations" && (() => {
-                    const buildLabel = (BUILD_PROFILES as any)[selectedBuild]?.label || selectedBuild;
+                    const buildLabel = selectedProductPathLabel;
                     const rotWindow = modeledDurationOrZero(selectedBuild);
+                    if ("reason" in rotationSim) return <div role="status" className="text-[12px] text-[#f0b400]">Custom rotation unavailable: {numericalUnavailableMessage(rotationSim)}</div>;
                     const bd = rotationSim.breakdown;
                     const bdTot = (bd.crit + bd.aff + bd.normal + bd.abrasion) || 1;
                     const dDps = rotationSim.dps - rotationStats.dps;
@@ -5600,13 +5778,14 @@ export default function App() {
                         </p>
                       </div>
                       <div className="analysis-file-actions" aria-label="Manage rotation">
-                        <button type="button" onClick={() => setEditedRotation(modeledRotationOrEmpty(selectedBuild).map((item) => ({ ...item })))}>Create custom rotation</button>
-                        <label>Reference preset<select value={activeRotationPresetId} onChange={(event) => event.target.value ? useRotationPreset(event.target.value) : (setEditedRotation(null), setActiveRotationPresetId(""))}><option value="">Built-in reference</option>{buildRotationPresets.map((preset) => <option key={preset.id} value={preset.id}>{preset.name}</option>)}</select></label>
-                        <button type="button" onClick={saveRotationPreset}>Save preset</button>
-                        <button type="button" disabled={!activeRotationPresetId} onClick={renameRotationPreset}>Rename</button>
-                        <button type="button" disabled={!activeRotationPresetId} onClick={duplicateRotationPreset}>Duplicate</button>
-                        <button type="button" onClick={() => downloadJson(`${selectedBuild}-rotation.json`, effectiveRotation)}>Export JSON</button>
-                        <label>Import JSON<input type="file" accept="application/json,.json" onChange={async (event) => {
+                        {!customRotationEnabled && <span>Custom rotation numerical execution is unavailable for this path.</span>}
+                        <button type="button" disabled={!customRotationEnabled} onClick={() => setEditedRotation(modeledRotationOrEmpty(selectedBuild).map((item) => ({ ...item })))}>Create custom rotation</button>
+                        <label>Reference preset<select disabled={!customRotationEnabled} value={activeRotationPresetId} onChange={(event) => event.target.value ? useRotationPreset(event.target.value) : (setEditedRotation(null), setActiveRotationPresetId(""))}><option value="">Built-in reference</option>{buildRotationPresets.map((preset) => <option key={preset.id} value={preset.id}>{preset.name}</option>)}</select></label>
+                        <button type="button" disabled={!customRotationEnabled} onClick={saveRotationPreset}>Save preset</button>
+                        <button type="button" disabled={!customRotationEnabled || !activeRotationPresetId} onClick={renameRotationPreset}>Rename</button>
+                        <button type="button" disabled={!customRotationEnabled || !activeRotationPresetId} onClick={duplicateRotationPreset}>Duplicate</button>
+                        <button type="button" disabled={!customRotationEnabled} onClick={() => downloadJson(`${selectedBuild}-rotation.json`, effectiveRotation)}>Export JSON</button>
+                        <label>Import JSON<input disabled={!customRotationEnabled} type="file" accept="application/json,.json" onChange={async (event) => {
                           const file = event.target.files?.[0];
                           if (!file) return;
                           try {
@@ -5616,13 +5795,14 @@ export default function App() {
                           } catch (error) { alert(error instanceof Error ? error.message : "Invalid rotation file"); }
                           event.target.value = "";
                         }} /></label>
-                        <button type="button" disabled={!editedRotation} onClick={() => { setEditedRotation(null); setActiveRotationPresetId(""); }}>Reset default</button>
+                        <button type="button" disabled={!customRotationEnabled || !editedRotation} onClick={() => { setEditedRotation(null); setActiveRotationPresetId(""); }}>Reset default</button>
                       </div>
 
                       {/* ── BUFF-UPTIME TIMELINE SIMULATOR ── */}
                       {(() => {
                         const ts = timelineSim;
                         const win = modeledDurationOrZero(selectedBuild);
+                        if ("reason" in ts) return <div role="status" className="rotsim">Timeline unavailable: {numericalUnavailableMessage(ts)}</div>;
                         const SKILL_COLORS = ['#e05a41','#e0b45a','#4fb27c','#bd8fdb','#5f97c6','#4fc9c0','#d68f5f','#9ab04f','#c96b8f','#6b8fc9','#c9a84f','#4f9ec9'];
                         const colorOf = (name: string) => SKILL_COLORS[Math.abs([...name].reduce((a,c)=>a+c.charCodeAt(0),0)) % SKILL_COLORS.length];
                         const rampBuffs = ts.perBuff.filter(b => b.ramp);
@@ -5789,7 +5969,7 @@ export default function App() {
                                 <tr key={item.name + i} className="border-b border-[#23262c]/40">
                                   <td className="text-left px-3 py-1.5 text-slate-200" title={item.name}>{translateSkillName(item.name)}</td>
                                   <td className="text-center px-2 py-1.5">
-                                    <input type="number" min={0} value={item.count}
+                                    <input disabled={!customRotationEnabled} type="number" min={0} value={item.count}
                                       onChange={e => { const n = Number(e.target.value); if (!isNaN(n)) setSkillCount(i, n); }}
                                       className="w-14 bg-[#111316] border border-[#23262c] rounded px-1.5 py-0.5 text-center text-slate-100 text-[12.5px]" />
                                   </td>
@@ -5803,9 +5983,9 @@ export default function App() {
                                     </div>
                                   </td>
                                   <td className="text-center px-1 py-1.5 whitespace-nowrap">
-                                    <button onClick={() => moveSkill(i, -1)} disabled={i === 0} title="Move earlier" className="rotmove">▲</button>
-                                    <button onClick={() => moveSkill(i, 1)} disabled={i === effectiveRotation.length - 1} title="Move later" className="rotmove">▼</button>
-                                    <button onClick={() => removeSkill(i)} title="Remove skill" className="text-[#ff7b72]/70 hover:text-[#ff7b72] text-[13px] ml-1">✕</button>
+                                    <button onClick={() => moveSkill(i, -1)} disabled={!customRotationEnabled || i === 0} title="Move earlier" className="rotmove">▲</button>
+                                    <button onClick={() => moveSkill(i, 1)} disabled={!customRotationEnabled || i === effectiveRotation.length - 1} title="Move later" className="rotmove">▼</button>
+                                    <button onClick={() => removeSkill(i)} disabled={!customRotationEnabled} title="Remove skill" className="text-[#ff7b72]/70 hover:text-[#ff7b72] text-[13px] ml-1">✕</button>
                                   </td>
                                 </tr>
                               );
@@ -5821,12 +6001,12 @@ export default function App() {
 
                       <div className="flex flex-wrap items-center gap-2 bg-[#141619] border border-[#23262c] rounded-xl p-3">
                         <span className="text-[10px] uppercase tracking-widest text-[#a19683] font-mono">Add skill</span>
-                        <select value={addSkillName} onChange={e => setAddSkillName(e.target.value)}
+                        <select disabled={!customRotationEnabled} value={addSkillName} onChange={e => setAddSkillName(e.target.value)}
                           className="flex-1 min-w-[160px] bg-[#111316] border border-[#23262c] rounded px-2 py-1 text-slate-100 text-[12px]">
                           <option value="">— pick a skill from this build —</option>
                           {buildSkillNames.map(n => <option key={n} value={n}>{translateSkillName(n)}</option>)}
                         </select>
-                        <button onClick={() => addSkillToRotation(addSkillName)} disabled={!addSkillName}
+                        <button onClick={() => addSkillToRotation(addSkillName)} disabled={!customRotationEnabled || !addSkillName}
                           className="text-[12px] px-3 py-1.5 rounded border border-[#23262c] text-[#7ee787] disabled:opacity-40 hover:border-[#7ee787]/50">+ Add to rotation</button>
                       </div>
                       <p className="text-[11px] text-slate-500 leading-snug">
@@ -5841,7 +6021,9 @@ export default function App() {
                       return <div style={{ padding: 16, color: "#8b949e" }}>No WWMath data for this build.</div>;
                     }
                     // App default DPS for the same inputs (sanity anchor).
-                    const appTotal = computeTotalDamage(adjustedPanel);
+                    const appResult = computeTotalDamage(adjustedPanel);
+                    if ("reason" in appResult) return <div style={{ padding: 16, color: "#8b949e" }}>App comparison unavailable: {appResult.reason}.</div>;
+                    const appTotal = appResult.total;
                     const appTime = modeledDurationOrZero(selectedBuild);
                     const appDps = appTime > 0 ? appTotal / appTime : 0;
                     const tiers = Object.keys(ROTATIONS_WWM[wwmKey]);
@@ -5883,6 +6065,7 @@ export default function App() {
                   })()}
                   {gradModalActiveTab === "skill-editor" && (() => {
                     const p = skillEditorPreview;
+                    const preview = p.available ? p : null;
                     const timing = { ...lookupTiming(editorSkillName), ...timingOverrides[editorSkillName] };
                     const fields: { key: keyof SkillDefinition; label: string; step: number }[] = [
                       { key: "outerRatio", label: "Physical ratio", step: 0.01 },
@@ -5893,18 +6076,18 @@ export default function App() {
                       { key: "exPen", label: "Extra Pen", step: 0.1 },
                       { key: "csBonus", label: "Charge / set bonus", step: 0.01 },
                     ];
-                    const cells = p ? [
-                      { label: "Abrasion", v: p.sim.grazeHit, b: p.base.grazeHit, color: "#8b949e" },
-                      { label: "Normal", v: p.sim.normHit, b: p.base.normHit, color: "#e8e8e8" },
-                      { label: "Crit", v: p.sim.critHit, b: p.base.critHit, color: "#f0b400" },
-                      { label: "Affinity", v: p.sim.affHit, b: p.base.affHit, color: "#7ee787" },
+                    const cells = preview ? [
+                      { label: "Abrasion", v: preview.sim.sim.grazeHit, b: preview.base.sim.grazeHit, color: "#8b949e" },
+                      { label: "Normal", v: preview.sim.sim.normHit, b: preview.base.sim.normHit, color: "#e8e8e8" },
+                      { label: "Crit", v: preview.sim.sim.critHit, b: preview.base.sim.critHit, color: "#f0b400" },
+                      { label: "Affinity", v: preview.sim.sim.affHit, b: preview.base.sim.affHit, color: "#7ee787" },
                     ] : [];
                     return (
                     <div className="space-y-4" style={{ textAlign: 'left' }}>
                       <div className="bg-[#1e1a12] border border-[#f0b400]/30 rounded-xl p-4">
                         <h3 className="text-sm font-bold text-[#f0b400] mb-2 flex items-center gap-2">🎚️ Skill Editor <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#f0b400]/15 text-[#f0b400]/80">beta</span></h3>
                         <p className="text-[12px] text-slate-300 leading-relaxed">
-                          Pick a skill, edit its coefficients, and watch the per-hit damage recompute live through the verified formula. <b>Preview only</b> — edits don't change the rotation DPS or the real skill (the damage math is untouched). Values use your current panel, tier and in-combat buffs.
+                          Pick a skill, edit its coefficients, and watch the per-hit damage recompute live through the verified formula. {canApplySkillRotationOverride ? "Apply to rotation DPS is available for this path." : "Preview is available, but changing rotation DPS is unavailable for this path."} Values use your current panel, tier and in-combat buffs.
                         </p>
                       </div>
 
@@ -5917,14 +6100,14 @@ export default function App() {
                         </select>
                         <button onClick={() => setEditorOverrides(null)} disabled={!editorOverrides}
                           className="text-[12px] px-3 py-1.5 rounded border border-[#23262c] text-slate-300 disabled:opacity-40 hover:border-[#f0b400]/50">Reset coefficients</button>
-                        <button onClick={() => { if (editorSkillName && editorOverrides) setSkillOverrides((current) => ({ ...current, [editorSkillName]: editorOverrides })); }} disabled={!editorSkillName || !editorOverrides}
+                        <button onClick={() => { if (canApplySkillRotationOverride && editorSkillName && editorOverrides) setSkillOverrides((current) => ({ ...current, [editorSkillName]: editorOverrides })); }} disabled={!canApplySkillRotationOverride || !editorSkillName || !editorOverrides}
                           className="text-[12px] px-3 py-1.5 rounded border border-emerald-500/40 text-emerald-300 disabled:opacity-40">Apply to rotation DPS</button>
-                        <button onClick={() => { if (editorSkillName) setSkillOverrides(({ [editorSkillName]: _removed, ...rest }) => rest); }} disabled={!skillOverrides[editorSkillName]}
+                        <button onClick={() => { if (canApplySkillRotationOverride && editorSkillName) setSkillOverrides(({ [editorSkillName]: _removed, ...rest }) => rest); }} disabled={!canApplySkillRotationOverride || !skillOverrides[editorSkillName]}
                           className="text-[12px] px-3 py-1.5 rounded border border-rose-500/40 text-rose-300 disabled:opacity-40">Remove rotation override</button>
                       </div>
                       <div className="analysis-file-actions" aria-label="Manage skill">
                         <button type="button" onClick={() => setEditorOverrides({})}>Create editable copy</button>
-                        <button type="button" disabled={!p} onClick={() => p && downloadJson(`${translateSkillName(editorSkillName)}.json`, { name: editorSkillName, definition: p.edited })}>Export JSON</button>
+                        <button type="button" disabled={!preview} onClick={() => preview && downloadJson(`${translateSkillName(editorSkillName)}.json`, { name: editorSkillName, definition: preview.edited })}>Export JSON</button>
                         <label>Import JSON<input type="file" accept="application/json,.json" onChange={async (event) => {
                           const file = event.target.files?.[0];
                           if (!file) return;
@@ -5942,7 +6125,7 @@ export default function App() {
                         }} /></label>
                       </div>
 
-                      {p ? (
+                      {preview ? (
                         <>
                           <div className="text-[11px] uppercase tracking-widest text-slate-400 font-mono">Damage preview <span className="normal-case tracking-normal">(per hit)</span></div>
                           <div className="grid grid-cols-4 gap-3">
@@ -5970,27 +6153,25 @@ export default function App() {
                           <div className="bg-[#141619] border border-[#23262c] rounded-xl p-4 grid grid-cols-2 gap-3">
                             <div className="col-span-2 text-[11px] uppercase tracking-widest text-slate-400 font-mono">Coefficients &amp; modifiers</div>
                             {fields.map(f => {
-                              const val = (editorOverrides?.[f.key] ?? p.orig[f.key]) as number;
-                              const changed = !!editorOverrides && editorOverrides[f.key] !== undefined && editorOverrides[f.key] !== p.orig[f.key];
+                              const val = (editorOverrides?.[f.key] ?? preview.orig[f.key]) as number;
+                              const changed = !!editorOverrides && editorOverrides[f.key] !== undefined && editorOverrides[f.key] !== preview.orig[f.key];
                               return (
                                 <label key={f.key} className="flex flex-col gap-1 text-[11.5px] text-slate-300">
                                   <span className="flex items-center gap-1">{f.label}{changed && <span className="text-[#f0b400]" title="edited">●</span>}</span>
                                   <input type="number" step={f.step} value={val}
                                     onChange={e => { const n = Number(e.target.value); if (!isNaN(n)) setSkillField(f.key, n); }}
                                     className="bg-[#111316] border border-[#23262c] rounded px-2 py-1 text-slate-100 text-[12.5px]" />
-                                  <span className="text-[10px] text-slate-500">orig {String(p.orig[f.key])}</span>
+                                  <span className="text-[10px] text-slate-500">orig {String(preview.orig[f.key])}</span>
                                 </label>
                               );
                             })}
                           </div>
-                          <label className="flex items-center gap-2 text-[11px] text-slate-300"><input type="checkbox" checked={Boolean(editorOverrides?.isCharge ?? p.orig.isCharge)} onChange={(event) => setSkillField("isCharge", event.target.checked ? 1 : 0)} /> Charged-skill flag</label>
+                          <label className="flex items-center gap-2 text-[11px] text-slate-300"><input type="checkbox" checked={Boolean(editorOverrides?.isCharge ?? preview.orig.isCharge)} onChange={(event) => setSkillField("isCharge", event.target.checked ? 1 : 0)} /> Charged-skill flag</label>
 
-                          <p className="text-[11px] text-slate-500 leading-snug">
-                            Classification fields (type / weapon-type / charge / set bonus) decide how the skill is bucketed and aren't safe to edit in v1. To make an edit affect rotation DPS you'd wire an override — a later phase.
-                          </p>
+                          <p className="text-[11px] text-slate-500 leading-snug">Classification fields (type / weapon-type / charge / set bonus) decide how the skill is bucketed and aren't safe to edit in v1.</p>
                         </>
                       ) : (
-                        <div className="text-[12px] text-slate-400">Select a skill to edit.</div>
+                        <div className="text-[12px] text-slate-400">Preview unavailable: {p.result.reason}.</div>
                       )}
                     </div>
                     );
@@ -6018,9 +6199,9 @@ export default function App() {
                               </select>
                               <select aria-label={`Member ${i + 1} path`} value={teamBuilds[i] || selectedBuild} onChange={e => setTeamBuilds(prev => prev.map((value, j) => j === i ? e.target.value : value))}
                                 className="max-w-40 bg-[#111316] border border-[#23262c] rounded px-2 py-1 text-slate-100 text-[11px]">
-                                {Object.entries(BUILD_PROFILES).map(([key, build]) => <option key={key} value={key}>{build.label}</option>)}
+                                {buildOptions.map((build) => <option key={build.id} value={build.id}>{build.label}{build.capability === "UNMODELED" ? " (numerical model unavailable)" : ""}</option>)}
                               </select>
-                              <span className="w-28 text-right text-[12.5px] font-bold text-slate-200">{m ? Math.round(m.dps).toLocaleString() + " /s" : "—"}</span>
+                              <span className="w-28 text-right text-[12.5px] font-bold text-slate-200">{m ? m.numericalModelAvailable ? Math.round(m.dps).toLocaleString() + " /s" : "UNKNOWN" : "—"}</span>
                             </div>
                           );
                         })}
@@ -6208,7 +6389,7 @@ export default function App() {
                       })()}
                     </div>
                   )}
-                  {gradModalActiveTab === "priority" && (
+                  {gradModalActiveTab === "priority" && isProductCapabilityEnabled(selectedBuild, "statPriority") && (
                     <div style={{ textAlign: 'left' }}>
                       {gradModalActiveTab === "priority" && (
           <div className="space-y-6">
@@ -6218,7 +6399,7 @@ export default function App() {
                   <TrendingUp className="text-[#f0b400] w-5 h-5" /> Stat Priority — Graduation Impact
                 </h2>
                 <p className="text-slate-500 text-sm mt-1">
-                  Live ranking for <strong className="text-[#f0b400]">{(BUILD_PROFILES as any)[selectedBuild]?.label || "your build"}</strong>, computed from your current panel ({rotationStats.gradRate.toFixed(1)}% graduation). Each row simulates adding/removing <strong>one typical substat roll</strong> on a single sub-stat and shows the resulting change in graduation %.
+                  Provisional model ranking for <strong className="text-[#f0b400]">{selectedProductPathLabel}</strong>, computed from your current panel ({rotationStats.gradRate.toFixed(1)}% graduation). Each row simulates adding/removing <strong>one typical substat roll</strong> on a single sub-stat and shows the resulting modeled change in graduation %.
                 </p>
               </div>
 
@@ -6318,14 +6499,8 @@ export default function App() {
                   <p>
                     <strong className="text-[#f0b400]">2. Critical Rate Cap (80%)</strong>: The absolute maximum Critical Rate in Where Winds Meet is capped at <strong className="text-orange-400">80%</strong>. If your combined character attributes and passive/active buffs push your Crit beyond 80%, the surplus is ignored. Aim for roughly 73% unbuffed so that party buffs safely top you off at the optimal 80% maximum.
                   </p>
-                  <p>
-                    <strong className="text-[#f0b400]">3. Critical Damage (Crit DMG %)</strong>: Crit DMG works in direct synergy with Crit Rate. Once your critical chance is secure, augmenting critical multipliers scales your total active DPS and Everspring Umbrella execution chain jumps exponentially.
-                  </p>
                 </div>
                 <div className="space-y-3">
-                  <p>
-                    <strong className="text-[#f0b400]">4. Affinity Rate (Cap 40%) & Bamboocut</strong>: Bamboocut Dust damage scales heavily with your overall break stats. Although Affinity is restricted to an absolute <strong className="text-orange-400">40%</strong> maximum cap in-game, adding Affinity attributes on current Global gear remains a powerful build option to convert graze hits into full-powered breaking attacks.
-                  </p>
                   <p>
                     <strong className="text-[#f0b400]">5. Substat Relaying (Inherit mechanics)</strong>: When refining current Global gear, always prioritize relaying/inheriting attributes that have reached diamond/gold thresholds (such as Phys Pen 9.0%, Max Atk 63.8, Crit 7.4%, etc.). A carefully put-together set can singlehandedly contribute over 40% of your graduation progression.
                   </p>
@@ -6336,7 +6511,10 @@ export default function App() {
         )}
                     </div>
                   )}
-                  {gradModalActiveTab === "cultivate" && (
+                  {gradModalActiveTab === "cultivate" && isProductCapabilityEnabled(selectedBuild, "statPriority") && !selectedBuildLegacyClass && (
+                    <div role="status" className="text-[12px] text-[#f0b400]">Actionable recommendation unavailable pending path-owned evidence.</div>
+                  )}
+                  {gradModalActiveTab === "cultivate" && isProductCapabilityEnabled(selectedBuild, "statPriority") && selectedBuildLegacyClass && (
                     <div style={{ textAlign: 'left' }}>
                       {gradModalActiveTab === "cultivate" && (
           <div className="space-y-6">
@@ -6353,25 +6531,12 @@ export default function App() {
                     Class graduation targets are still legacy T91 references. T96 gear quality now uses verified 100上 roll caps; a 100% class-graduation score is not yet an authoritative T96 target.
                   </p>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-sm font-mono text-slate-500">Select Class:</span>
-                  <select
-                    value={cultivateClass}
-                    onChange={(e) => setCultivateClass(e.target.value)}
-                    className="bg-[#1a1a1d] border border-[#23262c]/30 hover:border-[#f0b400]/50 text-[#f0b400] text-sm rounded-lg px-3 py-1.5 focus:outline-none font-bold transition-all cursor-pointer"
-                  >
-                    {Object.keys(LEGACY_GRAD95_PANEL).map((cls) => (
-                      <option key={cls} value={cls}>
-                        {classDisplayName(cls)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <span className="text-sm font-mono text-[#f0b400] shrink-0">Path-owned reference: {classDisplayName(selectedBuildLegacyClass)}</span>
               </div>
 
               {/* Stats Overview */}
               {(() => {
-                const classData = WWM_DATA.classes[cultivateClass as keyof typeof WWM_DATA.classes] || { graduationPanel: {}, marginalGains: [] };
+                const classData = WWM_DATA.classes[selectedBuildLegacyClass as keyof typeof WWM_DATA.classes] || { graduationPanel: {}, marginalGains: [] };
                 const graduationPanel = classData.graduationPanel || {};
                 const marginalGains = classData.marginalGains || [];
 
@@ -6501,7 +6666,7 @@ export default function App() {
                 // reference layout: each stat shows the current "count" (gear sum ÷
                 // max 95下 roll) vs the verified graduated substat count
                 // (LEGACY_GRAD95_COUNTS). e.g. Max Phys 4.7/12条.
-                const counts95 = LEGACY_GRAD95_COUNTS[cultivateClass] || {};
+                const counts95 = LEGACY_GRAD95_COUNTS[selectedBuildLegacyClass] || {};
                 const ownWeaponSum = Object.entries(currentSubsSum)
                   .filter(([k]) => SUB_MAP[k] && /^(umb|rope|sword|spear|fan|twinblades|modao|hengdao|gauntlets)(All|Martial|Special|Charged)$/.test(SUB_MAP[k] as string))
                   .reduce((s, [, v]) => s + (v || 0), 0);
@@ -6615,7 +6780,7 @@ export default function App() {
                 // Per-stat headroom = graduated 条 target (LEGACY_GRAD95_COUNTS) − 条 already
                 // owned. Caps each stat so the greedy spreads across stats toward the
                 // path's graduated distribution instead of dumping into one linear stat.
-                const optCounts95 = LEGACY_GRAD95_COUNTS[cultivateClass] || LEGACY_GRAD95_COUNTS["Bamboocut-Dust"];
+                const optCounts95 = LEGACY_GRAD95_COUNTS[selectedBuildLegacyClass] || {};
                 const ownedCountFor = (key: keyof PanelStats, roll: number): number => {
                   const subName = Object.keys(SUB_MAP).find((k) => SUB_MAP[k] === key);
                   const sum = subName ? (currentSubsSum[subName] || 0) : 0;
@@ -6801,7 +6966,7 @@ export default function App() {
         )}
                     </div>
                   )}
-                  {gradModalActiveTab === "compare" && (
+                  {gradModalActiveTab === "compare" && isProductCapabilityEnabled(selectedBuild, "gearCompare") && (
                     <div style={{ textAlign: 'left' }}>
                       {gradModalActiveTab === "compare" && (
           <div className="space-y-6">
@@ -6818,10 +6983,13 @@ export default function App() {
               {/* Upgrade Analysis — cross-slot recommendation (T91/Lv95 formula) */}
               {(() => {
                 const gear = getActiveGear();
+                let unavailable = false;
                 const slotInfo = SLOTS.map(slot => {
                   const items = gear.filter(it => it.slot === slot.name);
                   if (items.length === 0) return null;
-                  const scored = items.map(it => ({ it, total: getGearItemCompareStats(it).totalGradDelta, equipped: isItemEquipped(it, gear) }));
+                  const comparisons = items.map(it => ({ it, stats: getGearItemCompareStats(it) }));
+                  if (comparisons.some(({ stats }) => !stats.available)) { unavailable = true; return null; }
+                  const scored = comparisons.map(({ it, stats }) => ({ it, total: stats.totalGradDelta!, equipped: isItemEquipped(it, gear) }));
                   scored.sort((a, b) => b.total - a.total);
                   const best = scored[0];
                   const equipped = scored.find(s => s.equipped) || null;
@@ -6829,14 +6997,14 @@ export default function App() {
                   const gain = best.total - equippedTotal;
                   return { slot: slot.name, label: getSlotLabel(slot.name), best, equipped, equippedTotal, gain };
                 }).filter(Boolean) as { slot: string; label: string; best: any; equipped: any; equippedTotal: number; gain: number }[];
+                if (unavailable) return <div role="status" className="text-[12px] text-[#f0b400]">Gear comparison unavailable: the selected path model could not score this inventory.</div>;
 
                 const upgrades = slotInfo.filter(s => s.best && !s.best.equipped && s.gain > 0.01).sort((a, b) => b.gain - a.gain);
                 const equippedSlots = slotInfo.filter(s => s.equipped).sort((a, b) => a.equippedTotal - b.equippedTotal);
                 const totalSwapGain = upgrades.reduce((sum, u) => sum + u.gain, 0);
 
                 // Top stat priorities for this build (highest marginal gain per roll)
-                const build = BUILD_PROFILES[selectedBuild as keyof typeof BUILD_PROFILES];
-                const priorityStats = (build?.priorityStats || []).slice(0, 4);
+                const priorityStats = (selectedBuildProfile?.priorityStats || []).slice(0, 4);
                 const STAT_LABELS: Record<string, string> = {
                   maxOuter: "Max Phys Atk", minOuter: "Min Phys Atk", outerPen: "Phys Pen",
                   crit: "Crit Rate", critDmg: "Crit DMG", aff: "Affinity Rate", affDmg: "Affinity DMG",
@@ -6920,14 +7088,9 @@ export default function App() {
                     );
                   }
                   
-                  const scored = slotItems.map(item => {
-                    const stats = getGearItemCompareStats(item);
-                    return {
-                      item,
-                      total: stats.totalGradDelta,
-                      subs: stats.subsWithDeltas
-                    };
-                  });
+                  const comparisons = slotItems.map(item => ({ item, stats: getGearItemCompareStats(item) }));
+                  if (comparisons.some(({ stats }) => !stats.available)) return <div role="status" className="text-[12px] text-[#f0b400]">Gear comparison unavailable: the selected path model could not score this inventory.</div>;
+                  const scored = comparisons.map(({ item, stats }) => ({ item, total: stats.totalGradDelta!, subs: stats.subsWithDeltas }));
                   
                   scored.sort((a, b) => b.total - a.total);
                   const bestScore = scored[0].total;
@@ -7019,7 +7182,7 @@ export default function App() {
         )}
                     </div>
                   )}
-                  {gradModalActiveTab === "transmute" && (
+                  {gradModalActiveTab === "transmute" && isProductCapabilityEnabled(selectedBuild, "statPriority") && (
                     <div style={{ textAlign: 'left' }}>
                       {(() => {
                         // Global T96 / 100上 max single-roll per gear substat. Crit DMG / Affinity
@@ -7052,10 +7215,12 @@ export default function App() {
                         const equipped = slotItems.find(it => isItemEquipped(it, gear)) || slotItems[0] || null;
 
                         const currentStats = equipped ? getGearItemCompareStats(equipped) : null;
-                        const currentTotal = currentStats ? currentStats.totalGradDelta : 0;
+                        if (equipped && (!currentStats || !currentStats.available)) return <div role="status" className="text-[12px] text-[#f0b400]">Transmutation advice unavailable: the selected path model could not score this item.</div>;
+                        const currentTotal = currentStats?.available ? currentStats.totalGradDelta! : 0;
 
                         // Build replacement analysis
                         let results: { candidateStat: string; maxRoll: string; newTotal: number; delta: number }[] = [];
+                        let scoringUnavailable = false;
                         if (equipped && transmuteSubIndex !== null && transmuteSubIndex < equipped.subs.length) {
                           const selectedSub = equipped.subs[transmuteSubIndex];
                           results = TRANSMUTE_CANDIDATES
@@ -7074,18 +7239,21 @@ export default function App() {
                               );
                               const fakeItem = { ...equipped, subs: newSubs };
                               const newStats = getGearItemCompareStats(fakeItem);
+                              if (!newStats.available) { scoringUnavailable = true; return null; }
                               return {
                                 candidateStat: candidate,
                                 maxRoll,
-                                newTotal: newStats.totalGradDelta,
-                                delta: newStats.totalGradDelta - currentTotal,
+                                newTotal: newStats.totalGradDelta!,
+                                delta: newStats.totalGradDelta! - currentTotal,
                               };
                             })
+                            .filter((result): result is { candidateStat: string; maxRoll: string; newTotal: number; delta: number } => result !== null)
                             .sort((a, b) => b.delta - a.delta);
                         }
+                        if (scoringUnavailable) return <div role="status" className="text-[12px] text-[#f0b400]">Transmutation advice unavailable: a replacement could not be scored for the selected path.</div>;
 
                         const bestResult = results.length > 0 ? results[0] : null;
-                        const selectedSubDelta = (currentStats && transmuteSubIndex !== null && transmuteSubIndex < (currentStats.subsWithDeltas || []).length)
+                        const selectedSubDelta = (currentStats?.available && transmuteSubIndex !== null && transmuteSubIndex < (currentStats.subsWithDeltas || []).length)
                           ? currentStats.subsWithDeltas[transmuteSubIndex].delta
                           : 0;
 
@@ -7231,10 +7399,10 @@ export default function App() {
                       })()}
                     </div>
                   )}
-                  {gradModalActiveTab === "bis" && (
+                  {gradModalActiveTab === "bis" && isProductCapabilityEnabled(selectedBuild, "bestBuild") && (
                     <div style={{ padding: '4px 0', textAlign: 'left' }}>
                       <div className="text-[13px] text-[#8b949e] mb-3">
-                        Ideal gear per slot for <b className="text-[#f0b400]">{cultivateClass}</b>.
+                        Ideal gear per slot for <b className="text-[#f0b400]">{selectedProductPathLabel}</b>.
                         Set is the current top DPS weapon set (updates with your panel); main-stat and
                         substat priority come from the verified Global T91 graduated build.
                       </div>
@@ -7250,7 +7418,7 @@ export default function App() {
                         <tbody>
                           {bisGear.map((row, i) => {
                             const isWeaponSide = i < 4;
-                            const topSet = armorSetCompare[0];
+                            const topSet = armorSetCompare?.[0];
                             return (
                               <tr key={row.slot} style={{ borderTop: '1px solid #21262d' }}>
                                 <td className="py-2 pr-3 text-white">{row.slot}</td>
@@ -7272,17 +7440,19 @@ export default function App() {
                       </div>
                     </div>
                   )}
-                  {gradModalActiveTab === "best-build" && (
+                  {gradModalActiveTab === "best-build" && isProductCapabilityEnabled(selectedBuild, "bestBuild") && (
                     <div style={{ textAlign: 'left' }}>
                       <div className="bg-[#141619] border border-[#23262c] rounded-xl p-6">
                         <div className="mb-4 border-b border-[#23262c] pb-3">
-                          <h2 className="text-base font-extrabold text-[#f0b400] uppercase tracking-wider font-serif flex items-center gap-2">🏆 Best Build</h2>
+                          <h2 className="text-base font-extrabold text-[#f0b400] uppercase tracking-wider font-serif flex items-center gap-2">🏆 Provisional Best Build</h2>
                           <p className="text-[12px] text-slate-500 mt-0.5">
-                            Considers all <b>{getActiveGear().length} gear pieces</b> in this scheme, including unequipped inventory. Smaller pools are searched exactly; large pools use a full-pool beam search so no item is discarded before combination scoring.
+                            Model-based comparison of all <b>{getActiveGear().length} gear pieces</b> in this scheme, including unequipped inventory. Smaller pools are searched exactly; large pools use a full-pool beam search so no item is discarded before combination scoring.
                           </p>
                         </div>
-                        {selectedBuildIsUnmodeled ? (
-                          <div role="status" className="text-[12px] text-[#f0b400] mb-3">Best Build is unavailable: Bamboocut - Draught has no numerical model and cannot be ranked using another path's coefficients.</div>
+                        {!isProductCapabilityEnabled(selectedBuild, "bestBuild") ? (
+                          <div role="status" className="text-[12px] text-[#f0b400] mb-3">Best Build is unavailable: {selectedProductPathLabel} has no authorized numerical ranking and cannot use another path's coefficients.</div>
+                        ) : bestBuildUnavailable ? (
+                          <div role="status" className="text-[12px] text-[#f0b400] mb-3">Best Build is unavailable: Jade candidate and current build do not share one resolved scenario contract ({bestBuildUnavailable.reason}).</div>
                         ) : !bestBuildRunning && (
                           <button onClick={runBestBuild} className="primary-btn" style={{ marginBottom: 12 }}>
                             {bestBuildEntries ? "Re-run search" : "Find best build"}
@@ -7304,12 +7474,13 @@ export default function App() {
                         )}
                         {bestBuildEntries && bestBuildEntries.length > 0 && (() => {
                           const best = bestBuildEntries[0];
-                          const bestModeledDps = best ? best.rate / 100 * baselineScore / modeledDurationOrZero(selectedBuild) : 0;
+                          const bestModeledDps = best?.durationSeconds ? best.rate / best.durationSeconds : 0;
                           const bestDeltaPct = rotationStats.dps > 0 ? (bestModeledDps - rotationStats.dps) / rotationStats.dps * 100 : 0;
                           const bestConfidence = recommendationConfidence({ pathKey: selectedBuild, deltaPct: bestDeltaPct, panelCalibrated: selectedBuild === "bamboocut-dust" || Boolean(activeScheme?.baseOverride), materialUnknowns: selectedBuild === "bamboocut-dust" ? BAMBOOCUT_MODEL_UNKNOWNS : [] });
                           const pathMaturity = PATH_MODEL_MATURITY[selectedBuild];
-                          const bestBuildTrustSummary = (entry: { gear: GearItem[]; rate: number }) => {
-                            const dps = entry.rate / 100 * baselineScore / modeledDurationOrZero(selectedBuild);
+                          const bestBuildTrustSummary = (entry: { gear: GearItem[]; rate: number; durationSeconds?: number }) => {
+                            const duration = entry.durationSeconds;
+                            const dps = duration ? entry.rate / duration : 0;
                             const deltaPct = rotationStats.dps > 0 ? (dps - rotationStats.dps) / rotationStats.dps * 100 : 0;
                             const confidence = recommendationConfidence({ pathKey: selectedBuild, deltaPct, panelCalibrated: selectedBuild === "bamboocut-dust" || Boolean(activeScheme?.baseOverride), materialUnknowns: selectedBuild === "bamboocut-dust" ? BAMBOOCUT_MODEL_UNKNOWNS : [] });
                             const sets = detectSet4pc(entry.gear);
@@ -7335,7 +7506,7 @@ export default function App() {
                             <div className="space-y-4">
                               <div className="bg-[#1a1a1d]/60 border border-[#23262c] rounded-xl p-4">
                                 <div className="flex items-center justify-between mb-3 border-b border-[#23262c]/40 pb-2">
-                                  <h3 className="text-sm font-bold text-slate-100">Best combination</h3>
+                                  <h3 className="text-sm font-bold text-slate-100">Leading modeled combination</h3>
                                   <span className="text-sm font-mono font-extrabold text-[#f0b400]">{Math.round(bestModeledDps).toLocaleString()} DPS</span>
                               <div className="text-[11px] text-slate-500 mt-1">Delta vs current: {bestTrust.deltaPct >= 0 ? "+" : ""}{bestTrust.deltaPct.toFixed(2)}% · Confidence: <strong>{bestTrust.confidence.label}</strong>{pathMaturity ? <> · {pathMaturity.ownership} · {pathMaturity.maturity}</> : null}</div>
                               <div className="text-[10.5px] text-slate-500 mt-1">Sets: {bestTrust.setLabel} · Attunements: {bestTrust.attunements}</div>

@@ -1,0 +1,14 @@
+{
+  "product": "Where Winds Meet Build Calculator",
+  "dataVersion": "Global 2.1 context · Tier 96 · accepted T96 fixture",
+  "schemaVersion": 1,
+  "commit": "56bf9c5f43b5b4d0f92d77de10f0ffcf8772932c",
+  "shortCommit": "56bf9c5f",
+  "branch": "feat/v13-bamboocut-draught-intake",
+  "builtAt": "2026-09-05T07:29:12.787Z",
+  "evidence": {
+    "gearCaps": "Global screenshots + workbook 100上",
+    "innerWays": "English Global client + official Global patch notes",
+    "dummyFixture": "Level 96 Sword Trial Boss · 60 seconds"
+  }
+}

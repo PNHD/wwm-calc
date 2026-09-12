@@ -18,7 +18,7 @@ for (const confidence of ["HIGH", "MEDIUM", "CLOSE CALL", "EXPERIMENTAL"]) {
   assert(trust.includes(`"${confidence}"`), `missing confidence category ${confidence}`);
 }
 
-assert(trust.includes('ownership: "MY BUILD"') && trust.includes('maturity: "CALIBRATED"'), "Bamboocut must be labeled as the calibrated owner build");
+assert(/"bamboocut-dust"[\s\S]*ownership: "MY BUILD",[\s\S]*maturity: "MODELED"/.test(trust), "Bamboocut must be labeled as a provisional modeled owner build");
 assert(trust.includes('ownership: "REFERENCE BUILD"') && trust.includes('maturity: "MODELED"'), "Jade must remain an explicit reference/model, not owner inventory");
 assert(trust.includes('margin < 2'), "deterministic close-call guard band missing");
 assert(!trust.includes("confidencePct") && !trust.includes("probabilityOfWinning"), "fake statistical confidence field introduced");

@@ -34,7 +34,8 @@ import GvgSharePrivacyPanel from "./GvgSharePrivacyPanel";
 import GvgSharedLanding from "./GvgSharedLanding";
 import LibraryWorkspace from "./LibraryWorkspace";
 import ModelAbout from "./ModelAbout"; // V1_MODEL_ABOUT_PRODUCT_SHELL
-import { getNumericalPathAvailability } from "../data/pathCatalog";
+import PathProvenance from "./PathProvenance";
+import { getPathMaturity, isProductCapabilityEnabled, type ProductCapability } from "../data/pathCatalog";
 import "./model-assumptions.css";
 import "./workspace-redesign.css";
 import "./workspaces/compare-v2.css";
@@ -52,7 +53,7 @@ const PVE_PRIMARY: NavItem<PveView>[] = [
   { key: "build", label: "Build", hint: "Path & configuration", icon: Settings },
   { key: "gear", label: "Gear", hint: "Equipped & inventory", icon: Boxes },
   { key: "compare", label: "Compare", hint: "Current vs candidate", icon: SlidersHorizontal },
-  { key: "best-build", label: "Best Build", hint: "Recommended combination", icon: Layers3 },
+  { key: "best-build", label: "Best Build", hint: "Provisional model combination", icon: Layers3 },
   { key: "combat", label: "Combat", hint: "Menu vs combat panel", icon: BarChart3 },
   { key: "simulation", label: "Simulation", hint: "Timeline & contribution", icon: Dice5 },
 ];
@@ -63,6 +64,19 @@ const PVE_SECONDARY: NavItem<PveView>[] = [
   { key: "team", label: "Team", hint: "Party context", icon: Users },
   { key: "profile", label: "Import / Export", hint: "Data & reference access", icon: FileText },
 ];
+
+const PVE_VIEW_CAPABILITY: Partial<Record<PveView, ProductCapability>> = {
+  compare: "gearCompare", "best-build": "bestBuild", simulation: "simulation", "skill-editor": "skillPreview", team: "headlineDps",
+};
+const isPveViewAvailable = (pathKey: string, view: PveView) => {
+  const capability = PVE_VIEW_CAPABILITY[view];
+  return !capability || isProductCapabilityEnabled(pathKey, capability);
+};
+const resolvePveView = (pathKey: string, requested: PveView): PveView =>
+  isPveViewAvailable(pathKey, requested) ? requested : "overview";
+const unavailableDetail = (pathKey: string) => getPathMaturity(pathKey) === "MODELED_PROVISIONAL"
+  ? "Actionable recommendation unavailable pending stronger evidence"
+  : "Numerical model unavailable";
 
 const GVG_PRIMARY: NavItem<GvgView>[] = [
   { key: "overview", label: "Overview", hint: "Readiness command center", icon: Home },
@@ -210,6 +224,7 @@ function ContextNavigation<T extends string>({
   secondary,
   active,
   onNavigate,
+  pathKey,
   isUnavailable = () => false,
 }: {
   label: string;
@@ -217,14 +232,15 @@ function ContextNavigation<T extends string>({
   secondary: NavItem<T>[];
   active: T;
   onNavigate: (key: T) => void;
+  pathKey: string;
   isUnavailable?: (key: T) => boolean;
 }) {
   const renderButton = ({ key, label: itemLabel, hint, icon: Icon }: NavItem<T>) => {
     const unavailable = isUnavailable(key);
     const label = unavailable ? `${itemLabel} unavailable` : itemLabel;
-    const detail = unavailable ? "Numerical model unavailable" : hint;
+    const detail = unavailable ? unavailableDetail(pathKey) : hint;
     return (
-    <button key={key} type="button" disabled={unavailable} aria-disabled={unavailable || undefined} aria-label={unavailable ? `${itemLabel} unavailable: numerical model unavailable` : undefined} className={`${active === key ? "is-active" : ""}${unavailable ? " is-unavailable" : ""}`} aria-current={active === key ? "page" : undefined} onClick={() => onNavigate(key)} style={unavailable ? { cursor: "not-allowed", opacity: 0.45 } : undefined}>
+    <button key={key} type="button" disabled={unavailable} aria-disabled={unavailable || undefined} aria-label={unavailable ? `${itemLabel} unavailable: ${unavailableDetail(pathKey).toLowerCase()}` : undefined} className={`${active === key ? "is-active" : ""}${unavailable ? " is-unavailable" : ""}`} aria-current={active === key ? "page" : undefined} onClick={() => onNavigate(key)} style={unavailable ? { cursor: "not-allowed", opacity: 0.45 } : undefined}>
       <Icon size={17} strokeWidth={1.8} aria-hidden="true" />
       <span><strong>{label}</strong><small>{detail}</small></span>
     </button>
@@ -250,12 +266,16 @@ function PveOverview({ context, onNavigate, showOnboarding, onOpenLibrary }: {
   onOpenLibrary: (hash?: string) => void;
 }) {
   const completeInnerWays = context.innerWays >= 4;
-  const availability = getNumericalPathAvailability(context.pathKey);
+  const headlineAvailable = isProductCapabilityEnabled(context.pathKey, "headlineDps");
+  const compareAvailable = isPveViewAvailable(context.pathKey, "compare");
+  const maturity = getPathMaturity(context.pathKey);
   return (
     <main className="workspace-overview workspace-overview-pve" data-testid="pve-overview" id="main-content">
       <header className="workspace-overview-heading">
         <div><span className="workspace-eyebrow">PvE / Overview</span><h1>Your build, at a glance</h1><p>See the recommendation first. Open detailed model evidence only when you need it.</p></div>
-        <button type="button" className="workspace-primary-action" onClick={() => onNavigate("compare")}>Compare gear <ChevronRight size={16} aria-hidden="true" /></button>
+        {compareAvailable
+          ? <button type="button" className="workspace-primary-action" onClick={() => onNavigate("compare")}>Compare gear <ChevronRight size={16} aria-hidden="true" /></button>
+          : <button type="button" className="workspace-primary-action" disabled aria-label={`Compare unavailable: ${unavailableDetail(context.pathKey).toLowerCase()}`}>Compare unavailable</button>}
       </header>
 
       {showOnboarding && <section className="workspace-onboarding workspace-onboarding-start" aria-label="First use PvE start options">
@@ -268,10 +288,10 @@ function PveOverview({ context, onNavigate, showOnboarding, onOpenLibrary }: {
 
       <div className="workspace-overview-grid">
         <section className="workspace-hero-card">
-          <div className="workspace-card-heading"><span>MY BUILD</span><b className={`workspace-status-chip ${availability.numericalModelAvailable ? "is-modeled" : "is-attention"}`}>{availability.capability}</b></div>
+          <div className="workspace-card-heading"><span>MY BUILD</span><b className={`workspace-status-chip ${headlineAvailable ? "is-modeled" : "is-attention"}`}>{maturity}</b></div>
           <h2>{context.build}</h2>
           <p>{context.scheme}</p>
-          <div className="workspace-primary-metric"><small>{availability.numericalModelAvailable ? "Modeled DPS" : "Numerical model"}</small><strong>{availability.numericalModelAvailable ? <>{context.estimate}<em>/s</em></> : "Unavailable"}</strong></div>
+          <div className="workspace-primary-metric"><small>{headlineAvailable ? "Modeled DPS" : "Numerical model"}</small><strong>{headlineAvailable ? <>{context.estimate}<em>/s</em></> : "Unavailable"}</strong></div>
           <div className="workspace-inline-meta"><span>{context.tier}</span><span>{context.innerWays}/4 Inner Ways</span></div>
           <button type="button" className="workspace-text-action" onClick={() => onNavigate("build")}>Edit build configuration <ChevronRight size={14} /></button>
         </section>
@@ -295,10 +315,12 @@ function PveOverview({ context, onNavigate, showOnboarding, onOpenLibrary }: {
         <section className="workspace-next-card">
           <div className="workspace-card-heading"><span>NEXT ACTIONS</span></div>
           <button type="button" onClick={() => onOpenLibrary("#library/pve")}><span><strong>Compare with Reference</strong><small>Open a sourced build without changing My Build.</small></span><ChevronRight size={16} /></button>
-          <button type="button" onClick={() => onNavigate("compare")}><span><strong>Compare a gear piece</strong><small>See the winner and why it wins.</small></span><ChevronRight size={16} /></button>
-          {availability.numericalModelAvailable
-            ? <button type="button" onClick={() => onNavigate("best-build")}><span><strong>Run Best Build</strong><small>Search complete combinations by modeled DPS.</small></span><ChevronRight size={16} /></button>
-            : <button type="button" disabled aria-label="Best Build unavailable: numerical model unavailable"><span><strong>Best Build unavailable</strong><small>Numerical model unavailable for this current Global path.</small></span></button>}
+          {compareAvailable
+            ? <button type="button" onClick={() => onNavigate("compare")}><span><strong>Compare a gear piece</strong><small>See the winner and why it wins.</small></span><ChevronRight size={16} /></button>
+            : <button type="button" disabled aria-label={`Compare unavailable: ${unavailableDetail(context.pathKey).toLowerCase()}`}><span><strong>Compare unavailable</strong><small>{unavailableDetail(context.pathKey)}.</small></span></button>}
+          {isProductCapabilityEnabled(context.pathKey, "bestBuild")
+            ? <button type="button" onClick={() => onNavigate("best-build")}><span><strong>Run provisional Best Build</strong><small>Search complete combinations by model estimate.</small></span><ChevronRight size={16} /></button>
+            : <button type="button" disabled aria-label={`Best Build unavailable: ${unavailableDetail(context.pathKey).toLowerCase()}`}><span><strong>Best Build unavailable</strong><small>{unavailableDetail(context.pathKey)}.</small></span></button>}
           <button type="button" onClick={() => onNavigate("gear")}><span><strong>Review weak slots</strong><small>Manage equipped gear and inventory.</small></span><ChevronRight size={16} /></button>
         </section>
       </div>
@@ -383,7 +405,8 @@ function PveInspector({ context, page, collapsed, onToggle, onNavigate }: {
   onNavigate: (view: PveView) => void;
 }) {
   if (page === "overview") return null;
-  const availability = getNumericalPathAvailability(context.pathKey);
+  const headlineAvailable = isProductCapabilityEnabled(context.pathKey, "headlineDps");
+  const maturity = getPathMaturity(context.pathKey);
   const next: Record<PveView, { label: string; view: PveView }> = {
     overview: { label: "Open Build", view: "build" }, build: { label: "Manage Gear", view: "gear" }, gear: { label: "Compare Candidate", view: "compare" }, compare: { label: "Run Best Build", view: "best-build" }, "best-build": { label: "Review Combat", view: "combat" }, combat: { label: "Open Simulation", view: "simulation" }, simulation: { label: "Review Rotations", view: "rotations" }, rotations: { label: "Open Simulation", view: "simulation" }, "skill-editor": { label: "Review Combat", view: "combat" }, team: { label: "Review Combat", view: "combat" }, profile: { label: "Back to Overview", view: "overview" },
   };
@@ -393,11 +416,11 @@ function PveInspector({ context, page, collapsed, onToggle, onNavigate }: {
       {!collapsed && <>
         <div className="workspace-inspector-label">CURRENT BUILD</div>
         <h2>{context.build}</h2><p>{context.scheme}</p>
-        <div className="workspace-inspector-metric"><small>{availability.numericalModelAvailable ? "Modeled DPS" : "Numerical model"}</small><strong>{availability.numericalModelAvailable ? <>{context.estimate}<em>/s</em></> : "Unavailable"}</strong><span className={`workspace-status-chip ${availability.numericalModelAvailable ? "is-modeled" : "is-attention"}`}>{availability.capability}</span></div>
+        <div className="workspace-inspector-metric"><small>{headlineAvailable ? "Modeled DPS" : "Numerical model"}</small><strong>{headlineAvailable ? <>{context.estimate}<em>/s</em></> : "Unavailable"}</strong><span className={`workspace-status-chip ${headlineAvailable ? "is-modeled" : "is-attention"}`}>{maturity}</span></div>
         <dl><dt>Data</dt><dd>{context.tier}</dd><dt>Inner Ways</dt><dd>{context.innerWays}/4</dd><dt>Context</dt><dd>{page === "combat" ? "Menu + conditional combat" : page.replaceAll("-", " ")}</dd></dl>
-        {availability.numericalModelAvailable || next[page].view !== "best-build"
+        {isPveViewAvailable(context.pathKey, next[page].view)
           ? <button type="button" className="workspace-primary-action" onClick={() => onNavigate(next[page].view)}>{next[page].label}<ChevronRight size={14} /></button>
-          : <button type="button" className="workspace-primary-action" disabled aria-label="Best Build unavailable: numerical model unavailable">Best Build unavailable</button>}
+          : <button type="button" className="workspace-primary-action" disabled aria-label={`${next[page].label} unavailable: ${unavailableDetail(context.pathKey).toLowerCase()}`}>{next[page].label} unavailable</button>}
         <details className="workspace-inspector-details"><summary>Evidence & assumptions</summary><p>Model, calibration and provenance details remain available in the relevant tool instead of occupying the primary decision surface.</p></details>
       </>}
     </aside>
@@ -410,7 +433,10 @@ export default function ProductShell({ active, onNavigate, roleControl, actions,
   const initialBase = route?.workspace === "pve" || route?.workspace === "gvg" ? route.workspace : stored.lastWorkspace ?? (stored.workspace === "gvg" ? "gvg" : "pve");
   const [workspace, setWorkspace] = useState<ProductWorkspace>(route?.workspace ?? stored.workspace ?? "pve");
   const [lastWorkspace, setLastWorkspace] = useState<BaseWorkspace>(initialBase);
-  const [pveView, setPveView] = useState<PveView>((route && "pveView" in route ? route.pveView : undefined) ?? stored.pveView ?? "overview");
+  const [pveView, setPveView] = useState<PveView>(() => {
+    const requested = (route && "pveView" in route ? route.pveView : undefined) ?? stored.pveView ?? "overview";
+    return resolvePveView(context.pathKey, requested);
+  });
   const [gvgView, setGvgView] = useState<GvgView>((route && "gvgView" in route ? route.gvgView : undefined) ?? stored.gvgView ?? "overview");
   const [inspectorCollapsed, setInspectorCollapsed] = useState(Boolean(stored.inspectorCollapsed));
   const [moreOpen, setMoreOpen] = useState(false);
@@ -439,7 +465,11 @@ export default function ProductShell({ active, onNavigate, roleControl, actions,
       }
       if (parsed.workspace === "pve") {
         setWorkspace("pve"); setLastWorkspace("pve");
-        if ("pveView" in parsed) setPveView(parsed.pveView);
+        if ("pveView" in parsed) {
+          const view = resolvePveView(context.pathKey, parsed.pveView);
+          setPveView(view);
+          if (view !== parsed.pveView) updateRoute("pve", view);
+        }
       } else {
         setWorkspace("gvg"); setLastWorkspace("gvg");
         if ("gvgView" in parsed) setGvgView(parsed.gvgView);
@@ -448,22 +478,33 @@ export default function ProductShell({ active, onNavigate, roleControl, actions,
     };
     window.addEventListener("hashchange", handleHash);
     return () => window.removeEventListener("hashchange", handleHash);
-  }, []);
+  }, [context.pathKey]);
+
+  useEffect(() => {
+    const resolved = resolvePveView(context.pathKey, pveView);
+    if (resolved !== pveView) {
+      setPveView(resolved);
+      if (workspace === "pve") updateRoute("pve", resolved);
+    }
+  }, [context.pathKey, pveView, workspace]);
 
   useEffect(() => {
     if (initializedRef.current) return;
     initializedRef.current = true;
-    if (workspace === "pve" && pveView !== "overview") {
+    if (workspace === "pve" && pveView !== "overview" && isPveViewAvailable(context.pathKey, pveView)) {
       const tab = TAB_FOR_PVE[pveView];
       if (tab && tab !== active) onNavigate(tab);
     }
-  }, [active, onNavigate, pveView, workspace]);
+  }, [active, context.pathKey, onNavigate, pveView, workspace]);
 
   useEffect(() => {
     if (activeRef.current === active) return;
     activeRef.current = active;
-    if (workspace === "pve") setPveView(PVE_FOR_TAB[active]);
-  }, [active, workspace]);
+    if (workspace === "pve") {
+      const view = PVE_FOR_TAB[active];
+      setPveView(resolvePveView(context.pathKey, view));
+    }
+  }, [active, context.pathKey, workspace]);
 
   useEffect(() => {
     if (workspace !== "gvg" || gvgView === "overview" || (gvgView === "share" && (!gvgSharePayload() || previewLegacyGvgShare))) return;
@@ -486,6 +527,7 @@ export default function ProductShell({ active, onNavigate, roleControl, actions,
   }, [workspace, gvgView, previewLegacyGvgShare]);
 
   const goPve = (view: PveView) => {
+    if (!isPveViewAvailable(context.pathKey, view)) return;
     setWorkspace("pve"); setLastWorkspace("pve"); setPveView(view); setMoreOpen(false); setOnboarded(true); updateRoute("pve", view);
     const tab = TAB_FOR_PVE[view];
     if (tab) onNavigate(tab);
@@ -498,8 +540,10 @@ export default function ProductShell({ active, onNavigate, roleControl, actions,
   const switchWorkspace = (next: BaseWorkspace) => {
     setWorkspace(next); setLastWorkspace(next); setMoreOpen(false); setOnboarded(true); setPreviewLegacyGvgShare(false);
     if (next === "pve") {
-      if (!/^#pve\//.test(window.location.hash)) window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}#pve/${pveView}`);
-      const tab = TAB_FOR_PVE[pveView];
+      const view = resolvePveView(context.pathKey, pveView);
+      setPveView(view);
+      if (!/^#pve\//.test(window.location.hash) || view !== pveView) window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}#pve/${view}`);
+      const tab = TAB_FOR_PVE[view];
       if (tab) onNavigate(tab);
     } else {
       if (!/^#gvg\//.test(window.location.hash)) window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}#gvg/${gvgView}`);
@@ -520,8 +564,7 @@ export default function ProductShell({ active, onNavigate, roleControl, actions,
 
   const pveTitle = [...PVE_PRIMARY, ...PVE_SECONDARY].find((item) => item.key === pveView)?.label ?? "Overview";
   const gvgTitle = [...GVG_PRIMARY, ...GVG_SECONDARY].find((item) => item.key === gvgView)?.label ?? "Overview";
-  const pveAvailability = getNumericalPathAvailability(context.pathKey);
-  const isUnavailablePveNavigation = (key: PveView) => key === "best-build" && !pveAvailability.numericalModelAvailable;
+  const isUnavailablePveNavigation = (key: PveView) => !isPveViewAvailable(context.pathKey, key);
   const mobilePve: PveView[] = ["build", "gear", "compare", "best-build"];
   const mobileGvg: GvgView[] = ["roster", "strategy", "timeline", "matches"];
 
@@ -541,14 +584,14 @@ export default function ProductShell({ active, onNavigate, roleControl, actions,
         </div>
       </header>
 
-      {workspace !== "library" && <div className="workspace-context-bar">
+      {workspace !== "library" && <><div className="workspace-context-bar">
         <button type="button" className="workspace-mobile-switch" onClick={() => switchWorkspace(workspace === "pve" ? "gvg" : "pve")}><span>{workspace === "pve" ? "PvE" : "Guild War"}</span><ChevronDown size={14} /></button>
         <span>{workspace === "pve" ? "PvE" : "Guild War"} <b>/</b> {workspace === "pve" ? pveTitle : gvgTitle}</span>
-        {workspace === "pve" && <section className="product-context" role="region" aria-label="Current build context"><span><small>Build</small><strong>{context.build}</strong></span><span><small>Inner Ways</small><strong>{context.innerWays}/4</strong></span><span className="product-context-metric"><small>{getNumericalPathAvailability(context.pathKey).numericalModelAvailable ? "Modeled DPS" : "Numerical model"}</small><strong>{getNumericalPathAvailability(context.pathKey).numericalModelAvailable ? `${context.estimate}/s` : "Unavailable"}</strong></span></section>}
-      </div>}
+        {workspace === "pve" && <section className="product-context" role="region" aria-label="Current build context"><span><small>Build</small><strong>{context.build}</strong></span><span><small>Inner Ways</small><strong>{context.innerWays}/4</strong></span><span className="product-context-metric"><small>{isProductCapabilityEnabled(context.pathKey, "headlineDps") ? "Modeled DPS" : "Numerical model"}</small><strong>{isProductCapabilityEnabled(context.pathKey, "headlineDps") ? `${context.estimate}/s` : "Unavailable"}</strong></span></section>}
+      </div>{workspace === "pve" && <PathProvenance pathKey={context.pathKey} />}</>}
 
-      {workspace === "pve" && <ContextNavigation label="PvE" primary={PVE_PRIMARY} secondary={PVE_SECONDARY} active={pveView} onNavigate={goPve} isUnavailable={isUnavailablePveNavigation} />}
-      {workspace === "gvg" && <ContextNavigation label="Guild War" primary={GVG_PRIMARY} secondary={GVG_SECONDARY} active={gvgView} onNavigate={goGvg} />}
+      {workspace === "pve" && <ContextNavigation label="PvE" primary={PVE_PRIMARY} secondary={PVE_SECONDARY} active={pveView} onNavigate={goPve} pathKey={context.pathKey} isUnavailable={isUnavailablePveNavigation} />}
+      {workspace === "gvg" && <ContextNavigation label="Guild War" primary={GVG_PRIMARY} secondary={GVG_SECONDARY} active={gvgView} onNavigate={goGvg} pathKey="" />}
 
       {workspace === "pve" && <PveInspector context={context} page={pveView} collapsed={inspectorCollapsed} onToggle={() => setInspectorCollapsed((value) => !value)} onNavigate={goPve} />}
 
@@ -563,7 +606,7 @@ export default function ProductShell({ active, onNavigate, roleControl, actions,
         {workspace === "pve" ? mobilePve.map((key) => {
           const item = PVE_PRIMARY.find((candidate) => candidate.key === key)!; const Icon = item.icon;
           const unavailable = isUnavailablePveNavigation(key);
-          return <button type="button" key={key} disabled={unavailable} aria-disabled={unavailable || undefined} aria-label={unavailable ? "Best Build unavailable: numerical model unavailable" : undefined} className={`${pveView === key ? "is-active" : ""}${unavailable ? " is-unavailable" : ""}`} aria-current={pveView === key ? "page" : undefined} onClick={() => goPve(key)} style={unavailable ? { cursor: "not-allowed", opacity: 0.45 } : undefined}><Icon size={18} /><span>{unavailable ? "Unavailable" : item.label === "Best Build" ? "Best" : item.label}</span></button>;
+          return <button type="button" key={key} disabled={unavailable} aria-disabled={unavailable || undefined} aria-label={unavailable ? `${item.label} unavailable: ${unavailableDetail(context.pathKey).toLowerCase()}` : undefined} className={`${pveView === key ? "is-active" : ""}${unavailable ? " is-unavailable" : ""}`} aria-current={pveView === key ? "page" : undefined} onClick={() => goPve(key)} style={unavailable ? { cursor: "not-allowed", opacity: 0.45 } : undefined}><Icon size={18} /><span>{unavailable ? "Unavailable" : item.label === "Best Build" ? "Best" : item.label}</span></button>;
         }) : mobileGvg.map((key) => {
           const item = GVG_PRIMARY.find((candidate) => candidate.key === key)!; const Icon = item.icon;
           return <button type="button" key={key} className={gvgView === key ? "is-active" : ""} aria-current={gvgView === key ? "page" : undefined} onClick={() => goGvg(key)}><Icon size={18} /><span>{item.label === "Match Log" ? "Matches" : item.label}</span></button>;

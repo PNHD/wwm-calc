@@ -1,13 +1,29 @@
-import assert from "node:assert";
-import { readFileSync } from "node:fs";
+import assert from "node:assert/strict";
+import { mkdtemp, rm } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+import { pathToFileURL } from "node:url";
+import { build } from "esbuild";
 
-const calc = readFileSync(new URL("./calc.ts", import.meta.url), "utf8");
-const app = readFileSync(new URL("../App.tsx", import.meta.url), "utf8");
+const tempDir = await mkdtemp(path.join(os.tmpdir(), "wwm-baseline-selfcheck-"));
 
-assert(calc.includes("function tierBaselineScale"), "calcBaseline must scale preview/reference tier baselines");
-assert(calc.includes('if (!tier || tier.name === t91.name) return 1;'), "T91 baseline must remain exact");
-assert(calc.includes("dps * tierBaselineScale(tier) * getRotationTimeForBuild(key)"), "calcBaseline must use tierBaselineScale");
-assert(!app.includes("vs the best-in-slot T91 build"), "main help text must not hard-code BiS T91 baseline");
-assert(app.includes("% vs the selected tier baseline"), "main help text should explain selected tier baseline");
+try {
+  await build({ entryPoints: { calc: "src/utils/calc.ts", catalog: "src/data/pathCatalog.ts" }, bundle: true, format: "esm", platform: "node", outdir: tempDir, outExtension: { ".js": ".mjs" } });
+  const calc = await import(pathToFileURL(path.join(tempDir, "calc.mjs")).href);
+  const catalog = await import(pathToFileURL(path.join(tempDir, "catalog.mjs")).href);
+  const t96 = calc.TIERS["405|0.65b"];
+  const dust = calc.getLegacyReferenceBaseline(t96, "bamboocut-dust");
+  const jade = calc.getLegacyReferenceBaseline(t96, "silkbind-jade");
 
-console.log("baseline self-check OK");
+  assert.equal(calc.CURRENT_VALIDATED_BASELINE, null, "legacy anchors must not become a current validated baseline");
+  assert.equal(dust?.value, 39_117 * calc.getRotationTimeForBuild("bamboocut-dust"), "the retained Dust T91 anchor must remain exact at the current tier");
+  assert.equal(jade?.value, 35_321 * calc.getRotationTimeForBuild("silkbind-jade"), "the retained Jade T91 anchor must remain exact at the current tier");
+  assert.equal(calc.calcBaseline(t96, "bamboocut-dust"), dust?.value, "the compatibility accessor must expose the same legacy reference value");
+  assert.equal(calc.calcBaseline(t96, "bamboocut-wind"), null, "a legacy-only path must not receive a reference baseline");
+  for (const capability of ["headlineDps", "bestBuild", "statPriority", "gearPathFit"]) {
+    assert.equal(catalog.isProductCapabilityEnabled("bamboocut-wind", capability), false, `legacy reference data must not authorize ${capability}`);
+  }
+  console.log("baseline self-check OK");
+} finally {
+  await rm(tempDir, { recursive: true, force: true });
+}

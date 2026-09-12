@@ -31,13 +31,21 @@ export const PATH_MODEL_MATURITY: Record<string, PathModelMaturity> = {
     evidence: ["OFFICIAL", "UNKNOWN"],
     summary: "Current Global path recognized September 3. Skystrike Gauntlets and Riven Twinblades are known, but current-client mechanics are required before numerical modeling.",
   },
+  "bamboocut-kite": {
+    pathKey: "bamboocut-kite",
+    label: "Bamboocut - Kite",
+    ownership: "REFERENCE BUILD",
+    maturity: "UNMODELED",
+    evidence: ["OFFICIAL", "UNKNOWN"],
+    summary: "Current Global path. Heavenwill Gauntlets and Skygrasp Rope Dart are known, but no numerical model is approved.",
+  },
   "bamboocut-dust": {
     pathKey: "bamboocut-dust",
     label: "Bamboocut-Dust",
     ownership: "MY BUILD",
-    maturity: "CALIBRATED",
+    maturity: "MODELED",
     evidence: ["VERIFIED_PANEL", "VERIFIED_CLIENT", "OBSERVED_PARSE", "MODELED"],
-    summary: "1106/1129 menu panels are client-verified. The rotation is event-modeled from verified mechanics, with unresolved settlement/outcome rules kept explicit.",
+    summary: "Local 1106/1129 menu-panel fixtures inform a provisional event model; unresolved settlement/outcome rules and the observed-versus-modeled DPS discrepancy remain explicit.",
   },
   "silkbind-jade": {
     pathKey: "silkbind-jade",

@@ -64,8 +64,8 @@ export const SKILL_TIMING: Record<string, SkillTiming> = {
   MoBladeAttack:      { castTime: 0.7,  hits: 1, weapon: "modao" },
 };
 
-// Default lock used when a rotation skill has no timing entry (GCD-ish estimate).
-export const DEFAULT_CAST_TIME = 0.6;
+// Editor-only placeholder. It must never enter numerical timeline execution.
+export const EDITOR_PLACEHOLDER_CAST_TIME = 0.6;
 
 // Keyword rules mapping a rotation skill's CORE name (English OR CN) → a canonical
 // timing key. The app's rotation names embed conditions in parentheses, e.g.
@@ -74,7 +74,7 @@ export const DEFAULT_CAST_TIME = 0.6;
 // strips the "(...)" part before matching. Best-effort; the Rotations editor
 // (Phase 2) will use an explicit per-build map instead of this heuristic.
 // Order matters (first match wins) — most specific first.
-const NAME_RULES: { match: RegExp; key: keyof typeof SKILL_TIMING }[] = [
+const REFERENCE_NAME_RULES: { match: RegExp; key: keyof typeof SKILL_TIMING }[] = [
   { match: /resonance|共鸣/i, key: "Resonance" },
   { match: /rope dart special|尘绳标/i, key: "RopeDartSpecial" },
   { match: /rope dart charged|响指/i, key: "RopeDartCharged" },
@@ -86,16 +86,54 @@ const NAME_RULES: { match: RegExp; key: keyof typeof SKILL_TIMING }[] = [
   { match: /drone|幻伞/i, key: "UmbDrone" },
 ];
 
+// Load-bearing execution accepts only audited exact rotation identities. The
+// parenthesized suffix is scenario metadata, not part of the skill identity.
+const NUMERICAL_CORE_TIMING_KEYS: Record<string, keyof typeof SKILL_TIMING> = {
+  "尘绳标～": "RopeDartSpecial",
+  "尘绳标Q": "RopeDartSpecial",
+  "尘绳标R1-3": "RopeDartSpecial",
+  "尘绳标R45": "RopeDartSpecial",
+  "尘绳标R67": "RopeDartSpecial",
+  "尘伞完美Q": "UmbQ_Perfect",
+  "尘伞共鸣": "Resonance",
+};
+
+const timingCore = (skillName: string) => skillName.replace(/[（(].*$/s, "").trim();
+
 /**
  * Best-effort timing lookup for a rotation skill name (English or CN).
  * Strips the "(...)" condition suffix, then keyword-matches the core name.
- * Falls back to a default GCD-ish lock if unmatched.
+ * Returns no value when the name has no explicit timing evidence.
  */
-export function lookupTiming(skillName: string): SkillTiming {
-  if (skillName in SKILL_TIMING) return SKILL_TIMING[skillName]; // exact canonical key
-  const core = skillName.replace(/[（(].*$/s, "").trim(); // drop "(...)" / "（...）" conditions
-  for (const r of NAME_RULES) {
-    if (r.match.test(core)) return SKILL_TIMING[r.key];
+export function lookupKnownTiming(skillName: string): SkillTiming | undefined {
+  if (Object.hasOwn(SKILL_TIMING, skillName)) return SKILL_TIMING[skillName];
+  const core = timingCore(skillName);
+  if (!Object.hasOwn(NUMERICAL_CORE_TIMING_KEYS, core)) return undefined;
+  return SKILL_TIMING[NUMERICAL_CORE_TIMING_KEYS[core]];
+}
+
+export type LoadBearingTimingResolution =
+  | { available: true; castTime: number; source: "OVERRIDE" | "CANONICAL" }
+  | { available: false; reason: "INVALID_TIMING_OVERRIDE" | "MISSING_LOAD_BEARING_TIMING" };
+
+/** The single trust boundary for user timing overrides and numerical timing. */
+export function resolveLoadBearingTiming(skillName: string, override?: unknown): LoadBearingTimingResolution {
+  if (override != null) {
+    return typeof override === "number" && Number.isFinite(override) && override > 0
+      ? { available: true, castTime: override, source: "OVERRIDE" }
+      : { available: false, reason: "INVALID_TIMING_OVERRIDE" };
   }
-  return { castTime: DEFAULT_CAST_TIME, hits: 1, weapon: "general", note: "default (unmatched)" };
+  const known = lookupKnownTiming(skillName);
+  return known
+    ? { available: true, castTime: known.castTime, source: "CANONICAL" }
+    : { available: false, reason: "MISSING_LOAD_BEARING_TIMING" };
+}
+
+/** Display/editor placeholder only; numerical callers must use lookupKnownTiming. */
+export function lookupTiming(skillName: string): SkillTiming {
+  const known = lookupKnownTiming(skillName);
+  if (known) return known;
+  const core = timingCore(skillName);
+  for (const rule of REFERENCE_NAME_RULES) if (rule.match.test(core)) return SKILL_TIMING[rule.key];
+  return { castTime: EDITOR_PLACEHOLDER_CAST_TIME, hits: 1, weapon: "general", note: "editor placeholder (unmatched)" };
 }

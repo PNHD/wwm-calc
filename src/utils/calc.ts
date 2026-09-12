@@ -2,7 +2,40 @@ import { PanelStats, TierConstants, SkillDefinition, RotationItem } from "../typ
 import { WWM_DATA } from "../data/wwmData";
 import { ClassConfig, SkillData } from "../data/referenceData";
 import { GLOBAL_V2_SKILL_OUTCOME_RULES } from "../data/globalV2CombatEvidence";
-import { isPathModeled } from "../data/pathCatalog";
+import { isPathModeled, isProductCapabilityEnabled } from "../data/pathCatalog";
+
+export type NumericalAssumptionClassification = "PATH_INDEPENDENT_EVIDENCED" | "SCENARIO_DEFAULT_PROVISIONAL" | "PROVISIONAL_SHARED" | "UNSAFE_FOR_RECOMMENDATION" | "UNKNOWN";
+export interface NumericalAssumption {
+  id: string;
+  classification: NumericalAssumptionClassification;
+  sourceScope: string;
+}
+
+export type SkillCalculationUnavailableReason = "MISSING_PATH_SKILL_MODEL";
+
+export function createBestBuildCalculationIdentity(input: unknown): string {
+  return JSON.stringify(input);
+}
+
+export function isBestBuildRequestCurrent(currentIdentity: string, requestIdentity: string, currentRequestId: number, requestId: number): boolean {
+  return currentIdentity === requestIdentity && currentRequestId === requestId;
+}
+
+export function getNumericalUnavailable(...results: any[]): any | null {
+  for (const result of results) {
+    if (result?.available === false) return result;
+    if (result?.unavailable) return result.unavailable;
+  }
+  return null;
+}
+
+const SHARED_CALC_ASSUMPTIONS: readonly NumericalAssumption[] = [
+  { id: "tier-target-resistance", classification: "SCENARIO_DEFAULT_PROVISIONAL", sourceScope: "selected-tier target" },
+  { id: "fixed-damage-22.5-percent", classification: "PROVISIONAL_SHARED", sourceScope: "shared combat formula" },
+  { id: "net-penetration-branch", classification: "PROVISIONAL_SHARED", sourceScope: "shared combat formula" },
+  { id: "off-element-physical-ratio", classification: "PROVISIONAL_SHARED", sourceScope: "shared combat formula" },
+  { id: "conditional-set-behavior", classification: "SCENARIO_DEFAULT_PROVISIONAL", sourceScope: "selected scenario" },
+];
 
 const t95 = WWM_DATA.tiers["95下"];
 const t96 = WWM_DATA.tiers["95上"];
@@ -63,7 +96,6 @@ export const BUILD_MAP_TO_CHINESE: Record<string, string> = {
   "stonesplit-might": "裂石钧",
   "silkbind-jade": "牵丝玉",
   "silkbind-deluge": "牵丝霖",
-  "bamboocut-kite": "破竹鸢",
   "stonesplit-awe": "裂石威",
   "stonesplit-pure-datang": "裂石钧（纯唐）",
 };
@@ -404,27 +436,55 @@ export const ROTATION: RotationItem[] = [
 
 export const ROTATION_TIME = 60.0;
 
-export function getRotationForBuild(buildKey?: string): RotationItem[] | null {
-  if (!isPathModeled(buildKey)) return null;
-  const cnClass = BUILD_MAP_TO_CHINESE[buildKey || "bamboocut-dust"] || "破竹尘";
+function getModeledClass(buildKey?: string): string | null {
+  if (!buildKey || !isPathModeled(buildKey)) return null;
+  return BUILD_MAP_TO_CHINESE[buildKey] ?? null;
+}
+
+function toSkillDefinition(dynSk: any): SkillDefinition {
+  const wKey = getWeaponTypeKeyFromChinese(dynSk.weaponType || "");
+  const isXinfa = dynSk.type === "心法" || dynSk.name?.includes("Resonance") || dynSk.name?.includes("Camps") || dynSk.name?.includes("xinfa") || dynSk.name?.includes("歌") || dynSk.name?.includes("章") || dynSk.name?.includes("法") || dynSk.name?.includes("心经");
+  return {
+    outerRatio: dynSk.outerRatio || 0,
+    fixed: dynSk.fixed || 0,
+    eleRatio: dynSk.eleRatio || 0,
+    exCritDmg: dynSk.exCritDmg !== undefined ? dynSk.exCritDmg : 0.27,
+    exDmg: dynSk.exDmg !== undefined ? dynSk.exDmg : 0.05,
+    exPen: dynSk.exPen || 0,
+    isCharge: dynSk.isCharge || 0,
+    type: isXinfa ? "xinfa" : "weapon",
+    wType: wKey !== "single" ? wKey : (dynSk.weaponType === "伞" ? "umb" : dynSk.weaponType === "绳标" ? "rope" : "single"),
+    force: dynSk.force || "",
+    special: dynSk.special || "",
+    csBonus: dynSk.csBonus || 0,
+  };
+}
+
+/** Numerical skill lookup is intentionally scoped to one explicit modeled path. */
+export function getSkillForBuild(buildKey: string | undefined, skillName: string): SkillDefinition | null {
+  const cnClass = getModeledClass(buildKey);
+  if (!cnClass) return null;
   const cfg = ClassConfig.ROTATIONS[cnClass];
-  if (cfg && cfg.rotation) {
-    return cfg.rotation;
-  }
-  return ROTATION;
+  const classSkills = cfg?.skillDatabase ?? SkillData[cnClass];
+  const dynSk = classSkills && Object.hasOwn(classSkills, skillName) ? classSkills[skillName] : undefined;
+  return dynSk ? toSkillDefinition(dynSk) : null;
+}
+
+export function getRotationForBuild(buildKey?: string): RotationItem[] | null {
+  const cnClass = getModeledClass(buildKey);
+  if (!cnClass) return null;
+  const cfg = ClassConfig.ROTATIONS[cnClass];
+  return cfg?.rotation ?? null;
 }
 
 export function getRotationTimeForBuild(buildKey?: string): number | null {
-  if (!isPathModeled(buildKey)) return null;
-  const cnClass = BUILD_MAP_TO_CHINESE[buildKey || "bamboocut-dust"] || "破竹尘";
+  const cnClass = getModeledClass(buildKey);
+  if (!cnClass) return null;
   // Global training-dummy parses use a 60s comparison window.
   const GLOBAL_OVERRIDE_TIME: Record<string, number> = { "破竹尘": 60.0 };
   if (GLOBAL_OVERRIDE_TIME[cnClass]) return GLOBAL_OVERRIDE_TIME[cnClass];
   const cfg = ClassConfig.ROTATIONS[cnClass];
-  if (cfg && cfg.useTime !== undefined) {
-    return cfg.useTime;
-  }
-  return ROTATION_TIME;
+  return cfg?.useTime ?? null;
 }
 
 export function calcSkill(
@@ -433,42 +493,16 @@ export function calcSkill(
   tier: TierConstants,
   opts: { set: string; datang: boolean; yishui: boolean; buildKey?: string; armorSet?: string; weaponStars?: boolean; skillOverride?: Partial<SkillDefinition> }
 ) {
-  let sk = SKILL_DB[rot.name];
-  if (!sk) {
-    const cnClass = BUILD_MAP_TO_CHINESE[opts.buildKey || "bamboocut-dust"] || "破竹尘";
-    const cfg = ClassConfig.ROTATIONS[cnClass];
-    const classSkills = cfg && cfg.skillDatabase ? cfg.skillDatabase : SkillData[cnClass];
-    const dynSk = classSkills ? classSkills[rot.name] : null;
-    if (dynSk) {
-      const wKey = getWeaponTypeKeyFromChinese(dynSk.weaponType || "");
-      const isXinfa = dynSk.type === "心法" || rot.name.includes("Resonance") || rot.name.includes("Camps") || rot.name.includes("xinfa") || rot.name.includes("歌") || rot.name.includes("章") || rot.name.includes("法") || rot.name.includes("心经");
-      
-      sk = {
-        outerRatio: dynSk.outerRatio || 0,
-        fixed: dynSk.fixed || 0,
-        eleRatio: dynSk.eleRatio || 0,
-        exCritDmg: dynSk.exCritDmg !== undefined ? dynSk.exCritDmg : 0.27,
-        exDmg: dynSk.exDmg !== undefined ? dynSk.exDmg : 0.05,
-        exPen: dynSk.exPen || 0,
-        isCharge: dynSk.isCharge || 0,
-        type: isXinfa ? "xinfa" : "weapon",
-        wType: wKey !== "single" ? wKey : (dynSk.weaponType === "伞" ? "umb" : dynSk.weaponType === "绳标" ? "rope" : "single"),
-        force: dynSk.force || "",
-        special: dynSk.special || "",
-        csBonus: dynSk.csBonus || 0,
-      };
-      SKILL_DB[rot.name] = sk;
-    }
-  }
+  let sk = getSkillForBuild(opts.buildKey, rot.name);
 
-  if (!sk) return { perHit: 0, total: 0, breakdown: { crit: 0, aff: 0, normal: 0, abrasion: 0 }, sim: { pCrit: 0, pAff: 0, pWhite: 0, pGraze: 0, critHit: 0, affHit: 0, normHit: 0, grazeHit: 0, casts: 0 } };
+  if (!sk) return { available: false as const, reason: "MISSING_PATH_SKILL_MODEL" as const, missingSkills: [rot.name], perHit: 0, total: 0, breakdown: { crit: 0, aff: 0, normal: 0, abrasion: 0 }, sim: { pCrit: 0, pAff: 0, pWhite: 0, pGraze: 0, critHit: 0, affHit: 0, normHit: 0, grazeHit: 0, casts: 0 }, assumptions: [{ id: "path-skill-model", classification: "UNKNOWN", sourceScope: "selected path" }] satisfies readonly NumericalAssumption[] };
   if (opts.skillOverride) sk = { ...sk, ...opts.skillOverride };
 
   // The base Effective Critical Rate remains capped before Direct Critical is
   // added. Only explicit current-Global skill exceptions are applied here; all
   // unverified DoT/summon/settlement sources keep the normal formula rather than
   // being guessed into forced Crit/Affinity behavior.
-  const outcomeRule = GLOBAL_V2_SKILL_OUTCOME_RULES[rot.name]?.rule;
+  const outcomeRule = Object.hasOwn(GLOBAL_V2_SKILL_OUTCOME_RULES, rot.name) ? GLOBAL_V2_SKILL_OUTCOME_RULES[rot.name].rule : undefined;
   if (outcomeRule === "guaranteed-critical" && sk.force !== "crit") {
     sk = { ...sk, force: "crit" };
   }
@@ -577,15 +611,9 @@ export function calcSkill(
     physRes;
   const F = netPenZone(totalOuterPen);
 
-  // Panel min/maxOuter already include five-attribute contributions from the game.
-  // Hawkwing (key "eaglerise") 4pc: +2% PHYSICAL ATK/stack ×5 = +10% at full stacks, but
-  // stacks are GAINED ONLY WHEN DAMAGE TRIGGERS AFFINITY. A crit-built class (e.g. bamboocut-dust,
-  // aff ~17%) rarely procs affinity, so it cannot hold 5 stacks — uptime ≈ its affinity rate.
-  // Scale the +10% by effective affinity proc rate so Hawkwing only shines on affinity builds
-  // (Nameless/九剑), and stays below Stars Align's unconditional +15% MA dmg on crit builds.
-  // ponytail: linear-with-affinity is a heuristic, not the exact per-stack uptime curve.
-  const hawkUptime = Math.min(1, (panel.aff || 0) / 100 + (panel.daff || 0) / 100);
-  let atkMult = armorSet === "eaglerise" ? 1 + 0.10 * hawkUptime : armorSet === "ironweave" ? 1.05 : 1.0;
+  // Hawkwing's affinity-linearized uptime is retained as reference information in
+  // the UI, but is excluded here until a provenance-backed event model exists.
+  let atkMult = armorSet === "ironweave" ? 1.05 : 1.0;
   let minO = (panel.minOuter || 0) * atkMult;
   let maxO = (panel.maxOuter || 0) * atkMult;
   if (maxO < minO) maxO = minO;
@@ -661,7 +689,16 @@ export function calcSkill(
     grazeHit: (dGl_O + dN_F + dN_PZ) * attMul,
     casts: rot.count * (rot.tiaozhan || 1),
   };
-  return { perHit, total, breakdown, sim };
+  return {
+    available: true as const,
+    perHit,
+    total,
+    breakdown,
+    sim,
+    assumptions: armorSet === "eaglerise"
+      ? [...SHARED_CALC_ASSUMPTIONS, { id: "hawkwing-affinity-linearization", classification: "UNSAFE_FOR_RECOMMENDATION", sourceScope: "armor-set reference; excluded" }]
+      : SHARED_CALC_ASSUMPTIONS,
+  };
 }
 
 // Legacy T91 graduated DPS anchors from the source spreadsheet.
@@ -677,8 +714,13 @@ const LEGACY_T91_GRAD_DPS: Record<string, number> = {
   "bamboocut-wind":   38881,
   "silkbind-deluge":  32951,
   // No direct T91 entry for these — estimated from T100上 ratios:
-  "bamboocut-kite":   39117,  // similar Bamboocut family
   "stonesplit-pure-datang": 36498,  // Might variant
+};
+
+export const CURRENT_VALIDATED_BASELINE: null = null;
+export const LEGACY_REFERENCE_BASELINE = {
+  classification: "PROVISIONAL_SHARED" as const,
+  sourceScope: "legacy T91 graduation sheet; not current Global optimization truth",
 };
 
 function netPenZone(delta: number): number {
@@ -710,11 +752,18 @@ function tierBaselineScale(tier: TierConstants): number {
   return outerScale * elemDmgScale * penScale;
 }
 
+export function getLegacyReferenceBaseline(tier: TierConstants, buildKey?: string): { value: number; assumptions: readonly NumericalAssumption[] } | null {
+  if (!buildKey || !isProductCapabilityEnabled(buildKey, "headlineDps")) return null;
+  const dps = LEGACY_T91_GRAD_DPS[buildKey];
+  const duration = getRotationTimeForBuild(buildKey);
+  if (dps == null || duration == null) return null;
+  return {
+    value: dps * tierBaselineScale(tier) * duration,
+    assumptions: [{ id: "legacy-t91-graduation-baseline", classification: "PROVISIONAL_SHARED", sourceScope: LEGACY_REFERENCE_BASELINE.sourceScope }],
+  };
+}
+
+/** Compatibility reference accessor. This never implies CURRENT_VALIDATED_BASELINE. */
 export function calcBaseline(tier: TierConstants, buildKey?: string, _refPanel?: PanelStats): number | null {
-  const key = buildKey || "bamboocut-dust";
-  if (!isPathModeled(key)) return null;
-  const dps = LEGACY_T91_GRAD_DPS[key] || LEGACY_T91_GRAD_DPS["bamboocut-dust"];
-  // This remains an estimated benchmark until a verified Global T96 graduation
-  // dataset is available. Never present it as an authoritative parse target.
-  return dps * tierBaselineScale(tier) * getRotationTimeForBuild(key);
+  return getLegacyReferenceBaseline(tier, buildKey)?.value ?? null;
 }

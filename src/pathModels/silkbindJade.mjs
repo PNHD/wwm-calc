@@ -1,4 +1,4 @@
-export const JADE_MODEL_VERSION = 3;
+export const JADE_MODEL_VERSION = 4;
 export const PROVENANCE = Object.freeze({ CONFIRMED_CLIENT:'CONFIRMED_CLIENT', CONFIRMED_OFFICIAL:'CONFIRMED_OFFICIAL', COMMUNITY_GUIDE:'COMMUNITY_GUIDE', COMMUNITY_MEASURED:'COMMUNITY_MEASURED', MODELED_ASSUMPTION:'MODELED_ASSUMPTION', UNRESOLVED:'UNRESOLVED' });
 /** @typedef {"expected-dps" | "short-fight-burst" | "speedrun-ceiling" | "team-dps"} JadeObjective */
 export const JADE_OBJECTIVES = Object.freeze({ EXPECTED_DPS:'expected-dps', SHORT_FIGHT_BURST:'short-fight-burst', SPEEDRUN_CEILING:'speedrun-ceiling', TEAM_DPS:'team-dps' });
@@ -25,6 +25,8 @@ export function deriveJadeRates(panel,judgeRes=0.45,blossomDirectCritPct=0){
 
 export const DEFAULT_JADE_SCENARIO = Object.freeze({
   duration:60, strategy:'ground-jade', opening:'qhlq', fightType:'boss', judgeRes:0.45,
+  durationSource:'Silkbind-Jade event planner input', targetResistanceSource:'UNKNOWN_LEGACY_JADE_DEFAULT', targetResistanceClassification:'UNKNOWN',
+  rotationSource:'src/pathModels/silkbindJade.mjs priority planner', coefficientSource:'src/data/referenceData.ts ClassConfig.ROTATIONS[牵丝玉].skillDatabase',
   firstQiBreakTime:24, qiBreakDuration:8, subsequentQiBreakInterval:35, bossTakesQiDamage:true, challengeMode:false,
   perfectDodge:false, jadeCount:1, lingerBridging:false, bitterSuppliedByTeammate:false, otherJadeDroneRefresh:false,
   breakingPoint:false, thunderousBloom:false, bitterSeasons:false, moraleChant:false, starReacher:false,
@@ -44,6 +46,54 @@ export const DEFAULT_JADE_SCENARIO = Object.freeze({
   whiteBodyPetalRefillPerSecond:0.9, whiteBodyCadenceProvenance:PROVENANCE.MODELED_ASSUMPTION,
   vitalityMax:100, vitalityReserveForQiBreak:35, attunementBonuses:{}, fluteDistanceBonus:null,
 });
+
+export const JADE_SOURCE_ROTATION_CONTRACT = Object.freeze({
+  scenarioId:'JADE_SOURCE_ROTATION_49_5S', pathKey:'silkbind-jade', durationSeconds:49.5,
+  durationSource:'src/data/referenceData.ts ClassConfig.ROTATIONS[牵丝玉].useTime',
+  targetResistanceValue:null, targetResistanceSource:'UNKNOWN', targetResistanceClassification:'UNKNOWN',
+  rotationSource:'src/data/referenceData.ts ClassConfig.ROTATIONS[牵丝玉].rotation',
+  coefficientSource:'src/data/referenceData.ts ClassConfig.ROTATIONS[牵丝玉].skillDatabase',
+  classification:'CN_REFERENCE', intendedCapabilities:['referenceGuides'], unresolvedAssumptions:['target-resistance-contract'],
+});
+
+const scenarioToken=(value)=>String(value).replace(/[^a-z0-9.]+/gi,'-').replace(/^-|-$/g,'').toUpperCase();
+export function resolveJadeScenarioContract(inputScenario={},objective=JADE_OBJECTIVES.EXPECTED_DPS){
+  const s={...DEFAULT_JADE_SCENARIO,...inputScenario};
+  const durationSeconds=Number(s.duration), targetResistanceValue=Number(s.judgeRes);
+  const durationSource=String(s.durationSource||'UNKNOWN');
+  const targetResistanceSource=String(s.targetResistanceSource||'UNKNOWN');
+  const targetResistanceClassification=String(s.targetResistanceClassification||'UNKNOWN');
+  const rotationSource=String(s.rotationSource||'UNKNOWN');
+  const coefficientSource=String(s.coefficientSource||'UNKNOWN');
+  const unresolvedAssumptions=[];
+  if(!(durationSeconds>0)||durationSource.startsWith('UNKNOWN'))unresolvedAssumptions.push('duration-contract');
+  if(!Number.isFinite(targetResistanceValue)||targetResistanceSource.startsWith('UNKNOWN')||targetResistanceClassification==='UNKNOWN')unresolvedAssumptions.push('target-resistance-contract');
+  if(rotationSource.startsWith('UNKNOWN'))unresolvedAssumptions.push('rotation-contract');
+  if(coefficientSource.startsWith('UNKNOWN'))unresolvedAssumptions.push('coefficient-contract');
+  const durationId=durationSeconds===60?'JADE_EVENT_60S':`JADE_EVENT_${scenarioToken(durationSeconds)}S`;
+  const identityScenario={...s,attunementBonuses:{}};delete identityScenario.cacheSalt;
+  const rotationIdentity=getSilkbindJadeCacheKey({},identityScenario,objective);
+  const rotationFingerprint=[...rotationIdentity].reduce((hash,char)=>Math.imul(hash^char.charCodeAt(0),16777619)>>>0,2166136261).toString(36).toUpperCase();
+  const scenarioId=[durationId,`ROT-${rotationFingerprint}`,...[objective,targetResistanceValue,targetResistanceSource,targetResistanceClassification,durationSource,rotationSource,coefficientSource].map((value)=>encodeURIComponent(String(value)))].join(':');
+  return Object.freeze({
+    scenarioId,
+    pathKey:'silkbind-jade', durationSeconds, durationSource,
+    targetResistanceValue, targetResistanceSource, targetResistanceClassification,
+    rotationSource, coefficientSource, rotationIdentity,
+    classification:'PROVISIONAL_SCENARIO', intendedCapabilities:['headlineDps','rotationDps','skillPreview','statPriority','gearCompare','bestBuild'],
+    unresolvedAssumptions,
+  });
+}
+
+export function compareJadeScenarioResults(current,candidate){
+  const unavailable=[current,candidate].find((result)=>result?.available===false);
+  if(unavailable)return {available:false,value:null,reason:unavailable.reason,missingSkills:unavailable.missingSkills??[],currentScenarioId:current?.scenarioId??null,candidateScenarioId:candidate?.scenarioId??null};
+  const a=current?.scenarioContract,b=candidate?.scenarioContract;
+  if(!a||!b||a.unresolvedAssumptions?.length||b.unresolvedAssumptions?.length||current.scenarioId!==a.scenarioId||candidate.scenarioId!==b.scenarioId)return {available:false,value:null,reason:'UNRESOLVED_SCENARIO_CONTRACT',currentScenarioId:a?.scenarioId??null,candidateScenarioId:b?.scenarioId??null};
+  const identity=(contract)=>JSON.stringify([contract.pathKey,contract.durationSeconds,contract.durationSource,contract.targetResistanceValue,contract.targetResistanceSource,contract.targetResistanceClassification,contract.rotationSource,contract.coefficientSource,contract.rotationIdentity,contract.unresolvedAssumptions]);
+  if(current.scenarioId!==candidate.scenarioId||identity(a)!==identity(b))return {available:false,value:null,reason:'SCENARIO_MISMATCH',currentScenarioId:current.scenarioId,candidateScenarioId:candidate.scenarioId};
+  return {available:true,value:{current,candidate},reason:null,scenarioId:current.scenarioId};
+}
 
 export const JADE_SKILL_TEMPLATES = Object.freeze({
   'fan-wall': { name:'Fan Wall', duration:1.2, tags:['weapon','fan','martial','jadebreak-source'], appSkill:'扇Q(近距离命中)+阴阳鬼掣', priced:true },
@@ -142,10 +192,28 @@ export function evaluateSilkbindJade(panel,inputScenario={},objective=JADE_OBJEC
   const s={...DEFAULT_JADE_SCENARIO,...inputScenario},plan=planSilkbindJadeRotation(s),basePanel={...panel};
   if(s.blossomBarrage&&s.blossomDirectCritPct>0)basePanel.dcrit=(basePanel.dcrit||0)+s.blossomDirectCritPct;
   if(objective===JADE_OBJECTIVES.SPEEDRUN_CEILING)basePanel.minOuter=basePanel.maxOuter;
-  let total=0;const perSkill=new Map();
-  for(const event of plan.events){if(!JADE_SKILL_TEMPLATES[event.id]?.priced)continue;const p={...basePanel};if(event.moraleStacks>0)p.outerPen=(p.outerPen||0)+2*event.moraleStacks;if(event.bitterActive)p.outerPen=(p.outerPen||0)+s.bitterResistanceReduction;if(event.starReacher){const pct=event.qiBroken?s.starReacherLowQiAttackPct:s.starReacherBaseAttackPct;p.minOuter=(p.minOuter||0)*(1+pct/100);p.maxOuter=(p.maxOuter||0)*(1+pct/100);}const base=priceSkill?Number(priceSkill(event,p)||0):fallbackPrice(event,p,objective);const dmg=base*jadeEventMultiplier(event,s).multiplier;if(!(dmg>0))continue;total+=dmg;const row=perSkill.get(event.id)||{id:event.id,name:event.name,damage:0,events:0};row.damage+=dmg;row.events++;perSkill.set(event.id,row);}
+  let total=0,unavailable=null;const perSkill=new Map();
+  for(const event of plan.events){
+    if(!JADE_SKILL_TEMPLATES[event.id]?.priced)continue;
+    const p={...basePanel};
+    if(event.moraleStacks>0)p.outerPen=(p.outerPen||0)+2*event.moraleStacks;
+    if(event.bitterActive)p.outerPen=(p.outerPen||0)+s.bitterResistanceReduction;
+    if(event.starReacher){const pct=event.qiBroken?s.starReacherLowQiAttackPct:s.starReacherBaseAttackPct;p.minOuter=(p.minOuter||0)*(1+pct/100);p.maxOuter=(p.maxOuter||0)*(1+pct/100);}
+    const priced=priceSkill?priceSkill(event,p):fallbackPrice(event,p,objective);
+    if(priced?.available===false){unavailable=priced;break;}
+    const base=Number(priced?.available===true?priced.total:priced??0);
+    if(!Number.isFinite(base)||base<0){unavailable={available:false,reason:'INVALID_SKILL_PRICE',missingSkills:[event.name]};break;}
+    const dmg=base*jadeEventMultiplier(event,s).multiplier;
+    if(!(dmg>0))continue;
+    total+=dmg;
+    const row=perSkill.get(event.id)||{id:event.id,name:event.name,damage:0,events:0};row.damage+=dmg;row.events++;perSkill.set(event.id,row);
+  }
   const rates=deriveJadeRates(basePanel,s.judgeRes,0),dps=total/Math.max(.001,s.duration),rows=[...perSkill.values()].map(x=>({...x,damage:round(x.damage,2),sharePct:total?round(x.damage/total*100,2):0})).sort((a,b)=>b.damage-a.damage);
-  return {path:'silkbind-jade',objective,objectiveLabel:objective===JADE_OBJECTIVES.SPEEDRUN_CEILING?'COMMUNITY SPEEDRUN OBJECTIVE — Max-Physical endpoint; not statistical P95':JADE_OBJECTIVE_LABELS[objective]||objective,totalDamage:round(total,2),dps:round(dps,2),rates,diagnostics:{...plan.diagnostics,precision:rates.precision,precisionTarget:100,precisionGap:round(Math.max(0,100-rates.precision),2),effectiveCrit:rates.yellowCrit,critTarget:80,directCrit:rates.directCrit,affinity:rates.yellowAffinity,rateBudget:rates.heuristicBudget,rateBudgetStatus:rates.heuristicBudget>100.5?'overcap/waste':rates.heuristicBudget<99.5?'below-community-target':'target-range',maxPhysical:panel.maxOuter||0},perSkill:rows,timeline:plan.events,assumptions:[s.blossomDirectCritPct===0?'Blossom Barrage Direct Crit numeric value is unresolved and therefore not credited by default.':null,'Exact Global Min↔Max attack-roll distribution is unresolved; Speedrun Ceiling uses the Max endpoint and is not a statistical percentile.','White Body extension is generated by Qi-break refill events; its exact refill cadence remains a modeled assumption.','Flute distance exact value is unresolved and disabled.'].filter(Boolean)};
+  const scenarioContract=resolveJadeScenarioContract(s,objective);
+  const common={path:'silkbind-jade',scenarioId:scenarioContract.scenarioId,scenarioContract,objective,objectiveLabel:objective===JADE_OBJECTIVES.SPEEDRUN_CEILING?'COMMUNITY SPEEDRUN OBJECTIVE — Max-Physical endpoint; not statistical P95':JADE_OBJECTIVE_LABELS[objective]||objective,rates,diagnostics:{...plan.diagnostics,precision:rates.precision,precisionTarget:100,precisionGap:round(Math.max(0,100-rates.precision),2),effectiveCrit:rates.yellowCrit,critTarget:80,directCrit:rates.directCrit,affinity:rates.yellowAffinity,rateBudget:rates.heuristicBudget,rateBudgetStatus:rates.heuristicBudget>100.5?'overcap/waste':rates.heuristicBudget<99.5?'below-community-target':'target-range',maxPhysical:panel.maxOuter||0},timeline:plan.events,assumptions:[...scenarioContract.unresolvedAssumptions,s.blossomDirectCritPct===0?'Blossom Barrage Direct Crit numeric value is unresolved and therefore not credited by default.':null,'Exact Global Min↔Max attack-roll distribution is unresolved; Speedrun Ceiling uses the Max endpoint and is not a statistical percentile.','White Body extension is generated by Qi-break refill events; its exact refill cadence remains a modeled assumption.','Flute distance exact value is unresolved and disabled.'].filter(Boolean)};
+  return unavailable
+    ? {...common,...unavailable,totalDamage:null,dps:null,perSkill:[]}
+    : {...common,available:true,totalDamage:round(total,2),dps:round(dps,2),perSkill:rows};
 }
 const CACHE=new Map();
 export function getSilkbindJadeCacheKey(panel,scenario,objective){const keys=['minOuter','maxOuter','outerPen','minPz','maxPz','pzPen','pzDmg','prec','crit','aff','dcrit','daff','critDmg','affDmg','outerDmg','bossDmg','umbAll','umbMartial','umbSpecial','umbCharged','fanAll','fanMartial','fanSpecial','fanCharged','allArts','attunedBonus','power','agility','momentum','set'];const p=Object.fromEntries(keys.map(k=>[k,typeof panel?.[k]==='number'?round(panel[k],4):panel?.[k]]));return JSON.stringify({v:JADE_MODEL_VERSION,objective,panel:p,scenario:{...DEFAULT_JADE_SCENARIO,...scenario}});}

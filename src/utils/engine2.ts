@@ -1,6 +1,6 @@
 import { ROTATIONS_WWM } from "../data/rotationsWWM";
 import { ABILITY_MAP_WWM } from "../data/abilityMapWWM";
-import { calcSkill, SKILL_DB } from "./calc";
+import { calcSkill, getSkillForBuild } from "./calc";
 import { RotationItem, PanelStats, TierConstants } from "../types";
 
 // App build key -> wherewindsmath bundle path key.
@@ -50,7 +50,7 @@ export function engine2Dps(
   let total = 0;
   let priced = 0;
   for (const item of items) {
-    const sk = SKILL_DB[item.name];
+    const sk = getSkillForBuild(buildKey, item.name);
     const { total: t } = calcSkill(item, panel, activeTier, {
       set: opts.set,
       datang: opts.datang,

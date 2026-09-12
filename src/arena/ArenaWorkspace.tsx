@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import "./arena.css";
 import ModelAbout from "../product/ModelAbout"; // V1_MODEL_ABOUT_ARENA
+import { CANONICAL_GLOBAL_PATHS } from "../data/pathCatalog";
 import {
   ARENA_HISTORY_KEY, ARENA_PATCH, ARENA_STORAGE_KEY, PATH_PROFILES,
   consumeArenaStorageRecovery, decodeArenaShare, encodeArenaShare, loadArenaHistory, loadArenaState, readPveInventorySnapshot,
@@ -36,7 +37,7 @@ const SECONDARY: Array<{ id: Route; label: string }> = [
   { id: "attunement", label: "Attunement" }, { id: "skills", label: "Mechanics" },
   { id: "evidence", label: "Evidence" }, { id: "reference", label: "Path Catalog" }, { id: "transfer", label: "Import / Export" },
 ];
-const PATHS = Object.keys(PATH_COMPETITIVE_PROFILES);
+const PATHS = CANONICAL_GLOBAL_PATHS.map((path) => path.label);
 
 function routeFromHash(): Route {
   const value = location.hash.replace(/^#arena\/?/, "").split("/")[0];
@@ -87,7 +88,7 @@ function ThreeVThree() {
 }
 
 function Matchups({ mode, profile, opponent, setOpponent }: { mode: ArenaModeV2; profile: any; opponent: string; setOpponent: (v: string) => void }) {
-  const result = useMemo(() => matchupAnalysis({ myPath: profile.path, opponentPath: opponent, mode }), [profile.path, opponent, mode]);
+  const result = useMemo(() => matchupAnalysis({ myPath: profile.path, opponentPath: opponent.replace(" - ", "-"), mode }), [profile.path, opponent, mode]);
   return <div data-testid="arena-matchups"><SectionHeader eyebrow="Arena V2 / Matchups" title="Mechanic matchup lab" copy="No generic 1–5 score and no fake win probability. The result is a structured interaction checklist." /><article className="arena-matchup-picker"><div><span>MY PATH</span><strong>{profile.path}</strong><small>{ARENA_MODE_RULES[mode].label}</small></div><Swords size={24}/><label>OPPONENT PATH<select aria-label="Opponent Path" value={opponent} onChange={(e) => setOpponent(e.target.value)}>{PATHS.map((path) => <option key={path}>{path}</option>)}</select></label></article><article className="arena-card arena-result" data-testid="arena-matchup-result"><div className="arena-result-head"><div><span className="arena-kicker">{profile.path} vs {opponent}</span><h3>Interaction analysis</h3></div><EvidenceBadge value={result.confidence}/></div><div className="arena-three-col"><ListBlock title="ADVANTAGES" rows={result.advantages}/><ListBlock title="RISKS" rows={result.risks}/><ListBlock title="KEY INTERACTIONS" rows={result.keyInteractions}/></div><div className="arena-two-col"><ListBlock title="PUNISH WINDOWS" rows={result.punishWindows}/><ListBlock title="DEFENSIVE ANSWERS" rows={result.defensiveAnswers}/></div><ListBlock title="UNKNOWN / PLAYER-SKILL-SENSITIVE" rows={result.unknowns}/><p className="arena-muted">This is not an empirical win probability.</p></article>{mode === "3V3_ARENA" && <ThreeVThree/>}{mode === "PERCEPTION_FOREST" && <PerceptionForest/>}</div>;
 }
 function ListBlock({ title, rows }: { title: string; rows: string[] }) { return <div><strong>{title}</strong>{rows.length ? <ul>{rows.map((row) => <li key={row}>{row}</li>)}</ul> : <p className="arena-muted">No current evidence-backed claim.</p>}</div>; }
@@ -153,7 +154,7 @@ function ReferenceBuilds({ state, setState, mode }: { state: ArenaState; setStat
     };
     setState({ ...state, profiles: [...state.profiles, next] } as ArenaState);
   }; // V1_ARENA_REFERENCE_CLONE_V2
-  return <div data-testid="arena-reference"><SectionHeader eyebrow="Arena V2 / Paths" title="Evidence-backed competitive path catalog" copy="Only profiles supportable by current evidence are shown; missing paths are not filled with fake ratings."/><div className="arena-reference-grid">{Object.entries(PATH_COMPETITIVE_PROFILES).map(([path, data]: any) => <article className="arena-card" key={path}><div className="arena-result-head"><div><span className="arena-kicker">PATH</span><h3>{path}</h3></div><EvidenceBadge value={data.evidence}/></div><p>{data.weapons.join(" + ")} · {data.range}</p><ListBlock title="Control / stagger" rows={[...data.stagger,...data.control]}/><ListBlock title="Defensive states" rows={[...data.tenacity,...data.superArmor,...data.shielding]}/><ListBlock title="Unknown / counters" rows={data.counters}/><button type="button" disabled={state.profiles.length >= 12} onClick={() => clone(path, data)}>Clone to my workspace</button></article>)}</div></div>;
+  return <div data-testid="arena-reference"><SectionHeader eyebrow="Arena V2 / Paths" title="Current Global path catalog" copy="All current identities are shown. Competitive numerical evidence remains unavailable unless a profile is explicitly present."/><div className="arena-reference-grid">{CANONICAL_GLOBAL_PATHS.map((path) => { const data: any = PATH_COMPETITIVE_PROFILES[path.label.replace(" - ", "-")]; return <article className="arena-card" key={path.id}><div className="arena-result-head"><div><span className="arena-kicker">CURRENT GLOBAL PATH</span><h3>{path.label}</h3></div><EvidenceBadge value={data?.evidence ?? EVIDENCE_STATE.UNKNOWN}/></div><p>{path.weapon1} + {path.weapon2}{data ? ` · ${data.range}` : " · competitive numerical model unavailable"}</p>{data ? <><ListBlock title="Control / stagger" rows={[...data.stagger,...data.control]}/><ListBlock title="Defensive states" rows={[...data.tenacity,...data.superArmor,...data.shielding]}/><ListBlock title="Unknown / counters" rows={data.counters}/><button type="button" disabled={state.profiles.length >= 12} onClick={() => clone(path.label.replace(" - ", "-"), data)}>Clone to my workspace</button></> : <Unknown>No competitive numerical profile is available for this current Global identity.</Unknown>}</article>; })}</div></div>;
 }
 
 function HistoryView({ profile, mode }: { profile: any; mode: ArenaModeV2 }) {

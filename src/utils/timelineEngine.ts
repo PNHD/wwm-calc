@@ -13,6 +13,7 @@
 // engine's value is being reusable for EDITED rotations / skills / team members.
 
 import { calcSkill, getRotationForBuild, getRotationTimeForBuild } from "./calc";
+import { resolveLoadBearingTiming } from "../data/skillTiming";
 import type { PanelStats, RotationItem } from "../types";
 
 // Derive tier/opts types straight from calcSkill so this stays in sync with it.
@@ -27,12 +28,23 @@ export interface SimSkill {
   share: number; // fraction of total damage (0..1)
 }
 
-export interface RotationSim {
+export interface RotationSimAvailable {
+  available: true;
   totalDmg: number;
   dps: number;
   breakdown: { crit: number; aff: number; normal: number; abrasion: number };
   perSkill: SimSkill[];
 }
+
+export interface RotationSimUnavailable {
+  available: false;
+  reason: "MISSING_LOAD_BEARING_TIMING" | "INVALID_TIMING_OVERRIDE" | "MISSING_PATH_SKILL_MODEL";
+  missingTiming: string[];
+  invalidTiming: string[];
+  missingSkills: string[];
+}
+
+export type RotationSim = RotationSimAvailable | RotationSimUnavailable;
 
 /**
  * Simulate an arbitrary rotation against a panel.
@@ -44,13 +56,24 @@ export function simulateRotation(
   tier: CalcTier,
   opts: CalcOpts,
   rotationTime: number,
+  timingOverrides: Record<string, { castTime?: number }> = {},
 ): RotationSim {
+  const missingTiming = new Set<string>();
+  const invalidTiming = new Set<string>();
+  for (const item of rotation) {
+    if (Math.round(item.count) <= 0) continue;
+    const timing = resolveLoadBearingTiming(item.name, timingOverrides[item.name]?.castTime);
+    if ("reason" in timing) (timing.reason === "INVALID_TIMING_OVERRIDE" ? invalidTiming : missingTiming).add(item.name);
+  }
+  if (invalidTiming.size) return { available: false, reason: "INVALID_TIMING_OVERRIDE", missingTiming: [], invalidTiming: [...invalidTiming].sort(), missingSkills: [] };
+  if (missingTiming.size) return { available: false, reason: "MISSING_LOAD_BEARING_TIMING", missingTiming: [...missingTiming].sort(), invalidTiming: [], missingSkills: [] };
   let totalDmg = 0;
   const breakdown = { crit: 0, aff: 0, normal: 0, abrasion: 0 };
   const perSkill: SimSkill[] = [];
 
   for (const item of rotation) {
     const r = calcSkill(item, panel, tier, opts);
+    if (!r.available) return { available: false, reason: r.reason, missingTiming: [], invalidTiming: [], missingSkills: r.missingSkills };
     totalDmg += r.total;
     if (r.breakdown) {
       breakdown.crit += r.breakdown.crit;
@@ -68,7 +91,7 @@ export function simulateRotation(
   }
   perSkill.sort((a, b) => b.total - a.total);
 
-  return { totalDmg, dps, breakdown, perSkill };
+  return { available: true, totalDmg, dps, breakdown, perSkill };
 }
 
 /** Simulate a build's built-in rotation — reproduces App.tsx rotationStats. */

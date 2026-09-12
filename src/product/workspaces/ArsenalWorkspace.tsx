@@ -14,10 +14,10 @@ export interface ArsenalRow {
   mastery?: number;
   equipped: boolean;
   grade: string;
-  score: number;
+  score: number | null;
   rollQuality?: number;
-  buildFit?: number;
-  modeledContribution?: number;
+  buildFit?: number | null;
+  modeledContribution?: number | null;
   recognizedLines?: number;
   usefulLines?: number;
   unknownLines?: number;
@@ -37,7 +37,7 @@ interface ArsenalWorkspaceProps {
   onEquip: (id: string) => void;
   onEdit: (id: string) => void;
   onAdd: () => void;
-  analysis: { slot: string; slotKey: string; name: string; score: number; dpsLoss: number; lossPct: number }[];
+  analysis: { slot: string; slotKey: string; name: string; score: number | null; dpsLoss: number; lossPct: number }[];
   modeledDps: number;
   priorities: { name: string; dps: number }[];
   onOpenCompare: () => void;
@@ -80,6 +80,7 @@ export default function ArsenalWorkspace({
   const pageCount = Math.max(1, Math.ceil(visibleRows.length / pageSize));
   const pageRows = visibleRows.slice((page - 1) * pageSize, page * pageSize);
   const maxLoss = Math.max(1, ...analysis.map((item) => item.dpsLoss));
+  const scoreLabel = (score: number | null | undefined, digits = 1) => score === null || score === undefined ? "N/A" : score.toFixed(digits);
   const advisedItem = rows.find((row) => row.equipped && row.slot === activeSlot) ?? rows.find((row) => row.equipped);
   const selectedItem = rows.find((row) => row.id === selectedId) ?? advisedItem;
   const rank = (name: string) => {
@@ -130,9 +131,9 @@ export default function ArsenalWorkspace({
       </section>
 
       {selectedItem && <section className="gear-inspector" aria-label="Selected gear analyzer">
-        <header><div><span className="product-kicker">Selected gear</span><h2>{selectedItem.name}</h2><p>{selectedItem.slotLabel} / {selectedItem.setName} / {selectedItem.quality}</p></div><strong>{selectedItem.grade}<small>{selectedItem.score.toFixed(1)} T96 score</small></strong></header>
+        <header><div><span className="product-kicker">Selected gear</span><h2>{selectedItem.name}</h2><p>{selectedItem.slotLabel} / {selectedItem.setName} / {selectedItem.quality}</p></div><strong>{selectedItem.grade}<small>{scoreLabel(selectedItem.score)} T96 score</small></strong></header>
         <div className="gear-inspector-layout">
-          <div className="gear-inspector-advice"><small>{selectedItem.sourceLabel ?? "Gear score"}</small><strong>{selectedItem.usefulLines ?? 0}/{selectedItem.recognizedLines ?? selectedItem.subs.length} useful verified lines</strong><span>Modeled contribution {(selectedItem.modeledContribution ?? 0).toFixed(1)}% · Build fit {(selectedItem.buildFit ?? 0).toFixed(1)}% · {selectedItem.rollQualityAvailable === false ? "Roll diagnostic N/A" : `Roll diagnostic ${(selectedItem.rollQuality ?? 0).toFixed(1)}%`}</span>{selectedItem.warnings?.map((warning) => <span key={warning}>{warning}</span>)}</div>
+          <div className="gear-inspector-advice"><small>{selectedItem.sourceLabel ?? "Gear score"}</small><strong>{selectedItem.usefulLines ?? 0}/{selectedItem.recognizedLines ?? selectedItem.subs.length} useful verified lines</strong><span>Modeled contribution {scoreLabel(selectedItem.modeledContribution)}% · Build fit {scoreLabel(selectedItem.buildFit)}% · {selectedItem.rollQualityAvailable === false ? "Roll diagnostic N/A" : `Roll diagnostic ${scoreLabel(selectedItem.rollQuality)}%`}</span>{selectedItem.warnings?.map((warning) => <span key={warning}>{warning}</span>)}</div>
           <div className="gear-inspector-stats">{selectedItem.subs.slice(0, 6).map((sub, index) => <span key={`${sub.type}-${index}`}><i>{index + 1}</i><strong>{sub.type}{sub.tuned ? " (tuned)" : ""}</strong><b>{sub.value}</b></span>)}</div>
           <div className="gear-inspector-advice"><small>Reroll calculator</small><label><span>Path</span><select value={rerollPath} onChange={(event) => setRerollPath(event.target.value)}><option value="build">{selectedItem.slotLabel} path</option><option value="bamboocut">Bamboocut path</option><option value="general">General path</option></select></label><strong>{weakestSub && bestMissing ? `${weakestSub.type} -> ${bestMissing.name}` : "No verified upgrade found"}</strong><span>{bestMissing ? `About +${Math.round(bestMissing.dps).toLocaleString()} DPS for one Global max roll.` : "Current lines already cover the ranked priorities."}</span></div>
           <div className="gear-inspector-actions">
@@ -160,7 +161,7 @@ export default function ArsenalWorkspace({
             ))}
           </div>
           <div className="arsenal-analysis-actions">
-            <div><small>Weakest slot</small><strong>{analysis.at(-1)?.slot ?? "-"}</strong><span>{analysis.at(-1)?.score.toFixed(2) ?? "0.00"} T96 gear score</span></div>
+            <div><small>Weakest slot</small><strong>{analysis.at(-1)?.slot ?? "-"}</strong><span>{scoreLabel(analysis.at(-1)?.score, 2)} T96 gear score</span></div>
             {advisedItem && <div><small>Reroll advisor</small><strong>{advisedItem.name}</strong><span>{weakestSub && bestMissing ? `${weakestSub.type} -> ${bestMissing.name} (about +${Math.round(bestMissing.dps).toLocaleString()} DPS/roll)` : "No clear reroll upgrade from current priority data."}</span></div>}
             {advisedItem && <button type="button" onClick={() => onEdit(advisedItem.id)}>Edit selected gear</button>}
             <button type="button" onClick={onOpenCompare}>Compare one replacement</button>
@@ -207,7 +208,7 @@ export default function ArsenalWorkspace({
               <header>
                 <span className="arsenal-card-image"><img src={row.image} alt="" /></span>
                 <span><strong>{row.name}</strong><small>{row.slotLabel}{row.weaponType ? ` / ${row.weaponType}` : ""}</small><em>{row.setName}</em></span>
-                <span className="arsenal-card-grade"><strong>{row.grade}</strong><small>{row.score.toFixed(2)}%</small></span>
+                <span className="arsenal-card-grade"><strong>{row.grade}</strong><small>{scoreLabel(row.score, 2)}%</small></span>
               </header>
               <div className="arsenal-card-substats">
                 {row.subs.slice(0, 6).map((sub, index) => (

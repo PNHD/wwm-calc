@@ -1,5 +1,6 @@
 import { GLOBAL_T96_ROLL_CAPS } from "../data/globalT96Rules";
 import { classifyGlobalT96GearOrigin, globalT96GearOriginLabel, type GlobalT96GearOrigin } from "../data/globalT96GearCompatibility";
+import { isProductCapabilityEnabled } from "../data/pathCatalog";
 
 export interface GlobalT96GearLine {
   type: string;
@@ -12,16 +13,16 @@ export interface GlobalT96LineScore {
   value: number;
   cap: number | null;
   rollPct: number | null;
-  fitWeight: number;
+  fitWeight: number | null;
   useful: boolean;
   reason: string;
 }
 
 export interface GlobalT96GearScore {
-  overall: number;
+  overall: number | null;
   rollQuality: number;
-  buildFit: number;
-  modeledContribution: number;
+  buildFit: number | null;
+  modeledContribution: number | null;
   recognizedLines: number;
   usefulLines: number;
   unknownLines: number;
@@ -30,6 +31,7 @@ export interface GlobalT96GearScore {
   warnings: string[];
   gearOrigin: GlobalT96GearOrigin;
   rollQualityAvailable: boolean;
+  pathSpecificAvailable: boolean;
 }
 
 const parseNumber = (value: string): number => {
@@ -85,7 +87,8 @@ const CAP_BY_STAT: Record<string, number> = {
   mysticDmg: GLOBAL_T96_ROLL_CAPS.mysticDmg,
 };
 
-const DEFAULT_WEIGHTS: Record<string, number> = {
+// Latent neutral ordering only. Selected-path recommendation code must not consume it.
+export const DEFAULT_WEIGHTS: Record<string, number> = {
   maxOuter: 0.9,
   minOuter: 0.55,
   outerPen: 0.9,
@@ -105,7 +108,7 @@ const DEFAULT_WEIGHTS: Record<string, number> = {
   mysticDmg: 0.4,
 };
 
-const BUILD_WEIGHTS: Record<string, Partial<Record<string, number>>> = {
+export const BUILD_WEIGHTS: Record<string, Partial<Record<string, number>>> = {
   "bamboocut-dust": {
     maxOuter: 1,
     outerPen: 1,
@@ -127,15 +130,16 @@ const BUILD_WEIGHTS: Record<string, Partial<Record<string, number>>> = {
   "bellstrike-splendor": { maxOuter: 1, crit: 0.9, affinity: 0.75, outerPen: 0.85, weaponMartial: 1 },
   "silkbind-jade": { maxOuter: 0.95, crit: 0.9, affinity: 0.8, maxElement: 0.9, weaponMartial: 1, allArts: 0.95 },
   "silkbind-deluge": { maxOuter: 0.75, minOuter: 0.7, crit: 0.7, allArts: 0.85, bossDmg: 0.25 },
-  "stonesplit-might": { maxOuter: 1, minOuter: 0.75, crit: 0.9, outerPen: 0.9, allArts: 0.9, maxElement: 0.05, minElement: 0.05 },
-  "stonesplit-awe": { maxOuter: 1, crit: 0.9, outerPen: 0.9, allArts: 0.9 },
-  "stonesplit-pure-datang": { maxOuter: 1, crit: 0.9, outerPen: 0.95, allArts: 0.95, weaponMartial: 1 },
-  "bamboocut-kite": { maxOuter: 0.95, maxElement: 1, outerPen: 0.9, crit: 0.9, weaponMartial: 1 },
 };
 
+export const BUILD_WEIGHT_CLASSIFICATION: Record<string, "PROVISIONAL_ASSUMPTION"> = Object.fromEntries(
+  Object.keys(BUILD_WEIGHTS).map((pathKey) => [pathKey, "PROVISIONAL_ASSUMPTION"]),
+) as Record<string, "PROVISIONAL_ASSUMPTION">;
+
 const fitWeight = (buildKey: string, stat: string): number => {
-  const build = BUILD_WEIGHTS[buildKey];
-  return build?.[stat] ?? DEFAULT_WEIGHTS[stat] ?? 0;
+  // Table presence is not authority. This only runs behind the independent
+  // gearPathFit capability gate, and never fills a missing path/stat with generic weights.
+  return BUILD_WEIGHTS[buildKey]?.[stat] ?? 0;
 };
 
 const isWrongElement = (type: string, buildKey: string): boolean => {
@@ -157,18 +161,21 @@ export function scoreGlobalT96Gear(
   slot = "",
 ): GlobalT96GearScore {
   const gearOrigin = classifyGlobalT96GearOrigin(slot, lines);
+  const pathSpecificAvailable = isProductCapabilityEnabled(buildKey, "gearPathFit");
   const scored = lines.map<GlobalT96LineScore>((line) => {
     const stat = canonicalStat(line.type);
     const value = parseNumber(line.val);
     const standardCap = stat ? CAP_BY_STAT[stat] ?? null : null;
     const cap = gearOrigin === "relaid" ? null : standardCap;
     const wrongElement = isWrongElement(line.type, buildKey);
-    const weight = stat ? (wrongElement ? 0.05 : fitWeight(buildKey, stat)) : 0;
+    const weight = pathSpecificAvailable && stat ? (wrongElement ? 0.05 : fitWeight(buildKey, stat)) : null;
     const rollPct = cap && cap > 0 ? Math.max(0, Math.min(125, value / cap * 100)) : null;
-    const useful = weight >= 0.55;
+    const useful = weight !== null && weight >= 0.55;
     const reason = !stat
       ? "No verified T96 cap for this line"
-      : gearOrigin === "relaid"
+      : !pathSpecificAvailable
+        ? "Path-specific build fit is unavailable for this path; roll diagnostics remain path-independent"
+        : gearOrigin === "relaid"
         ? "Recognized line; Relaid Modulating cap is not verified"
         : wrongElement
           ? "Off-element line for the selected path"
@@ -184,13 +191,13 @@ export function scoreGlobalT96Gear(
   const rollQuality = rollQualityAvailable
     ? capScored.reduce((sum, line) => sum + Math.min(100, line.rollPct ?? 0), 0) / capScored.length
     : 0;
-  const buildFit = scored.length
-    ? scored.reduce((sum, line) => sum + line.fitWeight * 100, 0) / scored.length
-    : 0;
-  const modeledContribution = Math.max(0, Math.min(100, modeledContributionPct / 7 * 100));
+  const buildFit = pathSpecificAvailable && scored.length
+    ? scored.reduce((sum, line) => sum + (line.fitWeight ?? 0) * 100, 0) / scored.length
+    : null;
+  const modeledContribution = pathSpecificAvailable ? Math.max(0, Math.min(100, modeledContributionPct / 7 * 100)) : null;
   // Item caps are diagnostic only. Build selection is driven by the modeled
   // panel/rotation contribution, with build-fit used only as a small tie-breaker.
-  const overall = modeledContribution * 0.85 + buildFit * 0.15;
+  const overall = modeledContribution === null || buildFit === null ? null : modeledContribution * 0.85 + buildFit * 0.15;
   const unknownLines = Math.max(0, scored.length - recognizedLineCount);
   const warnings: string[] = [];
   if (unknownLines) warnings.push(`${unknownLines} line(s) have no cap diagnostic; their entered values still contribute to the panel and optimizer.`);
@@ -198,6 +205,7 @@ export function scoreGlobalT96Gear(
   if (gearOrigin === "mixed") warnings.push("This weapon mixes native Void and historical Path stat pools; review the OCR result before trusting its score.");
   if (scored.some((line) => line.reason.startsWith("Off-element"))) warnings.push("Off-element attribute attack is heavily discounted for this path.");
   if (recognizedLineCount === 0) warnings.push("This item cannot be roll-scored from the verified 100上 table yet.");
+  if (!pathSpecificAvailable) warnings.push("Path-specific gear scoring is unavailable for this path; roll diagnostics remain path-independent.");
 
   return {
     overall,
@@ -212,5 +220,6 @@ export function scoreGlobalT96Gear(
     warnings,
     gearOrigin,
     rollQualityAvailable,
+    pathSpecificAvailable,
   };
 }

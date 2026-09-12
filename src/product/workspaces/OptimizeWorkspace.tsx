@@ -20,10 +20,12 @@ interface OptimizeWorkspaceProps {
   calibrated: boolean;
   detailOpen: boolean;
   activeTool: string;
+  unavailableTools: string[];
   onToolOpen: (id: string) => void;
 }
 
 export default function OptimizeWorkspace(props: OptimizeWorkspaceProps) {
+  const optimizationUnavailable = props.unavailableTools.includes("best-build") || props.unavailableTools.includes("compare");
   return (
     <main className={`optimize-workspace ${props.detailOpen ? "has-detail" : ""}`} id="main-content">
       <header className="product-page-heading">
@@ -31,12 +33,15 @@ export default function OptimizeWorkspace(props: OptimizeWorkspaceProps) {
       </header>
       <div className="optimize-layout">
         <nav className="optimize-tool-nav" aria-label="Optimization tools">
-          {["Improve", "Plan", "Advanced"].map((group) => <div key={group}><h2>{group}</h2>{TOOLS.filter((tool) => tool.group === group).map(({ id, label, detail, icon: Icon }) => <button type="button" key={id} className={props.detailOpen && props.activeTool === id ? "is-active" : ""} onClick={() => props.onToolOpen(id)}><Icon size={17} aria-hidden="true" /><span><strong>{label}</strong><small>{detail}</small></span><ArrowRight size={14} aria-hidden="true" /></button>)}</div>)}
+          {["Improve", "Plan", "Advanced"].map((group) => <div key={group}><h2>{group}</h2>{TOOLS.filter((tool) => tool.group === group).map(({ id, label, detail, icon: Icon }) => {
+            const unavailable = props.unavailableTools.includes(id);
+            return <button type="button" key={id} disabled={unavailable} aria-label={unavailable ? `${label} unavailable: recommendation unavailable pending stronger evidence` : undefined} className={props.detailOpen && props.activeTool === id ? "is-active" : ""} onClick={() => props.onToolOpen(id)}><Icon size={17} aria-hidden="true" /><span><strong>{unavailable ? `${label} unavailable` : label}</strong><small>{unavailable ? "Recommendation unavailable pending stronger evidence." : detail}</small></span><ArrowRight size={14} aria-hidden="true" /></button>;
+          })}</div>)}
         </nav>
         {!props.detailOpen && <div className="optimize-overview">
           <section className="optimize-score"><span>Current modeled rotation</span><strong>{Math.round(props.modeledDps).toLocaleString()} DPS</strong><p>{props.calibrated ? "Derived from the calibrated menu panel, combat conditions, and selected rotation." : "Provisional until the calculated menu panel is calibrated against the in-game Combat Attributes screen."}</p></section>
           <section className="optimize-readiness"><div className="product-section-heading"><div><h2>Model readiness</h2><p>Inputs required before trusting a recommendation</p></div></div><div><span className={props.equipped === 8 ? "is-ready" : ""}><b>{props.equipped}/8</b><small>Gear equipped</small></span><span className={props.innerWays === 4 ? "is-ready" : ""}><b>{props.innerWays}/4</b><small>Inner Ways</small></span><span className={props.calibrated ? "is-ready" : ""}><b>{props.calibrated ? "Matched" : "Required"}</b><small>In-game panel</small></span><span><b>{props.graduation.toFixed(1)}%</b><small>Legacy baseline reference</small></span></div></section>
-          <section className="optimize-next"><div className="product-section-heading"><div><h2>Recommended next step</h2></div></div><strong>{!props.calibrated ? "Calibrate the calculated menu panel against the game first." : props.equipped < 8 ? "Equip one item in every modeled slot." : props.innerWays < 4 ? "Complete the four Inner Way slots and their conditions." : "Run Best Build, then verify the top replacement in Gear Compare."}</strong><p>Best Build evaluates complete gear combinations. Gear Compare replaces one slot, rebuilds the panel, applies set effects, and reruns the selected rotation.</p><button type="button" onClick={() => props.onToolOpen(!props.calibrated ? "manual" : props.equipped < 8 ? "cultivate" : props.innerWays < 4 ? "cultivate" : "best-build")}>Open recommended tool <ArrowRight size={15} aria-hidden="true" /></button></section>
+          <section className="optimize-next"><div className="product-section-heading"><div><h2>Recommended next step</h2></div></div><strong>{optimizationUnavailable ? "Actionable optimization recommendations are unavailable pending stronger evidence." : !props.calibrated ? "Calibrate the calculated menu panel against the game first." : props.equipped < 8 ? "Equip one item in every modeled slot." : props.innerWays < 4 ? "Complete the four Inner Way slots and their conditions." : "Run Best Build, then verify the top replacement in Gear Compare."}</strong><p>{optimizationUnavailable ? "Review build configuration and modeled inputs before relying on an optimization recommendation." : "Best Build evaluates complete gear combinations. Gear Compare replaces one slot, rebuilds the panel, applies set effects, and reruns the selected rotation."}</p><button type="button" onClick={() => { const tool = !props.calibrated ? "manual" : props.equipped < 8 || props.innerWays < 4 ? "cultivate" : "best-build"; props.onToolOpen(optimizationUnavailable ? "manual" : tool); }}>{optimizationUnavailable ? "Review build configuration" : "Open recommended tool"} <ArrowRight size={15} aria-hidden="true" /></button></section>
         </div>}
       </div>
     </main>

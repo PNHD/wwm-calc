@@ -60,7 +60,7 @@ assert.ok(
   "Gear Compare must rerun the complete build",
 );
 assert.ok(app.includes("timelineResult.total"), "Bamboocut ranking must consume timeline total damage");
-assert.ok(app.includes("return baselineScore > 0 ? (totalDmg / baselineScore) * 100 : 0;"), "Best Build internal rank must be monotonic modeled damage");
+assert.ok(app.includes("return totalDmg;"), "Best Build internal rank must use direct modeled damage, not a legacy baseline");
 assert.ok(!app.includes("Subtract a tiny penalty per overcap point"), "Best Build must not use a hidden Crit-overcap tie penalty");
 assert.ok(!app.includes("rollQuality * 0.5"), "roll quality must not decide a build winner");
 

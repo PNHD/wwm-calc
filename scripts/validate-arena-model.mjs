@@ -97,12 +97,13 @@ test("Deflect and Dodge use explicit states", () => {
   assert.equal(applyArenaEvent(createCombatState(), { type: "DODGE", duration: .2 }).state, "DODGE_IFRAME");
 });
 
-test("1v1 matchup is deterministic and has no win probability", () => {
+test("1v1 matchup is reference-only and has no win probability", () => {
   const result = matchupCompare("Bamboocut-Dust", "Bamboocut-Wind", "1v1");
   assert.equal(result.mode, "1v1");
-  assert.ok(result.dimensions.some((d) => d.key === "control"));
+  assert.equal(result.verdict, "INSUFFICIENT EVIDENCE");
+  assert.deepEqual(result.dimensions, []);
   assert.ok(!("winProbability" in result));
-  assert.match(result.why.join(" "), /not an empirical win probability/i);
+  assert.match(result.why.join(" "), /no current Global path authorizes numerical Arena ranking/i);
 });
 
 test("3v3 no-healer revive logic and duplicate Martial Art restriction", () => {
@@ -127,25 +128,23 @@ test("Bamboocut Dust Version 2.0 official rules are isolated from PvE-only effec
   assert.equal(BAMBOOCUT_DUST_RULES.burnAndBury.evidence, EVIDENCE.CONFIRMED_OFFICIAL);
 });
 
-test("Arena compare excludes PvE DPS winner leakage", () => {
+test("Arena compare fails closed instead of leaking a PvE DPS winner", () => {
   const a = { path: "Bamboocut-Dust", name: "1106", pveDps: 999999 };
   const b = { path: "Bamboocut-Dust", name: "1129", pveDps: 1, arenaDimensions: { survival: .3 } };
   const result = compareArenaBuilds(a, b, { objective: "VS_BURST" });
-  assert.match(result.explanation, /PvE modeled DPS is intentionally excluded/i);
-  assert.notEqual(result.verdict, "A BETTER FOR THIS OBJECTIVE");
+  assert.match(result.explanation, /no current Global path authorizes numerical comparison/i);
+  assert.equal(result.verdict, "INSUFFICIENT EVIDENCE");
 });
 
-test("Arena Best Build ranking is objective-specific and exposes close-call semantics", () => {
+test("Arena Best Build ranking is disabled for every current path", () => {
   const candidates = [
     { id: "pressure", path: "Bamboocut-Dust", arenaDimensions: { burst: .5, survival: -.2 } },
     { id: "survival", path: "Bamboocut-Dust", arenaDimensions: { burst: -.2, survival: .6, recovery: .3 } },
     { id: "control", path: "Bamboocut-Dust", arenaDimensions: { control: .5, mobility: .2 } },
   ];
   const general = rankArenaCandidates(candidates, "1V1_GENERAL");
-  const antiBurst = rankArenaCandidates(candidates, "VS_BURST");
-  assert.equal(antiBurst[0].id, "survival");
-  assert.ok(general[0].arenaObjectiveScore !== undefined);
-  assert.ok(["MODELED", "CLOSE CALL"].includes(general[0].rankingConfidence));
+  assert.ok(general.every((candidate) => candidate.arenaObjectiveScore === null));
+  assert.ok(general.every((candidate) => candidate.rankingConfidence === "REFERENCE_ONLY"));
 });
 
 test("Arena references are mechanic-only and never fabricate gear", () => {

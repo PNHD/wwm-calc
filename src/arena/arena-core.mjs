@@ -210,8 +210,12 @@ export const BAMBOOCUT_DUST_RULES = Object.freeze({
 
 const DIMENSION_LABELS = { burst: "Burst pressure", sustain: "Sustained pressure", survival: "Survivability", control: "Control", mobility: "Mobility", qi: "Qi pressure", recovery: "Recovery", antiHeal: "Anti-heal" };
 const qualitative = (delta) => delta >= 0.65 ? "ADVANTAGED" : delta <= -0.65 ? "DISADVANTAGED" : "CLOSE";
+// ponytail: every current Global arenaNumerical capability is REFERENCE_ONLY or DISABLED; replace this fail-closed gate when a path earns ALLOW/PROVISIONAL evidence.
+const ARENA_NUMERICAL_ENABLED = false;
+const arenaNumericalUnavailable = () => ({ verdict: "INSUFFICIENT EVIDENCE", confidence: "REFERENCE_ONLY", dimensions: [], why: ["Arena mechanics may remain reference material, but no current Global path authorizes numerical Arena ranking."] });
 
 export function matchupCompare(myPath, opponentPath, mode = "1v1") {
+  if (!ARENA_NUMERICAL_ENABLED) return { myPath, opponentPath, mode, ...arenaNumericalUnavailable() };
   const mine = PATH_PROFILES[myPath];
   const theirs = PATH_PROFILES[opponentPath];
   if (!mine || !theirs) return { verdict: "INSUFFICIENT EVIDENCE", confidence: "EXPERIMENTAL", dimensions: [], why: ["One or both Path profiles are not represented safely yet."] };
@@ -237,15 +241,24 @@ export function matchupCompare(myPath, opponentPath, mode = "1v1") {
 }
 
 export function compareArenaBuilds(a, b, context = {}) {
-  const pa = PATH_PROFILES[a.path] || PATH_PROFILES["Bamboocut-Dust"];
-  const pb = PATH_PROFILES[b.path] || PATH_PROFILES["Bamboocut-Dust"];
+  if (!ARENA_NUMERICAL_ENABLED) return {
+    objective: context.objective || "1V1_GENERAL", dimensions: [], arenaAttunementChanged: JSON.stringify(a.arenaAttunementIds || []) !== JSON.stringify(b.arenaAttunementIds || []),
+    verdict: "INSUFFICIENT EVIDENCE", confidence: "REFERENCE_ONLY", explanation: "Arena mechanics may remain reference material, but no current Global path authorizes numerical comparison.",
+  };
+  const pa = PATH_PROFILES[a.path];
+  const pb = PATH_PROFILES[b.path];
+  const objective = context.objective || "1V1_GENERAL";
+  if (!pa || !pb) return {
+    objective, dimensions: [], arenaAttunementChanged: JSON.stringify(a.arenaAttunementIds || []) !== JSON.stringify(b.arenaAttunementIds || []),
+    verdict: "INSUFFICIENT EVIDENCE", confidence: "UNKNOWN",
+    explanation: "One or both paths have no Arena profile; no dimensions or ranking score were substituted.",
+  };
   const statShift = (build, key) => Number(build?.arenaDimensions?.[key] || 0);
   const dimensions = Object.keys(DIMENSION_LABELS).map((key) => {
     const av = pa.dimensions[key] + statShift(a, key);
     const bv = pb.dimensions[key] + statShift(b, key);
     return { key, label: DIMENSION_LABELS[key], a: Number(av.toFixed(2)), b: Number(bv.toFixed(2)), delta: Number((av - bv).toFixed(2)) };
   });
-  const objective = context.objective || "1V1_GENERAL";
   const weights = objectiveWeights(objective);
   const score = (side) => dimensions.reduce((sum, d) => sum + d[side] * (weights[d.key] || 0), 0);
   const delta = score("a") - score("b");
@@ -269,18 +282,20 @@ function objectiveWeights(objective) {
 }
 
 export function rankArenaCandidates(candidates, objective = "1V1_GENERAL", opponentPath = null) {
+  if (!ARENA_NUMERICAL_ENABLED) return candidates.map((candidate) => ({ ...candidate, arenaObjectiveScore: null, rankingConfidence: "REFERENCE_ONLY", arenaEvidence: "No current Global path authorizes Arena numerical ranking." })).slice(0, 3);
   const weights = objectiveWeights(objective);
   const scored = candidates.map((candidate) => {
-    const base = PATH_PROFILES[candidate.path] || PATH_PROFILES["Bamboocut-Dust"];
+    const base = PATH_PROFILES[candidate.path];
+    if (!base) return { ...candidate, arenaObjectiveScore: null, rankingConfidence: "INSUFFICIENT EVIDENCE", arenaEvidence: "No Arena profile for this path." };
     let score = Object.keys(weights).reduce((sum, key) => sum + (base.dimensions[key] + Number(candidate.arenaDimensions?.[key] || 0)) * weights[key], 0);
     if (opponentPath && PATH_PROFILES[opponentPath]) {
       const matchup = matchupCompare(candidate.path, opponentPath, objective.startsWith("3V3") ? "3v3" : "1v1");
       score += matchup.dimensions.reduce((sum, d) => sum + d.delta, 0) * 0.02;
     }
     return { ...candidate, arenaObjectiveScore: Number(score.toFixed(3)) };
-  }).sort((a, b) => b.arenaObjectiveScore - a.arenaObjectiveScore).slice(0, 3);
-  if (scored.length > 1 && Math.abs(scored[0].arenaObjectiveScore - scored[1].arenaObjectiveScore) < 0.18) scored[0].rankingConfidence = "CLOSE CALL";
-  else if (scored[0]) scored[0].rankingConfidence = "MODELED";
+  }).sort((a, b) => (b.arenaObjectiveScore ?? -Infinity) - (a.arenaObjectiveScore ?? -Infinity)).slice(0, 3);
+  if (scored[0]?.arenaObjectiveScore != null && scored.length > 1 && scored[1]?.arenaObjectiveScore != null && Math.abs(scored[0].arenaObjectiveScore - scored[1].arenaObjectiveScore) < 0.18) scored[0].rankingConfidence = "CLOSE CALL";
+  else if (scored[0]?.arenaObjectiveScore != null) scored[0].rankingConfidence = "MODELED";
   return scored;
 }
 
@@ -397,7 +412,7 @@ export function saveArenaState(state, storage = globalThis?.localStorage) {
 }
 
 function cleanText(value, max = 120) { return String(value ?? "").replace(/[<>]/g, "").slice(0, max); }
-function allowedPath(path) { return PATH_PROFILES[path] ? path : "Bamboocut-Dust"; }
+function retainedPath(path) { return typeof path === "string" && path.trim() ? cleanText(path, 80) : null; }
 function safeArenaGearSnapshot(value) {
   if (!isPlainRecord(value)) return null;
   try { return cloneBoundedJson(value, { maxDepth: 6, maxArray: 80, maxKeys: 80, maxString: 4_000, maxChars: 96 * 1024 }); }
@@ -407,10 +422,10 @@ function sanitizeArenaState(input) {
   const base = defaultArenaState();
   if (!input || typeof input !== "object" || Array.isArray(input)) return base;
   const profiles = (Array.isArray(input.profiles) ? input.profiles : base.profiles).slice(0, 12).map((p, index) => {
-    const path = allowedPath(p?.path);
+    const path = retainedPath(p?.path) ?? base.profiles[0].path;
     return {
       id: cleanText(p?.id || `arena-${index}`, 64), name: cleanText(p?.name || "Arena Build", 80), path,
-      weapons: PATH_PROFILES[path].weapons.slice(), mode: ARENA_MODES.includes(p?.mode) ? p.mode : "1v1",
+      weapons: PATH_PROFILES[path]?.weapons.slice() ?? [], mode: ARENA_MODES.includes(p?.mode) ? p.mode : "1v1",
       normalAttunementProfile: null,
       arenaAttunementIds: (Array.isArray(p?.arenaAttunementIds) ? p.arenaAttunementIds : []).filter((id) => ARENA_ATTUNEMENTS.some((a) => a.id === id)).slice(0, 8),
       mysticSkills: (Array.isArray(p?.mysticSkills) ? p.mysticSkills : []).map((v) => cleanText(v, 80)).slice(0, 8),
@@ -422,7 +437,7 @@ function sanitizeArenaState(input) {
   }).filter((profile, index, rows) => rows.findIndex((other) => other.id === profile.id) === index);
   const safeProfiles = profiles.length ? profiles : base.profiles;
   const activeModeV2 = V2_ARENA_MODES.includes(input.activeModeV2) ? input.activeModeV2 : base.activeModeV2;
-  return { schemaVersion: ARENA_SCHEMA_VERSION, patch: ARENA_PATCH, activeProfileId: safeProfiles.some((p) => p.id === input.activeProfileId) ? input.activeProfileId : safeProfiles[0]?.id, profiles: safeProfiles, activeModeV2, opponentPath: allowedPath(input.opponentPath || base.opponentPath), objective: cleanText(input.objective || base.objective, 40), onboardingComplete: Boolean(input.onboardingComplete) };
+  return { schemaVersion: ARENA_SCHEMA_VERSION, patch: ARENA_PATCH, activeProfileId: safeProfiles.some((p) => p.id === input.activeProfileId) ? input.activeProfileId : safeProfiles[0]?.id, profiles: safeProfiles, activeModeV2, opponentPath: retainedPath(input.opponentPath) ?? base.opponentPath, objective: cleanText(input.objective || base.objective, 40), onboardingComplete: Boolean(input.onboardingComplete) };
 }
 function sanitizeDimensions(input) {
   const out = {};
@@ -443,8 +458,8 @@ export function validateArenaShare(payload) {
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) throw new Error("Invalid Arena share payload");
   if (payload.schemaVersion !== ARENA_SCHEMA_VERSION) throw new Error("Unsupported Arena share schema");
   if (!["ARENA_BUILD", "ARENA_MATCHUP", "ARENA_PROFILE"].includes(payload.type)) throw new Error("Unsupported Arena share type");
-  const path = allowedPath(payload.path);
-  if (path !== payload.path) throw new Error("Unknown Arena path");
+  const path = retainedPath(payload.path);
+  if (!path || !PATH_PROFILES[path]) throw new Error("Unknown Arena path");
   const mode = ARENA_MODES.includes(payload.mode) ? payload.mode : null;
   if (!mode) throw new Error("Invalid Arena mode");
   if (JSON.stringify(payload).length > 24000) throw new Error("Arena share payload too large");
@@ -475,7 +490,7 @@ export function sanitizeHistoryEntry(entry) {
   if (!entry || typeof entry !== "object") throw new Error("Invalid history entry");
   return {
     id: cleanText(entry.id || `match-${Date.now()}`, 64), date: cleanText(entry.date || new Date().toISOString().slice(0, 10), 10), patch: cleanText(entry.patch || ARENA_PATCH, 40),
-    mode: [...ARENA_MODES, "1V1_ARENA", "3V3_ARENA", "GROUP_STRATEGY", "5V5_ARENA", "PERCEPTION_FOREST", "TRAINING_TERRACE"].includes(entry.mode) ? entry.mode : "1v1", /* COMPETITIVE_V2_ARENA_HISTORY_MODE_IDS */ battlegroup: cleanText(entry.battlegroup || "", 40), opponentPath: allowedPath(entry.opponentPath),
+    mode: [...ARENA_MODES, "1V1_ARENA", "3V3_ARENA", "GROUP_STRATEGY", "5V5_ARENA", "PERCEPTION_FOREST", "TRAINING_TERRACE"].includes(entry.mode) ? entry.mode : "1v1", /* COMPETITIVE_V2_ARENA_HISTORY_MODE_IDS */ battlegroup: cleanText(entry.battlegroup || "", 40), opponentPath: retainedPath(entry.opponentPath) ?? "UNKNOWN",
     opponentWeapons: (Array.isArray(entry.opponentWeapons) ? entry.opponentWeapons : []).map((v) => cleanText(v, 80)).slice(0, 2), result: ["WIN", "LOSS", "DRAW", "UNKNOWN"].includes(entry.result) ? entry.result : "UNKNOWN",
     durationSeconds: Math.min(7200, Math.max(0, Number(entry.durationSeconds) || 0)), myBuildRef: cleanText(entry.myBuildRef || "", 64), arenaAttunementRef: cleanText(entry.arenaAttunementRef || "", 120), notes: cleanText(entry.notes || "", 1000),
     observed: { damageDealt: boundedMetric(entry.observed?.damageDealt), damageTaken: boundedMetric(entry.observed?.damageTaken), healing: boundedMetric(entry.observed?.healing), qiBreaks: boundedMetric(entry.observed?.qiBreaks), executes: boundedMetric(entry.observed?.executes), revives: boundedMetric(entry.observed?.revives) },

@@ -7,7 +7,7 @@
 // Starweave distance damage or outcome rules for special-resolution sources.
 
 import { calcSkill } from "./calc";
-import { lookupTiming } from "../data/skillTiming";
+import { resolveLoadBearingTiming } from "../data/skillTiming";
 import { INNER_WAYS } from "../data/innerways";
 import type { PanelStats, RotationItem, TierConstants } from "../types";
 
@@ -47,7 +47,8 @@ export interface TLCast {
 export interface TLSkillAgg { name: string; casts: number; dmg: number; dps: number; share: number; }
 export interface TLBuffAgg { id: string; name: string; color: string; uptime: number; avgStacks: number; maxStacks: number; ramp: boolean; }
 
-export interface TimelineResult {
+export interface TimelineAvailableResult {
+  available: true;
   casts: TLCast[];
   perSkill: TLSkillAgg[];
   perBuff: TLBuffAgg[];
@@ -57,6 +58,16 @@ export interface TimelineResult {
   fullUptimeDps: number;
   uptimeLoss: number;
 }
+
+export interface TimelineUnavailableResult {
+  available: false;
+  reason: "MISSING_LOAD_BEARING_TIMING" | "INVALID_TIMING_OVERRIDE" | "MISSING_PATH_SKILL_MODEL";
+  missingTiming: string[];
+  invalidTiming: string[];
+  missingSkills: string[];
+}
+
+export type TimelineResult = TimelineAvailableResult | TimelineUnavailableResult;
 
 const BUFF_PALETTE = ["#e0b45a", "#4fb27c", "#bd8fdb", "#5f97c6", "#e05a41", "#4fc9c0", "#d68f5f", "#9ab04f"];
 
@@ -221,11 +232,17 @@ export function simulateTimeline(
   }
 
   const events: { item: RotationItem; start: number; dur: number; ordinal: number }[] = [];
+  const missingTiming = new Set<string>();
+  const invalidTiming = new Set<string>();
   rotation.forEach((item, rowIndex) => {
     const n = Math.max(0, Math.round(item.count));
     if (!n) return;
-    const timing = { ...lookupTiming(item.name), ...timingOverrides[item.name] };
-    const dur = Math.max(0.05, timing.castTime || 0.6);
+    const timing = resolveLoadBearingTiming(item.name, timingOverrides[item.name]?.castTime);
+    if ("reason" in timing) {
+      (timing.reason === "INVALID_TIMING_OVERRIDE" ? invalidTiming : missingTiming).add(item.name);
+      return;
+    }
+    const dur = Math.max(0.05, timing.castTime);
     for (let i = 0; i < n; i++) {
       // A small deterministic row offset prevents identical timestamps from being
       // ordered by source-array grouping while remaining negligible to cooldowns.
@@ -233,6 +250,8 @@ export function simulateTimeline(
       events.push({ item, start, dur, ordinal: rowIndex });
     }
   });
+  if (invalidTiming.size) return { available: false, reason: "INVALID_TIMING_OVERRIDE", missingTiming: [], invalidTiming: [...invalidTiming].sort(), missingSkills: [] };
+  if (missingTiming.size) return { available: false, reason: "MISSING_LOAD_BEARING_TIMING", missingTiming: [...missingTiming].sort(), invalidTiming: [], missingSkills: [] };
   events.sort((a, b) => a.start - b.start || a.ordinal - b.ordinal || a.item.name.localeCompare(b.item.name));
 
   const state = allBuffs.map((b) => ({
@@ -272,6 +291,7 @@ export function simulateTimeline(
     });
 
     const r = calcSkill({ ...event.item, count: 1 }, panel, tier, eventOpts);
+    if (!r.available) return { available: false, reason: r.reason, missingTiming: [], invalidTiming: [], missingSkills: r.missingSkills };
     total += r.total;
     const agg = skillMap.get(event.item.name) || { casts: 0, dmg: 0 };
     agg.casts += 1;
@@ -334,12 +354,15 @@ export function simulateTimeline(
       for (const b of allBuffs) {
         if (b.scope === "martial-art" && isMartialArt(item)) applyDelta(scoped, b.maxDelta, 1);
       }
-      full += calcSkill(item, scoped, tier, eventOpts).total;
+      const result = calcSkill(item, scoped, tier, eventOpts);
+      if (!result.available) return { available: false, reason: result.reason, missingTiming: [], invalidTiming: [], missingSkills: result.missingSkills };
+      full += result.total;
     }
   }
   const fullUptimeDps = window > 0 ? full / window : 0;
 
   return {
+    available: true,
     casts,
     perSkill,
     perBuff,

@@ -38,7 +38,7 @@ function connect(url) {
     if (message.id) {
       const request = pending.get(message.id); pending.delete(message.id);
       if (message.error) request.reject(new Error(message.error.message)); else request.resolve(message.result);
-    } else if (message.method === "Runtime.exceptionThrown" || message.method === "Log.entryAdded") events.push(message);
+    } else if (message.method === "Runtime.exceptionThrown" || message.method === "Log.entryAdded" || message.method === "Network.loadingFailed" || (message.method === "Runtime.consoleAPICalled" && ["error", "warning", "assert"].includes(message.params.type))) events.push(message);
   });
   const ready = new Promise((resolve, reject) => { socket.addEventListener("open", resolve, { once: true }); socket.addEventListener("error", reject, { once: true }); });
   const send = async (method, params = {}) => {
@@ -56,7 +56,7 @@ async function main() {
   try {
     const target = await waitForTarget();
     const cdp = connect(target.webSocketDebuggerUrl);
-    await cdp.send("Page.enable"); await cdp.send("Runtime.enable"); await cdp.send("Log.enable");
+    await cdp.send("Page.enable"); await cdp.send("Runtime.enable"); await cdp.send("Log.enable"); await cdp.send("Network.enable");
     const evaluate = async (expression) => {
       const result = await cdp.send("Runtime.evaluate", { expression, awaitPromise: true, returnByValue: true });
       if (result.exceptionDetails) throw new Error(result.exceptionDetails.text);
@@ -77,61 +77,105 @@ async function main() {
         if (await evaluate("Boolean(document.querySelector('.build-path-list button'))")) break;
         await pause(50);
       }
-      const clicked = await evaluate(`(() => { const button = [...document.querySelectorAll('.build-path-list button')].find((candidate) => candidate.textContent.trim().startsWith(${JSON.stringify(label)})); if (!button) return false; button.click(); return true; })()`);
+      const clicked = await evaluate(`(() => {
+        const normalize = (value) => value.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const wanted = normalize(${JSON.stringify(label)});
+        const button = [...document.querySelectorAll('.build-path-list button')].find((candidate) => normalize(candidate.textContent || '').startsWith(wanted));
+        if (button) { button.click(); return true; }
+        const select = document.querySelector('select[aria-label="Selected path"]');
+        const option = select && [...select.options].find((candidate) => normalize(candidate.textContent || '') === wanted);
+        if (!option) return false;
+        select.value = option.value;
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+        return true;
+      })()`);
       assert.equal(clicked, true, `${label} path selector must be present`);
       await pause(500);
     };
-    const navState = async (navigationLabel) => evaluate(`(() => { const nav = document.querySelector(${JSON.stringify(`[aria-label="${navigationLabel}"]`)}); const button = [...(nav?.querySelectorAll('button') || [])].find((candidate) => /Best Build|Unavailable|^Best$/.test(candidate.textContent || '')); if (!button) return null; const before = document.activeElement; button.focus(); const focused = document.activeElement === button; button.click(); const style = getComputedStyle(button); return { disabled: button.disabled, ariaDisabled: button.getAttribute('aria-disabled'), ariaLabel: button.getAttribute('aria-label'), focused, hash: location.hash, cursor: style.cursor, opacity: style.opacity, text: button.textContent.trim() }; })()`);
+    const navState = async (navigationLabel) => evaluate(`(() => { const nav = document.querySelector(${JSON.stringify(`[aria-label="${navigationLabel}"]`)}); const button = [...(nav?.querySelectorAll('button') || [])].find((candidate) => candidate.getAttribute('aria-label') === 'Best Build unavailable: numerical model unavailable'); if (!button) return null; const before = document.activeElement; button.focus(); const focused = document.activeElement === button; button.click(); const style = getComputedStyle(button); return { disabled: button.disabled, ariaDisabled: button.getAttribute('aria-disabled'), ariaLabel: button.getAttribute('aria-label'), focused, hash: location.hash, cursor: style.cursor, opacity: style.opacity, text: button.textContent.trim() }; })()`);
 
     await cdp.send("Emulation.setDeviceMetricsOverride", { width: 1440, height: 960, deviceScaleFactor: 1, mobile: false });
     await clickPath("Bamboocut - Draught");
     const draughtDesktop = await navState("PvE navigation");
     assert.deepEqual({ disabled: draughtDesktop.disabled, ariaDisabled: draughtDesktop.ariaDisabled, ariaLabel: draughtDesktop.ariaLabel, focused: draughtDesktop.focused, hash: draughtDesktop.hash }, { disabled: true, ariaDisabled: "true", ariaLabel: "Best Build unavailable: numerical model unavailable", focused: false, hash: "#pve/build" });
     assert.notEqual(draughtDesktop.cursor, "pointer"); assert.ok(Number(draughtDesktop.opacity) < 1);
+    const draughtDesktopText = await evaluate("document.body.innerText");
+    assert.match(draughtDesktopText, /Bamboocut - Draught[\s\S]*Skystrike Gauntlets \+ Riven Twinblades/i, "Draught must retain its path-specific recognition status");
+    const draughtStatus = await evaluate("document.querySelector('.build-config-section[role=\\\"status\\\"]')?.innerText || ''");
+    assert.match(draughtStatus, /Known recognition metadata: Skystrike Gauntlets \+ Riven Twinblades/i);
+
+    await clickPath("Bamboocut - Kite");
+    const kiteDesktop = await navState("PvE navigation");
+    assert.deepEqual({ disabled: kiteDesktop.disabled, ariaDisabled: kiteDesktop.ariaDisabled, ariaLabel: kiteDesktop.ariaLabel, focused: kiteDesktop.focused, hash: kiteDesktop.hash }, { disabled: true, ariaDisabled: "true", ariaLabel: "Best Build unavailable: numerical model unavailable", focused: false, hash: "#pve/build" });
+    assert.notEqual(kiteDesktop.cursor, "pointer"); assert.ok(Number(kiteDesktop.opacity) < 1);
+    const kiteDesktopText = await evaluate("document.body.innerText");
+    assert.match(kiteDesktopText, /Bamboocut - Kite[\s\S]*Heavenwill Gauntlets \+ Skygrasp Rope Dart/i, "Kite must display its current Global martial-art names");
+    const kiteStatus = await evaluate("document.querySelector('.build-config-section[role=\\\"status\\\"]')?.innerText || ''");
+    assert.match(kiteStatus, /Known recognition metadata: Heavenwill Gauntlets \+ Skygrasp Rope Dart/i, "Kite unmodeled status must use Kite recognition metadata");
+    assert.doesNotMatch(kiteStatus, /Bamboocut - Draught is current Global content, but its numerical model is UNKNOWN\./);
 
     await cdp.send("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 1, mobile: true }); await pause(100);
+    const kiteMobile = await navState("PvE mobile navigation");
+    assert.deepEqual({ disabled: kiteMobile.disabled, ariaDisabled: kiteMobile.ariaDisabled, ariaLabel: kiteMobile.ariaLabel, focused: kiteMobile.focused, hash: kiteMobile.hash }, { disabled: true, ariaDisabled: "true", ariaLabel: "Best Build unavailable: numerical model unavailable", focused: false, hash: "#pve/build" });
+    assert.notEqual(kiteMobile.cursor, "pointer"); assert.ok(Number(kiteMobile.opacity) < 1);
+    const kiteMobileText = await evaluate("document.body.innerText");
+    assert.match(kiteMobileText, /Heavenwill Gauntlets \+ Skygrasp Rope Dart/);
+    assert.match(kiteMobileText, /Numerical model unavailable/);
+    await navigate("#pve/best-build");
+    const kiteDirectRoute = await evaluate("({ path: localStorage.getItem('wwm_selected_build'), hash: location.hash, text: document.body.innerText, compareDisabled: document.querySelector('[aria-label=\"Compare unavailable: numerical model unavailable\"]')?.disabled, bestBuildDisabled: document.querySelector('[aria-label=\"Best Build unavailable: numerical model unavailable\"]')?.disabled })");
+    assert.equal(kiteDirectRoute.path, "bamboocut-kite");
+    assert.equal(kiteDirectRoute.hash, "#pve/overview", "an unavailable direct Best Build route must normalize to the safe overview");
+    assert.match(kiteDirectRoute.text, /PVE \/ OVERVIEW[\s\S]*Bamboocut - Kite/i);
+    assert.deepEqual({ compareDisabled: kiteDirectRoute.compareDisabled, bestBuildDisabled: kiteDirectRoute.bestBuildDisabled }, { compareDisabled: true, bestBuildDisabled: true }, "safe overview must retain unavailable Compare and Best Build controls");
+    assert.doesNotMatch(kiteDirectRoute.text, /Best Build is unavailable: Bamboocut - Draught has no numerical model/i);
+    assert.doesNotMatch(kiteDirectRoute.text, /Equip this build/i);
+
+    await clickPath("Bamboocut - Draught");
     const draughtMobile = await navState("PvE mobile navigation");
     assert.deepEqual({ disabled: draughtMobile.disabled, ariaDisabled: draughtMobile.ariaDisabled, ariaLabel: draughtMobile.ariaLabel, focused: draughtMobile.focused, hash: draughtMobile.hash }, { disabled: true, ariaDisabled: "true", ariaLabel: "Best Build unavailable: numerical model unavailable", focused: false, hash: "#pve/build" });
     assert.notEqual(draughtMobile.cursor, "pointer"); assert.ok(Number(draughtMobile.opacity) < 1);
 
     await navigate("#pve/best-build");
-    const directRoute = await evaluate("({ path: localStorage.getItem('wwm_selected_build'), text: document.body.innerText })");
+    const directRoute = await evaluate("({ path: localStorage.getItem('wwm_selected_build'), hash: location.hash, text: document.body.innerText, compareDisabled: document.querySelector('[aria-label=\"Compare unavailable: numerical model unavailable\"]')?.disabled, bestBuildDisabled: document.querySelector('[aria-label=\"Best Build unavailable: numerical model unavailable\"]')?.disabled })");
     assert.equal(directRoute.path, "bamboocut-draught", "direct route must retain the selected Draught path");
-    assert.match(directRoute.text, /Best Build unavailable\. It cannot be ranked using another path's coefficients\./i, "direct Draught Best Build route must retain its unavailable destination guard");
+    assert.equal(directRoute.hash, "#pve/overview", "an unavailable direct Draught Best Build route must normalize to the safe overview");
+    assert.match(directRoute.text, /PVE \/ OVERVIEW[\s\S]*Bamboocut - Draught/i);
+    assert.deepEqual({ compareDisabled: directRoute.compareDisabled, bestBuildDisabled: directRoute.bestBuildDisabled }, { compareDisabled: true, bestBuildDisabled: true }, "safe overview must retain unavailable Compare and Best Build controls for a direct Draught route");
 
     await cdp.send("Emulation.setDeviceMetricsOverride", { width: 1440, height: 960, deviceScaleFactor: 1, mobile: false });
     await clickPath("Bamboocut-Dust");
-    const dustDesktop = await navState("PvE navigation");
-    assert.deepEqual({ disabled: dustDesktop.disabled, ariaDisabled: dustDesktop.ariaDisabled, hash: dustDesktop.hash }, { disabled: false, ariaDisabled: null, hash: "#pve/best-build" });
-    const bestBuildStarted = await evaluate(`(() => { const button = [...document.querySelectorAll('button')].find((candidate) => /^(Find best build|Re-run search)$/i.test(candidate.textContent.trim())); if (!button) return false; button.click(); return true; })()`);
-    assert.equal(bestBuildStarted, true, "normal modeled Best Build control must be available");
-    let completedResult = null;
-    for (let attempt = 0; attempt < 200; attempt += 1) {
-      completedResult = await evaluate(`(() => ({ completed: Boolean([...document.querySelectorAll('button')].find((candidate) => /Equip this build/i.test(candidate.textContent || ''))), text: document.body.innerText }))()`);
-      if (completedResult.completed) break;
-      await pause(50);
-    }
-    assert.equal(completedResult.completed, true, `a real completed Dust Best Build result must render before ownership switching; observed=${completedResult.text.match(/.{0,80}(?:Best|gear|slot).{0,120}/gi)?.join(" | ") || completedResult.text.slice(-500)}`);
-    assert.match(completedResult.text, /Equip this build/i, "completed Dust result must be visible in the running app");
+    const dustDesktopText = await evaluate("document.body.innerText");
+    assert.match(dustDesktopText, /Numerical result unavailable/i, "Dust must retain structured numerical unavailability when an active skill lacks explicit timing");
+    assert.match(dustDesktopText, /Explicit timing is required/i, "Dust must name the missing timing boundary");
+    assert.match(dustDesktopText, /Provisional model/i, "Dust unavailable state must retain provenance");
+    assert.doesNotMatch(dustDesktopText, /Equip this build/i, "an unavailable Dust calculation must not expose an actionable result");
+
+    await clickPath("Silkbind - Jade");
+    await pause(250);
+    const jadeDesktop = await evaluate("({ path: localStorage.getItem('wwm_selected_build'), text: document.body.innerText })");
+    assert.equal(jadeDesktop.path, "silkbind-jade", "Dust -> Jade must retain the selected Path without a TDZ crash");
+    assert.match(jadeDesktop.text, /Silkbind - Jade/i);
     await clickPath("Bamboocut - Draught");
     await navigate("#pve/best-build");
-    const draughtAfterResult = await evaluate("document.body.innerText");
-    assert.doesNotMatch(draughtAfterResult, /Equip this build/i, "completed Dust Best Build result must disappear after switching to Draught");
-    assert.match(draughtAfterResult, /Best Build unavailable\. It cannot be ranked using another path's coefficients\./i, "Draught must remain explicitly unavailable after result switching");
+    const draughtAfterResult = await evaluate("({ hash: location.hash, text: document.body.innerText, compareDisabled: document.querySelector('[aria-label=\"Compare unavailable: numerical model unavailable\"]')?.disabled, bestBuildDisabled: document.querySelector('[aria-label=\"Best Build unavailable: numerical model unavailable\"]')?.disabled })");
+    assert.equal(draughtAfterResult.hash, "#pve/overview", "an unavailable Draught Best Build route must normalize to the safe overview");
+    assert.match(draughtAfterResult.text, /PVE \/ OVERVIEW[\s\S]*Bamboocut - Draught/i);
+    assert.doesNotMatch(draughtAfterResult.text, /Equip this build/i, "Draught must not expose an actionable Best Build result");
+    assert.deepEqual({ compareDisabled: draughtAfterResult.compareDisabled, bestBuildDisabled: draughtAfterResult.bestBuildDisabled }, { compareDisabled: true, bestBuildDisabled: true }, "safe overview must retain unavailable Compare and Best Build controls after path switching");
     await clickPath("Bamboocut-Dust");
     const dustAfterReturn = await evaluate("document.body.innerText");
-    assert.doesNotMatch(dustAfterReturn, /Equip this build/i, "stale Dust result must not reappear after returning from Draught");
-    const dustReturnNavigation = await navState("PvE navigation");
-    assert.deepEqual({ disabled: dustReturnNavigation.disabled, ariaDisabled: dustReturnNavigation.ariaDisabled, hash: dustReturnNavigation.hash }, { disabled: false, ariaDisabled: null, hash: "#pve/best-build" });
-    assert.equal(await evaluate("Boolean([...document.querySelectorAll('button')].find((candidate) => /^(Find best build|Re-run search)$/i.test(candidate.textContent.trim())))"), true, "Dust Best Build remains normally usable after returning");
+    assert.doesNotMatch(dustAfterReturn, /Equip this build/i, "an unavailable Dust result must not appear after returning from Draught");
+    assert.match(dustAfterReturn, /Explicit timing is required/i);
 
     await cdp.send("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
     await navigate("#pve/build");
-    const dustMobile = await navState("PvE mobile navigation");
-    assert.deepEqual({ disabled: dustMobile.disabled, ariaDisabled: dustMobile.ariaDisabled, hash: dustMobile.hash }, { disabled: false, ariaDisabled: null, hash: "#pve/best-build" });
+    const dustMobileText = await evaluate("document.body.innerText");
+    assert.match(dustMobileText, /Numerical result unavailable/i);
+    assert.match(dustMobileText, /Provisional model/i);
     const relevantErrors = cdp.events.filter((event) => !event.params?.entry?.url?.endsWith("/favicon.ico"));
     assert.equal(relevantErrors.length, 0, `unexpected browser errors: ${JSON.stringify(relevantErrors)}`);
-    console.log(`[v13-bamboocut-navigation] PASS — Draught desktop/mobile navigation is unavailable and non-navigating; Dust remains enabled; direct route remains guarded; completed Dust result disappears on Draught switch. DOM=${JSON.stringify({ draughtDesktop, draughtMobile, dustDesktop, dustMobile, completedResult: { completed: completedResult.completed }, draughtResultVisible: /Equip this build/i.test(draughtAfterResult), dustReturnResultVisible: /Equip this build/i.test(dustAfterReturn) })}`);
+    console.log(`[v13-kite-navigation] ${JSON.stringify({ kiteDesktop, kiteMobile, martialArts: "Heavenwill Gauntlets + Skygrasp Rope Dart", mobileLabelsVerified: true, directRouteGuarded: true, browserFailures: relevantErrors })}`);
+    console.log(`[v13-bamboocut-navigation] PASS — Draught desktop/mobile navigation is unavailable and non-navigating; Dust retains structured timing/provenance unavailability; Dust -> Jade mounts without TDZ; direct routes stay guarded. DOM=${JSON.stringify({ draughtDesktop, draughtMobile, jadePath: jadeDesktop.path, dustActionableVisible: /Equip this build/i.test(dustDesktopText), draughtActionableVisible: /Equip this build/i.test(draughtAfterResult), dustReturnActionableVisible: /Equip this build/i.test(dustAfterReturn) })}`);
     cdp.socket.close();
   } finally {
     browser.kill();
