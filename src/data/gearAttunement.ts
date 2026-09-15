@@ -1,3 +1,5 @@
+import { canonicalGearStatType, formatGearStatValue } from "./gearStatCatalog.ts";
+
 export type GearSubRole = "primary" | "additional" | "attunement";
 
 export interface WeaponAttunementDefinition {
@@ -119,7 +121,12 @@ export interface SemanticGearSubLike {
 export const applyGearRowSemantics = <T extends SemanticGearSubLike>(rows: T[]): T[] => {
   let normalIndex = 0;
   return rows.map((row, index) => {
-    const migrated = migrateLegacyVernalAttunement(row);
+    const legacyMigrated = migrateLegacyVernalAttunement(row);
+    const migrated = {
+      ...legacyMigrated,
+      type: canonicalGearStatType(legacyMigrated.type),
+      val: formatGearStatValue(legacyMigrated.type, legacyMigrated.val),
+    };
     const definition = getWeaponAttunementById(migrated.attunementId);
     const attunement = migrated.role === "attunement" || isAttunementStatKey(migrated.type);
     const role: GearSubRole = attunement ? "attunement" : normalIndex++ === 0 ? "primary" : "additional";
@@ -143,7 +150,7 @@ export const applyGearRowSemantics = <T extends SemanticGearSubLike>(rows: T[]):
 export const toGearFormRows = <T extends SemanticGearSubLike>(rows: T[]): SemanticGearSubLike[] => {
   const semantic = applyGearRowSemantics(rows)
     .filter((row) => row.type !== "Other" || Boolean(row.val));
-  const normal = semantic.filter((row) => row.role !== "attunement").slice(0, 5);
+  const normal = semantic.filter((row) => row.role !== "attunement");
   const attunement = semantic.find((row) => row.role === "attunement");
 
   const form: SemanticGearSubLike[] = normal.map((row, index) => ({
@@ -151,7 +158,9 @@ export const toGearFormRows = <T extends SemanticGearSubLike>(rows: T[]): Semant
     role: index === 0 ? "primary" : "additional",
     sourceOrder: row.sourceOrder ?? index,
   }));
-  while (form.length < 5) {
+  // Six normal rows are directly observed in the current Global client. Keep
+  // every imported row if future gear exposes more; only pad missing rows.
+  while (form.length < 6) {
     const index = form.length;
     form.push({
       type: "Other",
@@ -173,7 +182,7 @@ export const toGearFormRows = <T extends SemanticGearSubLike>(rows: T[]): Semant
     role: "attunement",
     isRetuned: false,
     isTuned: false,
-    sourceOrder: 5,
+    sourceOrder: form.length,
   });
   return form;
 };

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { runDualPassOcr, type OcrSub } from "../utils/ocrParser";
 import { isAttunementStatKey } from "../data/gearAttunement";
+import { CURRENT_WEAPON_ART_LABELS } from "../data/gearStatCatalog";
 import SearchableSelect from "./SearchableSelect";
 import { filterGlobalT96StatOptions, validateGlobalT96GearLines } from "../data/globalT96GearCompatibility";
 import {
@@ -50,11 +51,10 @@ const OCR_STAT_OPTIONS: { value: string; label: string; group?: string }[] = [
   { value: "Other", label: "Select Stat / Empty" },
   { value: "Max Void Atk", label: "Max Void Attack", group: "T96 Weapon · Void" },
   { value: "Min Void Atk", label: "Min Void Attack", group: "T96 Weapon · Void" },
-  { value: "Max Void Atk", label: "Max Void Attack", group: "T96 Weapon · Void" },
-  { value: "Min Void Atk", label: "Min Void Attack", group: "T96 Weapon · Void" },
-  { value: "Max Phys Atk", label: "Max Phys Atk", group: "Physical" },
-  { value: "Min Phys Atk", label: "Min Phys Atk", group: "Physical" },
-  { value: "Phys Pen", label: "Phys Pen", group: "Physical" },
+  { value: "Max Formless Attack", label: "Max Formless Attack", group: "Current Global · identity only" },
+  { value: "Max Physical Attack", label: "Max Physical Attack", group: "Physical" },
+  { value: "Min Physical Attack", label: "Min Physical Attack", group: "Physical" },
+  { value: "Physical Penetration", label: "Physical Penetration", group: "Physical" },
   { value: "Phys DMG%", label: "Phys DMG%", group: "Physical" },
   { value: "Max Silkbind Atk", label: "Max Silkbind Atk", group: "Relic / Armor · Path" },
   { value: "Min Silkbind Atk", label: "Min Silkbind Atk", group: "Relic / Armor · Path" },
@@ -87,15 +87,7 @@ const OCR_STAT_OPTIONS: { value: string; label: string; group?: string }[] = [
   { value: "Boss DMG%", label: "Boss DMG%", group: "Bonus" },
   { value: "Group DMG", label: "Group DMG", group: "Bonus" },
   { value: "Single Target DMG", label: "Single Target DMG", group: "Bonus" },
-  { value: "Art of Umbrella Boost", label: "Art of Umbrella Boost", group: "Weapon Art" },
-  { value: "Art of Rope Dart Boost", label: "Art of Rope Dart Boost", group: "Weapon Art" },
-  { value: "Art of Sword Boost", label: "Art of Sword Boost", group: "Weapon Art" },
-  { value: "Art of Spear Boost", label: "Art of Spear Boost", group: "Weapon Art" },
-  { value: "Art of Fan Boost", label: "Art of Fan Boost", group: "Weapon Art" },
-  { value: "Art of Dual Blades Boost", label: "Art of Dual Blades Boost", group: "Weapon Art" },
-  { value: "Art of Mo Blade Boost", label: "Art of Mo Blade Boost", group: "Weapon Art" },
-  { value: "Art of Heng Blade Boost", label: "Art of Heng Blade Boost", group: "Weapon Art" },
-  { value: "Art of Gauntlets Boost", label: "Art of Gauntlets Boost", group: "Weapon Art" },
+  ...CURRENT_WEAPON_ART_LABELS.map((label) => ({ value: label, label, group: "Weapon Art" })),
   { value: "Umb Martial Art Skill DMG Boost", label: "Umb Martial Art Skill DMG Boost", group: "Martial Skill" },
   { value: "Rope Dart Martial Art Skill DMG Boost", label: "Rope Dart Martial Art Skill DMG Boost", group: "Martial Skill" },
   { value: "Sword Martial Art Skill DMG Boost", label: "Sword Martial Art Skill DMG Boost", group: "Martial Skill" },

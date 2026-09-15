@@ -1,6 +1,6 @@
-import { GLOBAL_T96_ROLL_CAPS } from "../data/globalT96Rules";
-import { classifyGlobalT96GearOrigin, globalT96GearOriginLabel, type GlobalT96GearOrigin } from "../data/globalT96GearCompatibility";
-import { isProductCapabilityEnabled } from "../data/pathCatalog";
+import { GLOBAL_T96_ROLL_CAPS } from "../data/globalT96Rules.ts";
+import { classifyGlobalT96GearOrigin, globalT96GearOriginLabel, type GlobalT96GearOrigin } from "../data/globalT96GearCompatibility.ts";
+import { isProductCapabilityEnabled } from "../data/pathCatalog.ts";
 
 export interface GlobalT96GearLine {
   type: string;
@@ -43,11 +43,12 @@ const normalize = (value: string): string => value.toLowerCase().replace(/[^a-z0
 
 const ELEMENT_NAMES = ["bamboocut", "silkbind", "bellstrike", "stonesplit"];
 
-const canonicalStat = (type: string): string | null => {
+export const canonicalStat = (type: string): string | null => {
   const key = normalize(type);
-  if (key.includes("maxphysatk") || key.includes("maxouteratk")) return "maxOuter";
-  if (key.includes("minphysatk") || key.includes("minouteratk")) return "minOuter";
-  if (key.includes("physpen") || key.includes("outerpen")) return "outerPen";
+  if (key.includes("maxformlessattack")) return "maxFormless";
+  if (key.includes("maxphysatk") || key.includes("maxphysicalattack") || key.includes("maxouteratk")) return "maxOuter";
+  if (key.includes("minphysatk") || key.includes("minphysicalattack") || key.includes("minouteratk")) return "minOuter";
+  if (key.includes("physpen") || key.includes("physicalpenetration") || key.includes("outerpen")) return "outerPen";
   if (key.includes("formlesspen") || key.includes("attrpen") || key.includes("elementpen")) return "elementPen";
   if (key.includes("maxvoidatk") || key.includes("maximumvoidattack")) return "maxElement";
   if (key.includes("minvoidatk") || key.includes("minimumvoidattack")) return "minElement";
@@ -173,6 +174,8 @@ export function scoreGlobalT96Gear(
     const useful = weight !== null && weight >= 0.55;
     const reason = !stat
       ? "No verified T96 cap for this line"
+      : stat === "maxFormless"
+        ? "Canonical current-client stat; calculation mapping and roll cap are unavailable"
       : !pathSpecificAvailable
         ? "Path-specific build fit is unavailable for this path; roll diagnostics remain path-independent"
         : gearOrigin === "relaid"

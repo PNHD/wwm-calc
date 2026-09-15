@@ -508,8 +508,11 @@ export function calcSkill(
   }
 
   const set = opts.set;
+  const calculationAssumptions: readonly NumericalAssumption[] = set === "hawkwing"
+    ? [...SHARED_CALC_ASSUMPTIONS, { id: "hawkwing-affinity-linearization", classification: "UNSAFE_FOR_RECOMMENDATION", sourceScope: "current Hawkwing weapon-set effect; excluded from numerical math" }]
+    : SHARED_CALC_ASSUMPTIONS;
   // Armor 4pc applies ALONGSIDE the weapon 4pc (the game allows one of each). When
-  // the caller doesn't split them, fall back to `set` so a single "stormrain"
+  // the caller doesn't split them, fall back to `set` for backward compatibility.
   // passed as `set` still works (back-compat).
   const armorSet = opts.armorSet ?? opts.set;
   const judgeRes = tier.judgeRes;
@@ -529,8 +532,8 @@ export function calcSkill(
   // Jadeware 4pc: +7.5% Direct Affinity Rate vs qi-imbalanced targets (assume boss).
   if (set === "jadeware") dirAff += 0.075;
 
-  if (armorSet === "stormrain") precEff = Math.min(1.0, precEff + 10.8 / 100 / jR);
-  // Eaglerise 4pc is defensive only (damage reduction, no atk/aff bonus).
+  // Current armor-set identities are catalogued separately. Conflicting legacy
+  // offensive hooks are intentionally excluded until current effect evidence exists.
 
   let pCrit: number, pAff: number, pPrec: number, pGraze: number;
   if (sk.force === "crit") {
@@ -549,7 +552,6 @@ export function calcSkill(
 
   let critMult = 1 + (panel.critDmg || 0) / 100 + (sk.exCritDmg || 0);
   let affMult = 1 + (panel.affDmg || 0) / 100;
-  if (armorSet === "stormrain") critMult += 0.1;
   if (set === "ivorybloom") critMult += 0.15; // Ivorybloom 4pc: +15% Crit DMG at max HP
   if (set === "rainwhisper") critMult += 0.10; // Rainwhisper 4pc: +10% Crit DMG (+15% w/ shield)
   if (set === "jadeware") affMult += 0.10;     // Jadeware 4pc: +10% Affinity DMG vs qi-imbalance (boss)
@@ -564,18 +566,17 @@ export function calcSkill(
     weapBonus += ((panel[key] as number) || 0) / 100;
   }
 
-  // Starweave is the current Global name for the legacy internal key "stars".
+  // Starweave's verified five-stack Martial Art Skill component is +15%.
   // Five stacks of the explicit +3% Martial Art Skill component = +15%.
   // The separate distance component (above 4m, up to +1% at 8m per tooltip)
   // is intentionally not hidden inside this constant; target distance needs an
   // explicit scenario input before it can be credited safely.
-  const csBonus = (set === "stars" || (opts as any).weaponStars) ? 0.15 : 0;
+  const csBonus = (set === "starweave" || (opts as any).weaponStars) ? 0.15 : 0;
   const spinBonus = sk.special === "spin" ? 0.12 : 0;
 
   // Verified 4pc general-damage weapon sets (game tooltips, boss/standard condition).
   let setDmgBonus = 0;
-  if (set === "swallowreturn") setDmgBonus += 0.05; // Swaying Heights: +5% vs HP>50% (up to +10% at full HP; conservative)
-  if (set === "shakenhill") setDmgBonus += 0.05;    // Shattered Ridge: +5% HP dmg on deflect / boss
+  if (set === "swaying-heights") setDmgBonus += 0.05; // +5% vs HP>50% (up to +10% at full HP; conservative)
   // Swallowcall 4pc (patch): +6% Physical & Bamboocut DMG vs targets with Qi <40% or in an
   // Abnormal Qi State (Bone Corrosion / Qi Imbalance). Boss is assumed qi-imbalanced — the same
   // standard DPS condition as Jadeware/Swaying Heights — so the bonus is credited unconditionally here.
@@ -611,9 +612,7 @@ export function calcSkill(
     physRes;
   const F = netPenZone(totalOuterPen);
 
-  // Hawkwing's affinity-linearized uptime is retained as reference information in
-  // the UI, but is excluded here until a provenance-backed event model exists.
-  let atkMult = armorSet === "ironweave" ? 1.05 : 1.0;
+  const atkMult = 1.0;
   let minO = (panel.minOuter || 0) * atkMult;
   let maxO = (panel.maxOuter || 0) * atkMult;
   if (maxO < minO) maxO = minO;
@@ -637,7 +636,7 @@ export function calcSkill(
   const totalPzPen = (panel.pzPen || 0) - attrRes;
   const Fpz = netPenZone(totalPzPen);
 
-  const pzMult = armorSet === "formbend" ? 1.05 : 1.0;
+  const pzMult = 1.0;
   const minPzTot = (panel.minPz || 0) + (panel.wuxiangMin || 0);
   const maxPzTot = (panel.maxPz || 0) + (panel.wuxiangMax || 0);
   const minPz_e = Math.max(0, minPzTot * pzMult - tier.def);
@@ -695,9 +694,7 @@ export function calcSkill(
     total,
     breakdown,
     sim,
-    assumptions: armorSet === "eaglerise"
-      ? [...SHARED_CALC_ASSUMPTIONS, { id: "hawkwing-affinity-linearization", classification: "UNSAFE_FOR_RECOMMENDATION", sourceScope: "armor-set reference; excluded" }]
-      : SHARED_CALC_ASSUMPTIONS,
+    assumptions: calculationAssumptions,
   };
 }
 

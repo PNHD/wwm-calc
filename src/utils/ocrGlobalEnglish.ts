@@ -3,6 +3,7 @@ import {
   matchWeaponAttunementText,
   type GearSubRole,
 } from "../data/gearAttunement.ts";
+import { CURRENT_WEAPON_ART_LABELS } from "../data/gearStatCatalog.ts";
 
 export interface GlobalEnglishOcrSub {
   type: string;
@@ -38,6 +39,7 @@ const PERCENT_MAX: Record<string, number> = {
   "Bellstrike DMG%": 12,
   "Stonesplit DMG%": 12,
   "Umb Martial Art Skill DMG Boost": 8,
+  ...Object.fromEntries(CURRENT_WEAPON_ART_LABELS.map((type) => [type, 8])),
 };
 
 const PERCENT_LIKE_TYPES = new Set(Object.keys(PERCENT_MAX));
@@ -65,15 +67,39 @@ const normalizeNumber = (type: string, rawValue: string, percentLike = false): s
   return cleaned;
 };
 
+const ART_OF_RULES: PatternRule[] = CURRENT_WEAPON_ART_LABELS.map((type) => {
+  const weapon = type.slice("Art of ".length, -" DMG Boost".length).replace(/\s+/g, "\\s+");
+  return {
+    type,
+    regex: new RegExp(`(\\[\\s*turn\\s*\\])?\\s*art\\s+of\\s+${weapon}\\s+dmg\\s+boost\\s*[:\\-]?\\s*(\\d{1,3}(?:[.,]\\d+)?)\\s*%?`, "gi"),
+    valueGroup: 2,
+    turnGroup: 1,
+    percentLike: true,
+  };
+});
+
 const RULES: PatternRule[] = [
+  ...ART_OF_RULES,
   {
-    type: "Max Phys Atk",
+    type: "Max Formless Attack",
+    regex: /(\[\s*turn\s*\])?\s*max(?:imum)?\s+formless\s+attack\s*[:\-]?\s*(\d{1,3}(?:[.,]\d+)?)/gi,
+    valueGroup: 2,
+    turnGroup: 1,
+  },
+  {
+    type: "Physical Penetration",
+    regex: /(\[\s*turn\s*\])?\s*(?:physical\s+penetration|phys(?:ical)?\s+pen(?:etration)?)\s*[:\-]?\s*(\d{1,3}(?:[.,]\d+)?)/gi,
+    valueGroup: 2,
+    turnGroup: 1,
+  },
+  {
+    type: "Max Physical Attack",
     regex: /(\[\s*turn\s*\])?\s*(?:max(?:imum)?\s+physical\s+attack|max\s+phys(?:ical)?\s+atk)\s*[:\-]?\s*(\d{1,3}(?:[.,]\d+)?)/gi,
     valueGroup: 2,
     turnGroup: 1,
   },
   {
-    type: "Min Phys Atk",
+    type: "Min Physical Attack",
     regex: /(\[\s*turn\s*\])?\s*(?:min(?:imum)?\s+physical\s+attack|min\s+phys(?:ical)?\s+atk)\s*[:\-]?\s*(\d{1,3}(?:[.,]\d+)?)/gi,
     valueGroup: 2,
     turnGroup: 1,
@@ -298,11 +324,20 @@ const classifyUnresolvedEnglishRow = (context: string): {
   if (hasAll(label, ["combat", "boost", "boss"]) || hasAll(label, ["boss", "units"])) {
     return { type: "Boss DMG%", percentLike: true };
   }
+  const artType = CURRENT_WEAPON_ART_LABELS.find((type) => {
+    const words = type.toLowerCase().replace("dmg boost", "").split(/\s+/).filter(Boolean);
+    return hasAll(label, [...words, "dmg", "boost"]);
+  });
+  if (artType) return { type: artType, percentLike: true };
+  if (hasAll(label, ["max", "formless", "attack"])) return { type: "Max Formless Attack" };
+  if (hasAll(label, ["physical", "penetration"]) || hasAll(label, ["phys", "pen"])) {
+    return { type: "Physical Penetration" };
+  }
   if (hasAll(label, ["max", "physical", "attack"]) || hasAll(label, ["max", "phys", "atk"])) {
-    return { type: "Max Phys Atk" };
+    return { type: "Max Physical Attack" };
   }
   if (hasAll(label, ["min", "physical", "attack"]) || hasAll(label, ["min", "phys", "atk"])) {
-    return { type: "Min Phys Atk" };
+    return { type: "Min Physical Attack" };
   }
   if (hasAll(label, ["critical", "rate"]) || hasAll(label, ["crit", "rate"])) {
     return { type: "Crit Rate", percentLike: true };

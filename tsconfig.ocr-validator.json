@@ -14,6 +14,7 @@
     "src/utils/ocrGlobalEnglish.ts",
     "scripts/validate-ocr-regression.mjs",
     "scripts/validate-ocr-structured-import.mjs",
-    "scripts/validate-t96-row-semantics.mjs"
+    "scripts/validate-t96-row-semantics.mjs",
+    "scripts/validate-usertest-ocr-set-audit.mjs"
   ]
 }

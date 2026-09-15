@@ -41,14 +41,14 @@ import { simulateRotation } from "./utils/timelineEngine";
 import { simulateTimeline, buildTimelineBuffs, type TimelineResult, type TimelineUnavailableResult } from "./utils/rotationTimeline";
 import { previewSkill } from "./utils/skillPreview";
 import { INNER_WAYS } from "./data/innerways";
-import { INNER_WAY_IMAGES, WEAPON_IMAGES_G8, MYSTIC_SKILL_IMAGES, ARMOR_SET_IMAGES } from "./data/game8Images";
+import { INNER_WAY_IMAGES, WEAPON_IMAGES_G8, MYSTIC_SKILL_IMAGES } from "./data/game8Images";
 import { WWM_DATA } from "./data/wwmData";
 import { GLOBAL_T96_OBSERVED_GEAR, GLOBAL_T96_OBSERVED_PANEL, GLOBAL_T96_OBSERVED_PRESET_META } from "./data/globalT96Preset";
 import { scoreGlobalT96Gear } from "./utils/globalT96Gear";
 import OcrScanner from "./components/OcrScanner";
 import { parseGameData, ImportResult } from "./utils/gameImport";
 import { translateSkillName } from "./utils/skillNameEn";
-import { runDualPassOcr } from "./utils/ocrParser";
+import { parseSubStats, runDualPassOcr } from "./utils/ocrParser";
 import {
   ATTUNEMENT_SELECT_OPTIONS,
   applyGearRowSemantics,
@@ -84,6 +84,15 @@ import {
 } from "./pathModels/silkbindJade.mjs";
 import { validateGlobalT96GearLines } from "./data/globalT96GearCompatibility";
 import { GLOBAL_ATTRIBUTE_CONVERSIONS, PANEL_MODEL_VERSION } from "./data/panelOptimizationEvidence";
+import {
+  ARMOR_SETS as CURRENT_ARMOR_SETS,
+  CURRENT_GLOBAL_SET_CATALOG,
+  WEAPON_ACCESSORY_SETS,
+  canonicalizeSetId,
+  getCurrentGlobalSet,
+  setEffectModelUnavailable,
+  setFamilyForSlot,
+} from "./data/setCatalog";
 
 export function missingTimingUnavailableState(result: TimelineResult): TimelineUnavailableResult | null {
   return "reason" in result ? result : null;
@@ -92,6 +101,7 @@ export function missingTimingUnavailableState(result: TimelineResult): TimelineU
 export function numericalUnavailableMessage(result: TimelineUnavailableResult): string {
   if (result.reason === "INVALID_TIMING_OVERRIDE") return `Invalid timing override for ${result.invalidTiming.join(", ")}. Enter a positive finite value.`;
   if (result.reason === "MISSING_PATH_SKILL_MODEL") return `Coefficient model unavailable for ${result.missingSkills.join(", ")}.`;
+  if (result.reason === "SET_EFFECT_MODEL_UNAVAILABLE") return `Set-effect model unavailable for ${result.missingSkills.join(", ")}. No legacy bonus was borrowed.`;
   return `Explicit timing is required for ${result.missingTiming.join(", ")}.`;
 }
 
@@ -258,7 +268,7 @@ const INITIAL_PANEL: PanelStats = {
   attunedBonus: 0,
   wuxiangMin: 0,
   wuxiangMax: 0,
-  set: "stars",
+  set: "starweave",
   constitution: 137,
   power: 176,
   defense: 137,
@@ -570,28 +580,31 @@ function getWeaponIconUrlByType(weaponType: string | undefined, fallbackSlot: st
 // distinct without fabricating image URLs)
 const SET_BADGE_COLORS: Record<string, string> = {
   // Weapon / accessory sets
-  "stars":         "from-[#f0b400] to-yellow-700",
-  "eaglerise":     "from-sky-500 to-blue-700",
+  "starweave":     "from-[#f0b400] to-yellow-700",
+  "hawkwing":      "from-sky-500 to-blue-700",
   "jadeware":      "from-emerald-400 to-green-700",
   "ivorybloom":    "from-pink-400 to-rose-700",
-  "shakenhill":    "from-stone-400 to-stone-700",
-  "swallowreturn": "from-orange-400 to-orange-700",
-  "swiftgale":     "from-cyan-300 to-sky-600",
+  "cleftpeak":     "from-stone-400 to-stone-700",
+  "swaying-heights":"from-orange-400 to-orange-700",
+  "swift-gale":    "from-cyan-300 to-sky-600",
   "swallowcall":   "from-teal-400 to-teal-700",
   "mistwillow":    "from-lime-400 to-green-700",
   "rainwhisper":   "from-indigo-400 to-blue-800",
+  "etherwrath":    "from-violet-500 to-purple-900",
+  "tiltrim":       "from-amber-400 to-red-800",
   // Armor sets
-  "stormrain":     "from-teal-400 to-cyan-700",
+  "eaglerise":     "from-teal-400 to-cyan-700",
   "formbend":      "from-[#e6c200] to-yellow-900",
   "moonflare":     "from-purple-400 to-violet-700",
-  "obsidian":      "from-slate-800 to-slate-950",
-  "beyondchill":   "from-blue-300 to-cyan-600",
+  "ebonward":      "from-slate-800 to-slate-950",
+  "beyond-the-chill":"from-blue-300 to-cyan-600",
   "whirlsnow":     "from-white to-slate-400",
   "calmwaters":    "from-blue-500 to-blue-800",
-  "jadeembrace":   "from-emerald-700 to-teal-900",
-  "agilesteps":    "from-yellow-500 to-orange-700",
-  "flawlessdef":   "from-yellow-200 to-[#f0b400]",
-  "ironweave":     "from-slate-400 to-slate-700",
+  "jadeclasp":     "from-emerald-700 to-teal-900",
+  "honorbound":    "from-yellow-500 to-orange-700",
+  "ripple-step":   "from-sky-400 to-indigo-700",
+  "flawless-guardian":"from-yellow-200 to-[#f0b400]",
+  "brimflow":      "from-rose-400 to-slate-800",
   // Bow/Ring sets
   "pursuing":      "from-purple-400 to-violet-700",
   "plume":         "from-cyan-400 to-blue-600",
@@ -600,27 +613,30 @@ const SET_BADGE_COLORS: Record<string, string> = {
 };
 
 const DEFAULT_GEAR: GearItem[] = [
-  { id:"g1", slot:"Umbrella", name:"Swiftwing Cloud Umbrella", quality:"gold", set:"stars",
+  { id:"g1", slot:"Umbrella", name:"Swiftwing Cloud Umbrella", quality:"gold", set:"starweave",
     subs:[{type:"Max Phys Atk",val:"59.2"},{type:"Max Phys Atk",val:"63.8"},{type:"Umbrella Bonus",val:"5.1%"},{type:"Min Phys Atk",val:"62.9"},{type:"Crit Rate",val:"7.4%"},{type:"Phys Pen",val:"7.4"}]},
-  { id:"g2", slot:"Rope Dart", name:"Swiftwing Charm", quality:"gold", set:"stars",
+  { id:"g2", slot:"Rope Dart", name:"Swiftwing Charm", quality:"gold", set:"starweave",
     subs:[{type:"Min Phys Atk",val:"56.2"},{type:"Max Phys Atk",val:"59.9"},{type:"Min Phys Atk",val:"61.7"},{type:"Max Bamboocut Atk",val:"35.0"},{type:"Crit Rate",val:"7.4%"},{type:"Phys Pen",val:"6.4"}]},
-  { id:"g3", slot:"Pendant", name:"Swiftwing Pendant", quality:"gold", set:"stars",
+  { id:"g3", slot:"Pendant", name:"Swiftwing Pendant", quality:"gold", set:"starweave",
     subs:[{type:"Max Phys Atk",val:"49.9"},{type:"Max Phys Atk",val:"58.3"},{type:"Min Phys Atk",val:"63.8",isTuned:true},{type:"Crit Rate",val:"6.8%"},{type:"Phys Pen",val:"8.6"}]},
-  { id:"g4", slot:"Helmet", name:"Nightfarer Crown", quality:"gold", set:"stormrain",
+  { id:"g4", slot:"Helmet", name:"Nightfarer Crown", quality:"gold", set:"eaglerise",
     subs:[{type:"Crit Rate",val:"7.0%"},{type:"Crit Rate",val:"7.1%"},{type:"Min Phys Atk",val:"63.8",isTuned:true},{type:"Max Bamboocut Atk",val:"33.4"},{type:"Max Phys Atk",val:"62.7"},{type:"Umbrella Bonus",val:"4.8%"}]},
-  { id:"g5", slot:"Chest", name:"Nightfarer Armor", quality:"gold", set:"stormrain",
+  { id:"g5", slot:"Chest", name:"Nightfarer Armor", quality:"gold", set:"eaglerise",
     subs:[{type:"Precision",val:"6.3%"},{type:"Max Bamboocut Atk",val:"34.8"},{type:"Min Bamboocut Atk",val:"35.4"},{type:"Crit Rate",val:"7.4%",isTuned:true},{type:"Max Phys Atk",val:"59.7"},{type:"Umbrella Bonus",val:"4.8%"}]},
-  { id:"g6", slot:"Greaves", name:"Nightfarer Night Leg Armor", quality:"purple", set:"stormrain",
+  { id:"g6", slot:"Greaves", name:"Nightfarer Night Leg Armor", quality:"purple", set:"eaglerise",
     subs:[{type:"Crit Rate",val:"6.8%"},{type:"Max Phys Atk",val:"63.8",isTuned:true},{type:"Precision",val:"6.6%"},{type:"Crit Rate",val:"6.9%"},{type:"Min Bamboocut Atk",val:"33.7"},{type:"Umbrella Bonus",val:"4.5%"}]},
-  { id:"g7", slot:"Bracers", name:"Nightfarer Bracers", quality:"purple", set:"stormrain",
+  { id:"g7", slot:"Bracers", name:"Nightfarer Bracers", quality:"purple", set:"eaglerise",
     subs:[{type:"Crit Rate",val:"7.2%"},{type:"Max Bamboocut Atk",val:"36.2"},{type:"Min Phys Atk",val:"63.8",isTuned:true},{type:"Crit Rate",val:"7.3%"},{type:"Max Phys Atk",val:"59.8"},{type:"Umbrella Bonus",val:"5.0%"}]},
-  { id:"g8", slot:"Disc", name:"Swiftwing Disc", quality:"gold", set:"stars",
+  { id:"g8", slot:"Disc", name:"Swiftwing Disc", quality:"gold", set:"starweave",
     subs:[{type:"Min Phys Atk",val:"56.2"},{type:"Max Phys Atk",val:"59.9"},{type:"Min Phys Atk",val:"61.7",isTuned:true},{type:"Crit Rate",val:"6.8%"},{type:"Phys Pen",val:"8.6"}]},
-];
+].map((item) => ({ ...item, subs: applyGearRowSemantics(item.subs) as GearSub[] })) as GearItem[];
 
 const SUB_MAP: Record<string, keyof PanelStats> = {
+  "Max Physical Attack": "maxOuter",
   "Max Phys Atk": "maxOuter",
+  "Min Physical Attack": "minOuter",
   "Min Phys Atk": "minOuter", 
+  "Physical Penetration": "outerPen",
   "Phys Pen": "outerPen",
   "Crit Rate": "crit",
   "Crit DMG": "critDmg",
@@ -635,6 +651,7 @@ const SUB_MAP: Record<string, keyof PanelStats> = {
   "Formless Pen": "pzPen",
   "Attr Pen": "pzPen",
   "Bamboocut DMG%": "pzDmg",
+  "Art of Umbrella DMG Boost": "umbAll",
   "Art of Umbrella Boost": "umbAll",
   "Umb Martial Art Skill DMG Boost": "umbMartial",
   "Umb Special Skill DMG Boost": "umbSpecial",
@@ -643,6 +660,7 @@ const SUB_MAP: Record<string, keyof PanelStats> = {
   "Umb Martial": "umbMartial",
   "Umb Special": "umbSpecial",
   "Umb Charged": "umbCharged",
+  "Art of Rope Dart DMG Boost": "ropeAll",
   "Art of Rope Dart Boost": "ropeAll",
   "Rope Dart Martial Art Skill DMG Boost": "ropeMartial",
   "Rope Dart Special Skill DMG Boost": "ropeSpecial",
@@ -651,6 +669,7 @@ const SUB_MAP: Record<string, keyof PanelStats> = {
   "Rope Martial": "ropeMartial",
   "Rope Special": "ropeSpecial",
   "Rope Charged": "ropeCharged",
+  "Art of Sword DMG Boost": "swordAll",
   "Art of Sword Boost": "swordAll",
   "Sword Martial Art Skill DMG Boost": "swordMartial",
   "Sword Special Skill DMG Boost": "swordSpecial",
@@ -659,6 +678,7 @@ const SUB_MAP: Record<string, keyof PanelStats> = {
   "Sword Martial": "swordMartial",
   "Sword Special": "swordSpecial",
   "Sword Charged": "swordCharged",
+  "Art of Spear DMG Boost": "spearAll",
   "Art of Spear Boost": "spearAll",
   "Spear Martial Art Skill DMG Boost": "spearMartial",
   "Spear Special Skill DMG Boost": "spearSpecial",
@@ -667,6 +687,7 @@ const SUB_MAP: Record<string, keyof PanelStats> = {
   "Spear Martial": "spearMartial",
   "Spear Special": "spearSpecial",
   "Spear Charged": "spearCharged",
+  "Art of Fan DMG Boost": "fanAll",
   "Art of Fan Boost": "fanAll",
   "Fan Martial Art Skill DMG Boost": "fanMartial",
   "Fan Special Skill DMG Boost": "fanSpecial",
@@ -675,6 +696,7 @@ const SUB_MAP: Record<string, keyof PanelStats> = {
   "Fan Martial": "fanMartial",
   "Fan Special": "fanSpecial",
   "Fan Charged": "fanCharged",
+  "Art of Dual Blades DMG Boost": "twinbladesAll",
   "Art of Dual Blades Boost": "twinbladesAll",
   "Dual Blades Martial Art Skill DMG Boost": "twinbladesMartial",
   "Dual Blades Special Skill DMG Boost": "twinbladesSpecial",
@@ -683,6 +705,7 @@ const SUB_MAP: Record<string, keyof PanelStats> = {
   "Twinblades Martial": "twinbladesMartial",
   "Twinblades Special": "twinbladesSpecial",
   "Twinblades Charged": "twinbladesCharged",
+  "Art of Mo Blade DMG Boost": "modaoAll",
   "Art of Mo Blade Boost": "modaoAll",
   "Mo Blade Martial Art Skill DMG Boost": "modaoMartial",
   "Mo Blade Special Skill DMG Boost": "modaoSpecial",
@@ -691,6 +714,7 @@ const SUB_MAP: Record<string, keyof PanelStats> = {
   "Modao Martial": "modaoMartial",
   "Modao Special": "modaoSpecial",
   "Modao Charged": "modaoCharged",
+  "Art of Heng Blade DMG Boost": "hengdaoAll",
   "Art of Heng Blade Boost": "hengdaoAll",
   "Heng Blade Martial Art Skill DMG Boost": "hengdaoMartial",
   "Heng Blade Special Skill DMG Boost": "hengdaoSpecial",
@@ -699,6 +723,7 @@ const SUB_MAP: Record<string, keyof PanelStats> = {
   "Hengdao Martial": "hengdaoMartial",
   "Hengdao Special": "hengdaoSpecial",
   "Hengdao Charged": "hengdaoCharged",
+  "Art of Gauntlets DMG Boost": "gauntletsAll",
   "Art of Gauntlets Boost": "gauntletsAll",
   "Gauntlets Martial Art Skill DMG Boost": "gauntletsMartial",
   "Gauntlets Special Skill DMG Boost": "gauntletsSpecial",
@@ -741,6 +766,9 @@ const SUB_MAP: Record<string, keyof PanelStats> = {
 };
 
 const COMPAT_ALIASES = [
+  "Max Phys Atk","Min Phys Atk","Phys Pen",
+  "Art of Umbrella Boost","Art of Rope Dart Boost","Art of Sword Boost","Art of Spear Boost","Art of Fan Boost",
+  "Art of Dual Blades Boost","Art of Mo Blade Boost","Art of Heng Blade Boost","Art of Gauntlets Boost",
   "Umbrella Bonus","Rope Dart Bonus","Sword Bonus","Spear Bonus","Fan Bonus",
   "Twinblades Bonus","Modao Bonus","Hengdao Bonus","Gauntlets Bonus",
   "Umb Martial","Rope Martial","Sword Martial","Spear Martial","Fan Martial",
@@ -774,6 +802,7 @@ function buildSubStatOptions(): { value: string; label: string; group?: string }
   };
   const opts: { value: string; label: string; group?: string }[] = [
     { value: "Other", label: "Select stat / Empty" },
+    { value: "Max Formless Attack", label: "Max Formless Attack", group: "Current Global · identity only" },
   ];
   for (const k of Object.keys(SUB_MAP)) {
     if (COMPAT_ALIASES.includes(k)) continue;
@@ -812,6 +841,7 @@ const parseSubValue = (val: string): number => {
   const m = val.match(/-?\d+(\.\d+)?/);
   return m ? parseFloat(m[0]) : 0;
 };
+const WEAPON_SLOT_SET = new Set(["Umbrella", "Rope Dart", "Pendant", "Disc"]);
 
 // Yield to the event loop WITHOUT setTimeout. Chrome heavily throttles
 // setTimeout in a backgrounded tab (clamped to ~1/sec), which froze the Best
@@ -863,7 +893,10 @@ const sumGearSubs = (gear: GearItem[]): Partial<Record<keyof PanelStats, number>
   sums.aff = (sums.aff || 0)
     + momentum * GLOBAL_ATTRIBUTE_CONVERSIONS.momentum.affinityRatePerPoint;
 
-  const starweavePieces = gear.filter((item) => ["Umbrella", "Rope Dart", "Pendant", "Disc"].includes(item.slot) && item.set === "stars").length;
+  const starweavePieces = gear.filter((item) =>
+    WEAPON_SLOT_SET.has(item.slot)
+    && canonicalizeSetId(item.set, "weapon-accessory") === "starweave",
+  ).length;
   if (starweavePieces >= 2) sums.minOuter = (sums.minOuter || 0) + 78;
 
   return sums;
@@ -891,14 +924,16 @@ const BASE_PANEL_NO_GEAR: PanelStats = (() => {
 // (Helmet/Chest/Greaves/Bracers). Counting by slot category — not a single
 // active4pc string — is what lets stars(weapon) + stormrain(armor) both apply.
 // Pass only the gear you want counted (equipped pieces, or a Best-Build combo).
-const WEAPON_SLOT_SET = new Set(["Umbrella", "Rope Dart", "Pendant", "Disc"]);
 const detectSet4pc = (gear: GearItem[]): { weaponSet: string; armorSet: string } => {
   const w: Record<string, number> = {};
   const a: Record<string, number> = {};
   gear.forEach(it => {
     if (!it.set || it.set === "none") return;
-    const bucket = WEAPON_SLOT_SET.has(it.slot) ? w : a;
-    bucket[it.set] = (bucket[it.set] || 0) + 1;
+    const family = WEAPON_SLOT_SET.has(it.slot) ? "weapon-accessory" : "armor";
+    const setId = canonicalizeSetId(it.set, family);
+    if (getCurrentGlobalSet(setId)?.family !== family) return;
+    const bucket = family === "weapon-accessory" ? w : a;
+    bucket[setId] = (bucket[setId] || 0) + 1;
   });
   const pick = (c: Record<string, number>) => {
     let best = "none";
@@ -965,14 +1000,18 @@ const computeGearPanel = (current: PanelStats, gear: GearItem[], baseOverride?: 
 // Drop the bad override so the panel auto-recomputes from gear. A small Min > Max
 // is a legit (rare) in-game state, so only treat Min > 2×Max as corruption.
 const sanitizeChars = <T,>(data: T): T => {
-  (data as { chars?: { schemes?: { baseOverride?: Partial<PanelStats>; panelModelVersion?: number }[] }[] })?.chars?.forEach(c =>
+  (data as { chars?: { schemes?: { baseOverride?: Partial<PanelStats>; panelModelVersion?: number; gear?: GearItem[] }[] }[] })?.chars?.forEach(c =>
     c?.schemes?.forEach(s => {
       const b = s?.baseOverride;
       if (b && s.panelModelVersion !== PANEL_MODEL_VERSION) {
         delete s.baseOverride;
-        return;
       }
       if (b && ((b.minOuter ?? 0) > (b.maxOuter ?? 0) * 2 || (b.minPz ?? 0) > (b.maxPz ?? 0) * 2)) delete s.baseOverride;
+      if (s.gear) s.gear = s.gear.map((item) => ({
+        ...item,
+        set: item.set === "none" ? "none" : canonicalizeSetId(item.set, setFamilyForSlot(item.slot)),
+        subs: applyGearRowSemantics(item.subs) as GearSub[],
+      }));
     }),
   );
   return data;
@@ -1020,28 +1059,31 @@ export const BUILD_PROFILES = {
 
 const SET_EMOJI: Record<string, string> = {
   // Offensive sets
-  "stars":         "⭐",  // Starweave
-  "eaglerise":     "🦅",  // Hawkwing
+  "starweave":     "⭐",
+  "hawkwing":      "🦅",
   "jadeware":      "💚",  // Jadeware
   "ivorybloom":    "🌸",  // Ivorybloom
-  "shakenhill":    "🗡️",  // Shattered Ridge
-  "swallowreturn": "🕊️",  // Swaying Heights
-  "swiftgale":     "💨",  // Swift Gale
+  "cleftpeak":     "🗡️",
+  "swaying-heights":"🕊️",
+  "swift-gale":    "💨",
   "swallowcall":   "🐦",  // Swallowcall
   "mistwillow":    "🌿",  // Mistwillow
-  "stormrain":     "🌧️",  // Eaglerise
-  "obsidian":      "🖤",  // Obsidian Armor
+  "etherwrath":    "⚡",
+  "tiltrim":       "🍶",
+  "eaglerise":     "🌧️",
+  "ebonward":      "🖤",
   // Defensive sets
   "moonflare":     "🌙",  // Moonflare
   "rainwhisper":   "💧",  // Rainwhisper
   "formbend":      "🛡️",  // Formbend
   "calmwaters":    "🌊",  // Calmwaters
-  "beyondchill":   "❄️",  // Beyond the Chill
+  "beyond-the-chill":"❄️",
   "whirlsnow":     "⛄",  // Whirlsnow
-  "jadeembrace":   "🐉",  // Jade Embrace
-  "agilesteps":    "👟",  // Agile Steps
-  "flawlessdef":   "⚜️",  // Flawless Defense
-  "ironweave":     "🔗",  // Ironweave
+  "jadeclasp":     "🐉",
+  "honorbound":    "🛡️",
+  "ripple-step":   "👟",
+  "flawless-guardian":"⚜️",
+  "brimflow":      "🔥",
   // Bow/Ring sets
   "pursuing":      "👥",  // Pursuing Shadow
   "plume":         "🪶",  // Plume
@@ -1054,7 +1096,7 @@ const getSetName = (setKey: string): string => {
   if (setKey === "plume") return "Plume";
   if (setKey === "string") return "Startling String";
   if (setKey === "none") return "No Set / Mixed";
-  return ARMOR_SETS[setKey as keyof typeof ARMOR_SETS]?.name || setKey;
+  return getCurrentGlobalSet(setKey)?.name || "Legacy set (unmapped)";
 };
 
 const getSlotLabel = (slotName: string): string => {
@@ -1064,19 +1106,13 @@ const getSlotLabel = (slotName: string): string => {
 };
 
 // Sets available per slot category (from in-game Switch Set screens)
-const WEAPON_SET_KEYS = [
-  "stars","jadeware","ivorybloom","shakenhill",
-  "swallowreturn","swiftgale","swallowcall","mistwillow","stormrain","none"
-];
-const ARMOR_SET_KEYS = [
-  "stormrain","eaglerise","formbend","moonflare","obsidian","beyondchill",
-  "whirlsnow","calmwaters","jadeembrace","agilesteps","flawlessdef","ironweave","none"
-];
+const WEAPON_SET_KEYS = [...WEAPON_ACCESSORY_SETS.map((set) => set.id), "none"];
+const ARMOR_SET_KEYS = [...CURRENT_ARMOR_SETS.map((set) => set.id), "none"];
 
 const getSetOptionsForSlot = (slot: string) => {
   if (slot === "Umbrella" || slot === "Rope Dart" || slot === "Pendant" || slot === "Disc") {
     // Weapon / accessory sets
-    return WEAPON_SET_KEYS.map(k => ({ key: k, name: ARMOR_SETS[k as keyof typeof ARMOR_SETS]?.name || k }));
+    return WEAPON_SET_KEYS.map(k => ({ key: k, name: getSetName(k) }));
   }
   if (slot === "Bow/Ring") {
     return [
@@ -1087,12 +1123,13 @@ const getSetOptionsForSlot = (slot: string) => {
     ];
   }
   // Armor slots (Helmet/Chest/Greaves/Bracers) → armor sets
-  return ARMOR_SET_KEYS.map(k => ({ key: k, name: ARMOR_SETS[k as keyof typeof ARMOR_SETS]?.name || k }));
+  return ARMOR_SET_KEYS.map(k => ({ key: k, name: getSetName(k) }));
 };
 
 // ⚠️ stat2pc values marked with (~) are estimates pending T91 verification.
 // Starweave +64 minOuter confirmed by user. All others approximate.
-const ARMOR_SETS = {
+/* Historical effect provenance only. Never use for current selectors or simulation.
+const LEGACY_SET_EFFECTS = {
   // ── Offensive (DPS-relevant 2pc stats) ──────────────────────────────────
   "stars": {
     name: "Starweave",
@@ -1266,6 +1303,7 @@ const ARMOR_SETS = {
   },
   "none": { name: "No Set / Mixed", stat2pc: {}, desc2pc: "—", desc4pc: "—", recommended: [] },
 };
+*/
 
 const getCustomConfig = () => {
   if (typeof window === "undefined") return null;
@@ -1727,14 +1765,14 @@ export default function App() {
   const [formName, setFormName] = useState("");
   const [formQuality, setFormQuality] = useState<"gold" | "purple" | "blue">("gold");
   // formMain removed — items no longer store a separate main stat text
-  const [formSet, setFormSet] = useState("stars");
+  const [formSet, setFormSet] = useState("starweave");
   // ── Base-calibration modal ──
   const [calibOpen, setCalibOpen] = useState(false);
   const [calibInputs, setCalibInputs] = useState<Record<string, string>>(
     () => Object.fromEntries(CALIB_FIELDS.map(f => [f.key as string, String(f.prefill)]))
   );
-  const [setAllWeapon, setSetAllWeapon] = useState("stars");
-  const [setAllArmor, setSetAllArmor] = useState("stormrain");
+  const [setAllWeapon, setSetAllWeapon] = useState("starweave");
+  const [setAllArmor, setSetAllArmor] = useState("eaglerise");
   const [formMastery, setFormMastery] = useState<string>("");
   const [formWeaponType, setFormWeaponType] = useState<string>("Sword");
   const [formSubs, setFormSubs] = useState<GearSub[]>(
@@ -1983,7 +2021,7 @@ export default function App() {
           matchedType = "Defense";
         }
 
-        if (matchedType && parsedSubs.length < 6) {
+        if (matchedType) {
           const isTuned = /\[\s*turn\s*\]/i.test(line)
             || /\bretun(?:e|ed|ing)\b/i.test(lcLine)
             || /\btuned\b/i.test(lcLine);
@@ -1998,6 +2036,9 @@ export default function App() {
         }
       }
     });
+
+    const canonicalRows = parseSubStats(text).filter((row) => row.type !== "Other" || Boolean(row.val));
+    if (canonicalRows.length) parsedSubs.splice(0, parsedSubs.length, ...canonicalRows);
 
     // Enforce max 1 attuned
     let foundTuned = false;
@@ -2018,8 +2059,8 @@ export default function App() {
     let defaultSet = detectedSlot === "Bow/Ring"
       ? "pursuing"
       : weaponSetSlots.has(detectedSlot)
-        ? "stars"
-        : "stormrain";
+        ? "starweave"
+        : "eaglerise";
 
     return {
       id: Math.random().toString(),
@@ -2027,7 +2068,7 @@ export default function App() {
       name: detectedName,
       quality: "gold",
       set: defaultSet,
-      subs: parsedSubs,
+      subs: applyGearRowSemantics(parsedSubs),
       mastery: masteryVal,
       isEquipped: false,
       weaponType: (detectedSlot === "Umbrella" || detectedSlot === "Rope Dart") ? detectedWeaponType : undefined
@@ -2044,11 +2085,11 @@ export default function App() {
     setFormName(existingCount === 0 ? slotLabel : `${slotLabel} #${existingCount + 1}`);
     setFormQuality("gold");
     if (slot === "Umbrella" || slot === "Rope Dart" || slot === "Pendant" || slot === "Disc") {
-      setFormSet("stars"); // default weapon set
+      setFormSet("starweave"); // default weapon set
     } else if (slot === "Bow/Ring") {
       setFormSet("pursuing");
     } else {
-      setFormSet("stormrain"); // default armor set
+      setFormSet("eaglerise"); // default armor set
     }
     setFormMastery("");
     const defaultTypes = BUILD_WEAPON_TYPES[selectedBuild] || ["Umbrella", "Rope Dart"];
@@ -2061,7 +2102,7 @@ export default function App() {
     setEditingItem(item);
     setFormName(item.name);
     setFormQuality(item.quality);
-    setFormSet(item.set);
+    setFormSet(item.set === "none" ? "none" : canonicalizeSetId(item.set, setFamilyForSlot(item.slot)));
     setFormMastery(item.mastery !== undefined ? item.mastery.toString() : "");
     setSelectedSlot(item.slot);
     const defaultTypes = BUILD_WEAPON_TYPES[selectedBuild] || ["Umbrella", "Rope Dart"];
@@ -2508,7 +2549,7 @@ export default function App() {
             attunedBonus: 0,
             wuxiangMin: 0,
             wuxiangMax: 0,
-            set: "stars",
+            set: "starweave",
             constitution: 0, power: 0, defense: 0, agility: 0, momentum: 0, physResGear: 0, physDmgReduction: 0, groupDmg: 0, singleTargetDmg: 0, strength: 0
           },
           gradRate: 70.8,
@@ -2549,7 +2590,7 @@ export default function App() {
             attunedBonus: 0,
             wuxiangMin: 0,
             wuxiangMax: 0,
-            set: "stars",
+            set: "starweave",
             constitution: 0, power: 0, defense: 0, agility: 0, momentum: 0, physResGear: 0, physDmgReduction: 0, groupDmg: 0, singleTargetDmg: 0, strength: 0
           },
           gradRate: 98.4,
@@ -2766,7 +2807,7 @@ export default function App() {
     // Starweave 4pc gives the Martial Art Skill stack effect. Tracked separately
     // so it applies alongside the armor 4pc. The 2pc +64 Min Atk bonus is already
     // baked into the user's panel input (game shows post-2pc).
-    (p as any).weaponStars = wSet4pc === "stars" || p.set === "stars";
+    (p as any).weaponStars = wSet4pc === "starweave" || p.set === "starweave";
 
     if (selectedBuild !== "bamboocut-dust") {
       p.outerPen += iwStats.outerPen;
@@ -3200,9 +3241,15 @@ export default function App() {
     const bow = bowOverride ?? bowSelect;
     if (bow === "crit") p.crit += 3.7; else if (bow === "prec") p.prec += 3.3; else if (bow === "aff") p.aff += 1.8;
     const { weaponSet, armorSet } = detectSet4pc(combo);
+    const unavailableSet = [weaponSet, armorSet].find((setId) => setEffectModelUnavailable(setId));
+    if (unavailableSet) return {
+      total: 0,
+      crit: p.crit,
+      unavailable: { available: false, reason: "SET_EFFECT_MODEL_UNAVAILABLE", missingTiming: [], invalidTiming: [], missingSkills: [getSetName(unavailableSet)] },
+    };
     p.set = weaponSet;
     (p as any).armorSet = armorSet;
-    (p as any).weaponStars = weaponSet === "stars";
+    (p as any).weaponStars = weaponSet === "starweave";
     if (diagnostics?.panelOverride) p = { ...p, ...diagnostics.panelOverride };
 
     if (selectedBuild === "bamboocut-dust") {
@@ -3303,11 +3350,15 @@ export default function App() {
   const armorSetCompare = useMemo(() => {
     if (!isProductCapabilityEnabled(selectedBuild, "gearCompare")) return null;
     const current = (adjustedPanel.set as string) || "none"; const duration = modeledDurationOrZero(selectedBuild);
-    const sets = ["stars", "jadeware", "ivorybloom", "rainwhisper", "eaglerise", "swallowreturn", "shakenhill", "swallowcall", "mistwillow", "none"];
+    if (setEffectModelUnavailable(current)) return [];
+    const sets = [
+      ...WEAPON_ACCESSORY_SETS.filter((set) => set.numericalAvailability === "modeled").map((set) => set.id),
+      "none",
+    ];
     const score = (key: string) => {
       if (duration <= 0) return null;
-      const candidate: any = { ...adjustedPanel, set: key, weaponStars: key === "stars" };
-      const remove = (ARMOR_SETS as any)[current]?.stat2pc || {}; const add = (ARMOR_SETS as any)[key]?.stat2pc || {};
+      const candidate: any = { ...adjustedPanel, set: key, weaponStars: key === "starweave" };
+      const remove = getCurrentGlobalSet(current)?.stat2pc || {}; const add = getCurrentGlobalSet(key)?.stat2pc || {};
       for (const stat in remove) candidate[stat] = (candidate[stat] || 0) - remove[stat]; for (const stat in add) candidate[stat] = (candidate[stat] || 0) + add[stat];
       let total = 0;
       for (const item of modeledRotationOrEmpty(selectedBuild)) {
@@ -3323,7 +3374,7 @@ export default function App() {
     for (const key of sets) {
       const dps = score(key);
       if (dps === null) return null;
-      rows.push({ key, name: (ARMOR_SETS as any)[key]?.name || key, dps, delta: dps - baseline, active: key === current, modeled: key === "none" || key !== "mistwillow" });
+      rows.push({ key, name: getSetName(key), dps, delta: dps - baseline, active: key === current, modeled: key === "none" || getCurrentGlobalSet(key)?.numericalAvailability === "modeled" });
     }
     return rows.sort((a, b) => b.dps - a.dps);
   }, [adjustedPanel, activeTier, datang, yishui, selectedBuild]);
@@ -3837,7 +3888,7 @@ export default function App() {
     p.minOuter += iwStats.minOuter; p.maxOuter += iwStats.maxOuter;
     p.iwGeneralDmg = 0; p.iwOuterPen = iwStats.outerPen; p.iwPzPen = iwStats.pzPen; p.iwPzDmg = iwStats.pzDmg;
     const sets = detectSet4pc(combo);
-    p.set = sets.weaponSet; (p as any).armorSet = sets.armorSet; (p as any).weaponStars = sets.weaponSet === "stars";
+    p.set = sets.weaponSet; (p as any).armorSet = sets.armorSet; (p as any).weaponStars = sets.weaponSet === "starweave";
     return p;
   };
   const currentMenuPanel = menuPanelForCombo(equippedGear);
@@ -3884,7 +3935,7 @@ export default function App() {
     const { weaponSet, armorSet } = detectSet4pc(combo);
     p.set = weaponSet;
     (p as any).armorSet = armorSet;
-    (p as any).weaponStars = weaponSet === "stars";
+    (p as any).weaponStars = weaponSet === "starweave";
     return p;
   };
   const currentDiagnosticPanel = comparePanelForDiagnostics(equippedGear);
@@ -4619,19 +4670,12 @@ export default function App() {
                 } else if (initialSlot === "Bow/Ring") {
                   setFormSet("pursuing");
                 } else {
-                  setFormSet("stars");
+                  setFormSet("eaglerise");
                 }
                 const defaultTypes = BUILD_WEAPON_TYPES[selectedBuild] || ["Umbrella", "Rope Dart"];
                 setFormWeaponType(initialSlot === "Umbrella" ? defaultTypes[0] : initialSlot === "Rope Dart" ? defaultTypes[1] : "Sword");
                 setFormMastery("");
-                setFormSubs([
-                  { type: "Other", val: "" },
-                  { type: "Other", val: "" },
-                  { type: "Other", val: "" },
-                  { type: "Other", val: "" },
-                  { type: "Other", val: "" },
-                  { type: "Other", val: "" }
-                ]);
+                setFormSubs(toGearFormRows([]) as GearSub[]);
                 setIsItemModalOpen(true);
               }}
               className="primary-btn"
@@ -4714,7 +4758,7 @@ export default function App() {
                       </div>
 
                       <div className="ga-card__subs">
-                        {item.subs.slice(0, 4).map((sub, sidx) => (
+                        {item.subs.map((sub, sidx) => (
                           <div key={sidx} className="ga-card__sub">
                             <span className="ga-card__sub-name">{sub.type} {sub.isTuned && <span className="ga-card__tuned">✦</span>}</span>
                             <span className="ga-card__sub-val">{sub.val}</span>
@@ -7599,7 +7643,7 @@ export default function App() {
                       } else if (newSlot === "Bow/Ring") {
                         setFormSet("pursuing");
                       } else {
-                        setFormSet("stars");
+                        setFormSet("eaglerise");
                       }
 
                       // Auto-name: generate a default name based on slot

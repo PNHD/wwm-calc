@@ -28,9 +28,9 @@ expect(firstLineParsed[1]?.type === "Crit Rate" && firstLineParsed[1]?.val === "
 expect(firstLineParsed[2]?.type === "Agility" && firstLineParsed[2]?.val === "46.4", "[Turn] Agility 46.4 lost");
 expect(firstLineParsed[2]?.isTuned === true, "[Turn] Agility must remain the Retuned line");
 expect(firstLineParsed[3]?.type === "Max Bamboocut Atk" && firstLineParsed[3]?.val === "33.4", "Maximum Bamboocut Attack 33.4 lost");
-expect(firstLineParsed[4]?.type === "Max Phys Atk" && firstLineParsed[4]?.val === "73.1", "Max Physical Attack 73.1 lost");
+expect(firstLineParsed[4]?.type === "Max Physical Attack" && firstLineParsed[4]?.val === "73.1", "Max Physical Attack 73.1 lost");
 expect(
-  firstLineParsed[5]?.type === "Umb Martial Art Skill DMG Boost" && firstLineParsed[5]?.val === "5.3",
+  firstLineParsed[5]?.type === "Umb Martial Art Skill DMG Boost" && firstLineParsed[5]?.val === "5.3%",
   `wrapped Everspring boost should be 5.3, got ${firstLineParsed[5]?.type} ${firstLineParsed[5]?.val}`,
 );
 expect(firstLineParsed[5]?.isTuned !== true, "weapon Attunement must not be mislabeled as Retuned");
@@ -50,7 +50,7 @@ const valueOnlyFixture = [
 const valueOnlyParsed = parseSubStats(valueOnlyFixture).filter((sub) => sub.type !== "Other");
 expect(valueOnlyParsed.length === 6, `value-only fixture should yield 6 stats, got ${valueOnlyParsed.length}`);
 const valueOnlyBoost = valueOnlyParsed.find((sub) => sub.type === "Umb Martial Art Skill DMG Boost");
-expect(valueOnlyBoost?.val === "5.3", `value-only wrapped boost should retain 5.3, got ${valueOnlyBoost?.val ?? "missing"}`);
+expect(valueOnlyBoost?.val === "5.3%", `value-only wrapped boost should retain 5.3%, got ${valueOnlyBoost?.val ?? "missing"}`);
 expect(!valueOnlyParsed.some((sub) => sub.type === "Max Bamboocut Atk" && sub.val === "5.3"), "5.3 must never be borrowed into Max Bamboocut Atk");
 
 if (failures.length) {

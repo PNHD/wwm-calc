@@ -68,7 +68,7 @@ function computeTotalDmg(
   let total = 0;
   (getRotationForBuild(opts.buildKey) ?? []).forEach(item => {
     const { total: dmg } = calcSkill(item, p, tier, {
-      set: p.set || "stars",
+      set: p.set || "starweave",
       datang: opts.datang,
       yishui: opts.yishui,
       buildKey: opts.buildKey,

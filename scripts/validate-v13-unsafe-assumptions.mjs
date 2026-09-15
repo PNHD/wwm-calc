@@ -49,7 +49,7 @@ try {
   const dustSkill = calc.getRotationForBuild("bamboocut-dust")[0];
   const panel = { minOuter: 1600, maxOuter: 2700, minPz: 300, maxPz: 700, crit: 100, aff: 20, prec: 110, critDmg: 50, affDmg: 35 };
   const normal = calc.calcSkill(dustSkill, panel, t96, { ...opts, armorSet: "" });
-  const hawkwing = calc.calcSkill(dustSkill, panel, t96, { ...opts, armorSet: "eaglerise" });
+  const hawkwing = calc.calcSkill(dustSkill, panel, t96, { ...opts, set: "hawkwing", armorSet: "" });
   assert.equal(hawkwing.total, normal.total, "Hawkwing linearization cannot alter provisional recommendation math");
   assert.ok(hawkwing.assumptions.some((item) => item.id === "hawkwing-affinity-linearization" && item.classification === "UNSAFE_FOR_RECOMMENDATION"), "excluded Hawkwing assumption remains machine-readable");
   assert.ok(normal.assumptions.some((item) => item.id === "fixed-damage-22.5-percent"), "shared load-bearing assumptions remain machine-readable");

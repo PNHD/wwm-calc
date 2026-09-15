@@ -27,10 +27,10 @@ expect(everspring.length === 6, `Everspring: expected 6 semantic rows, got ${eve
 const expectedEverspring = [
   ["Crit Rate", "8.1", "primary", false],
   ["Agility", "46.4", "additional", false],
-  ["Min Phys Atk", "68.4", "additional", false],
-  ["Max Phys Atk", "73.1", "additional", true],
+  ["Min Physical Attack", "68.4", "additional", false],
+  ["Max Physical Attack", "73.1", "additional", true],
   ["Min Bamboocut Atk", "35.6", "additional", false],
-  ["Umb Martial Art Skill DMG Boost", "5.2", "attunement", false],
+  ["Umb Martial Art Skill DMG Boost", "5.2%", "attunement", false],
 ];
 expectedEverspring.forEach(([type, val, role, retuned], index) => {
   const row = everspring[index];
@@ -61,7 +61,7 @@ expect(rope.map((row) => row.type).join("|") === [
   "Max Bamboocut Atk",
   "Min Bamboocut Atk",
   "Crit Rate",
-  "Max Phys Atk",
+  "Max Physical Attack",
   "Rope Dart Martial Art Skill DMG Boost",
 ].join("|"), "Rope Dart source order/types mismatch");
 expect(rope[3]?.val === "7.4" && rope[3]?.role === "additional" && rope[3]?.isRetuned === true, "Rope Dart [Turn] Crit Rate must be the only Retuned row");
@@ -82,12 +82,12 @@ const missingNormalFixture = [
 ].join("\n");
 const missingNormal = parseSubStats(missingNormalFixture).filter((row) => row.type !== "Other");
 expect(missingNormal.length === 5, `missing-normal: production parser must preserve 5 semantic rows, got ${missingNormal.length}`);
-expect(missingNormal[3]?.type === "Max Phys Atk" && missingNormal[3]?.isRetuned === true, "missing-normal: Max Phys must remain the Retuned ordinary roll");
+expect(missingNormal[3]?.type === "Max Physical Attack" && missingNormal[3]?.isRetuned === true, "missing-normal: Max Physical must remain the Retuned ordinary roll");
 expect(missingNormal[4]?.role === "attunement" && missingNormal[4]?.type === "Umb Martial Art Skill DMG Boost", "missing-normal: surviving Attunement must not shift into an ordinary slot");
 const missingNormalForm = toGearFormRows(missingNormal);
-expect(missingNormalForm.length === 6, "missing-normal form must expose five normal slots plus one Attunement slot");
-expect(missingNormalForm.slice(0, 5).filter((row) => row.type === "Other").length === 1, "missing-normal form must leave exactly one normal slot unresolved");
-expect(missingNormalForm[5]?.role === "attunement" && missingNormalForm[5]?.type === "Umb Martial Art Skill DMG Boost", "missing-normal form must keep Everspring in the Attunement section");
+expect(missingNormalForm.length === 7, "missing-normal form must expose six normal slots plus one Attunement slot");
+expect(missingNormalForm.slice(0, 6).filter((row) => row.type === "Other").length === 2, "missing-normal form must leave two normal slots unresolved");
+expect(missingNormalForm[6]?.role === "attunement" && missingNormalForm[6]?.type === "Umb Martial Art Skill DMG Boost", "missing-normal form must keep Everspring in the Attunement section");
 
 const missingAttunementFixture = [
   "Precision Rate 6.3%",
@@ -99,9 +99,9 @@ const missingAttunementFixture = [
 const missingAttunement = parseSubStats(missingAttunementFixture).filter((row) => row.type !== "Other");
 expect(missingAttunement.length === 5, `missing-attunement: production parser must preserve 5 normal rows, got ${missingAttunement.length}`);
 expect(missingAttunement.every((row) => row.role !== "attunement"), "missing-attunement: ordinary row must never be promoted to Attunement");
-expect(missingAttunement[4]?.type === "Max Phys Atk" && missingAttunement[4]?.role === "additional", "missing-attunement: fifth normal stat must remain additional");
+expect(missingAttunement[4]?.type === "Max Physical Attack" && missingAttunement[4]?.role === "additional", "missing-attunement: fifth normal stat must remain additional");
 const missingAttunementForm = toGearFormRows(missingAttunement);
-expect(missingAttunementForm[5]?.role === "attunement" && missingAttunementForm[5]?.type === "Other", "missing-attunement form must leave Attunement unresolved/empty");
+expect(missingAttunementForm[6]?.role === "attunement" && missingAttunementForm[6]?.type === "Other", "missing-attunement form must leave Attunement unresolved/empty");
 
 const genericMatch = matchWeaponAttunementText("Mortal Rope Dart - Martial Art Skill DMG Boost 4.1%");
 expect(genericMatch?.statKey === "Rope Dart Martial Art Skill DMG Boost", "generic weapon allowlist must map Mortal Rope Dart to the existing ropeMartial key");
@@ -111,7 +111,7 @@ const legacy = applyGearRowSemantics([
   { type: "Art of Rope Dart Boost", val: "2.6", isTuned: false },
   { type: "Rope Dart Martial Art Skill DMG Boost", val: "3.9", isTuned: true },
 ]);
-expect(legacy[0]?.type === "Art of Rope Dart Boost" && legacy[0]?.role === "primary", "legacy Art of Rope Dart Boost key must retain its existing calculation meaning");
+expect(legacy[0]?.type === "Art of Rope Dart DMG Boost" && legacy[0]?.val === "2.6%" && legacy[0]?.role === "primary", "legacy Art of Rope Dart Boost must migrate to the current label and retain its calculation meaning");
 expect(legacy[1]?.type === "Rope Dart Martial Art Skill DMG Boost" && legacy[1]?.role === "attunement", "legacy ropeMartial key must migrate semantically to Attunement without a destructive key rename");
 expect(legacy[1]?.isRetuned === false && legacy[1]?.isTuned === false, "legacy Attunement must never remain marked Retuned");
 expect(!legacy[1]?.attunementId, "legacy family-level key must not guess a specific weapon identity");

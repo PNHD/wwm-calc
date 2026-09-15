@@ -2,6 +2,8 @@ export interface GlobalT96GearLineLike {
   type: string;
   val?: string;
   isTuned?: boolean;
+  isRetuned?: boolean;
+  role?: "primary" | "additional" | "attunement";
 }
 
 export interface GlobalT96StatOptionLike {
@@ -95,8 +97,8 @@ export function validateGlobalT96GearLines(
   if (active.some((line) => !hasUsableValue(line))) {
     errors.push("Every selected stat needs a positive numeric value.");
   }
-  if (lines.filter((line) => line.isTuned).length > 1) {
-    errors.push("A gear piece can have only one Tuned / Attuned line.");
+  if (lines.filter((line) => line.role !== "attunement" && (line.isRetuned ?? line.isTuned)).length > 1) {
+    errors.push("A gear piece can have only one Retuned [Turn] normal line.");
   }
   if (!isGlobalT96WeaponSlot(slot) && active.some((line) => isVoidType(line.type))) {
     errors.push("Void Attack is a native Tier 96 weapon label and cannot be used on relic or armor slots.");

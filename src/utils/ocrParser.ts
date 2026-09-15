@@ -32,15 +32,15 @@ const fuzzyContains = (haystack: string, needle: string, maxDist = 2): boolean =
 // Type values MUST match SUB_MAP keys in App.tsx exactly
 const STAT_PATTERNS: { type: string; patterns: string[][]; exclude?: string[][] }[] = [
   // ── "Art of [Weapon] Boost" = boosts all skills of that weapon type ──
-  { type: "Art of Umbrella Boost", patterns: [["art", "umbrella"], ["art", "everspring"], ["umbrella", "boost"], ["everspring", "boost"]], exclude: [["martial"]] },
-  { type: "Art of Rope Dart Boost", patterns: [["art", "rope"], ["rope", "dart", "boost"], ["unfettered", "boost"]], exclude: [["martial"]] },
-  { type: "Art of Sword Boost", patterns: [["art", "sword"]], exclude: [["martial"], ["twinblade"], ["twin"]] },
-  { type: "Art of Spear Boost", patterns: [["art", "spear"]], exclude: [["martial"]] },
-  { type: "Art of Fan Boost", patterns: [["art", "fan"]], exclude: [["martial"]] },
-  { type: "Art of Dual Blades Boost", patterns: [["art", "dual"], ["art", "twinblade"], ["art", "twin", "blade"]], exclude: [["martial"]] },
-  { type: "Art of Mo Blade Boost", patterns: [["art", "mo", "blade"], ["art", "modao"]], exclude: [["martial"]] },
-  { type: "Art of Heng Blade Boost", patterns: [["art", "heng"], ["art", "hengdao"]], exclude: [["martial"]] },
-  { type: "Art of Gauntlets Boost", patterns: [["art", "gauntlet"]], exclude: [["martial"]] },
+  { type: "Art of Umbrella DMG Boost", patterns: [["art", "umbrella"], ["art", "everspring"], ["umbrella", "boost"], ["everspring", "boost"]], exclude: [["martial"]] },
+  { type: "Art of Rope Dart DMG Boost", patterns: [["art", "rope"], ["rope", "dart", "boost"], ["unfettered", "boost"]], exclude: [["martial"]] },
+  { type: "Art of Sword DMG Boost", patterns: [["art", "sword"]], exclude: [["martial"], ["twinblade"], ["twin"]] },
+  { type: "Art of Spear DMG Boost", patterns: [["art", "spear"]], exclude: [["martial"]] },
+  { type: "Art of Fan DMG Boost", patterns: [["art", "fan"]], exclude: [["martial"]] },
+  { type: "Art of Dual Blades DMG Boost", patterns: [["art", "dual"], ["art", "twinblade"], ["art", "twin", "blade"]], exclude: [["martial"]] },
+  { type: "Art of Mo Blade DMG Boost", patterns: [["art", "mo", "blade"], ["art", "modao"]], exclude: [["martial"]] },
+  { type: "Art of Heng Blade DMG Boost", patterns: [["art", "heng"], ["art", "hengdao"]], exclude: [["martial"]] },
+  { type: "Art of Gauntlets DMG Boost", patterns: [["art", "gauntlet"]], exclude: [["martial"]] },
   // ── "[Weapon] Martial Art Skill DMG Boost" = boosts only martial art skills ──
   { type: "Umb Martial", patterns: [["umbrella", "martial"], ["everspring", "martial"], ["soulshade", "martial"], ["vernal", "martial"], ["umbrella", "art", "skill"], ["umbrella", "art", "dmg"], ["umbrella", "skill", "dmg", "boost"], ["umbrella", "skill", "boost"], ["umbrella", "dmg", "boost"]] },
   { type: "Umb Special", patterns: [["umbrella", "special"], ["everspring", "special"], ["soulshade", "special"], ["vernal", "special"], ["umbrella", "derivation"], ["everspring", "derivation"]] },
@@ -87,17 +87,21 @@ const STAT_PATTERNS: { type: string; patterns: string[][]; exclude?: string[][] 
   },
   // ── General stats ──
   {
-    type: "Phys Pen",
-    patterns: [["penetration"], ["破防"], ["破甲"], ["外功", "穿透"], ["xuyên"], ["phá giáp"], ["pen", "phys"], ["pen", "attack"]],
+    type: "Physical Penetration",
+    patterns: [["physical", "penetration"], ["破防"], ["破甲"], ["外功", "穿透"], ["xuyên"], ["phá giáp"], ["pen", "phys"], ["pen", "attack"]],
     exclude: [["破竹"], ["bamboo"], ["phá trúc"], ["silkbind"], ["bellstrike"], ["stonesplit"], ["tâm pháp"]]
   },
   {
-    type: "Max Phys Atk",
-    patterns: [["max", "attack"], ["max", "phys"], ["maximum", "physical"], ["tối đa", "ngoại"], ["tối đa", "công"], ["最大", "外功"]],
-    exclude: [["破竹"], ["bamboo"], ["phá trúc"], ["silkbind"], ["bellstrike"], ["stonesplit"], ["tâm pháp"], ["umbrella"], ["everspring"], ["soulshade"], ["vernal"], ["combat", "boost"], ["boss"]]
+    type: "Max Formless Attack",
+    patterns: [["max", "formless", "attack"], ["maximum", "formless", "attack"]],
   },
   {
-    type: "Min Phys Atk",
+    type: "Max Physical Attack",
+    patterns: [["max", "attack"], ["max", "phys"], ["maximum", "physical"], ["tối đa", "ngoại"], ["tối đa", "công"], ["最大", "外功"]],
+    exclude: [["formless"], ["破竹"], ["bamboo"], ["phá trúc"], ["silkbind"], ["bellstrike"], ["stonesplit"], ["tâm pháp"], ["umbrella"], ["everspring"], ["soulshade"], ["vernal"], ["combat", "boost"], ["boss"]]
+  },
+  {
+    type: "Min Physical Attack",
     patterns: [["min", "attack"], ["min", "phys"], ["tối thiểu", "ngoại"], ["tối thiểu", "công"], ["最小", "外功"]],
     exclude: [["破竹"], ["bamboo"], ["phá trúc"], ["silkbind"], ["bellstrike"], ["stonesplit"], ["tâm pháp"]]
   },
@@ -247,6 +251,7 @@ const STAT_PATTERNS: { type: string; patterns: string[][]; exclude?: string[][] 
   // Unified attribute/formless penetration (patch 4.30: 无相穿透). Maps to pzPen
   // via SUB_MAP. CN-only tokens so it doesn't collide with Phys Pen's English
   // "penetration" match; element pens above are matched first by element name.
+  { type: "Formless Penetration", patterns: [["formless", "penetration"]] },
   {
     type: "Formless Penetration",
     patterns: [["无相", "穿透"], ["属性", "穿透"]],
@@ -323,7 +328,7 @@ export const parseSubStats = (text: string): OcrSub[] => {
   // the following Power value. Decimal repair remains percentage-family scoped.
   const hybridGlobalRows = parseHybridGlobalEnglishRows(text);
   if (hybridGlobalRows.length >= 5) {
-    const hybrid: OcrSub[] = hybridGlobalRows.slice(0, 6).map(({
+    const hybrid: OcrSub[] = hybridGlobalRows.map(({
       type, val, isTuned, isRetuned, role, sourceOrder, attunementId, displayName,
     }) => ({ type, val, isTuned, isRetuned, role, sourceOrder, attunementId, displayName }));
     console.log("[OCR] Hybrid Global English rows:", hybrid);
@@ -409,15 +414,14 @@ export const parseSubStats = (text: string): OcrSub[] => {
     const matchedType = matchStatType(lcLine);
     console.log("[OCR] Line:", JSON.stringify(line), "→", matchedType || "(no match)", "val:", valStr);
 
-    if (matchedType && parsedSubs.length < 6) {
+    if (matchedType) {
       const isTuned = isRetunedStatLine(lcLine);
       parsedSubs.push({ type: matchedType, val: valStr, isTuned });
     }
   }
 
   // Second pass: try joining consecutive unmatched lines with already-matched ones
-  if (parsedSubs.length < 6) {
-    const unmatchedWithNums: { line: string; val: string; idx: number }[] = [];
+  const unmatchedWithNums: { line: string; val: string; idx: number }[] = [];
     for (let i = 0; i < lines.length; i++) {
       const lc = lines[i].toLowerCase().replace(/[|[\]{}()]/g, " ");
       const vm = lines[i].match(/\d+(?:\.\d+)?%?/);
@@ -428,8 +432,7 @@ export const parseSubStats = (text: string): OcrSub[] => {
       if (matchStatType(lc)) continue; // already matched
       unmatchedWithNums.push({ line: lines[i], val: v, idx: i });
     }
-    for (const um of unmatchedWithNums) {
-      if (parsedSubs.length >= 6) break;
+  for (const um of unmatchedWithNums) {
       // A value may be emitted on its own line after a wrapped label. Look
       // back up to three NON-NUMERIC continuation lines, but never cross a
       // previous stat row that already contains a value.
@@ -446,7 +449,6 @@ export const parseSubStats = (text: string): OcrSub[] => {
           break;
         }
       }
-    }
   }
 
   // Enforce max 1 attuned
