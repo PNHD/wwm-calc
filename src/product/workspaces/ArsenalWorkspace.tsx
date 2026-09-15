@@ -38,7 +38,8 @@ interface ArsenalWorkspaceProps {
   onEdit: (id: string) => void;
   onAdd: () => void;
   analysis: { slot: string; slotKey: string; name: string; score: number | null; dpsLoss: number; lossPct: number }[];
-  modeledDps: number;
+  modeledDps: number | null;
+  numericalUnavailableReason?: string;
   priorities: { name: string; dps: number }[];
   onOpenCompare: () => void;
   onOpenOptimizer: () => void;
@@ -57,6 +58,7 @@ export default function ArsenalWorkspace({
   onAdd,
   analysis,
   modeledDps,
+  numericalUnavailableReason,
   priorities,
   onOpenCompare,
   onOpenOptimizer,
@@ -130,6 +132,8 @@ export default function ArsenalWorkspace({
         </div>
       </section>
 
+      {numericalUnavailableReason && <section className="arsenal-empty" role="status" data-testid="gear-analysis-unavailable"><strong>Numerical gear analysis unavailable</strong><span>{numericalUnavailableReason} Gear editing and set configuration remain available.</span></section>}
+
       {selectedItem && <section className="gear-inspector" aria-label="Selected gear analyzer">
         <header><div><span className="product-kicker">Selected gear</span><h2>{selectedItem.name}</h2><p>{selectedItem.slotLabel} / {selectedItem.setName} / {selectedItem.quality}</p></div><strong>{selectedItem.grade}<small>{scoreLabel(selectedItem.score)} T96 score</small></strong></header>
         <div className="gear-inspector-layout">
@@ -139,16 +143,16 @@ export default function ArsenalWorkspace({
           <div className="gear-inspector-actions">
             <button type="button" onClick={() => onEdit(selectedItem.id)}>Edit 6 stat lines</button>
             <button type="button" onClick={() => onEquip(selectedItem.id)}>{selectedItem.equipped ? "Unequip" : "Equip this gear"}</button>
-            <button type="button" onClick={onOpenTransmute}>Retune / re-attune</button>
-            <button type="button" onClick={onOpenCompare}>Compare slot</button>
+            <button type="button" disabled={Boolean(numericalUnavailableReason)} onClick={onOpenTransmute}>{numericalUnavailableReason ? "Retune unavailable" : "Retune / re-attune"}</button>
+            <button type="button" disabled={Boolean(numericalUnavailableReason)} onClick={onOpenCompare}>{numericalUnavailableReason ? "Compare unavailable" : "Compare slot"}</button>
           </div>
         </div>
       </section>}
 
-      <section className="arsenal-analysis" aria-label="Equipped gear analysis">
+      {!numericalUnavailableReason && <section className="arsenal-analysis" aria-label="Equipped gear analysis">
         <div className="product-section-heading">
           <div><h2>Equipped gear analysis</h2><p>DPS lost when each equipped piece is removed from the current build.</p></div>
-          <strong>{Math.round(modeledDps).toLocaleString()} modeled DPS</strong>
+          <strong>{modeledDps === null ? "Numerical result unavailable" : `${Math.round(modeledDps).toLocaleString()} modeled DPS`}</strong>
         </div>
         <div className="arsenal-analysis-layout">
           <div className="arsenal-contribution-list">
@@ -169,7 +173,7 @@ export default function ArsenalWorkspace({
             <button type="button" className="is-primary" onClick={onOpenOptimizer}>Optimize full inventory</button>
           </div>
         </div>
-      </section>
+      </section>}
 
       <section className="arsenal-inventory" aria-label="Inventory">
         <div className="product-section-heading">

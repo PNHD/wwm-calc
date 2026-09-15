@@ -95,6 +95,30 @@ async function main() {
     const navState = async (navigationLabel) => evaluate(`(() => { const nav = document.querySelector(${JSON.stringify(`[aria-label="${navigationLabel}"]`)}); const button = [...(nav?.querySelectorAll('button') || [])].find((candidate) => candidate.getAttribute('aria-label') === 'Best Build unavailable: numerical model unavailable'); if (!button) return null; const before = document.activeElement; button.focus(); const focused = document.activeElement === button; button.click(); const style = getComputedStyle(button); return { disabled: button.disabled, ariaDisabled: button.getAttribute('aria-disabled'), ariaLabel: button.getAttribute('aria-label'), focused, hash: location.hash, cursor: style.cursor, opacity: style.opacity, text: button.textContent.trim() }; })()`);
 
     await cdp.send("Emulation.setDeviceMetricsOverride", { width: 1440, height: 960, deviceScaleFactor: 1, mobile: false });
+    await navigate("");
+    const cleanRoot = await evaluate(`(() => ({
+      path: localStorage.getItem("wwm_selected_build"),
+      shell: Boolean(document.querySelector('[aria-label="PvE navigation"]')),
+      status: document.querySelector('[data-testid="missing-timing-unavailable"]')?.innerText || "",
+      selector: Boolean(document.querySelector('.build-path-list button')),
+      compareDisabled: [...document.querySelectorAll('[aria-label="PvE navigation"] button')].find((button) => /^Compare unavailable/.test(button.textContent || ''))?.disabled,
+      bestBuildDisabled: [...document.querySelectorAll('[aria-label="PvE navigation"] button')].find((button) => /^Best Build unavailable/.test(button.textContent || ''))?.disabled,
+    }))()`);
+    assert.deepEqual({ path: cleanRoot.path, shell: cleanRoot.shell, selector: cleanRoot.selector, compareDisabled: cleanRoot.compareDisabled, bestBuildDisabled: cleanRoot.bestBuildDisabled }, { path: "bamboocut-dust", shell: true, selector: true, compareDisabled: true, bestBuildDisabled: true }, "fresh root must retain the normal shell, path selector, and fail-closed Compare/Best Build controls");
+    assert.match(cleanRoot.status, /Explicit timing is required[\s\S]*Provisional model/i, "fresh Dust root must retain timing reason and provenance");
+    const gearOpened = await evaluate(`(() => { const nav = document.querySelector('[aria-label="PvE navigation"]'); const button = [...(nav?.querySelectorAll('button') || [])].find((candidate) => /^Gear/.test(candidate.textContent || '')); if (!button) return false; button.click(); return true; })()`);
+    assert.equal(gearOpened, true, "Gear navigation must remain reachable from clean Dust");
+    await pause(200);
+    const cleanGear = await evaluate(`(() => ({ workspace: Boolean(document.querySelector('.arsenal-workspace')), edit: Boolean(document.querySelector('[aria-label^="Edit "]')), compareDisabled: [...document.querySelectorAll('.gear-inspector-actions button')].find((button) => /^Compare unavailable/.test(button.textContent || ''))?.disabled, unavailable: document.querySelector('[data-testid="gear-analysis-unavailable"]')?.innerText || "" }))()`);
+    assert.deepEqual({ workspace: cleanGear.workspace, edit: cleanGear.edit, compareDisabled: cleanGear.compareDisabled }, { workspace: true, edit: true, compareDisabled: true }, "Gear Editor must remain reachable while numerical recommendation controls stay fail-closed");
+    assert.match(cleanGear.unavailable, /Explicit timing is required/i, "Gear analysis must remain fail-closed");
+    await evaluate(`document.querySelector('[aria-label^="Edit "]')?.click()`); await pause(100);
+    const editorRows = await evaluate(`(() => ({ normal: document.querySelectorAll('.product-gear-modal [placeholder="Search stat..."]').length, attunement: document.querySelectorAll('.product-gear-modal [placeholder*="Attunement"]').length }))()`);
+    assert.deepEqual(editorRows, { normal: 6, attunement: 1 }, "Gear Editor must preserve six normal rows plus a distinct Attunement row");
+    await evaluate(`document.querySelector('.product-gear-modal .cancel-btn')?.click()`);
+    await clickPath("Bamboocut-Dust");
+    const setOptions = await evaluate(`(() => [...document.querySelectorAll('select option')].map((option) => option.textContent).filter((text) => /Hawkwing|Eaglerise/.test(text || '')))()`);
+    assert.ok(setOptions.some((option) => /Hawkwing/.test(option || '')) && setOptions.some((option) => /Eaglerise/.test(option || '')), "Build controls must expose Hawkwing and Eaglerise sets");
     await clickPath("Bamboocut - Draught");
     const draughtDesktop = await navState("PvE navigation");
     assert.deepEqual({ disabled: draughtDesktop.disabled, ariaDisabled: draughtDesktop.ariaDisabled, ariaLabel: draughtDesktop.ariaLabel, focused: draughtDesktop.focused, hash: draughtDesktop.hash }, { disabled: true, ariaDisabled: "true", ariaLabel: "Best Build unavailable: numerical model unavailable", focused: false, hash: "#pve/build" });
@@ -145,7 +169,7 @@ async function main() {
     await cdp.send("Emulation.setDeviceMetricsOverride", { width: 1440, height: 960, deviceScaleFactor: 1, mobile: false });
     await clickPath("Bamboocut-Dust");
     const dustDesktopText = await evaluate("document.body.innerText");
-    assert.match(dustDesktopText, /Numerical result unavailable/i, "Dust must retain structured numerical unavailability when an active skill lacks explicit timing");
+    assert.match(dustDesktopText, /Numerical (result|model) unavailable/i, "Dust must retain structured numerical unavailability when an active skill lacks explicit timing");
     assert.match(dustDesktopText, /Explicit timing is required/i, "Dust must name the missing timing boundary");
     assert.match(dustDesktopText, /Provisional model/i, "Dust unavailable state must retain provenance");
     assert.doesNotMatch(dustDesktopText, /Equip this build/i, "an unavailable Dust calculation must not expose an actionable result");
@@ -170,7 +194,7 @@ async function main() {
     await cdp.send("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
     await navigate("#pve/build");
     const dustMobileText = await evaluate("document.body.innerText");
-    assert.match(dustMobileText, /Numerical result unavailable/i);
+    assert.match(dustMobileText, /Numerical (result|model) unavailable/i);
     assert.match(dustMobileText, /Provisional model/i);
     const relevantErrors = cdp.events.filter((event) => !event.params?.entry?.url?.endsWith("/favicon.ico"));
     assert.equal(relevantErrors.length, 0, `unexpected browser errors: ${JSON.stringify(relevantErrors)}`);

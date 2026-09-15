@@ -1334,8 +1334,8 @@ export default function App() {
   const autoGearPanel = true;
 
   const [activeTab, setActiveTab ] = useState<"calculator" | "priority" | "gear" | "compare" | "simulators" | "ocr" | "profiles" | "rot-sim" | "cultivate">("calculator");
-  const [workspace, setWorkspace] = useState<Workspace>("gear");
-  const [activeProductTab, setActiveProductTab] = useState<ProductTab>("gear-analyzer");
+  const [workspace, setWorkspace] = useState<Workspace>("build");
+  const [activeProductTab, setActiveProductTab] = useState<ProductTab>("settings");
 
   // ── NEW STATES & HELPERS FOR REDESIGNED LAYOUT ──
   // Advanced gear-analysis tables (DPS breakdown / ring / set) collapse by
@@ -3811,18 +3811,7 @@ export default function App() {
     return 1 + (effCritRate / 100) * (adjustedPanel.critDmg / 100) + (effAffRate / 100) * (adjustedPanel.affDmg / 100);
   }, [effCritRate, effAffRate, adjustedPanel]);
 
-  if ("reason" in rotationStats) {
-    return <main className="app-root min-h-screen font-sans antialiased p-6" role="status" data-testid="missing-timing-unavailable">
-      <h1 className="text-lg font-bold text-slate-100">Numerical result unavailable</h1>
-      <p className="text-slate-400">{numericalUnavailableMessage(rotationStats as TimelineUnavailableResult)}</p>
-      <PathProvenance pathKey={selectedBuild} />
-      <label className="block text-slate-300">Selected path
-        <select aria-label="Selected path" value={selectedBuild} onChange={(event) => setSelectedBuild(event.target.value)}>
-          {createProductPathCatalog(BUILD_PROFILES, ESTIMATED_BUILDS).map((path) => <option key={path.id} value={path.id}>{path.label}</option>)}
-        </select>
-      </label>
-    </main>;
-  }
+  const numericalUnavailable = missingTimingUnavailableState(rotationStats as TimelineResult);
 
   const handleStatChange = (key: keyof PanelStats, val: number | string) => {
     setPanel((prev) => ({
@@ -4111,7 +4100,7 @@ export default function App() {
     };
   }
 
-  const gearAnalysis = !gearCompareEnabled || currentCompareCombat.unavailable
+  const gearAnalysis = !gearCompareEnabled || currentCompareCombat.unavailable || "reason" in rotationStats
     ? []
     : equippedGear.flatMap((item) => {
       const removedRate = gradRateForGearCombo(equippedGear.filter((candidate) => candidate.id !== item.id));
@@ -4184,7 +4173,7 @@ export default function App() {
       details: "headlineDps", "gear-compare": "gearCompare", "inventory-optimizer": "bestBuild", simulation: "simulation", "skill-editor": "skillPreview", team: "headlineDps",
     };
     const capability = tabCapability[tab];
-    if ((selectedBuildIsUnmodeled && tab !== "settings" && tab !== "profile") || (capability && !isProductCapabilityEnabled(selectedBuild, capability))) {
+    if (("reason" in rotationStats && tab !== "settings" && tab !== "gear-analyzer" && tab !== "profile") || (selectedBuildIsUnmodeled && tab !== "settings" && tab !== "profile") || (capability && !isProductCapabilityEnabled(selectedBuild, capability))) {
       setActiveProductTab("settings");
       setWorkspace("build");
       setIsGradModalOpen(false);
@@ -4303,9 +4292,18 @@ export default function App() {
           pathKey: selectedBuild,
           scheme: activeScheme?.name ?? "Scheme",
           innerWays: selectedInnerWays.filter(Boolean).length,
-          estimate: selectedBuildIsUnmodeled ? "UNKNOWN" : Math.round(rotationStats.dps).toLocaleString(),
+          estimate: "reason" in rotationStats ? "UNAVAILABLE" : selectedBuildIsUnmodeled ? "UNKNOWN" : Math.round(rotationStats.dps).toLocaleString(),
         }}
       />
+
+      {numericalUnavailable && <section className="product-page-heading" role="status" data-testid="missing-timing-unavailable">
+        <div>
+          <span className="product-kicker">Numerical model unavailable</span>
+          <h1>Explicit timing is required</h1>
+          <p>{numericalUnavailableMessage(numericalUnavailable)} Gear editing and build configuration remain available; Compare and Best Build stay unavailable.</p>
+          <PathProvenance pathKey={selectedBuild} />
+        </div>
+      </section>}
 
       {workspace === "gear" && (
         <ArsenalWorkspace
@@ -4335,8 +4333,9 @@ export default function App() {
           }}
           onAdd={() => openAddModal(gearFilterSlot === "ALL" ? "Umbrella" : gearFilterSlot)}
           analysis={gearAnalysis}
-          modeledDps={rotationStats.dps}
-          priorities={isProductCapabilityEnabled(selectedBuild, "statPriority") ? statPriorityList.gains.map((item) => ({ name: item.label, dps: item.gainDps })) : []}
+          modeledDps={"reason" in rotationStats ? null : rotationStats.dps}
+          numericalUnavailableReason={numericalUnavailable ? numericalUnavailableMessage(numericalUnavailable) : undefined}
+          priorities={!numericalUnavailable && isProductCapabilityEnabled(selectedBuild, "statPriority") ? statPriorityList.gains.map((item) => ({ name: item.label, dps: item.gainDps })) : []}
           onOpenCompare={() => openProductTab("gear-compare")}
           onOpenOptimizer={() => openProductTab("inventory-optimizer")}
           onOpenTransmute={() => {
@@ -4413,6 +4412,7 @@ export default function App() {
         />
       )}
 
+      {!("reason" in rotationStats) && <>
       {workspace === "simulation" && (
         <CombatWorkspace
           ceiling={rotationStats.dps}
@@ -7616,6 +7616,8 @@ export default function App() {
           </div>
         </div>
       )}
+
+      </>}
 
       {/* ── EDIT ITEM MODAL ── */}
       {isItemModalOpen && (
