@@ -152,3 +152,5 @@
 }
 
 @media(prefers-reduced-motion:reduce){.workspace-inspector,.workspace-gvg-host *{scroll-behavior:auto!important;transition:none!important}}
+
+.workspace-path-card{display:grid;align-content:start}.workspace-path-card>strong{font:750 15px/1.25 system-ui;letter-spacing:-.015em}.workspace-path-card .workspace-text-action{margin-top:7px}

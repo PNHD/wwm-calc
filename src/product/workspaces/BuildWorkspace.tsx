@@ -1,5 +1,6 @@
 import { Check, Gauge, Search, Settings2, X } from "lucide-react";
 import { useState } from "react";
+import { getPathMaturity, isProductCapabilityEnabled } from "../../data/pathCatalog";
 
 interface BuildOption { id: string; label: string; weapons: string; tier: string; estimated: boolean; capability: "MODELED" | "UNMODELED"; currentGlobal?: true }
 interface InnerWayOption { id: string; name: string; image?: string; category: string; trigger: string; effect: string; recommended: boolean }
@@ -45,6 +46,8 @@ export default function BuildWorkspace(props: BuildWorkspaceProps) {
   const [pickerIndex, setPickerIndex] = useState<number | null>(null);
   const [query, setQuery] = useState("");
   const current = props.builds.find((build) => build.id === props.selectedBuild);
+  const currentMaturity = getPathMaturity(props.selectedBuild);
+  const currentNumerical = isProductCapabilityEnabled(props.selectedBuild, "headlineDps");
   const pickerOptions = props.innerWayOptions.filter((option) => option.name.toLowerCase().includes(query.toLowerCase()));
   const foodMin = props.foodMin ?? 120;
   const foodMax = props.foodMax ?? 240;
@@ -66,6 +69,7 @@ export default function BuildWorkspace(props: BuildWorkspaceProps) {
             {props.builds.map((build) => (
               <button key={build.id} type="button" className={build.id === props.selectedBuild ? "is-active" : ""} onClick={() => props.onBuildChange(build.id)}>
                 <span><strong>{build.label}</strong><small>{build.weapons}</small></span>
+                <em className={isProductCapabilityEnabled(build.id, "headlineDps") ? "is-available" : "is-unavailable"}>{getPathMaturity(build.id)}</em>
               </button>
             ))}
           </div>
@@ -74,11 +78,12 @@ export default function BuildWorkspace(props: BuildWorkspaceProps) {
         <div className="build-main-column">
           <section className="build-summary-band">
             <div><small>Selected path</small><strong>{current?.label ?? props.selectedBuild}</strong><span>{current?.weapons ?? "Path metadata unavailable"}</span></div>
+            <b className={`build-path-status ${currentNumerical ? "is-available" : "is-unavailable"}`}>{currentMaturity}</b>
             <p>{props.buildNotes}</p>
           </section>
 
           {current?.capability === "UNMODELED" ? (
-            <section className="build-config-section" role="status">
+            <section className="build-config-section build-unavailable-card" role="status">
               <div className="product-section-heading"><div><h2>Numerical model unavailable</h2><p>This current-Global martial path is selectable, but no modeled rotation, duration, DPS, graduation, stat priority, gear simulation, ranking, or Best Build result is available.</p></div></div>
               <p><strong>Best Build unavailable.</strong> It cannot be ranked using another path&apos;s coefficients.</p>
               <p className="text-[12px] text-slate-400">Known recognition metadata: {current.weapons}. Numerical mechanics will remain UNKNOWN until current-client evidence is available.</p>

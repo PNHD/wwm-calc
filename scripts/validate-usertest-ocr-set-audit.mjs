@@ -41,6 +41,7 @@ expect(LEGACY_SET_ALIASES.every((alias) => alias.provenance.length > 0), "every 
 expect(UNMAPPED_LEGACY_SET_IDS.includes("ironweave"), "unproven legacy IDs must stay explicitly unmapped");
 expect(setEffectModelUnavailable("tiltrim") && setEffectModelUnavailable("brimflow"), "new set effects must fail closed");
 expect(setEffectModelUnavailable("hawkwing"), "reference-only set effects must fail closed");
+expect(setEffectModelUnavailable("jadeware") && setEffectModelUnavailable("swallowcall") && setEffectModelUnavailable("swaying-heights"), "conditional set effects without encounter state must fail closed");
 expect(setEffectModelUnavailable("stormrain"), "unmigrated legacy IDs must not borrow a current effect");
 
 const fixture = [

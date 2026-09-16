@@ -38,7 +38,7 @@ export interface RotationSimAvailable {
 
 export interface RotationSimUnavailable {
   available: false;
-  reason: "MISSING_LOAD_BEARING_TIMING" | "INVALID_TIMING_OVERRIDE" | "MISSING_PATH_SKILL_MODEL";
+  reason: "MISSING_LOAD_BEARING_TIMING" | "INVALID_TIMING_OVERRIDE" | "MISSING_PATH_SKILL_MODEL" | "SET_EFFECT_MODEL_UNAVAILABLE";
   missingTiming: string[];
   invalidTiming: string[];
   missingSkills: string[];

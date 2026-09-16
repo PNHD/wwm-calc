@@ -11,7 +11,7 @@ export interface NumericalAssumption {
   sourceScope: string;
 }
 
-export type SkillCalculationUnavailableReason = "MISSING_PATH_SKILL_MODEL";
+export type SkillCalculationUnavailableReason = "MISSING_PATH_SKILL_MODEL" | "SET_EFFECT_MODEL_UNAVAILABLE";
 
 export function createBestBuildCalculationIdentity(input: unknown): string {
   return JSON.stringify(input);
@@ -487,12 +487,46 @@ export function getRotationTimeForBuild(buildKey?: string): number | null {
   return cfg?.useTime ?? null;
 }
 
+export interface OutcomeProbabilities {
+  pCrit: number;
+  pAff: number;
+  pWhite: number;
+  pGraze: number;
+}
+
+const boundedProbability = (value: number): number =>
+  Number.isFinite(value) ? Math.min(1, Math.max(0, value)) : 0;
+
+/** Resolves the four mutually exclusive hit outcomes without leaking over-cap inputs. */
+export function resolveOutcomeProbabilities(
+  precision: number,
+  critical: number,
+  affinity: number,
+  forcedCritical = false,
+): OutcomeProbabilities {
+  if (forcedCritical) return { pCrit: 1, pAff: 0, pWhite: 0, pGraze: 0 };
+
+  const pPrec = boundedProbability(precision);
+  const pAff = boundedProbability(affinity);
+  const critBeforePrecision = Math.min(boundedProbability(critical), 1 - pAff);
+  const pCrit = critBeforePrecision * pPrec;
+  let pGraze = (1 - pPrec) * (1 - pAff);
+  let pWhite = 1 - pCrit - pAff - pGraze;
+  if (pWhite < 0) {
+    pGraze = Math.max(0, 1 - pCrit - pAff);
+    pWhite = 0;
+  }
+  return { pCrit, pAff, pWhite, pGraze };
+}
+
 export function calcSkill(
   rot: RotationItem,
   panel: PanelStats,
   tier: TierConstants,
   opts: { set: string; datang: boolean; yishui: boolean; buildKey?: string; armorSet?: string; weaponStars?: boolean; skillOverride?: Partial<SkillDefinition> }
 ) {
+  const unavailableSet = ["jadeware", "swallowcall", "swaying-heights"].includes(opts.set) ? opts.set : undefined;
+  if (unavailableSet) return { available: false as const, reason: "SET_EFFECT_MODEL_UNAVAILABLE" as const, missingSkills: [unavailableSet], perHit: 0, total: 0, breakdown: { crit: 0, aff: 0, normal: 0, abrasion: 0 }, sim: { pCrit: 0, pAff: 0, pWhite: 0, pGraze: 0, critHit: 0, affHit: 0, normHit: 0, grazeHit: 0, casts: 0 }, assumptions: [{ id: "conditional-set-behavior", classification: "UNKNOWN", sourceScope: unavailableSet }] satisfies readonly NumericalAssumption[] };
   let sk = getSkillForBuild(opts.buildKey, rot.name);
 
   if (!sk) return { available: false as const, reason: "MISSING_PATH_SKILL_MODEL" as const, missingSkills: [rot.name], perHit: 0, total: 0, breakdown: { crit: 0, aff: 0, normal: 0, abrasion: 0 }, sim: { pCrit: 0, pAff: 0, pWhite: 0, pGraze: 0, critHit: 0, affHit: 0, normHit: 0, grazeHit: 0, casts: 0 }, assumptions: [{ id: "path-skill-model", classification: "UNKNOWN", sourceScope: "selected path" }] satisfies readonly NumericalAssumption[] };
@@ -535,20 +569,13 @@ export function calcSkill(
   // Current armor-set identities are catalogued separately. Conflicting legacy
   // offensive hooks are intentionally excluded until current effect evidence exists.
 
-  let pCrit: number, pAff: number, pPrec: number, pGraze: number;
-  if (sk.force === "crit") {
-    pCrit = 1;
-    pAff = 0;
-    pPrec = 1;
-    pGraze = 0;
-  } else {
-    pPrec = precEff;
-    const critBeforePrecision = Math.min(critEff + dirCrit, 0.8 + dirCrit);
-    pAff = affEff + dirAff;
-    pCrit = (critBeforePrecision + pAff > 1 ? Math.max(0, 1 - pAff) : critBeforePrecision) * pPrec;
-    pGraze = Math.max(0, (1 - pPrec) * (1 - pAff));
-  }
-  const pWhite = Math.max(0, 1 - pCrit - pAff - pGraze);
+  const critBeforePrecision = Math.min(critEff + dirCrit, 0.8 + dirCrit);
+  const { pCrit, pAff, pWhite, pGraze } = resolveOutcomeProbabilities(
+    precEff,
+    critBeforePrecision,
+    affEff + dirAff,
+    sk.force === "crit",
+  );
 
   let critMult = 1 + (panel.critDmg || 0) / 100 + (sk.exCritDmg || 0);
   let affMult = 1 + (panel.affDmg || 0) / 100;

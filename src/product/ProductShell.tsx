@@ -35,7 +35,7 @@ import GvgSharedLanding from "./GvgSharedLanding";
 import LibraryWorkspace from "./LibraryWorkspace";
 import ModelAbout from "./ModelAbout"; // V1_MODEL_ABOUT_PRODUCT_SHELL
 import PathProvenance from "./PathProvenance";
-import { getPathMaturity, isProductCapabilityEnabled, type ProductCapability } from "../data/pathCatalog";
+import { getCanonicalGlobalPath, getPathMaturity, isProductCapabilityEnabled, type ProductCapability } from "../data/pathCatalog";
 import "./model-assumptions.css";
 import "./workspace-redesign.css";
 import "./workspaces/compare-v2.css";
@@ -269,6 +269,7 @@ function PveOverview({ context, onNavigate, showOnboarding, onOpenLibrary }: {
   const headlineAvailable = isProductCapabilityEnabled(context.pathKey, "headlineDps");
   const compareAvailable = isPveViewAvailable(context.pathKey, "compare");
   const maturity = getPathMaturity(context.pathKey);
+  const path = getCanonicalGlobalPath(context.pathKey);
   return (
     <main className="workspace-overview workspace-overview-pve" data-testid="pve-overview" id="main-content">
       <header className="workspace-overview-heading">
@@ -294,6 +295,13 @@ function PveOverview({ context, onNavigate, showOnboarding, onOpenLibrary }: {
           <div className="workspace-primary-metric"><small>{headlineAvailable ? "Modeled DPS" : "Numerical model"}</small><strong>{headlineAvailable ? <>{context.estimate}<em>/s</em></> : "Unavailable"}</strong></div>
           <div className="workspace-inline-meta"><span>{context.tier}</span><span>{context.innerWays}/4 Inner Ways</span></div>
           <button type="button" className="workspace-text-action" onClick={() => onNavigate("build")}>Edit build configuration <ChevronRight size={14} /></button>
+        </section>
+
+        <section className="workspace-summary-card workspace-path-card">
+          <div className="workspace-card-heading"><span>CURRENT PATH</span><b className={`workspace-status-chip ${headlineAvailable ? "is-modeled" : "is-attention"}`}>{maturity}</b></div>
+          <strong>{path?.label ?? context.build}</strong>
+          <p>{path ? `${path.weapon1} + ${path.weapon2}` : "Path metadata unavailable"}</p>
+          <button type="button" className="workspace-text-action" onClick={() => onNavigate("build")}>Change path or loadout <ChevronRight size={14} /></button>
         </section>
 
         <section className="workspace-summary-card">
@@ -468,6 +476,8 @@ export default function ProductShell({ active, onNavigate, roleControl, actions,
         if ("pveView" in parsed) {
           const view = resolvePveView(context.pathKey, parsed.pveView);
           setPveView(view);
+          const tab = TAB_FOR_PVE[view];
+          if (tab && tab !== activeRef.current) onNavigate(tab);
           if (view !== parsed.pveView) updateRoute("pve", view);
         }
       } else {

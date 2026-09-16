@@ -17,11 +17,11 @@ try {
   assert.doesNotMatch(dust, /CALIBRATED|validated absolute DPS/i, "Dust provenance must not overclaim calibration");
 
   const app = readFileSync(new URL("../src/App.tsx", import.meta.url), "utf8");
-  const fallbackStart = app.lastIndexOf('if ("reason" in rotationStats)');
+  const fallbackStart = app.indexOf('{numericalUnavailable && <section');
   assert.notEqual(fallbackStart, -1, "structured numerical-unavailable branch must exist");
-  const unavailableBranch = app.slice(fallbackStart, app.indexOf("const handleStatChange", fallbackStart));
+  const unavailableBranch = app.slice(fallbackStart, app.indexOf("</section>}", fallbackStart));
   assert.match(unavailableBranch, /<PathProvenance pathKey=\{selectedBuild\} \/>/, "missing-timing fallback must retain path provenance");
-  assert.match(unavailableBranch, /numericalUnavailableMessage\(rotationStats/, "structured unavailable reason must remain visible");
+  assert.match(unavailableBranch, /numericalUnavailableMessage\(numericalUnavailable/, "structured unavailable reason must remain visible");
   console.log("[v13-dust-unavailable-provenance] PASS — Dust unavailable fallback retains provisional provenance.");
 } finally {
   await rm(tempDir, { recursive: true, force: true });

@@ -77,7 +77,7 @@ try {
   assert.equal(availability.numericalModelAvailable, false, "an unmodeled path must stop at the numerical product boundary");
   assert.equal(catalog.isBestBuildEligible("bamboocut-draught"), false, "Draught must not be eligible for Best Build");
   assert.equal(catalog.canRenderBestBuildResult("bamboocut-draught", "bamboocut-dust"), false, "a modeled-path Best Build result must not render after switching to Draught");
-  assert.equal(catalog.canRenderBestBuildResult("bamboocut-dust", "bamboocut-dust"), true, "a matching modeled-path Best Build result remains renderable");
+  assert.equal(catalog.canRenderBestBuildResult("silkbind-jade", "silkbind-jade"), true, "the matching authorized Jade Best Build result remains renderable");
 
   const kite = paths.find((entry) => entry.id === "bamboocut-kite");
   assert.ok(kite, "Kite must be a normal entry in the canonical primary path catalog");

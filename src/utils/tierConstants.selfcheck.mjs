@@ -7,7 +7,7 @@ for (const key of ["350|0.45", "350|0.45-t96", "307|0.3", "405|0.65", "405|0.65b
   assert(calc.includes(`"${key}"`), `missing tier ${key}`);
 }
 
-assert(calc.includes("Tier 96 / Lv95 Global Preview"), "missing Global T96 preview label");
-assert(calc.includes("Excel 各等级模板: 95上"), "T96 preview must cite the 95上 source column");
+assert(calc.includes("Tier 96 / Lv100 Global 2.1"), "missing accepted Global 2.1 T96 label");
+assert(calc.includes("Existing accepted T96 calibration fixture + Excel"), "T96 tier must cite the accepted calibration and source sheet");
 
 console.log("tier constants self-check OK");
