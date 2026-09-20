@@ -5,8 +5,10 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const STORAGE_KEY = 'wontonSimulatorState.v1';
+  const STORAGE_KEY = 'wontonSimulatorState.v2';
   const HARD_PITY = 90;
+  const UNLOCK_ATTEMPTS = 30;
+  const UNLOCK_STEP = 100 / UNLOCK_ATTEMPTS;
   const LOCK_COSTS = [1, 2, 5, 10];
 
   const ATTRIBUTES = {
@@ -37,6 +39,12 @@
     return { value: next / 4294967296, state: next };
   }
 
+  function takeRandom(state) {
+    const next = nextRng(state.rngState);
+    state.rngState = next.state;
+    return next.value;
+  }
+
   function createSeededRng(seed) {
     let state = hashSeed(seed);
     return function rng() {
@@ -49,6 +57,11 @@
   function clampPity(value) {
     const parsed = Number.isFinite(Number(value)) ? Math.floor(Number(value)) : 0;
     return Math.min(HARD_PITY, Math.max(0, parsed));
+  }
+
+  function clampProgress(value) {
+    const parsed = Number.isFinite(Number(value)) ? Number(value) : 0;
+    return Math.min(100, Math.max(0, parsed));
   }
 
   function costForLocks(count) {
@@ -67,17 +80,49 @@
     return { blue: 0.85 - gold, purple: 0.15, gold };
   }
 
+  // Community activation model used by WWMReforge v1.3.
+  // The 30-attempt maximum is widely reported; these early-unlock rates are not official.
+  function activationChance(attempt) {
+    const n = Math.max(1, Math.floor(Number(attempt) || 1));
+    if (n <= 10) return 0.02;
+    if (n <= 20) return 0.035;
+    return 0.05;
+  }
+
   function defaultSlot(id) {
+    if (id === 1) {
+      return {
+        id,
+        active: true,
+        quality: 'blue',
+        attribute: 'Set 1',
+        locked: false,
+        pity: 0,
+        progress: 100,
+        activationAttempts: 0
+      };
+    }
     if (id === 5) {
-      return { id, active: true, quality: 'gold', attribute: 'Sunlight', locked: true, pity: 0 };
+      return {
+        id,
+        active: false,
+        quality: 'gold',
+        attribute: 'Sunlight',
+        locked: false,
+        pity: 0,
+        progress: 0,
+        activationAttempts: 0
+      };
     }
     return {
       id,
-      active: true,
+      active: false,
       quality: 'blue',
       attribute: 'Set 1',
       locked: false,
-      pity: 0
+      pity: 0,
+      progress: 0,
+      activationAttempts: 0
     };
   }
 
@@ -85,7 +130,7 @@
     const opts = options || {};
     const seed = String(opts.seed || 'practice-1');
     return {
-      version: 1,
+      version: 2,
       mode: opts.mode === 'community' ? 'community' : 'official',
       seed,
       rngState: hashSeed(seed),
@@ -119,28 +164,142 @@
 
   function normalizeState(input) {
     const state = cloneState(input || createInitialState());
+    state.version = 2;
     state.mode = state.mode === 'community' ? 'community' : 'official';
     state.seed = String(state.seed || 'practice-1');
     state.rngState = Number.isInteger(state.rngState) ? state.rngState >>> 0 : hashSeed(state.seed);
     state.totalStones = Math.max(0, Number(state.totalStones) || 0);
     state.reforgeCount = Math.max(0, Math.floor(Number(state.reforgeCount) || 0));
     state.history = Array.isArray(state.history) ? state.history.slice(0, 200) : [];
+
     state.slots = [1, 2, 3, 4, 5].map((id, index) => {
-      const incoming = state.slots && state.slots[index] ? state.slots[index] : defaultSlot(id);
-      if (id === 5) return { id: 5, active: !!incoming.active, quality: 'gold', attribute: 'Sunlight', locked: true, pity: 0 };
-      const quality = ['blue', 'purple', 'gold'].includes(incoming.quality) ? incoming.quality : 'blue';
+      const fallback = defaultSlot(id);
+      const incoming = state.slots && state.slots[index] ? state.slots[index] : fallback;
+      const quality = ['blue', 'purple', 'gold'].includes(incoming.quality) ? incoming.quality : fallback.quality;
       return {
         id,
-        active: !!incoming.active,
-        quality,
-        attribute: String(incoming.attribute || 'Set 1'),
-        locked: !!incoming.locked,
-        pity: clampPity(incoming.pity)
+        active: id === 1 ? true : !!incoming.active,
+        quality: id === 5 ? 'gold' : quality,
+        attribute: id === 5 ? 'Sunlight' : String(incoming.attribute || 'Set 1'),
+        locked: id === 5 ? !!incoming.active : !!incoming.locked,
+        pity: id === 5 ? 0 : clampPity(incoming.pity),
+        progress: id === 1 ? 100 : clampProgress(incoming.progress),
+        activationAttempts: id === 1 ? 0 : Math.min(UNLOCK_ATTEMPTS, Math.max(0, Math.floor(Number(incoming.activationAttempts) || 0)))
       };
     });
+
+    // Real reforge progression is sequential. Once an inactive slot is reached,
+    // later slots cannot be active yet.
+    let foundInactive = false;
+    for (let i = 1; i < state.slots.length; i += 1) {
+      const slot = state.slots[i];
+      if (foundInactive) {
+        slot.active = false;
+        slot.locked = false;
+        slot.pity = 0;
+        slot.progress = 0;
+        slot.activationAttempts = 0;
+        continue;
+      }
+      if (slot.active) {
+        slot.progress = 100;
+        if (slot.id === 5) {
+          slot.quality = 'gold';
+          slot.attribute = 'Sunlight';
+          slot.locked = true;
+          slot.pity = 0;
+        }
+      } else {
+        foundInactive = true;
+        slot.locked = false;
+        slot.pity = 0;
+        slot.progress = Math.min(99.99, slot.progress);
+        const inferredAttempts = Math.round(slot.progress / UNLOCK_STEP);
+        slot.activationAttempts = Math.min(
+          UNLOCK_ATTEMPTS - 1,
+          Math.max(slot.activationAttempts, inferredAttempts)
+        );
+      }
+    }
+
     const activeLocks = state.slots.slice(0, 4).filter(slot => slot.active && slot.locked);
     if (activeLocks.length > 3) activeLocks.slice(3).forEach(slot => { slot.locked = false; });
     return state;
+  }
+
+  function nextUnlockSlotId(inputState) {
+    const state = normalizeState(inputState);
+    const next = state.slots.find(slot => slot.id > 1 && !slot.active);
+    return next ? next.id : null;
+  }
+
+  function allSlotsUnlocked(inputState) {
+    return normalizeState(inputState).slots.every(slot => slot.active);
+  }
+
+  function rollSlot(state, slot, incrementPity) {
+    const pityAfterRoll = incrementPity ? Math.min(HARD_PITY, slot.pity + 1) : 0;
+    const quality = rollQuality(state.mode, pityAfterRoll, takeRandom(state));
+    const attribute = pickAttribute(slot.id, quality, takeRandom(state));
+    slot.quality = quality;
+    slot.attribute = attribute;
+    slot.pity = incrementPity && quality !== 'gold' ? pityAfterRoll : 0;
+    return { slot: slot.id, quality, attribute, pity: slot.pity };
+  }
+
+  function advanceUnlock(state) {
+    const id = nextUnlockSlotId(state);
+    if (!id) return { slot: null, activated: false, progress: 100, attempts: 0 };
+
+    const slot = state.slots[id - 1];
+    slot.activationAttempts = Math.min(UNLOCK_ATTEMPTS, slot.activationAttempts + 1);
+
+    const direct = takeRandom(state) < activationChance(slot.activationAttempts);
+    if (!direct) {
+      slot.progress = Math.min(100, Number((slot.progress + UNLOCK_STEP).toFixed(2)));
+    }
+
+    const activated = direct || slot.activationAttempts >= UNLOCK_ATTEMPTS || slot.progress >= 99.9;
+    if (!activated) {
+      return {
+        slot: id,
+        activated: false,
+        direct: false,
+        progress: slot.progress,
+        attempts: slot.activationAttempts
+      };
+    }
+
+    slot.active = true;
+    slot.progress = 100;
+    slot.locked = false;
+    slot.pity = 0;
+
+    if (id === 5) {
+      slot.quality = 'gold';
+      slot.attribute = 'Sunlight';
+      slot.locked = true;
+      return {
+        slot: id,
+        activated: true,
+        direct,
+        progress: 100,
+        attempts: slot.activationAttempts,
+        quality: 'gold',
+        attribute: 'Sunlight'
+      };
+    }
+
+    const initial = rollSlot(state, slot, false);
+    return {
+      slot: id,
+      activated: true,
+      direct,
+      progress: 100,
+      attempts: slot.activationAttempts,
+      quality: initial.quality,
+      attribute: initial.attribute
+    };
   }
 
   function reforge(inputState) {
@@ -152,30 +311,23 @@
     state.totalStones += cost;
     state.reforgeCount += 1;
 
+    // Only currently active, unlocked Slots 1-4 reroll.
+    // Inactive parts have no pity counter yet.
     for (let i = 0; i < 4; i += 1) {
       const slot = state.slots[i];
       if (!slot.active || slot.locked) continue;
-
-      const pityAfterRoll = Math.min(HARD_PITY, slot.pity + 1);
-      let rng = nextRng(state.rngState);
-      state.rngState = rng.state;
-      const quality = rollQuality(state.mode, pityAfterRoll, rng.value);
-
-      rng = nextRng(state.rngState);
-      state.rngState = rng.state;
-      const attribute = pickAttribute(slot.id, quality, rng.value);
-
-      slot.quality = quality;
-      slot.attribute = attribute;
-      slot.pity = quality === 'gold' ? 0 : pityAfterRoll;
-      changes.push({ slot: slot.id, quality, attribute, pity: slot.pity });
+      changes.push(rollSlot(state, slot, true));
     }
+
+    // The next inactive slot progresses after the current reroll.
+    const activation = advanceUnlock(state);
 
     const event = {
       roll: state.reforgeCount,
       cost,
       lockedCount,
       changes,
+      activation,
       totalStones: state.totalStones
     };
     state.lastRoll = event;
@@ -206,8 +358,12 @@
   function autoLockGold(state, goal) {
     const next = normalizeState(state);
     next.slots.slice(0, 4).forEach(slot => { slot.locked = false; });
-    const goldSlots = next.slots.slice(0, 4).filter(slot => slot.active && slot.quality === 'gold');
 
+    // Common cost-saving practice is to unlock through Bright Light first,
+    // then start paying extra to preserve useful Gold parts.
+    if (!allSlotsUnlocked(next)) return next;
+
+    const goldSlots = next.slots.slice(0, 4).filter(slot => slot.active && slot.quality === 'gold');
     let candidates = goldSlots;
     if (goal === 'set-2' || goal === 'set-3') {
       const set1 = goldSlots.filter(slot => slot.attribute === 'Set 1');
@@ -279,13 +435,17 @@
   return {
     STORAGE_KEY,
     HARD_PITY,
+    UNLOCK_ATTEMPTS,
     ATTRIBUTES,
     clampPity,
     costForLocks,
     qualityRates,
+    activationChance,
     createSeededRng,
     createInitialState,
     normalizeState,
+    nextUnlockSlotId,
+    allSlotsUnlocked,
     reforge,
     countGold,
     sameGoldSetCount,
