@@ -2,7 +2,7 @@ import {
   HARD_PITY, SCHEMA_VERSION, UNLOCK_ATTEMPTS, activeLockCount, clampInt,
   clone, costForLocks, createSlots, nextInactiveSlot, normalizeSlots, safeText
 } from './common.js';
-import { appearancesFor } from '../data/weapons.v1.js';
+import { appearancesFor, brightLightAppearance } from '../data/weapons.v1.js';
 import {
   MAX_PLANS, applyPlan, deletePlan, normalizePlans, renamePlan, savePlan
 } from './plans.js';
@@ -58,12 +58,12 @@ export function activationChance(attempt) {
   return value <= 10 ? 0.02 : value <= 20 ? 0.035 : 0.05;
 }
 
-export function attributeList(slotId, quality) {
-  return appearancesFor(Number(slotId), quality);
+export function attributeList(slotId, quality, weapon = '') {
+  return appearancesFor(Number(slotId), quality, weapon);
 }
 
-function pickAttribute(slotId, quality, randomValue) {
-  const options = attributeList(slotId, quality);
+function pickAttribute(state, slotId, quality, randomValue) {
+  const options = attributeList(slotId, quality, state.target?.weapon || '');
   return options[Math.min(options.length - 1, Math.floor(randomValue * options.length))];
 }
 
@@ -131,6 +131,10 @@ export function normalizePracticeState(input) {
     ? source.pendingGold : null;
   state.undoStack = Array.isArray(source.undoStack)
     ? source.undoStack.filter(value => typeof value === 'string').slice(-UNDO_LIMIT) : [];
+  if (state.slots[4].active) {
+    state.slots[4].quality = 'gold';
+    state.slots[4].attribute = brightLightAppearance(state.slots, state.target.weapon);
+  }
   return state;
 }
 
@@ -153,7 +157,7 @@ function snapshotForUndo(state) {
 function rollSlot(state, slot) {
   const pityAfterRoll = Math.min(HARD_PITY, slot.pity + 1);
   const quality = rollQuality(state.mode, pityAfterRoll, takeRandom(state));
-  const attribute = pickAttribute(slot.id, quality, takeRandom(state));
+  const attribute = pickAttribute(state, slot.id, quality, takeRandom(state));
   slot.quality = quality;
   slot.attribute = attribute;
   slot.pity = quality === 'gold' ? 0 : pityAfterRoll;
@@ -177,11 +181,11 @@ function advanceUnlock(state) {
   slot.locked = slot.id === 5;
   if (slot.id === 5) {
     slot.quality = 'gold';
-    slot.attribute = 'Sunlight';
-    return { slot: 5, activated: true, direct, progress: 100, attempts: slot.activationAttempts, quality: 'gold', attribute: 'Sunlight' };
+    slot.attribute = brightLightAppearance(state.slots, state.target?.weapon || '');
+    return { slot: 5, activated: true, direct, progress: 100, attempts: slot.activationAttempts, quality: 'gold', attribute: slot.attribute };
   }
   const quality = rollQuality(state.mode, 0, takeRandom(state));
-  const attribute = pickAttribute(slot.id, quality, takeRandom(state));
+  const attribute = pickAttribute(state, slot.id, quality, takeRandom(state));
   slot.quality = quality;
   slot.attribute = attribute;
   return { slot: slot.id, activated: true, direct, progress: 100, attempts: slot.activationAttempts, quality, attribute };
@@ -200,6 +204,7 @@ export function reforge(inputState) {
     if (slot.active && !slot.locked) changes.push(rollSlot(state, slot));
   });
   const activation = advanceUnlock(state);
+  if (state.slots[4].active) state.slots[4].attribute = brightLightAppearance(state.slots, state.target?.weapon || '');
   const goldSlots = changes.filter(change => change.quality === 'gold').map(change => change.slot);
   const event = { roll: state.reforgeCount, cost, lockedCount, changes, activation, goldSlots, hasGold: goldSlots.length > 0, totalStones: state.totalStones };
   state.lastRoll = event;
