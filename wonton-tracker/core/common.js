@@ -53,7 +53,9 @@ export function normalizeSlots(input) {
       id,
       active: id === 1 || !!incoming.active,
       quality: id === 5 ? 'gold' : quality,
-      attribute: id === 5 ? 'Sunlight' : (allowed.includes(incoming.attribute) ? incoming.attribute : allowed[0]),
+      attribute: id === 5 ? 'Sunlight' : (typeof incoming.attribute === 'string' && incoming.attribute.trim()
+        ? safeText(incoming.attribute, allowed[0], 80)
+        : allowed[0]),
       locked: id === 5 ? !!incoming.active : !!incoming.locked,
       pity: id === 5 ? 0 : clampInt(incoming.pity, 0, HARD_PITY),
       progress: id === 1 ? 100 : clampNumber(incoming.progress, 0, 100),

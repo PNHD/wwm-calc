@@ -13,7 +13,7 @@ import {
 import { applyPlan, deletePlan, renamePlan, savePlan, targetMatch } from './core/plans.js';
 import { budgetSummary, PACKAGE_REFERENCE, REGIONS } from './core/pricing.js';
 import { exportBackup, exportText, importBackup, migrateStorage, persistState } from './core/storage.js';
-import { APPEARANCES, WEAPONS, WEAPON_DATA_VERSION, appearancesFor } from './data/weapons.v1.js';
+import { APPEARANCES, WEAPONS, WEAPON_DATA_VERSION, WEAPON_PROFILES, appearancesFor, setsForWeapon } from './data/weapons.v1.js';
 
 const $ = selector => document.querySelector(selector);
 const migration = migrateStorage(localStorage);
@@ -40,8 +40,9 @@ function option(value, label, selected) {
   return `<option value="${escapeHtml(value)}"${value === selected ? ' selected' : ''}>${escapeHtml(label)}</option>`;
 }
 
-function appearanceOptions(slotId, selected) {
-  const values = [...new Set(['blue', 'purple', 'gold'].flatMap(quality => appearancesFor(slotId, quality)))];
+function appearanceOptions(slotId, selected, weapon = '') {
+  const values = [...new Set(['blue', 'purple', 'gold'].flatMap(quality => appearancesFor(slotId, quality, weapon)))];
+  if (selected && !values.includes(selected)) values.push(selected);
   return values.map(value => option(value, value, value === selected ? selected : '')).join('');
 }
 
@@ -61,7 +62,7 @@ function slotCard(slot) {
     <div class="slot-top"><span class="slot-number">Slot ${slot.id}</span><span class="status-pill">${status}</span></div>
     <div class="quality">${quality}</div><div class="attribute">${attribute}</div>
     <div class="pity-head"><span>${meterLabel}</span><strong>${meterValue}</strong></div><div class="meter"><i style="width:${percent}%"></i></div>
-    <div class="slot-meta">${fixed ? 'Gold · Sunlight when active' : slot.active ? `${Math.round(slot.pity / HARD_PITY * 100)}% to hard pity` : 'No pity while inactive'}</div>
+    <div class="slot-meta">${fixed ? `Gold · ${escapeHtml(slot.attribute)} when active` : slot.active ? `${Math.round(slot.pity / HARD_PITY * 100)}% to hard pity` : 'No pity while inactive'}</div>
     ${fixed ? '' : `<label class="checkline"><input type="checkbox" name="lock-${slot.id}" data-lock="${slot.id}" ${slot.locked ? 'checked' : ''} ${slot.active ? '' : 'disabled'}><span>Lock slot</span></label>`}
   </article>`;
 }
@@ -115,22 +116,32 @@ function renderMetrics() {
 function renderTargets() {
   const state = current();
   const target = state.target;
+  const weapon = target.weapon || '';
+  const colorValues = weapon
+    ? [...new Set(['blue', 'purple', 'gold'].flatMap(quality => appearancesFor(1, quality, weapon)))]
+    : [...new Set(Object.values(APPEARANCES[1]).flat())];
+  const partValues = weapon
+    ? [...new Set(['blue', 'purple', 'gold'].flatMap(quality => setsForWeapon(weapon, quality)))]
+    : ['Set 1', 'Set 2'];
   const fields = [
     ['weapon', 'Weapon', WEAPONS],
-    ['color', 'Color target', [...new Set(Object.values(APPEARANCES[1]).flat())]],
-    ['part1', 'Part 1 target', ['Set 1', 'Set 2']],
-    ['part2', 'Part 2 target', ['Set 1', 'Set 2']],
-    ['part3', 'Part 3 target', ['Set 1', 'Set 2']]
+    ['color', 'Color target', colorValues],
+    ['part1', 'Part 1 target', partValues],
+    ['part2', 'Part 2 target', partValues],
+    ['part3', 'Part 3 target', partValues]
   ];
   $('#target-fields').innerHTML = fields.map(([key, label, values]) => `<label class="field"><span>${label}</span><select name="target-${key}" data-target="${key}">${option('', 'Any / not set', target[key])}${values.map(value => option(value, value, target[key])).join('')}</select></label>`).join('');
   $('#target-summary').textContent = targetMatch(state.slots, target).label;
   document.querySelectorAll('[data-target]').forEach(select => select.addEventListener('change', () => {
     const next = clone(current());
-    next.target[select.dataset.target] = select.value;
+    if (select.dataset.target === 'weapon' && next.target.weapon !== select.value) {
+      next.target = { weapon: select.value, color: '', part1: '', part2: '', part3: '' };
+    } else {
+      next.target[select.dataset.target] = select.value;
+    }
     setCurrent(next); render();
   }));
 }
-
 function renderPlans() {
   const state = current();
   $('#plan-count').textContent = `${state.plans.length}/5`;
@@ -186,13 +197,13 @@ function renderPracticeTools() {
   $('#mode-tools').innerHTML = `<div class="section-head"><div><p class="eyebrow">PRACTICE CONTROLS</p><h2>Seed, model, goals &amp; batch</h2></div><span class="status-pill ${state.mode === 'official' ? 'official' : 'community'}">${state.mode === 'official' ? 'Official quality model' : 'Community / Unofficial model'}</span></div>
     <div class="form-grid five">
       <label class="field"><span>Seed</span><input id="practice-seed" name="practice-seed" value="${escapeHtml(state.seed)}"></label>
-      <label class="field"><span>Quality model</span><select id="practice-model" name="practice-model">${option('official', 'Official 82 / 15 / 3', state.mode)}${option('community', 'Community 3 / 4 / 5 Gold', state.mode)}</select></label>
+      <label class="field"><span>Quality model</span><select id="practice-model" name="practice-model">${option('official', 'Official 82 / 15 / 3', state.mode)}${option('community', 'Legacy WWMReforge soft-rate model', state.mode)}</select></label>
       <label class="field"><span>Goal</span><select id="batch-goal" name="batch-goal">${[['gold-2','2 Gold'],['gold-3','3 Gold'],['gold-4','4 Gold'],['set-2','2 matching Gold sets'],['set-3','3 matching Gold sets']].map(([v,l]) => option(v,l,state.goals.goal)).join('')}</select></label>
       <label class="field"><span>Batch runs</span><select id="batch-runs" name="batch-runs">${[100,1000,10000].map(value => option(String(value), value.toLocaleString(), String(value) === String(state.goals.runs || 100) ? String(value) : '')).join('')}</select></label>
       <label class="field"><span>Batch strategy</span><select id="batch-strategy" name="batch-strategy">${option('lock-gold', 'Unlock all, then auto-lock useful Gold', state.goals.strategy)}${option('no-lock', 'Never auto-lock', state.goals.strategy)}</select></label>
       <label class="field"><span>Max reforges/run</span><input id="batch-max" name="batch-max" type="number" min="1" max="5000" value="${state.goals.maxReforges}"></label>
     </div><div class="button-row"><button class="btn secondary" id="apply-seed-btn">Apply seed &amp; restart</button><button class="btn primary" id="batch-btn">Run deterministic batch</button></div>
-    <p class="help"><span class="official">Official:</span> Blue 82%, Purple 15%, Gold 3%, hard pity 90. <span class="community">Community/Unofficial:</span> Gold soft tiers and 2% / 3.5% / 5% early unlock. Practice only.</p><div id="batch-result"></div>`;
+    <p class="help"><span class="official">Official:</span> Blue 82%, Purple 15%, Gold 3%, hard pity 90. <span class="community">Legacy community model:</span> the WWMReforge 3%→4%→5% Gold tiers and 2% / 3.5% / 5% early-unlock model are not part of NetEase's published probability table. Shadovex's observed Gold intervals around 35–40 are useful tracking data, not a guaranteed soft pity.</p><p class="help"><strong>Cost-efficient practice:</strong> community guides consistently recommend opening through Bright Light without locks first, then restoring a useful look and locking only the parts worth protecting.</p><div id="batch-result"></div>`;
   if (lastBatch) $('#batch-result').innerHTML = `<div class="batch-grid"><div><span>Success</span><strong>${lastBatch.successes}/${lastBatch.runs}</strong></div><div><span>Rate</span><strong>${(lastBatch.successRate * 100).toFixed(1)}%</strong></div><div><span>Average cost</span><strong>${lastBatch.averageStones} Stones</strong></div><div><span>P90 cost</span><strong>${lastBatch.p90Stones} Stones</strong></div></div>`;
   $('#apply-seed-btn').addEventListener('click', () => {
     const next = createPracticeState({ seed: $('#practice-seed').value.trim() || 'practice-1', mode: $('#practice-model').value });
@@ -238,10 +249,30 @@ function renderBudget() {
 }
 
 function renderReferences() {
-  $('#attribute-guide').innerHTML = `<p class="help">Dataset ${WEAPON_DATA_VERSION}. Names come from accepted project data; missing weapon-specific mappings are not invented.</p><div class="attribute-columns">${['blue','purple','gold'].map(quality => `<div><strong>${qualityLabel(quality)}</strong><p>${APPEARANCES[1][quality].map(escapeHtml).join(' · ')}</p></div>`).join('')}</div>`;
-  $('#assumptions').innerHTML = `<ul class="rules"><li><span class="official">Official:</span> 5 nodes; Blue 82%, Purple 15%, Gold 3%; Gold hard pity 90.</li><li><span class="community">Community/Unofficial:</span> 3% / 4% / 5% soft-rate tiers and 2% / 3.5% / 5% early unlock probabilities. Used only in Practice.</li><li><span class="observed">USER-OBSERVED:</span> Live Gold intervals, averages, and medians.</li><li>Live mode never infers server pity or generates outcomes.</li></ul>`;
+  const weapon = current().target.weapon || '';
+  const profile = WEAPON_PROFILES[weapon];
+  const colorGuide = ['blue','purple','gold'].map(quality => {
+    const values = appearancesFor(1, quality, weapon);
+    return `<div><strong>${qualityLabel(quality)} Color</strong><p>${values.map(escapeHtml).join(' · ')}</p></div>`;
+  }).join('');
+  const structuralGuide = profile
+    ? ['blue','purple','gold'].map(quality => `<div><strong>${qualityLabel(quality)} structural sets</strong><p>${setsForWeapon(weapon, quality).map(escapeHtml).join(' · ')}</p></div>`).join('')
+    : '<div><strong>Select a weapon</strong><p>Weapon-specific structural set names will appear here.</p></div>';
+  $('#attribute-guide').innerHTML = `<p class="help">Dataset ${WEAPON_DATA_VERSION}, transcribed from the Shadovex Reforge Tracker (updated 2026-08-02). ${weapon ? `Showing ${escapeHtml(weapon)} · ${escapeHtml(profile?.type || '')}.` : 'Select a weapon under Desired appearance for exact set names.'}</p><div class="attribute-columns">${colorGuide}${structuralGuide}</div><p class="help"><strong>Color variance:</strong> Shadovex notes that non-set colors can roll different metallic/accent tones from a curated pool, so a label such as Pearl does not uniquely determine the final look. The simulator does not invent probabilities for those sub-variants.</p>`;
+  $('#assumptions').innerHTML = `
+    <ul class="rules">
+      <li><span class="official">OFFICIAL:</span> five lattices (1 Color, 3 Structure, 1 Bright Light); Blue 82%, Purple 15%, Gold 3%; Gold hard pity 90.</li>
+      <li><span class="official">OFFICIAL PREVIEW EVIDENCE:</span> NetEase weapon previews show set-specific Bright Light effects. <span class="community">Community rule:</span> players consistently report that Bright Light changes from Sunlight only when Slots 1–4 form the same Purple or Gold set. The Lab models that rule for verified weapon sets.</li>
+      <li><strong>GUIDE / STRONG COMMUNITY CONSENSUS:</strong> about 120 Taiyi Stones to fully unlock the five notches (~30 per next notch); opening nodes without locks first is the cost-efficient baseline strategy.</li>
+      <li><strong>IN-GAME PLAN SYSTEM:</strong> guides document five auto-saved Optimal Plans ranked by Elegance Points plus one manual save. Lab Snapshots are separate convenience checkpoints and do not claim to reproduce that score.</li>
+      <li><span class="community">COMMUNITY-REPORTED:</span> finalizing/applying a reforge clears the session's saved plans; restoring a plan does not roll back unlock-meter progress.</li>
+      <li><span class="community">LEGACY MODEL ONLY:</span> exact 3%→4%→5% soft-rate tiers and 2% / 3.5% / 5% early-unlock chances come from the WWMReforge community calculator, not NetEase's official probability disclosure.</li>
+      <li><span class="observed">SHADOVEX / USER-OBSERVED:</span> locked parts do not increment their visible pity counters; observed Gold intervals are useful for tracking but are not an official soft-pity guarantee.</li>
+      <li><strong>UNKNOWN / NOT SIMULATED:</strong> reports conflict on whether nodes absent from an older saved plan return as default parts or reroll randomly after later nodes have been unlocked. The Lab does not hard-code either claim.</li>
+      <li>Real Tracker never infers hidden server pity or generates outcomes. Simulator generates a model only.</li>
+    </ul>
+    <p class="help source-links"><a href="https://www.yysls.cn/news/update/20250106/40412_1204508.html" target="_blank" rel="noopener noreferrer">NetEase probability disclosure</a> · <a href="https://game8.co/games/Where-Winds-Meet/archives/580464" target="_blank" rel="noopener noreferrer">Game8 Taiyi guide</a> · <a href="https://www.reddit.com/r/WhereWindsMeet/comments/1pnrxut/weapon_reforging_importance_of_nodes_and_the/" target="_blank" rel="noopener noreferrer">Node / Gallery guide</a> · <a href="https://www.reddit.com/r/wherewindsmeet_/comments/1sh616o/expansive_reforging_guide/" target="_blank" rel="noopener noreferrer">Community mechanics summary</a></p>`;
 }
-
 function render() {
   document.querySelectorAll('[data-mode]').forEach(button => button.classList.toggle('active', button.dataset.mode === mode));
   renderSlots(); renderAction(); renderMetrics(); renderTargets(); renderPlans();
@@ -251,12 +282,12 @@ function render() {
 
 function showLiveResult() {
   const state = liveState;
-  $('#result-fields').innerHTML = state.slots.filter(slot => slot.active && slot.id < 5).map(slot => `<fieldset class="edit-card" data-result-slot="${slot.id}"><legend>Slot ${slot.id}</legend><label class="checkline"><input type="checkbox" name="result-gold-${slot.id}" data-gold="${slot.id}"> Gold observed</label><div class="form-grid"><label class="field"><span>Actual quality</span><select name="result-quality-${slot.id}" data-result-quality="${slot.id}">${['blue','purple','gold'].map(value => option(value, qualityLabel(value), slot.quality)).join('')}</select></label><label class="field"><span>Actual appearance</span><select name="result-attribute-${slot.id}" data-result-attribute="${slot.id}">${appearancesFor(slot.id, slot.quality).map(value => option(value, value, slot.attribute)).join('')}</select></label></div></fieldset>`).join('');
+  $('#result-fields').innerHTML = state.slots.filter(slot => slot.active && slot.id < 5).map(slot => `<fieldset class="edit-card" data-result-slot="${slot.id}"><legend>Slot ${slot.id}</legend><label class="checkline"><input type="checkbox" name="result-gold-${slot.id}" data-gold="${slot.id}"> Gold observed</label><div class="form-grid"><label class="field"><span>Actual quality</span><select name="result-quality-${slot.id}" data-result-quality="${slot.id}">${['blue','purple','gold'].map(value => option(value, qualityLabel(value), slot.quality)).join('')}</select></label><label class="field"><span>Actual appearance</span><select name="result-attribute-${slot.id}" data-result-attribute="${slot.id}">${appearancesFor(slot.id, slot.quality, state.target.weapon).map(value => option(value, value, slot.attribute)).join('')}</select></label></div></fieldset>`).join('');
   $('#early-unlock-row').hidden = !nextInactiveSlot(state) || !!state.pendingResult?.activatedSlot;
   $('#early-unlock').checked = false;
   document.querySelectorAll('[data-result-quality]').forEach(select => select.addEventListener('change', () => {
     const attr = document.querySelector(`[data-result-attribute="${select.dataset.resultQuality}"]`);
-    attr.innerHTML = appearancesFor(Number(select.dataset.resultQuality), select.value).map(value => option(value, value, '')).join('');
+    attr.innerHTML = appearancesFor(Number(select.dataset.resultQuality), select.value, state.target.weapon).map(value => option(value, value, '')).join('');
   }));
   document.querySelectorAll('[data-gold]').forEach(input => input.addEventListener('change', () => {
     if (!input.checked) return;
@@ -268,7 +299,17 @@ function showLiveResult() {
 
 function showEdit() {
   const state = current();
-  $('#edit-fields').innerHTML = state.slots.map(slot => `<fieldset class="edit-card" data-edit-slot="${slot.id}"><legend>Slot ${slot.id}</legend><label class="checkline"><input type="checkbox" name="edit-active-${slot.id}" data-edit="active" ${slot.active ? 'checked' : ''} ${slot.id === 1 ? 'disabled' : ''}> Active</label>${slot.id === 5 ? '<p class="help">Fixed Gold · Sunlight when active.</p>' : `<div class="form-grid"><label class="field"><span>Quality</span><select name="edit-quality-${slot.id}" data-edit="quality">${['blue','purple','gold'].map(value => option(value,qualityLabel(value),slot.quality)).join('')}</select></label><label class="field"><span>Appearance</span><select name="edit-attribute-${slot.id}" data-edit="attribute">${appearanceOptions(slot.id,slot.attribute)}</select></label><label class="field"><span>Pity</span><input name="edit-pity-${slot.id}" data-edit="pity" type="number" min="0" max="90" value="${slot.pity}"></label><label class="field"><span>Unlock progress %</span><input name="edit-progress-${slot.id}" data-edit="progress" type="number" min="0" max="100" step="0.01" value="${slot.progress}"></label></div><label class="checkline"><input name="edit-locked-${slot.id}" data-edit="locked" type="checkbox" ${slot.locked ? 'checked' : ''}> Locked</label>`}</fieldset>`).join('');
+  $('#edit-fields').innerHTML = state.slots.map(slot => `<fieldset class="edit-card" data-edit-slot="${slot.id}"><legend>Slot ${slot.id}</legend><label class="checkline"><input type="checkbox" name="edit-active-${slot.id}" data-edit="active" ${slot.active ? 'checked' : ''} ${slot.id === 1 ? 'disabled' : ''}> Active</label>${slot.id === 5 ? `<p class="help">Fixed Gold · ${escapeHtml(slot.attribute)} when active. Full matching verified sets can change the Bright Light label.</p>` : `<div class="form-grid"><label class="field"><span>Quality</span><select name="edit-quality-${slot.id}" data-edit="quality">${['blue','purple','gold'].map(value => option(value,qualityLabel(value),slot.quality)).join('')}</select></label><label class="field"><span>Appearance</span><select name="edit-attribute-${slot.id}" data-edit="attribute">${appearancesFor(slot.id, slot.quality, state.target.weapon).map(value => option(value, value, slot.attribute)).join('')}</select></label><label class="field"><span>Pity</span><input name="edit-pity-${slot.id}" data-edit="pity" type="number" min="0" max="90" value="${slot.pity}"></label><label class="field"><span>Unlock progress %</span><input name="edit-progress-${slot.id}" data-edit="progress" type="number" min="0" max="100" step="0.01" value="${slot.progress}"></label></div><label class="checkline"><input name="edit-locked-${slot.id}" data-edit="locked" type="checkbox" ${slot.locked ? 'checked' : ''}> Locked</label>`}</fieldset>`).join('');
+  document.querySelectorAll('[data-edit-slot]').forEach(card => {
+    const quality = card.querySelector('[data-edit="quality"]');
+    const attribute = card.querySelector('[data-edit="attribute"]');
+    if (!quality || !attribute) return;
+    quality.addEventListener('change', () => {
+      const slotId = Number(card.dataset.editSlot);
+      const values = appearancesFor(slotId, quality.value, state.target.weapon);
+      attribute.innerHTML = values.map(value => option(value, value, '')).join('');
+    });
+  });
   $('#edit-dialog').showModal();
 }
 

@@ -2,7 +2,7 @@ import {
   HARD_PITY, SCHEMA_VERSION, UNLOCK_ATTEMPTS, activeLockCount, clampInt,
   clone, costForLocks, createSlots, nextInactiveSlot, normalizeSlots, safeText
 } from './common.js';
-import { appearancesFor } from '../data/weapons.v1.js';
+import { appearancesFor, brightLightAppearance, setsForWeapon } from '../data/weapons.v1.js';
 import {
   MAX_PLANS, applyPlan, deletePlan, normalizePlans, renamePlan, savePlan
 } from './plans.js';
@@ -58,12 +58,12 @@ export function activationChance(attempt) {
   return value <= 10 ? 0.02 : value <= 20 ? 0.035 : 0.05;
 }
 
-export function attributeList(slotId, quality) {
-  return appearancesFor(Number(slotId), quality);
+export function attributeList(slotId, quality, weapon = '') {
+  return appearancesFor(Number(slotId), quality, weapon);
 }
 
-function pickAttribute(slotId, quality, randomValue) {
-  const options = attributeList(slotId, quality);
+function pickAttribute(state, slotId, quality, randomValue) {
+  const options = attributeList(slotId, quality, state.target?.weapon || '');
   return options[Math.min(options.length - 1, Math.floor(randomValue * options.length))];
 }
 
@@ -131,6 +131,10 @@ export function normalizePracticeState(input) {
     ? source.pendingGold : null;
   state.undoStack = Array.isArray(source.undoStack)
     ? source.undoStack.filter(value => typeof value === 'string').slice(-UNDO_LIMIT) : [];
+  if (state.slots[4].active) {
+    state.slots[4].quality = 'gold';
+    state.slots[4].attribute = brightLightAppearance(state.slots, state.target.weapon);
+  }
   return state;
 }
 
@@ -153,7 +157,7 @@ function snapshotForUndo(state) {
 function rollSlot(state, slot) {
   const pityAfterRoll = Math.min(HARD_PITY, slot.pity + 1);
   const quality = rollQuality(state.mode, pityAfterRoll, takeRandom(state));
-  const attribute = pickAttribute(slot.id, quality, takeRandom(state));
+  const attribute = pickAttribute(state, slot.id, quality, takeRandom(state));
   slot.quality = quality;
   slot.attribute = attribute;
   slot.pity = quality === 'gold' ? 0 : pityAfterRoll;
@@ -177,11 +181,11 @@ function advanceUnlock(state) {
   slot.locked = slot.id === 5;
   if (slot.id === 5) {
     slot.quality = 'gold';
-    slot.attribute = 'Sunlight';
-    return { slot: 5, activated: true, direct, progress: 100, attempts: slot.activationAttempts, quality: 'gold', attribute: 'Sunlight' };
+    slot.attribute = brightLightAppearance(state.slots, state.target?.weapon || '');
+    return { slot: 5, activated: true, direct, progress: 100, attempts: slot.activationAttempts, quality: 'gold', attribute: slot.attribute };
   }
   const quality = rollQuality(state.mode, 0, takeRandom(state));
-  const attribute = pickAttribute(slot.id, quality, takeRandom(state));
+  const attribute = pickAttribute(state, slot.id, quality, takeRandom(state));
   slot.quality = quality;
   slot.attribute = attribute;
   return { slot: slot.id, activated: true, direct, progress: 100, attempts: slot.activationAttempts, quality, attribute };
@@ -200,6 +204,7 @@ export function reforge(inputState) {
     if (slot.active && !slot.locked) changes.push(rollSlot(state, slot));
   });
   const activation = advanceUnlock(state);
+  if (state.slots[4].active) state.slots[4].attribute = brightLightAppearance(state.slots, state.target?.weapon || '');
   const goldSlots = changes.filter(change => change.quality === 'gold').map(change => change.slot);
   const event = { roll: state.reforgeCount, cost, lockedCount, changes, activation, goldSlots, hasGold: goldSlots.length > 0, totalStones: state.totalStones };
   state.lastRoll = event;
@@ -213,12 +218,22 @@ export function countGold(inputState) {
   return normalizePracticeState(inputState).slots.slice(0, 4).filter(slot => slot.active && slot.quality === 'gold').length;
 }
 
-export function sameGoldSetCount(inputState) {
-  const counts = { 'Set 1': 0, 'Set 2': 0 };
-  normalizePracticeState(inputState).slots.slice(0, 4).forEach(slot => {
-    if (slot.active && slot.quality === 'gold' && Object.hasOwn(counts, slot.attribute)) counts[slot.attribute] += 1;
+function matchingGoldSetGroups(state) {
+  const allowed = new Set(setsForWeapon(state.target?.weapon || '', 'gold'));
+  const groups = new Map();
+  state.slots.slice(0, 4).forEach(slot => {
+    if (!slot.active || slot.quality !== 'gold' || !allowed.has(slot.attribute)) return;
+    const group = groups.get(slot.attribute) || [];
+    group.push(slot);
+    groups.set(slot.attribute, group);
   });
-  return Math.max(counts['Set 1'], counts['Set 2']);
+  return groups;
+}
+
+export function sameGoldSetCount(inputState) {
+  const state = normalizePracticeState(inputState);
+  const groups = matchingGoldSetGroups(state);
+  return groups.size ? Math.max(...[...groups.values()].map(group => group.length)) : 0;
 }
 
 export function goalReached(inputState, goal) {
@@ -235,9 +250,7 @@ export function autoLockGold(inputState, goal) {
   const gold = state.slots.slice(0, 4).filter(slot => slot.quality === 'gold');
   let candidates = gold;
   if (goal === 'set-2' || goal === 'set-3') {
-    const set1 = gold.filter(slot => slot.attribute === 'Set 1');
-    const set2 = gold.filter(slot => slot.attribute === 'Set 2');
-    candidates = set2.length > set1.length ? set2 : set1;
+    candidates = [...matchingGoldSetGroups(state).values()].sort((a, b) => b.length - a.length)[0] || [];
   }
   candidates.slice(0, 3).forEach(slot => { slot.locked = true; });
   return state;
@@ -286,10 +299,8 @@ function goalReachedFast(state, goal) {
   const gold = state.slots.slice(0, 4).filter(slot => slot.active && slot.quality === 'gold');
   if (goal === 'set-2' || goal === 'set-3') {
     const needed = goal === 'set-2' ? 2 : 3;
-    return Math.max(
-      gold.filter(slot => slot.attribute === 'Set 1').length,
-      gold.filter(slot => slot.attribute === 'Set 2').length
-    ) >= needed;
+    const groups = matchingGoldSetGroups(state);
+    return groups.size > 0 && Math.max(...[...groups.values()].map(group => group.length)) >= needed;
   }
   return gold.length >= Math.min(4, Math.max(1, Number(String(goal || 'gold-2').replace('gold-', '')) || 2));
 }
@@ -299,9 +310,7 @@ function autoLockGoldFast(state, goal) {
   if (!state.slots.every(slot => slot.active)) return;
   let candidates = state.slots.slice(0, 4).filter(slot => slot.quality === 'gold');
   if (goal === 'set-2' || goal === 'set-3') {
-    const set1 = candidates.filter(slot => slot.attribute === 'Set 1');
-    const set2 = candidates.filter(slot => slot.attribute === 'Set 2');
-    candidates = set2.length > set1.length ? set2 : set1;
+    candidates = [...matchingGoldSetGroups(state).values()].sort((a, b) => b.length - a.length)[0] || [];
   }
   candidates.slice(0, 3).forEach(slot => { slot.locked = true; });
 }
@@ -313,6 +322,7 @@ function reforgeBatchState(state) {
     if (slot.active && !slot.locked) rollSlot(state, slot);
   });
   advanceUnlock(state);
+  if (state.slots[4].active) state.slots[4].attribute = brightLightAppearance(state.slots, state.target?.weapon || '');
 }
 
 export function runBatch(inputState, options = {}) {
