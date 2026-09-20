@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <meta name="theme-color" content="#090e1a" />
-  <meta name="description" content="Practice Where Winds Meet Silent Voice reforging with seeded simulation, pity tracking, locks and batch statistics." />
+  <meta name="description" content="Practice Where Winds Meet Silent Voice reforging with seeded simulation, sequential unlocks, pity tracking, saved plans, locks and batch statistics." />
   <title>Wonton Simulator · Silent Voice Practice</title>
   <link rel="stylesheet" href="./styles.css" />
 </head>
@@ -70,6 +70,18 @@
         </article>
       </section>
 
+      <section class="panel plans-panel">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">SAVED PLANS</p>
+            <h2>Plan snapshots <span id="plan-count" class="plan-count">0/5</span></h2>
+            <p>Save useful appearance combinations. Applying a plan changes appearance only; pity, unlock progress, locks, seed and stone spend stay untouched.</p>
+          </div>
+          <div><button class="btn secondary" id="save-plan-btn" type="button">Save current plan</button></div>
+        </div>
+        <div class="plans" id="plans"><div class="empty-state">No saved plans yet.</div></div>
+      </section>
+
       <section class="grid">
         <section class="panel">
           <div class="section-head">
@@ -114,7 +126,7 @@
 
     <footer>
       <p>Independent community practice tool. Not affiliated with Everstone Studio or NetEase Games.</p>
-      <p>Simulator storage key: <code>wontonSimulatorState.v1</code> · Real tracker state is kept separate.</p>
+      <p>Simulator storage key: <code>wontonSimulatorState.v2</code> · Real tracker state is kept separate.</p>
     </footer>
   </div>
 
