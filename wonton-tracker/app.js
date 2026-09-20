@@ -116,22 +116,32 @@ function renderMetrics() {
 function renderTargets() {
   const state = current();
   const target = state.target;
+  const weapon = target.weapon || '';
+  const colorValues = weapon
+    ? [...new Set(['blue', 'purple', 'gold'].flatMap(quality => appearancesFor(1, quality, weapon)))]
+    : [...new Set(Object.values(APPEARANCES[1]).flat())];
+  const partValues = weapon
+    ? [...new Set(['blue', 'purple', 'gold'].flatMap(quality => setsForWeapon(weapon, quality)))]
+    : ['Set 1', 'Set 2'];
   const fields = [
     ['weapon', 'Weapon', WEAPONS],
-    ['color', 'Color target', [...new Set(Object.values(APPEARANCES[1]).flat())]],
-    ['part1', 'Part 1 target', ['Set 1', 'Set 2']],
-    ['part2', 'Part 2 target', ['Set 1', 'Set 2']],
-    ['part3', 'Part 3 target', ['Set 1', 'Set 2']]
+    ['color', 'Color target', colorValues],
+    ['part1', 'Part 1 target', partValues],
+    ['part2', 'Part 2 target', partValues],
+    ['part3', 'Part 3 target', partValues]
   ];
   $('#target-fields').innerHTML = fields.map(([key, label, values]) => `<label class="field"><span>${label}</span><select name="target-${key}" data-target="${key}">${option('', 'Any / not set', target[key])}${values.map(value => option(value, value, target[key])).join('')}</select></label>`).join('');
   $('#target-summary').textContent = targetMatch(state.slots, target).label;
   document.querySelectorAll('[data-target]').forEach(select => select.addEventListener('change', () => {
     const next = clone(current());
-    next.target[select.dataset.target] = select.value;
+    if (select.dataset.target === 'weapon' && next.target.weapon !== select.value) {
+      next.target = { weapon: select.value, color: '', part1: '', part2: '', part3: '' };
+    } else {
+      next.target[select.dataset.target] = select.value;
+    }
     setCurrent(next); render();
   }));
 }
-
 function renderPlans() {
   const state = current();
   $('#plan-count').textContent = `${state.plans.length}/5`;
