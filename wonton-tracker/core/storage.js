@@ -3,6 +3,7 @@ import { createLiveState, LIVE_STORAGE_KEY, normalizeLiveState } from './live.js
 import { PRACTICE_STORAGE_KEY, createPracticeState, normalizePracticeState } from './practice.js';
 
 export const LEGACY_LIVE_KEY = 'wonton-tracker-state-v1';
+export const PREVIOUS_PRACTICE_KEY = 'wontonReforgeLab.practice.v2';
 export const LEGACY_PRACTICE_KEY = 'wontonSimulatorState.v2';
 export const LEGACY_BASELINE_KEY = 'wontonSimulatorBaseline.v2';
 export const BACKUP_SCHEMA = 'wonton-reforge-lab';
@@ -53,9 +54,19 @@ export function migrateLegacyLive(value) {
 
 export function migrateLegacyPractice(value, baselineValue) {
   if (!value || !Array.isArray(value.slots)) throw new Error('Legacy Practice state is malformed.');
-  const state = normalizePracticeState(value);
-  if (Array.isArray(baselineValue) && baselineValue.length === 5) state.baselineSlots = clone(baselineValue);
-  return normalizePracticeState(state);
+  const old = normalizePracticeState(value);
+  const fresh = createPracticeState({ mode: old.mode, seed: old.seed });
+  fresh.plans = clone(old.plans);
+  fresh.target = clone(old.target);
+  fresh.budget = clone(old.budget);
+  fresh.goals = clone(old.goals);
+  fresh.batchHistory = clone(old.batchHistory);
+  return normalizePracticeState(fresh);
+}
+
+export function repairPreviousPractice(value) {
+  if (!value || !Array.isArray(value.slots)) throw new Error('Previous Practice state is malformed.');
+  return migrateLegacyPractice(value, null);
 }
 
 function loadCurrent(storage, key, normalize) {
@@ -83,14 +94,23 @@ export function migrateStorage(storage) {
 
   if (practice) report.practice = 'current';
   else {
-    const legacy = parseObject(storage.getItem(LEGACY_PRACTICE_KEY));
-    const baseline = parseObject(storage.getItem(LEGACY_BASELINE_KEY));
-    if (legacy) {
+    const previous = parseObject(storage.getItem(PREVIOUS_PRACTICE_KEY));
+    if (previous) {
       try {
-        practice = migrateLegacyPractice(legacy, baseline);
+        practice = repairPreviousPractice(previous);
         storage.setItem(PRACTICE_STORAGE_KEY, JSON.stringify(practice));
-        report.practice = 'migrated';
+        report.practice = 'repaired';
       } catch (error) { report.errors.push(`Practice: ${error.message}`); }
+    } else {
+      const legacy = parseObject(storage.getItem(LEGACY_PRACTICE_KEY));
+      const baseline = parseObject(storage.getItem(LEGACY_BASELINE_KEY));
+      if (legacy) {
+        try {
+          practice = migrateLegacyPractice(legacy, baseline);
+          storage.setItem(PRACTICE_STORAGE_KEY, JSON.stringify(practice));
+          report.practice = 'migrated';
+        } catch (error) { report.errors.push(`Practice: ${error.message}`); }
+      }
     }
   }
 
