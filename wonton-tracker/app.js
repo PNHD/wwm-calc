@@ -13,7 +13,7 @@ import {
 import { applyPlan, deletePlan, renamePlan, savePlan, targetMatch } from './core/plans.js';
 import { budgetSummary, PACKAGE_REFERENCE, REGIONS } from './core/pricing.js';
 import { exportBackup, exportText, importBackup, migrateStorage, persistState } from './core/storage.js';
-import { APPEARANCES, WEAPONS, WEAPON_DATA_VERSION, WEAPON_PROFILES, appearancesFor, setsForWeapon } from './data/weapons.v1.js';
+import { APPEARANCES, REFORGE_SLOT_NAMES, WEAPONS, WEAPON_DATA_VERSION, WEAPON_PROFILES, appearancesFor, setsForWeapon } from './data/weapons.v1.js';
 
 const $ = selector => document.querySelector(selector);
 const migration = migrateStorage(localStorage);
@@ -47,6 +47,10 @@ function appearanceOptions(slotId, selected, weapon = '') {
 }
 
 function qualityLabel(value) { return value ? value[0].toUpperCase() + value.slice(1) : ''; }
+function latticeLabel(id, compact = false) {
+  const name = REFORGE_SLOT_NAMES[Number(id)] || `Slot ${id}`;
+  return compact ? `S${id} · ${name}` : name;
+}
 
 function slotCard(slot) {
   const next = nextInactiveSlot(current());
@@ -55,11 +59,11 @@ function slotCard(slot) {
   const percent = slot.active ? (fixed ? 100 : slot.pity / HARD_PITY * 100) : (unlocking ? slot.progress : 0);
   const status = slot.active ? 'Active' : unlocking ? 'Unlocking' : 'Waiting';
   const quality = slot.active ? qualityLabel(slot.quality) : unlocking ? `${Math.round(slot.progress)}% progress` : 'Inactive';
-  const attribute = slot.active ? escapeHtml(slot.attribute) : unlocking ? `Attempt ${slot.activationAttempts}/30` : `Unlock Slot ${slot.id - 1} first`;
+  const attribute = slot.active ? escapeHtml(slot.attribute) : unlocking ? `Attempt ${slot.activationAttempts}/30` : `Unlock ${latticeLabel(slot.id - 1)} first`;
   const meterLabel = slot.active ? (fixed ? 'Fixed Gold' : 'Visible pity') : 'Unlock progress';
   const meterValue = slot.active ? (fixed ? '—' : `${slot.pity}/90`) : (unlocking ? `${Math.round(slot.progress)}%` : 'Not started');
   return `<article class="slot ${slot.active ? slot.quality : 'inactive'}" data-slot="${slot.id}">
-    <div class="slot-top"><span class="slot-number">Slot ${slot.id}</span><span class="status-pill">${status}</span></div>
+    <div class="slot-top"><span class="slot-number">${escapeHtml(latticeLabel(slot.id, true))}</span><span class="status-pill">${status}</span></div>
     <div class="quality">${quality}</div><div class="attribute">${attribute}</div>
     <div class="pity-head"><span>${meterLabel}</span><strong>${meterValue}</strong></div><div class="meter"><i style="width:${percent}%"></i></div>
     <div class="slot-meta">${fixed ? `Gold · ${escapeHtml(slot.attribute)} when active` : slot.active ? `${Math.round(slot.pity / HARD_PITY * 100)}% to hard pity` : 'No pity while inactive'}</div>
@@ -104,7 +108,7 @@ function renderLiveQuickActions() {
     .filter(slot => slot.active && !slot.locked)
     .map(slot => {
       const marked = (pending.goldSlots || []).includes(slot.id);
-      return `<button class="btn ${marked ? 'gold-hit marked' : 'ghost'} small" type="button" data-live-gold="${slot.id}" ${marked ? 'disabled' : ''}>${marked ? '✓ ' : ''}Gold S${slot.id} · ${slot.pity}/90</button>`;
+      return `<button class="btn ${marked ? 'gold-hit marked' : 'ghost'} small" type="button" data-live-gold="${slot.id}" ${marked ? 'disabled' : ''}>${marked ? '✓ ' : ''}Gold ${escapeHtml(latticeLabel(slot.id, true))} · ${slot.pity}/90</button>`;
     }).join('');
   const canEarlyUnlock = !!nextInactiveSlot(state) && !pending.activatedSlot;
   container.innerHTML = `
@@ -118,12 +122,12 @@ function renderLiveQuickActions() {
   container.querySelectorAll('[data-live-gold]').forEach(button => button.addEventListener('click', () => {
     const result = recordObservedGold(liveState, [Number(button.dataset.liveGold)]);
     setCurrent(result.state); render();
-    if (result.recorded) announce(`Slot ${button.dataset.liveGold} Gold recorded; that pity counter reset.`);
+    if (result.recorded) announce(`${latticeLabel(button.dataset.liveGold)} Gold recorded; that pity counter reset.`);
   }));
   $('#quick-early-unlock')?.addEventListener('click', () => {
     const result = recordEarlyUnlock(liveState);
     setCurrent(result.state); render();
-    if (result.recorded) announce(`Slot ${result.activatedSlot} marked as unlocked early.`);
+    if (result.recorded) announce(`${latticeLabel(result.activatedSlot)} marked as unlocked early.`);
   });
   $('#quick-details')?.addEventListener('click', showLiveResult);
 }
@@ -136,7 +140,7 @@ function renderAction() {
   $('#action-eyebrow').textContent = mode === 'live' ? 'REAL SESSION LEDGER' : 'RNG SIMULATOR';
   $('#action-title').textContent = mode === 'live' ? 'Log real reforge' : 'Simulate reforge';
   $('#action-note').textContent = mode === 'live'
-    ? `One click = one real in-game reforge. Active unlocked Slots 1–4 each gain +1 to their own counter; locked/inactive slots do not. ${next ? `Slot ${next.id} unlock progress also advances.` : 'All slots are open.'}`
+    ? `One click = one real in-game reforge. Active unlocked Color/Structure lattices each gain +1 to their own counter; locked/inactive lattices do not. ${next ? `${latticeLabel(next.id)} unlock progress also advances.` : 'All lattices are open.'}`
     : `${state.mode === 'official' ? 'Official 82% / 15% / 3%' : 'Legacy community quality model'} · seed ${state.seed}`;
   $('#primary-btn').textContent = mode === 'live'
     ? `Log reforge · ${cost} Stone${cost === 1 ? '' : 's'}`
@@ -171,9 +175,9 @@ function renderTargets() {
   const fields = [
     ['weapon', 'Weapon', WEAPONS],
     ['color', 'Color target', colorValues],
-    ['part1', 'Part 1 target', partValues],
-    ['part2', 'Part 2 target', partValues],
-    ['part3', 'Part 3 target', partValues]
+    ['part1', 'Structure I target', partValues],
+    ['part2', 'Structure II target', partValues],
+    ['part3', 'Structure III target', partValues]
   ];
   $('#target-fields').innerHTML = fields.map(([key, label, values]) => `<label class="field"><span>${label}</span><select name="target-${key}" data-target="${key}">${option('', 'Any / not set', target[key])}${values.map(value => option(value, value, target[key])).join('')}</select></label>`).join('');
   $('#target-summary').textContent = targetMatch(state.slots, target).label;
@@ -195,7 +199,7 @@ function renderPlans() {
   $('#plans').innerHTML = state.plans.map(plan => {
     const match = targetMatch(plan.slots, state.target);
     return `<article class="plan"><div class="plan-head"><div><strong>${escapeHtml(plan.name)}</strong><div class="help">${escapeHtml(match.label)}</div></div></div>
-      <div class="plan-slots">${plan.slots.map(slot => `<div class="mini-slot ${slot.active ? slot.quality : 'inactive'}"><strong>S${slot.id} · ${slot.active ? qualityLabel(slot.quality) : 'Inactive'}</strong><span>${slot.active ? escapeHtml(slot.attribute) : '—'}</span></div>`).join('')}</div>
+      <div class="plan-slots">${plan.slots.map(slot => `<div class="mini-slot ${slot.active ? slot.quality : 'inactive'}"><strong>${escapeHtml(latticeLabel(slot.id, true))} · ${slot.active ? qualityLabel(slot.quality) : 'Inactive'}</strong><span>${slot.active ? escapeHtml(slot.attribute) : '—'}</span></div>`).join('')}</div>
       <div class="plan-actions"><button class="btn ghost small" data-plan-action="rename" data-plan="${plan.id}">Rename</button><button class="btn ghost small" data-plan-action="restore" data-plan="${plan.id}">Restore Snapshot</button><button class="btn danger small" data-plan-action="delete" data-plan="${plan.id}">Delete</button></div></article>`;
   }).join('');
   document.querySelectorAll('[data-plan-action]').forEach(button => button.addEventListener('click', () => handlePlanAction(button.dataset.planAction, Number(button.dataset.plan))));
@@ -228,7 +232,7 @@ function handlePlanAction(action, id) {
 function renderLiveTools() {
   const state = liveState;
   const cost = costForLocks(activeLockCount(state));
-  $('#mode-tools').innerHTML = `<div class="section-head"><div><p class="eyebrow observed">PER-SLOT PITY LEDGER · LIVE ONLY</p><h2>Each Slot 1–4 has its own counter</h2></div><span class="status-pill">Official hard pity: 90</span></div>
+  $('#mode-tools').innerHTML = `<div class="section-head"><div><p class="eyebrow observed">PER-SLOT PITY LEDGER · LIVE ONLY</p><h2>Color + each Structure lattice has its own counter</h2></div><span class="status-pill">Official hard pity: 90</span></div>
     <div class="analytics-grid">${state.slots.slice(0, 4).map(slot => {
       const stats = observedStats(state.observedGoldIntervals[slot.id]);
       const remaining = 90 - slot.pity;
@@ -240,7 +244,7 @@ function renderLiveTools() {
       const costLine = !slot.active || slot.locked
         ? stateLine
         : `${remaining} to official hard pity · current roll costs ${cost} Stone${cost === 1 ? '' : 's'} · same-lock upper bound ${worstCaseStones} Stones / ${beadsForStones(worstCaseStones).toLocaleString()} beads`;
-      return `<article class="analytics-card"><span>Slot ${slot.id}</span><strong>${slot.active ? `${slot.pity}/90 · ${Math.round(slot.pity / 90 * 100)}%` : 'Not started'}</strong><small>${stats.count ? `Your Gold intervals: avg ${stats.average} · median ${stats.median} · n=${stats.count}` : stateLine}</small><p class="help">${costLine}</p></article>`;
+      return `<article class="analytics-card"><span>${escapeHtml(latticeLabel(slot.id, true))}</span><strong>${slot.active ? `${slot.pity}/90 · ${Math.round(slot.pity / 90 * 100)}%` : 'Not started'}</strong><small>${stats.count ? `Your Gold intervals: avg ${stats.average} · median ${stats.median} · n=${stats.count}` : stateLine}</small><p class="help">${costLine}</p></article>`;
     }).join('')}</div>
     <p class="help"><strong>What to count:</strong> every active + unlocked slot gains +1 on each real reforge; a locked or inactive slot gains nothing; when a slot hits Gold, reset only that slot to 0. A newly opened slot starts a fresh counter in this tracker.</p>
     <p class="help"><span class="community">Community reference only:</span> Shadovex recommends watching each slot separately and says its typical “softcap” is around 35–40; the shared sheet sample currently averages about 43.1. Bahamut players report many Gold hits around 35–65, while some players start locking around 25–30. None of these are an official guarantee; only 90 is published as hard pity.</p>`;
@@ -277,7 +281,7 @@ function renderHistory() {
   const state = current();
   if (!state.history.length) { $('#history').innerHTML = '<div class="empty">No activity yet.</div>'; return; }
   $('#history').innerHTML = state.history.slice(0, 80).map(event => {
-    const text = mode === 'live' ? event.text : `Roll #${event.roll}: ${event.changes?.length || 0} slot${event.changes?.length === 1 ? '' : 's'} changed${event.activation?.activated ? `; Slot ${event.activation.slot} unlocked` : ''}`;
+    const text = mode === 'live' ? event.text : `Roll #${event.roll}: ${event.changes?.length || 0} lattice${event.changes?.length === 1 ? '' : 's'} changed${event.activation?.activated ? `; ${latticeLabel(event.activation.slot)} unlocked` : ''}`;
     const gold = mode === 'live' ? event.type === 'gold' : event.hasGold;
     return `<div class="history-item ${gold ? 'gold' : ''}"><div class="history-head"><strong>${escapeHtml(text)}</strong><span>${event.cost || 0} Stone${event.cost === 1 ? '' : 's'}</span></div><div class="help">${escapeHtml(event.at || '')}</div></div>`;
   }).join('');
@@ -316,7 +320,7 @@ function renderReferences() {
   $('#assumptions').innerHTML = `
     <ul class="rules">
       <li><span class="official">OFFICIAL:</span> five lattices (1 Color, 3 Structure, 1 Bright Light); Blue 82%, Purple 15%, Gold 3%; Gold hard pity 90.</li>
-      <li><span class="official">OFFICIAL PREVIEW EVIDENCE:</span> NetEase weapon previews show set-specific Bright Light effects. <span class="community">Community rule:</span> players consistently report that Bright Light changes from Sunlight only when Slots 1–4 form the same Purple or Gold set. The Lab models that rule for verified weapon sets.</li>
+      <li><span class="official">OFFICIAL PREVIEW EVIDENCE:</span> NetEase weapon previews show set-specific Bright Light effects. <span class="community">Community rule:</span> players consistently report that Bright Light changes from Sunlight only when Color + Structure I–III form the same Purple or Gold set. The Lab models that rule for verified weapon sets.</li>
       <li><strong>GUIDE / STRONG COMMUNITY CONSENSUS:</strong> about 120 Taiyi Stones to fully unlock the five notches (~30 per next notch); opening nodes without locks first is the cost-efficient baseline strategy.</li>
       <li><strong>IN-GAME PLAN SYSTEM:</strong> guides document five auto-saved Optimal Plans ranked by Elegance Points plus one manual save. Lab Snapshots are separate convenience checkpoints and do not claim to reproduce that score.</li>
       <li><span class="community">COMMUNITY-REPORTED:</span> finalizing/applying a reforge clears the session's saved plans; restoring a plan does not roll back unlock-meter progress.</li>
@@ -343,7 +347,7 @@ function showLiveResult() {
   const markedGold = new Set(state.pendingResult.goldSlots || []);
   $('#result-fields').innerHTML = state.slots.filter(slot => slot.active && slot.id < 5).map(slot => {
     const marked = markedGold.has(slot.id);
-    return `<fieldset class="edit-card" data-result-slot="${slot.id}"><legend>Slot ${slot.id}</legend><label class="checkline"><input type="checkbox" name="result-gold-${slot.id}" data-gold="${slot.id}" ${marked ? 'checked disabled' : ''} ${slot.locked ? 'disabled' : ''}> ${marked ? 'Gold already recorded' : slot.locked ? 'Locked — no roll' : 'Gold observed on this roll'}</label><div class="form-grid"><label class="field"><span>Actual quality</span><select name="result-quality-${slot.id}" data-result-quality="${slot.id}">${['blue','purple','gold'].map(value => option(value, qualityLabel(value), slot.quality)).join('')}</select></label><label class="field"><span>Actual appearance</span><select name="result-attribute-${slot.id}" data-result-attribute="${slot.id}">${appearancesFor(slot.id, slot.quality, state.target.weapon).map(value => option(value, value, slot.attribute)).join('')}</select></label></div></fieldset>`;
+    return `<fieldset class="edit-card" data-result-slot="${slot.id}"><legend>${escapeHtml(latticeLabel(slot.id, true))}</legend><label class="checkline"><input type="checkbox" name="result-gold-${slot.id}" data-gold="${slot.id}" ${marked ? 'checked disabled' : ''} ${slot.locked ? 'disabled' : ''}> ${marked ? 'Gold already recorded' : slot.locked ? 'Locked — no roll' : 'Gold observed on this roll'}</label><div class="form-grid"><label class="field"><span>Actual quality</span><select name="result-quality-${slot.id}" data-result-quality="${slot.id}">${['blue','purple','gold'].map(value => option(value, qualityLabel(value), slot.quality)).join('')}</select></label><label class="field"><span>Actual appearance</span><select name="result-attribute-${slot.id}" data-result-attribute="${slot.id}">${appearancesFor(slot.id, slot.quality, state.target.weapon).map(value => option(value, value, slot.attribute)).join('')}</select></label></div></fieldset>`;
   }).join('');
   $('#early-unlock-row').hidden = !nextInactiveSlot(state) || !!state.pendingResult?.activatedSlot;
   $('#early-unlock').checked = false;
@@ -361,7 +365,7 @@ function showLiveResult() {
 
 function showEdit() {
   const state = current();
-  $('#edit-fields').innerHTML = state.slots.map(slot => `<fieldset class="edit-card" data-edit-slot="${slot.id}"><legend>Slot ${slot.id}</legend><label class="checkline"><input type="checkbox" name="edit-active-${slot.id}" data-edit="active" ${slot.active ? 'checked' : ''} ${slot.id === 1 ? 'disabled' : ''}> Active</label>${slot.id === 5 ? `<p class="help">Fixed Gold · ${escapeHtml(slot.attribute)} when active. Full matching verified sets can change the Bright Light label.</p>` : `<div class="form-grid"><label class="field"><span>Quality</span><select name="edit-quality-${slot.id}" data-edit="quality">${['blue','purple','gold'].map(value => option(value,qualityLabel(value),slot.quality)).join('')}</select></label><label class="field"><span>Appearance</span><select name="edit-attribute-${slot.id}" data-edit="attribute">${appearancesFor(slot.id, slot.quality, state.target.weapon).map(value => option(value, value, slot.attribute)).join('')}</select></label><label class="field"><span>Pity</span><input name="edit-pity-${slot.id}" data-edit="pity" type="number" min="0" max="90" value="${slot.pity}"></label><label class="field"><span>Unlock progress %</span><input name="edit-progress-${slot.id}" data-edit="progress" type="number" min="0" max="100" step="0.01" value="${slot.progress}"></label></div><label class="checkline"><input name="edit-locked-${slot.id}" data-edit="locked" type="checkbox" ${slot.locked ? 'checked' : ''}> Locked</label>`}</fieldset>`).join('');
+  $('#edit-fields').innerHTML = state.slots.map(slot => `<fieldset class="edit-card" data-edit-slot="${slot.id}"><legend>${escapeHtml(latticeLabel(slot.id, true))}</legend><label class="checkline"><input type="checkbox" name="edit-active-${slot.id}" data-edit="active" ${slot.active ? 'checked' : ''} ${slot.id === 1 ? 'disabled' : ''}> Active</label>${slot.id === 5 ? `<p class="help">Fixed Gold · ${escapeHtml(slot.attribute)} when active. Full matching verified sets can change the Bright Light label.</p>` : `<div class="form-grid"><label class="field"><span>Quality</span><select name="edit-quality-${slot.id}" data-edit="quality">${['blue','purple','gold'].map(value => option(value,qualityLabel(value),slot.quality)).join('')}</select></label><label class="field"><span>Appearance</span><select name="edit-attribute-${slot.id}" data-edit="attribute">${appearancesFor(slot.id, slot.quality, state.target.weapon).map(value => option(value, value, slot.attribute)).join('')}</select></label><label class="field"><span>Pity</span><input name="edit-pity-${slot.id}" data-edit="pity" type="number" min="0" max="90" value="${slot.pity}"></label><label class="field"><span>Unlock progress %</span><input name="edit-progress-${slot.id}" data-edit="progress" type="number" min="0" max="100" step="0.01" value="${slot.progress}"></label></div><label class="checkline"><input name="edit-locked-${slot.id}" data-edit="locked" type="checkbox" ${slot.locked ? 'checked' : ''}> Locked</label>`}</fieldset>`).join('');
   document.querySelectorAll('[data-edit-slot]').forEach(card => {
     const quality = card.querySelector('[data-edit="quality"]');
     const attribute = card.querySelector('[data-edit="attribute"]');
@@ -409,7 +413,7 @@ $('#primary-btn').addEventListener('click', () => {
   if (mode === 'live') {
     const result = recordActualReforge(liveState);
     setCurrent(result.state); render();
-    if (result.event.activatedSlot) announce(`Slot ${result.event.activatedSlot} reached full unlock progress.`);
+    if (result.event.activatedSlot) announce(`${latticeLabel(result.event.activatedSlot)} reached full unlock progress.`);
   } else {
     const result = reforge(practiceState); setCurrent(result.state); render();
     if (result.event.hasGold) { $('#gold-message').textContent = `Gold on Slot${result.event.goldSlots.length > 1 ? 's' : ''} ${result.event.goldSlots.join(', ')}.`; $('#gold-dialog').showModal(); }
@@ -451,7 +455,7 @@ $('#import-json-btn').addEventListener('click', async () => {
 if (migration.report.live === 'migrated' || ['migrated', 'repaired'].includes(migration.report.practice)) {
   $('#migration-note').hidden = false;
   $('#migration-note').textContent = migration.report.practice === 'repaired'
-    ? 'Simulator state was reset to the corrected sequential Slot 1 start. Saved plans, targets, budget, seed and batch preferences were preserved.'
+    ? 'Simulator state was reset to the corrected sequential Color-first start. Saved plans, targets, budget, seed and batch preferences were preserved.'
     : `Existing data migrated: Live ${migration.report.live}; Simulator ${migration.report.practice}. Legacy keys were retained.`;
 }
 if (migration.report.errors.length) {

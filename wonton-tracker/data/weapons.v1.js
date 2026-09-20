@@ -108,6 +108,14 @@ export const WEAPON_PROFILES = Object.freeze({
 
 export const WEAPONS = Object.freeze(Object.keys(WEAPON_PROFILES));
 
+export const REFORGE_SLOT_NAMES = Object.freeze({
+  1: 'Color',
+  2: 'Structure I',
+  3: 'Structure II',
+  4: 'Structure III',
+  5: 'Bright Light'
+});
+
 export const APPEARANCES = Object.freeze({
   1: Object.freeze({
     blue: Object.freeze([...BLUE_COLORS, 'Set 1']),

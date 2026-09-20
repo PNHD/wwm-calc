@@ -4,7 +4,7 @@ import { beadsForStones, costForLocks } from '../core/common.js';
 import { createLiveState } from '../core/live.js';
 import { applyPlan, deletePlan, renamePlan, savePlan, targetMatch } from '../core/plans.js';
 import { budgetSummary, packageReferenceFor } from '../core/pricing.js';
-import { appearancesFor, brightLightAppearance, WEAPON_PROFILES } from '../data/weapons.v1.js';
+import { appearancesFor, brightLightAppearance, REFORGE_SLOT_NAMES, WEAPON_PROFILES } from '../data/weapons.v1.js';
 
 test('lock costs are exactly 1 / 2 / 5 / 10', () => {
   assert.deepEqual([0, 1, 2, 3].map(costForLocks), [1, 2, 5, 10]);
@@ -184,4 +184,15 @@ test('Bright Light becomes the matching full-set light and otherwise remains Sun
   state.slots[3].quality = 'purple';
   state.slots[3].attribute = 'Set - Night Mist';
   assert.equal(brightLightAppearance(state.slots, 'Cloudsplitter'), 'Set - Night Mist');
+});
+
+
+test('canonical reforge lattice names match official categories', () => {
+  assert.deepEqual(REFORGE_SLOT_NAMES, {
+    1: 'Color',
+    2: 'Structure I',
+    3: 'Structure II',
+    4: 'Structure III',
+    5: 'Bright Light'
+  });
 });
