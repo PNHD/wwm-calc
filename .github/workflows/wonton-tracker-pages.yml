@@ -1,0 +1,31 @@
+name: Deploy Wonton Tracker to Cloudflare Pages
+
+on:
+  push:
+    branches:
+      - feature/wonton-tracker
+    paths:
+      - "wonton-tracker/**"
+      - ".github/workflows/wonton-tracker-pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  deployments: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    name: Deploy wonton-tracker.pages.dev
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Deploy to Cloudflare Pages
+        id: deploy
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy wonton-tracker --project-name=wonton-tracker --branch=main
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
