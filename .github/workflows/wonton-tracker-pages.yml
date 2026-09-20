@@ -7,6 +7,12 @@ on:
     paths:
       - "wonton-tracker/**"
       - ".github/workflows/wonton-tracker-pages.yml"
+  pull_request:
+    branches:
+      - feature/wonton-tracker
+    paths:
+      - "wonton-tracker/**"
+      - ".github/workflows/wonton-tracker-pages.yml"
   workflow_dispatch:
 
 permissions:
@@ -40,6 +46,15 @@ jobs:
           Path("/tmp/wonton-tracker.js").write_text(blocks[0])
           PY
           node --check /tmp/wonton-tracker.js
+
+          test -s wonton-tracker/simulator/index.html
+          test -s wonton-tracker/simulator/simulator.js
+          test -s wonton-tracker/simulator/app.js
+          grep -q '<title>Wonton Simulator · Silent Voice Practice</title>' wonton-tracker/simulator/index.html
+          grep -q 'SAVED PLANS' wonton-tracker/simulator/index.html
+          node --check wonton-tracker/simulator/simulator.js
+          node --check wonton-tracker/simulator/app.js
+          node wonton-tracker/simulator/simulator.test.js
 
       - name: Install Wrangler
         if: ${{ env.CLOUDFLARE_API_TOKEN != '' && env.CLOUDFLARE_ACCOUNT_ID != '' }}

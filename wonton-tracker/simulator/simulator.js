@@ -10,6 +10,7 @@
   const UNLOCK_ATTEMPTS = 30;
   const UNLOCK_STEP = 100 / UNLOCK_ATTEMPTS;
   const LOCK_COSTS = [1, 2, 5, 10];
+  const MAX_PLANS = 5;
 
   const ATTRIBUTES = {
     1: {
@@ -138,6 +139,7 @@
       totalStones: 0,
       reforgeCount: 0,
       history: [],
+      plans: [],
       lastRoll: null
     };
   }
@@ -162,6 +164,44 @@
     return 'gold';
   }
 
+  function attributeList(slotId, quality) {
+    if (slotId === 5) return ['Sunlight'];
+    const source = slotId === 1 ? ATTRIBUTES[1] : ATTRIBUTES[234];
+    return source[quality] || ['Set 1'];
+  }
+
+  function normalizePlan(plan, index) {
+    const source = plan && typeof plan === 'object' ? plan : {};
+    const rawSlots = Array.isArray(source.slots) ? source.slots : [];
+    const slots = [1, 2, 3, 4, 5].map((id, slotIndex) => {
+      const incoming = rawSlots[slotIndex] || {};
+      if (id === 5) {
+        return {
+          id,
+          active: !!incoming.active,
+          quality: 'gold',
+          attribute: 'Sunlight'
+        };
+      }
+      const quality = ['blue', 'purple', 'gold'].includes(incoming.quality) ? incoming.quality : 'blue';
+      const allowed = attributeList(id, quality);
+      const attribute = allowed.includes(incoming.attribute) ? incoming.attribute : allowed[0];
+      return {
+        id,
+        active: id === 1 ? true : !!incoming.active,
+        quality,
+        attribute
+      };
+    });
+
+    return {
+      id: Number.isInteger(source.id) && source.id > 0 ? source.id : index + 1,
+      name: String(source.name || `Plan ${index + 1}`).slice(0, 80),
+      savedAt: typeof source.savedAt === 'string' ? source.savedAt : '',
+      slots
+    };
+  }
+
   function normalizeState(input) {
     const state = cloneState(input || createInitialState());
     state.version = 2;
@@ -171,6 +211,18 @@
     state.totalStones = Math.max(0, Number(state.totalStones) || 0);
     state.reforgeCount = Math.max(0, Math.floor(Number(state.reforgeCount) || 0));
     state.history = Array.isArray(state.history) ? state.history.slice(0, 200) : [];
+    const rawPlans = Array.isArray(state.plans) ? state.plans.slice(0, MAX_PLANS) : [];
+    state.plans = rawPlans.map(normalizePlan);
+    const usedPlanIds = new Set();
+    let nextPlanId = 1;
+    state.plans.forEach(plan => {
+      if (usedPlanIds.has(plan.id)) {
+        while (usedPlanIds.has(nextPlanId)) nextPlanId += 1;
+        plan.id = nextPlanId;
+      }
+      usedPlanIds.add(plan.id);
+      nextPlanId = Math.max(nextPlanId, plan.id + 1);
+    });
 
     state.slots = [1, 2, 3, 4, 5].map((id, index) => {
       const fallback = defaultSlot(id);
@@ -374,6 +426,56 @@
     return next;
   }
 
+  function savePlan(inputState, name = '') {
+    const state = normalizeState(inputState);
+    if (state.plans.length >= MAX_PLANS) {
+      return { state, plan: null, saved: false };
+    }
+
+    const nextId = state.plans.reduce((max, plan) => Math.max(max, plan.id), 0) + 1;
+    const plan = {
+      id: nextId,
+      name: String(name || `Plan ${state.plans.length + 1}`).slice(0, 80),
+      savedAt: new Date().toISOString(),
+      slots: state.slots.map(slot => ({
+        id: slot.id,
+        active: slot.active,
+        quality: slot.id === 5 ? 'gold' : slot.quality,
+        attribute: slot.id === 5 ? 'Sunlight' : slot.attribute
+      }))
+    };
+
+    state.plans.push(plan);
+    return { state, plan, saved: true };
+  }
+
+  function applyPlan(inputState, planId) {
+    const state = normalizeState(inputState);
+    const plan = state.plans.find(item => item.id === Number(planId));
+    if (!plan) return { state, plan: null, applied: false };
+
+    state.slots.forEach((slot, index) => {
+      const saved = plan.slots[index];
+      if (!slot.active || !saved || !saved.active) return;
+      if (slot.id === 5) {
+        slot.quality = 'gold';
+        slot.attribute = 'Sunlight';
+        return;
+      }
+      slot.quality = saved.quality;
+      slot.attribute = saved.attribute;
+    });
+
+    return { state: normalizeState(state), plan, applied: true };
+  }
+
+  function deletePlan(inputState, planId) {
+    const state = normalizeState(inputState);
+    const before = state.plans.length;
+    state.plans = state.plans.filter(item => item.id !== Number(planId));
+    return { state, deleted: state.plans.length !== before };
+  }
+
   function percentile(sortedValues, ratio) {
     if (!sortedValues.length) return 0;
     const index = Math.min(sortedValues.length - 1, Math.max(0, Math.ceil(sortedValues.length * ratio) - 1));
@@ -439,6 +541,7 @@
     STORAGE_KEY,
     HARD_PITY,
     UNLOCK_ATTEMPTS,
+    MAX_PLANS,
     ATTRIBUTES,
     clampPity,
     costForLocks,
@@ -453,6 +556,9 @@
     countGold,
     sameGoldSetCount,
     goalReached,
+    savePlan,
+    applyPlan,
+    deletePlan,
     runBatch
   };
 });

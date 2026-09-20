@@ -127,6 +127,93 @@ run('goal detection supports 2 gold, 3 gold and all four', () => {
   assert.equal(sim.goalReached(state, 'gold-4'), true);
 });
 
+
+run('saved plans snapshot appearance and cap at five', () => {
+  let state = sim.createInitialState({ seed: 'plans' });
+  state.slots[0].quality = 'gold';
+  state.slots[0].attribute = 'Peach Crystal';
+
+  state = sim.savePlan(state).state;
+  assert.equal(state.plans.length, 1);
+  assert.equal(state.plans[0].name, 'Plan 1');
+  assert.equal(state.plans[0].slots[0].quality, 'gold');
+  assert.equal(state.plans[0].slots[0].attribute, 'Peach Crystal');
+
+  state.slots[0].quality = 'blue';
+  assert.equal(state.plans[0].slots[0].quality, 'gold', 'saved snapshot must not mutate with live state');
+
+  for (let i = 0; i < 8; i += 1) state = sim.savePlan(state).state;
+  assert.equal(state.plans.length, 5);
+});
+
+run('applying a saved plan restores appearance without changing progression or cost', () => {
+  let state = sim.createInitialState({ seed: 'apply-plan' });
+  state.slots[1].active = true;
+  state.slots[1].progress = 100;
+  state.slots[0].quality = 'gold';
+  state.slots[0].attribute = 'Peach Crystal';
+  state.slots[1].quality = 'purple';
+  state.slots[1].attribute = 'Set 2';
+  state = sim.savePlan(state, 'Gold + Purple').state;
+
+  state.slots[0].quality = 'blue';
+  state.slots[0].attribute = 'Rouge';
+  state.slots[0].pity = 47;
+  state.slots[0].locked = true;
+  state.slots[1].quality = 'blue';
+  state.slots[1].attribute = 'Set 1';
+  state.slots[1].pity = 18;
+  state.totalStones = 22;
+  state.reforgeCount = 13;
+  const beforeProgress = state.slots[1].progress;
+  const planId = state.plans[0].id;
+
+  const applied = sim.applyPlan(state, planId);
+  assert.equal(applied.applied, true);
+  state = applied.state;
+  assert.equal(state.slots[0].quality, 'gold');
+  assert.equal(state.slots[0].attribute, 'Peach Crystal');
+  assert.equal(state.slots[1].quality, 'purple');
+  assert.equal(state.slots[1].attribute, 'Set 2');
+  assert.equal(state.slots[0].pity, 47);
+  assert.equal(state.slots[1].pity, 18);
+  assert.equal(state.slots[0].locked, true);
+  assert.equal(state.slots[1].progress, beforeProgress);
+  assert.equal(state.totalStones, 22);
+  assert.equal(state.reforgeCount, 13);
+});
+
+run('applying a plan never skips sequential unlock progression', () => {
+  let future = sim.createInitialState({ seed: 'future-plan' });
+  future.slots[1].active = true;
+  future.slots[1].progress = 100;
+  future.slots[1].quality = 'gold';
+  future.slots[1].attribute = 'Set 2';
+  future = sim.savePlan(future, 'Future').state;
+
+  let current = sim.createInitialState({ seed: 'current-progress' });
+  current.plans = future.plans;
+  const applied = sim.applyPlan(current, future.plans[0].id).state;
+
+  assert.equal(applied.slots[0].active, true);
+  assert.equal(applied.slots[1].active, false);
+  assert.equal(applied.slots[1].pity, 0);
+  assert.equal(sim.nextUnlockSlotId(applied), 2);
+});
+
+run('saved plans can be deleted without changing the live roll state', () => {
+  let state = sim.createInitialState({ seed: 'delete-plan' });
+  state.slots[0].pity = 12;
+  state.totalStones = 4;
+  state = sim.savePlan(state, 'Keep').state;
+  const planId = state.plans[0].id;
+
+  state = sim.deletePlan(state, planId).state;
+  assert.equal(state.plans.length, 0);
+  assert.equal(state.slots[0].pity, 12);
+  assert.equal(state.totalStones, 4);
+});
+
 run('batch simulator remains deterministic with sequential unlocking', () => {
   const setup = sim.createInitialState({ mode: 'official', seed: 'batch-seed' });
   const resultA = sim.runBatch(setup, { runs: 25, goal: 'gold-2', maxReforges: 250 });
