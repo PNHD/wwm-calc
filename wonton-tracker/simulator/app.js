@@ -5,6 +5,10 @@
   if (!Sim) throw new Error('WontonSimulator core failed to load');
 
   const BASELINE_KEY = 'wontonSimulatorBaseline.v1';
+  const ECHO_BEADS_PER_STONE = 200;
+  const ECHO_BEADS_PER_100_USD = 7200;
+  const beadsForStones = stones => stones * ECHO_BEADS_PER_STONE;
+  const usdForStones = stones => beadsForStones(stones) / ECHO_BEADS_PER_100_USD * 100;
   const undoStack = [];
   let state = loadState();
   let baselineSlots = loadBaselineSlots(state.slots);
@@ -17,9 +21,11 @@
     goal: document.querySelector('#goal'),
     goalStatus: document.querySelector('#goal-status'),
     totalStones: document.querySelector('#total-stones'),
+    totalValue: document.querySelector('#total-value'),
     reforgeCount: document.querySelector('#reforge-count'),
     goldCount: document.querySelector('#gold-count'),
     nextCost: document.querySelector('#next-cost'),
+    nextValue: document.querySelector('#next-value'),
     reforgeButton: document.querySelector('#reforge-btn'),
     undoButton: document.querySelector('#undo-btn'),
     resetButton: document.querySelector('#reset-btn'),
@@ -174,13 +180,16 @@
     const locks = activeLockedCount();
     const goal = els.goal.value;
     const reached = Sim.goalReached(state, goal);
+    const nextStones = Sim.costForLocks(locks);
     els.totalStones.textContent = state.totalStones.toLocaleString();
+    els.totalValue.textContent = `${beadsForStones(state.totalStones).toLocaleString()} Echo Beads · ≈ ${usdForStones(state.totalStones).toFixed(2)}`;
     els.reforgeCount.textContent = state.reforgeCount.toLocaleString();
     els.goldCount.textContent = `${Sim.countGold(state)} / 4`;
-    els.nextCost.textContent = `${Sim.costForLocks(locks)} stone${Sim.costForLocks(locks) === 1 ? '' : 's'}`;
+    els.nextCost.textContent = `${nextStones} stone${nextStones === 1 ? '' : 's'}`;
+    els.nextValue.textContent = `${beadsForStones(nextStones).toLocaleString()} Echo Beads · ≈ ${usdForStones(nextStones).toFixed(2)}`;
     els.goalStatus.textContent = reached ? 'Goal reached' : 'Keep practicing';
     els.goalStatus.className = `goal-status ${reached ? 'reached' : ''}`;
-    els.reforgeButton.querySelector('strong').textContent = `${Sim.costForLocks(locks)} stone${Sim.costForLocks(locks) === 1 ? '' : 's'}`;
+    els.reforgeButton.querySelector('strong').textContent = `${nextStones} stone${nextStones === 1 ? '' : 's'} · ${beadsForStones(nextStones).toLocaleString()} beads`;
     els.undoButton.disabled = undoStack.length === 0;
   }
 
@@ -323,9 +332,9 @@
         <div><span>Success rate</span><strong>${(result.successRate * 100).toFixed(1)}%</strong></div>
         <div><span>Successful runs</span><strong>${result.successes}/${result.runs}</strong></div>
         <div><span>Avg. reforges</span><strong>${result.averageReforges}</strong></div>
-        <div><span>Avg. stones</span><strong>${result.averageStones}</strong></div>
-        <div><span>Median stones</span><strong>${result.medianStones}</strong></div>
-        <div><span>P90 stones</span><strong>${result.p90Stones}</strong></div>
+        <div><span>Avg. cost</span><strong>${result.averageStones} stones</strong><small>${Math.round(beadsForStones(result.averageStones)).toLocaleString()} beads · ≈ ${usdForStones(result.averageStones).toFixed(2)}</small></div>
+        <div><span>Median cost</span><strong>${result.medianStones} stones</strong><small>${beadsForStones(result.medianStones).toLocaleString()} beads · ≈ ${usdForStones(result.medianStones).toFixed(2)}</small></div>
+        <div><span>P90 cost</span><strong>${result.p90Stones} stones</strong><small>${beadsForStones(result.p90Stones).toLocaleString()} beads · ≈ ${usdForStones(result.p90Stones).toFixed(2)}</small></div>
       </div>
       <p class="batch-note">Each run starts from the current slot setup and pity values. Results are seeded simulation statistics, not server RNG predictions.</p>`;
   }

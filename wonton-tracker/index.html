@@ -57,7 +57,7 @@
 
       <section class="metrics" aria-label="Totals">
         <article class="metric"><span>Total spent</span><strong id="total-stones">0</strong><small>Taiyi Stones</small></article>
-        <article class="metric"><span>Approx. value</span><strong id="total-usd">$0.00</strong><small>using $2.78 / stone estimate</small></article>
+        <article class="metric"><span>Approx. value</span><strong id="total-beads">0 Echo Beads</strong><small id="total-usd">≈ $0.00 · $100 ≈ 7,200 beads</small></article>
         <article class="metric"><span>Reforges</span><strong id="reforge-count">0</strong><small>tracked locally</small></article>
         <article class="metric"><span>Locked</span><strong id="locked-count">0 / 3</strong><small>active slots</small></article>
       </section>
@@ -106,7 +106,8 @@
   <script>
 const HARD_PITY = 90;
 const STONE_COST_BY_LOCKS = [1, 2, 5, 10];
-const USD_PER_STONE = 2.78;
+const ECHO_BEADS_PER_STONE = 200;
+const ECHO_BEADS_PER_100_USD = 7200;
 
 const ATTRIBUTES = {
   1: {
@@ -351,8 +352,14 @@ function resetState() {
   return s;
 }
 
+function echoBeadsForStones(stones) {
+  return stones * ECHO_BEADS_PER_STONE;
+}
+function approxUsdForStones(stones) {
+  return echoBeadsForStones(stones) / ECHO_BEADS_PER_100_USD * 100;
+}
 function approxUsd(state) {
-  return state.totalStones * USD_PER_STONE;
+  return approxUsdForStones(state.totalStones);
 }
 
 const KEY = 'wonton-tracker-state-v1';
@@ -390,10 +397,11 @@ function renderSlots(){
 
 function renderTotals(){
   $('#total-stones').textContent = state.totalStones;
-  $('#total-usd').textContent = `$${approxUsd(state).toFixed(2)}`;
+  $('#total-beads').textContent = `${echoBeadsForStones(state.totalStones).toLocaleString()} Echo Beads`;
+  $('#total-usd').textContent = `≈ ${approxUsd(state).toFixed(2)} · $100 ≈ 7,200 beads`;
   $('#reforge-count').textContent = state.reforgeCount;
   $('#locked-count').textContent = `${lockedActiveCount(state)} / 3`;
-  const c=stoneCost(state); $('#reforge-cost').textContent = `${c} Taiyi Stone${c===1?'':'s'}`;
+  const c=stoneCost(state); $('#reforge-cost').textContent = `${c} Taiyi Stone${c===1?'':'s'} · ${echoBeadsForStones(c).toLocaleString()} beads`;
 }
 function renderAction(){
   if(state.nextHoleToActivate<=5){const h=state.holes[state.nextHoleToActivate-1];$('#action-title').textContent=`Activating Slot ${h.id}`;$('#action-note').textContent=`Current activation progress: ${h.progress.toFixed(1)}%. Reforge also rerolls every active, unlocked slot.`}
