@@ -1,0 +1,447 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="theme-color" content="#0b1020" />
+  <meta name="description" content="Manual Silent Voice reforge and Gold pity tracker for Where Winds Meet." />
+  <title>Wonton Tracker · Silent Voice Reforge</title>
+  <style>
+:root{
+  color-scheme:dark;
+  --bg:#090e1a;--surface:#101827;--surface-2:#151f31;--line:#263551;--text:#edf3ff;--muted:#91a2bd;
+  --blue:#63b3ff;--purple:#c38cff;--gold:#f2c76e;--green:#67d69c;--danger:#ff7c85;--accent:#ff9f43;
+  --radius:14px;--shadow:0 18px 50px rgba(0,0,0,.22)
+}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 50% -20%,#17223b 0,#090e1a 42%);color:var(--text);font:15px/1.5 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.app-shell{width:min(1180px,calc(100% - 28px));margin:0 auto}.topbar{display:flex;justify-content:space-between;gap:28px;align-items:flex-start;padding:38px 0 24px}.eyebrow{margin:0 0 6px;color:#7f92b4;font-size:.72rem;font-weight:800;letter-spacing:.13em}.topbar h1,.panel h2{margin:0}.topbar h1{font-size:clamp(1.8rem,4vw,3rem);letter-spacing:-.04em}.subtitle{max-width:720px;margin:8px 0 0;color:var(--muted)}.top-actions,.button-row{display:flex;gap:8px;flex-wrap:wrap}.btn{border:1px solid transparent;border-radius:10px;padding:10px 14px;font:inherit;font-weight:750;cursor:pointer;transition:.15s ease;background:var(--surface-2);color:var(--text)}.btn:hover{transform:translateY(-1px);filter:brightness(1.08)}.btn:focus-visible,.icon-btn:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid rgba(99,179,255,.35);outline-offset:2px}.btn.primary{background:linear-gradient(180deg,#f7b35f,#e78a32);color:#17120c}.btn.secondary{background:#183453;border-color:#315f89}.btn.ghost{border-color:var(--line);background:rgba(16,24,39,.7)}.btn.danger-ghost{border-color:#65343b;color:#ffafb4;background:#25171b}.btn.small{padding:7px 10px;font-size:.85rem}.slots{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}.slot{position:relative;min-height:232px;padding:17px;border:1px solid var(--line);border-radius:var(--radius);background:linear-gradient(180deg,var(--surface-2),var(--surface));box-shadow:var(--shadow);overflow:hidden}.slot::before{content:"";position:absolute;inset:0 0 auto;height:3px;background:#53637a}.slot.blue::before{background:var(--blue)}.slot.purple::before{background:var(--purple)}.slot.gold::before{background:var(--gold)}.slot.inactive{opacity:.64}.slot-number{display:flex;align-items:center;justify-content:space-between;color:var(--muted);font-weight:800}.slot-badge{padding:4px 7px;border-radius:99px;background:#0b1320;border:1px solid var(--line);font-size:.72rem}.slot-quality{margin-top:30px;font-size:1.28rem;font-weight:850}.blue .slot-quality{color:var(--blue)}.purple .slot-quality{color:var(--purple)}.gold .slot-quality{color:var(--gold)}.slot-attribute{min-height:44px;margin-top:4px;color:#c8d4e8}.progress{height:6px;margin-top:18px;background:#0b111d;border-radius:99px;overflow:hidden}.progress>i{display:block;height:100%;background:linear-gradient(90deg,#4da3ee,#7cd4ff)}.slot-meta{display:flex;justify-content:space-between;gap:8px;margin-top:8px;color:var(--muted);font-size:.78rem}.pity{margin-top:13px}.pity-head{display:flex;justify-content:space-between;color:#c9d4e6;font-size:.8rem}.pity-track{height:8px;margin-top:5px;border-radius:99px;overflow:hidden;background:#0b111d}.pity-track i{display:block;height:100%;background:linear-gradient(90deg,#d09635,#f3d58a)}.lock-row{display:flex;align-items:center;gap:8px;margin-top:14px;font-size:.85rem}.lock-row input{width:18px;height:18px;accent-color:var(--accent)}.panel{margin-top:14px;padding:22px;border:1px solid var(--line);border-radius:var(--radius);background:rgba(16,24,39,.88);box-shadow:var(--shadow)}.control-panel{display:flex;align-items:center;justify-content:space-between;gap:24px}.control-copy h2{font-size:1.3rem}.muted,.muted-inline{color:var(--muted)}.muted-inline{font-size:.85rem;font-weight:600}.reforge-btn{min-width:230px;display:flex;justify-content:space-between;gap:14px}.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:14px}.metric{padding:18px;border:1px solid var(--line);border-radius:var(--radius);background:#0d1523}.metric span,.metric small{display:block;color:var(--muted)}.metric strong{display:block;margin:5px 0 2px;font-size:1.55rem}.section-head{display:flex;align-items:center;justify-content:space-between;gap:18px}.section-head.compact{align-items:flex-start}.plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px;margin-top:14px}.empty{padding:22px;border:1px dashed #34445f;border-radius:12px;color:var(--muted);text-align:center}.plan{padding:14px;border:1px solid var(--line);border-radius:12px;background:#0c1421}.plan-head{display:flex;justify-content:space-between;gap:10px}.plan-slots{display:flex;gap:5px;margin:12px 0}.mini-slot{flex:1;padding:7px 5px;border:1px solid var(--line);border-radius:8px;text-align:center;font-size:.68rem}.mini-slot.gold{border-color:#7f672d;color:var(--gold)}.mini-slot.purple{border-color:#66428a;color:var(--purple)}.mini-slot.blue{border-color:#305b7d;color:var(--blue)}.plan-actions{display:flex;gap:8px;justify-content:flex-end}.grid-two{display:grid;grid-template-columns:1fr 1fr;gap:14px}.rules{padding-left:20px;margin-bottom:0}.rules li+li{margin-top:8px}.history{max-height:340px;overflow:auto;margin-top:10px}.history-item{padding:9px 11px;margin-top:7px;border-left:3px solid #5c7190;background:#0c1421;border-radius:8px;color:#cbd7e8;font-size:.86rem}.history-item.gold{border-color:var(--gold)}footer{padding:28px 4px 42px;color:#7588a6;font-size:.78rem}footer p{margin:4px 0}.modal{border:0;padding:0;background:transparent;color:var(--text);width:min(920px,calc(100% - 24px))}.modal::backdrop{background:rgba(2,6,12,.78);backdrop-filter:blur(4px)}.modal-card{border:1px solid var(--line);border-radius:16px;background:#0f1827;box-shadow:0 28px 90px rgba(0,0,0,.55);padding:22px;max-height:90vh;overflow:auto}.modal-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start}.modal-head h2{margin:0}.icon-btn{border:1px solid var(--line);background:#121e30;color:var(--text);border-radius:9px;width:38px;height:38px;font-size:1.45rem;cursor:pointer}.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}.edit-slots{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:16px}.edit-card{padding:14px;border:1px solid var(--line);border-radius:12px;background:#0b1320}.edit-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.field label{display:block;color:var(--muted);font-size:.78rem;margin-bottom:4px}.field input,.field select{width:100%;padding:9px 10px;border:1px solid #34455e;border-radius:8px;background:#0a111c;color:var(--text)}.checkline{display:flex;gap:8px;align-items:center;margin-top:9px}.attribute-guide{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:14px}.attribute-col{padding:12px;border:1px solid var(--line);border-radius:12px;background:#0b1320}.attribute-col h3{margin:0 0 8px;font-size:1rem}.chips{display:flex;flex-wrap:wrap;gap:6px}.chip{padding:5px 7px;border:1px solid var(--line);border-radius:99px;font-size:.76rem;color:#cbd7e8}
+@media(max-width:900px){.slots{grid-template-columns:repeat(2,1fr)}.slot:last-child{grid-column:span 2}.metrics{grid-template-columns:repeat(2,1fr)}.grid-two{grid-template-columns:1fr}.topbar{flex-direction:column}.top-actions{width:100%}}
+@media(max-width:560px){.app-shell{width:min(100% - 18px,1180px)}.slots{grid-template-columns:1fr}.slot:last-child{grid-column:auto}.control-panel,.section-head{align-items:stretch;flex-direction:column}.reforge-btn{width:100%;min-width:0}.metrics{grid-template-columns:1fr 1fr}.edit-slots,.form-grid,.attribute-guide{grid-template-columns:1fr}.topbar{padding-top:24px}.top-actions .btn{flex:1}.panel{padding:16px}}
+
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">WHERE WINDS MEET · COMMUNITY TOOL</p>
+        <h1>Silent Voice Reforge Tracker</h1>
+        <p class="subtitle">Track each slot's Gold pity, locks, activation progress, saved plans and reforge cost.</p>
+      </div>
+      <div class="top-actions">
+        <button class="btn ghost" id="attributes-btn">Attribute guide</button>
+        <button class="btn ghost" id="edit-btn">Edit state</button>
+        <button class="btn danger-ghost" id="reset-btn">Reset</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="slots" id="slots" aria-label="Reforge slots"></section>
+
+      <section class="panel control-panel">
+        <div class="control-copy">
+          <p class="eyebrow">REFORGE CONTROL</p>
+          <h2 id="action-title">Activating Slot 2</h2>
+          <p id="action-note" class="muted"></p>
+        </div>
+        <button class="btn primary reforge-btn" id="reforge-btn">
+          <span>Reforge</span>
+          <strong id="reforge-cost">1 Taiyi Stone</strong>
+        </button>
+      </section>
+
+      <section class="metrics" aria-label="Totals">
+        <article class="metric"><span>Total spent</span><strong id="total-stones">0</strong><small>Taiyi Stones</small></article>
+        <article class="metric"><span>Approx. value</span><strong id="total-usd">$0.00</strong><small>using $2.78 / stone estimate</small></article>
+        <article class="metric"><span>Reforges</span><strong id="reforge-count">0</strong><small>tracked locally</small></article>
+        <article class="metric"><span>Locked</span><strong id="locked-count">0 / 3</strong><small>active slots</small></article>
+      </section>
+
+      <section class="panel">
+        <div class="section-head">
+          <div><p class="eyebrow">SAVED PLANS</p><h2>Plan snapshots <span id="plan-count" class="muted-inline">0/5</span></h2></div>
+          <button class="btn secondary" id="save-plan-btn">Save current plan</button>
+        </div>
+        <div class="plans" id="plans"></div>
+      </section>
+
+      <section class="grid-two">
+        <section class="panel info-panel">
+          <p class="eyebrow">HOW IT WORKS</p>
+          <h2>Tracker rules</h2>
+          <ul class="rules">
+            <li>Slots 1–4 track Gold pity independently up to <strong>90</strong>.</li>
+            <li>Modeled quality rate starts at Blue 82% / Purple 15% / Gold 3%, with the original calculator's soft-rate tiers after 30 and 60.</li>
+            <li>Each reforge advances the next inactive slot by about 3.33%, with the original calculator's early-activation model.</li>
+            <li>Slot 5 becomes Gold automatically when activated and is not rerolled.</li>
+            <li>Locking 0/1/2/3 slots costs 1/2/5/10 Taiyi Stones per reforge.</li>
+            <li>Everything is stored only in this browser. Use <strong>Edit state</strong> to enter your real in-game pity manually.</li>
+          </ul>
+        </section>
+        <section class="panel history-panel">
+          <div class="section-head compact">
+            <div><p class="eyebrow">ACTIVITY</p><h2>History</h2></div>
+            <div class="button-row"><button class="btn ghost small" id="export-btn">Export</button><button class="btn ghost small" id="clear-history-btn">Clear</button></div>
+          </div>
+          <div class="history" id="history" aria-live="polite"></div>
+        </section>
+      </section>
+    </main>
+
+    <footer>
+      <p>Independent English remake inspired by Chowiemon / 琅劳斯's WWMReforge 1.3. This is an unofficial community tracker, not affiliated with Everstone Studio or NetEase Games.</p>
+      <p>Simulation probabilities beyond the published hard pity should be treated as a community model. Verify your actual state in game.</p>
+    </footer>
+  </div>
+
+  <dialog id="edit-dialog" class="modal"><form method="dialog" class="modal-card wide"><div class="modal-head"><div><p class="eyebrow">MANUAL MODE</p><h2>Edit tracker state</h2></div><button class="icon-btn" value="cancel" aria-label="Close">×</button></div><p class="muted">Use this to copy your current in-game state. Pity accepts 0–90.</p><div id="edit-slots" class="edit-slots"></div><div class="modal-actions"><button class="btn ghost" value="cancel">Cancel</button><button class="btn primary" type="button" id="save-edit-btn">Save state</button></div></form></dialog>
+
+  <dialog id="attributes-dialog" class="modal"><form method="dialog" class="modal-card"><div class="modal-head"><div><p class="eyebrow">ATTRIBUTE GUIDE</p><h2>Possible appearance attributes</h2></div><button class="icon-btn" value="cancel" aria-label="Close">×</button></div><div id="attribute-guide" class="attribute-guide"></div><div class="modal-actions"><button class="btn primary" value="cancel">Close</button></div></form></dialog>
+
+  <script>
+const HARD_PITY = 90;
+const STONE_COST_BY_LOCKS = [1, 2, 5, 10];
+const USD_PER_STONE = 2.78;
+
+const ATTRIBUTES = {
+  1: {
+    blue: ['Set 1', 'Rouge', 'Lapis', 'Vast Sky', 'Vermilion Rail', 'Pine Green', 'Sprout Yellow', 'Dusk Violet', 'Feather Gray', 'Ink Dust'],
+    purple: ['Set 1', 'Set 2', 'Apricot Pink', 'Mist Blue', 'Water Blue', 'Azalea', 'Moss Green', 'Tangerine', 'Wisteria', 'Shell White', 'Jackdaw'],
+    gold: ['Set 1', 'Set 2', 'Peach Crystal', 'Dragon Abyss', 'Ice Spring', 'Red Brocade', 'Jade', 'Gold', 'Violet Glass', 'Pearl', 'Obsidian']
+  },
+  234: {
+    blue: ['Set 1'],
+    purple: ['Set 1', 'Set 2'],
+    gold: ['Set 1', 'Set 2']
+  },
+  5: { gold: ['Radiant Sun'] }
+};
+
+function initialState() {
+  return {
+    holes: [
+      { id: 1, active: true, quality: 'blue', attribute: 'Set 1', locked: false, progress: 100, guaranteeCounter: 0, activationAttempts: 0 },
+      { id: 2, active: false, quality: 'blue', attribute: '', locked: false, progress: 0, guaranteeCounter: 0, activationAttempts: 0 },
+      { id: 3, active: false, quality: 'blue', attribute: '', locked: false, progress: 0, guaranteeCounter: 0, activationAttempts: 0 },
+      { id: 4, active: false, quality: 'blue', attribute: '', locked: false, progress: 0, guaranteeCounter: 0, activationAttempts: 0 },
+      { id: 5, active: false, quality: 'blue', attribute: '', locked: false, progress: 0, guaranteeCounter: 0, activationAttempts: 0 }
+    ],
+    totalStones: 0,
+    reforgeCount: 0,
+    nextHoleToActivate: 2,
+    history: [],
+    goldPendingReset: [],
+    schemes: []
+  };
+}
+
+function cloneState(state) {
+  return structuredClone(state);
+}
+
+function getActivationProbability(attempts) {
+  if (attempts <= 10) return 0.02;
+  if (attempts <= 20) return 0.035;
+  return 0.05;
+}
+
+function getGoldProbability(counter) {
+  if (counter <= 30) return 0.03;
+  if (counter <= 60) return 0.04;
+  return 0.05;
+}
+
+function getAttributeList(holeId, quality) {
+  if (holeId === 1) return ATTRIBUTES[1][quality] ?? [];
+  if (holeId >= 2 && holeId <= 4) return ATTRIBUTES[234][quality] ?? [];
+  if (holeId === 5 && quality === 'gold') return ATTRIBUTES[5].gold;
+  return [];
+}
+
+function randomAttribute(holeId, quality, rng = Math.random) {
+  const list = getAttributeList(holeId, quality);
+  return list.length ? list[Math.floor(rng() * list.length)] : '';
+}
+
+function qualityPrefix(quality) {
+  return quality === 'blue' ? 'Blue' : quality === 'purple' ? 'Purple' : 'Gold';
+}
+
+function holeLabel(hole) {
+  if (!hole.active) return 'Inactive';
+  return `${qualityPrefix(hole.quality)} · ${hole.attribute}`;
+}
+
+function updateNextHoleToActivate(state) {
+  const next = state.holes.find(h => !h.active);
+  state.nextHoleToActivate = next ? next.id : 6;
+}
+
+function lockedActiveCount(state) {
+  return state.holes.slice(0, 4).filter(h => h.active && h.locked).length;
+}
+
+function stoneCost(state) {
+  return STONE_COST_BY_LOCKS[Math.min(lockedActiveCount(state), 3)];
+}
+
+function pushHistory(state, text, type = 'info') {
+  state.history.unshift({ id: Date.now() + Math.random(), at: new Date().toISOString(), text, type });
+  if (state.history.length > 100) state.history.length = 100;
+}
+
+function rollQuality(counter, rng = Math.random) {
+  if (counter >= HARD_PITY) return 'gold';
+  const gold = getGoldProbability(counter);
+  const purple = 0.15;
+  const r = rng();
+  if (r < 1 - gold - purple) return 'blue';
+  if (r < 1 - gold) return 'purple';
+  return 'gold';
+}
+
+function rollHole(hole, rng = Math.random, incrementCounter = true) {
+  if (incrementCounter) hole.guaranteeCounter = Math.min(HARD_PITY, hole.guaranteeCounter + 1);
+  const q = rollQuality(hole.guaranteeCounter, rng);
+  hole.quality = q;
+  hole.attribute = randomAttribute(hole.id, q, rng);
+  if (q === 'gold') hole.guaranteeCounter = 0;
+  return q;
+}
+
+function activateHole(state, hole, direct, rng) {
+  hole.active = true;
+  hole.progress = 100;
+  if (hole.id === 5) {
+    hole.quality = 'gold';
+    hole.attribute = 'Radiant Sun';
+    hole.locked = true;
+    hole.guaranteeCounter = 0;
+  } else {
+    hole.quality = 'blue';
+    hole.attribute = randomAttribute(hole.id, 'blue', rng);
+    hole.guaranteeCounter = 0;
+    rollHole(hole, rng, false);
+    if (hole.quality === 'gold' && !state.goldPendingReset.includes(hole.id - 1)) state.goldPendingReset.push(hole.id - 1);
+  }
+  updateNextHoleToActivate(state);
+  return { activated: true, hole: hole.id, direct, quality: hole.quality };
+}
+
+function tryActivateNext(state, rng = Math.random) {
+  if (state.nextHoleToActivate > 5) return { activated: false };
+  const hole = state.holes[state.nextHoleToActivate - 1];
+  hole.activationAttempts += 1;
+  if (rng() < getActivationProbability(hole.activationAttempts)) return activateHole(state, hole, true, rng);
+  hole.progress = Math.min(100, Number((hole.progress + 100 / 30).toFixed(2)));
+  if (hole.progress >= 99.9) return activateHole(state, hole, false, rng);
+  return { activated: false, hole: hole.id, progress: hole.progress };
+}
+
+function reforge(state, rng = Math.random) {
+  const next = cloneState(state);
+  const locks = lockedActiveCount(next);
+  const cost = STONE_COST_BY_LOCKS[Math.min(locks, 3)];
+  next.totalStones += cost;
+  next.reforgeCount += 1;
+  const changes = [];
+
+  const pending = [...next.goldPendingReset];
+  for (const idx of pending) {
+    const h = next.holes[idx];
+    if (idx < 4 && h.active && !h.locked) {
+      h.quality = 'blue';
+      h.attribute = randomAttribute(h.id, 'blue', rng);
+      next.goldPendingReset = next.goldPendingReset.filter(v => v !== idx);
+      changes.push(`Slot ${h.id}: previous Gold reset to Blue`);
+    }
+  }
+
+  for (let i = 0; i < 4; i++) {
+    const h = next.holes[i];
+    if (!h.active || h.locked || next.goldPendingReset.includes(i)) continue;
+    const q = rollHole(h, rng, true);
+    if (q === 'gold' && !next.goldPendingReset.includes(i)) next.goldPendingReset.push(i);
+    changes.push(`Slot ${h.id}: ${holeLabel(h)}`);
+  }
+
+  const activation = tryActivateNext(next, rng);
+  const actText = activation.activated
+    ? ` Slot ${activation.hole} activated${activation.direct ? ' early' : ''}.`
+    : activation.hole ? ` Slot ${activation.hole} activation ${Math.round(activation.progress)}%.` : '';
+  pushHistory(next, `Reforge #${next.reforgeCount}: ${cost} Taiyi Stone${cost === 1 ? '' : 's'} (${locks} locked). ${changes.join(' · ')}${actText}`.trim(), changes.some(c => c.includes('Gold')) ? 'gold' : 'info');
+  return next;
+}
+
+function setHole(state, id, patch) {
+  const next = cloneState(state);
+  const h = next.holes[id - 1];
+  Object.assign(h, patch);
+  h.guaranteeCounter = Math.max(0, Math.min(HARD_PITY, Number(h.guaranteeCounter || 0)));
+  h.progress = Math.max(0, Math.min(100, Number(h.progress || 0)));
+  if (h.active) h.progress = 100;
+  if (!h.active) { h.locked = false; h.attribute = ''; }
+  if (id === 5 && h.active) { h.quality = 'gold'; h.attribute = 'Radiant Sun'; h.locked = true; h.guaranteeCounter = 0; }
+  next.goldPendingReset = next.holes.slice(0,4).flatMap((x,i) => x.active && x.quality === 'gold' ? [i] : []);
+  updateNextHoleToActivate(next);
+  pushHistory(next, `Slot ${id} edited manually.`, 'info');
+  return next;
+}
+
+function toggleLock(state, id, locked) {
+  const next = cloneState(state);
+  const h = next.holes[id - 1];
+  if (id > 4 || !h.active) return next;
+  const currentLocked = lockedActiveCount(next);
+  if (locked && !h.locked && currentLocked >= 3) return next;
+  h.locked = locked;
+  return next;
+}
+
+function saveScheme(state, name = '') {
+  const next = cloneState(state);
+  if (next.schemes.length >= 5) return next;
+  next.schemes.push({
+    id: Date.now(),
+    name: name || `Plan ${next.schemes.length + 1}`,
+    timestamp: new Date().toISOString(),
+    holes: next.holes.map(h => ({...h, guaranteeCounter: 0}))
+  });
+  pushHistory(next, `Saved ${next.schemes.at(-1).name}.`, 'info');
+  return next;
+}
+
+function applyScheme(state, schemeId) {
+  const next = cloneState(state);
+  const scheme = next.schemes.find(s => s.id === schemeId);
+  if (!scheme) return next;
+  scheme.holes.forEach((saved, i) => {
+    if (!saved.active) return;
+    const target = next.holes[i];
+    const pity = target.guaranteeCounter;
+    const locked = target.locked;
+    target.active = true;
+    target.quality = saved.quality;
+    target.attribute = saved.attribute;
+    target.progress = 100;
+    target.guaranteeCounter = saved.id === 5 ? 0 : pity;
+    target.locked = saved.id === 5 ? true : locked;
+  });
+  next.goldPendingReset = next.holes.slice(0,4).flatMap((h,i) => h.active && h.quality === 'gold' ? [i] : []);
+  updateNextHoleToActivate(next);
+  pushHistory(next, `Applied ${scheme.name}.`, 'info');
+  return next;
+}
+
+function deleteScheme(state, schemeId) {
+  const next = cloneState(state);
+  next.schemes = next.schemes.filter(s => s.id !== schemeId);
+  pushHistory(next, 'Deleted a saved plan.', 'info');
+  return next;
+}
+
+function resetState() {
+  const s = initialState();
+  pushHistory(s, 'Tracker reset to the default state.', 'info');
+  return s;
+}
+
+function approxUsd(state) {
+  return state.totalStones * USD_PER_STONE;
+}
+
+const KEY = 'wonton-tracker-state-v1';
+let state = load();
+const $ = (s) => document.querySelector(s);
+const slotsEl = $('#slots');
+
+function load(){ try { return JSON.parse(localStorage.getItem(KEY)) || initialState(); } catch { return initialState(); } }
+function persist(){ localStorage.setItem(KEY, JSON.stringify(state)); }
+function esc(s=''){ return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+function time(s){ try{return new Date(s).toLocaleString()}catch{return s} }
+
+function render(){
+  renderSlots(); renderTotals(); renderPlans(); renderHistory(); renderAction(); persist();
+}
+
+function renderSlots(){
+  slotsEl.innerHTML = state.holes.map(h => {
+    const q = h.active ? h.quality : 'inactive';
+    const pity = h.id === 5 ? 100 : Math.min(100, h.guaranteeCounter / HARD_PITY * 100);
+    const label = h.active ? holeLabel(h) : 'Inactive';
+    const lockDisabled = h.id === 5 || !h.active || (!h.locked && lockedActiveCount(state) >= 3);
+    return `<article class="slot ${q}" data-id="${h.id}">
+      <div class="slot-number"><span>Slot ${h.id}</span><span class="slot-badge">${h.active?'ACTIVE':'INACTIVE'}</span></div>
+      <div class="slot-quality">${h.active ? h.quality[0].toUpperCase()+h.quality.slice(1) : 'Inactive'}</div>
+      <div class="slot-attribute">${esc(label)}</div>
+      <div class="progress"><i style="width:${h.progress}%"></i></div>
+      <div class="slot-meta"><span>${h.active?'Activated':`Activation ${h.progress.toFixed(1)}%`}</span><span>${h.id===5?'Final slot':''}</span></div>
+      <div class="pity"><div class="pity-head"><span>${h.id===5?(h.active?'Guaranteed Gold':'Gold on activation'):'Gold pity'}</span><strong>${h.id===5?'—':`${h.guaranteeCounter}/${HARD_PITY}`}</strong></div><div class="pity-track"><i style="width:${pity}%"></i></div></div>
+      ${h.id<=4?`<label class="lock-row"><input type="checkbox" data-lock="${h.id}" ${h.locked?'checked':''} ${lockDisabled?'disabled':''}> Lock slot</label>`:''}
+    </article>`;
+  }).join('');
+  slotsEl.querySelectorAll('[data-lock]').forEach(el=>el.addEventListener('change',e=>{state=toggleLock(state,Number(e.target.dataset.lock),e.target.checked);render();}));
+}
+
+function renderTotals(){
+  $('#total-stones').textContent = state.totalStones;
+  $('#total-usd').textContent = `$${approxUsd(state).toFixed(2)}`;
+  $('#reforge-count').textContent = state.reforgeCount;
+  $('#locked-count').textContent = `${lockedActiveCount(state)} / 3`;
+  const c=stoneCost(state); $('#reforge-cost').textContent = `${c} Taiyi Stone${c===1?'':'s'}`;
+}
+function renderAction(){
+  if(state.nextHoleToActivate<=5){const h=state.holes[state.nextHoleToActivate-1];$('#action-title').textContent=`Activating Slot ${h.id}`;$('#action-note').textContent=`Current activation progress: ${h.progress.toFixed(1)}%. Reforge also rerolls every active, unlocked slot.`}
+  else{$('#action-title').textContent='All slots activated';$('#action-note').textContent='Reforge rerolls active, unlocked slots only.'}
+  if(state.goldPendingReset.length){$('#action-note').textContent += ` Gold currently shown on Slot ${state.goldPendingReset.map(i=>i+1).join(', ')} will be replaced on the next unlocked reforge.`}
+}
+function renderPlans(){
+  $('#plan-count').textContent=`${state.schemes.length}/5`;
+  $('#save-plan-btn').disabled=state.schemes.length>=5;
+  const el=$('#plans');
+  if(!state.schemes.length){el.innerHTML='<div class="empty">No saved plans yet.</div>';return}
+  el.innerHTML=[...state.schemes].reverse().map(p=>`<article class="plan"><div class="plan-head"><div><strong>${esc(p.name)}</strong><div class="muted">${time(p.timestamp)}</div></div></div><div class="plan-slots">${p.holes.map(h=>`<div class="mini-slot ${h.active?h.quality:'inactive'}"><strong>${h.id}</strong><br>${h.active?esc(h.attribute):'—'}</div>`).join('')}</div><div class="plan-actions"><button class="btn ghost small" data-apply="${p.id}">Apply</button><button class="btn danger-ghost small" data-delete="${p.id}">Delete</button></div></article>`).join('');
+  el.querySelectorAll('[data-apply]').forEach(b=>b.onclick=()=>{if(confirm('Apply this plan? Active slots in the plan will replace current quality/attribute while your current pity is preserved.')){state=applyScheme(state,Number(b.dataset.apply));render()}});
+  el.querySelectorAll('[data-delete]').forEach(b=>b.onclick=()=>{if(confirm('Delete this saved plan?')){state=deleteScheme(state,Number(b.dataset.delete));render()}});
+}
+function renderHistory(){const el=$('#history');el.innerHTML=state.history.length?state.history.map(h=>`<div class="history-item ${h.type==='gold'?'gold':''}">${esc(h.text)}<div class="muted">${time(h.at)}</div></div>`).join(''):'<div class="empty">No activity yet.</div>'}
+
+function openEdit(){
+  const el=$('#edit-slots');
+  el.innerHTML=state.holes.map(h=>{
+    const attrs=getAttributeList(h.id,h.active?h.quality:'blue');
+    return `<section class="edit-card" data-edit-card="${h.id}"><div class="edit-title"><strong>Slot ${h.id}</strong><label class="checkline"><input type="checkbox" data-field="active" ${h.active?'checked':''} ${h.id===5&&h.active?'disabled':''}> Active</label></div><div class="form-grid"><div class="field"><label>Quality</label><select data-field="quality" ${!h.active||h.id===5?'disabled':''}>${['blue','purple','gold'].map(q=>`<option value="${q}" ${q===h.quality?'selected':''}>${q[0].toUpperCase()+q.slice(1)}</option>`).join('')}</select></div><div class="field"><label>Attribute</label><select data-field="attribute" ${!h.active||h.id===5?'disabled':''}>${attrs.map(a=>`<option ${a===h.attribute?'selected':''}>${esc(a)}</option>`).join('')}</select></div><div class="field"><label>Activation progress</label><input data-field="progress" type="number" min="0" max="100" step=".1" value="${h.progress}" ${h.active?'disabled':''}></div><div class="field"><label>Gold pity</label><input data-field="pity" type="number" min="0" max="90" value="${h.guaranteeCounter}" ${h.id===5?'disabled':''}></div></div>${h.id<=4?`<label class="checkline"><input type="checkbox" data-field="locked" ${h.locked?'checked':''} ${!h.active?'disabled':''}> Locked</label>`:''}</section>`
+  }).join('');
+  el.querySelectorAll('[data-edit-card]').forEach(card=>{
+    const active=card.querySelector('[data-field="active"]'), quality=card.querySelector('[data-field="quality"]'), attr=card.querySelector('[data-field="attribute"]'), progress=card.querySelector('[data-field="progress"]'), locked=card.querySelector('[data-field="locked"]');
+    const id=Number(card.dataset.editCard);
+    function refreshAttrs(){const list=getAttributeList(id,quality.value);attr.innerHTML=list.map(a=>`<option>${esc(a)}</option>`).join('')}
+    active?.addEventListener('change',()=>{const on=active.checked;if(id!==5){quality.disabled=!on;attr.disabled=!on}progress.disabled=on;if(locked)locked.disabled=!on});
+    quality?.addEventListener('change',refreshAttrs);
+  });
+  $('#edit-dialog').showModal();
+}
+function saveEdit(){
+  document.querySelectorAll('[data-edit-card]').forEach(card=>{
+    const id=Number(card.dataset.editCard), get=f=>card.querySelector(`[data-field="${f}"]`);
+    const active=get('active')?.checked??false; const quality=get('quality')?.value||'blue'; const attr=get('attribute')?.value||''; const progress=Number(get('progress')?.value||0); const pity=Number(get('pity')?.value||0); const locked=get('locked')?.checked??false;
+    state=setHole(state,id,{active,quality,attribute:attr,progress,guaranteeCounter:pity,locked});
+  });
+  $('#edit-dialog').close(); render();
+}
+function renderAttributeGuide(){
+  $('#attribute-guide').innerHTML=['blue','purple','gold'].map(q=>`<section class="attribute-col"><h3>${q[0].toUpperCase()+q.slice(1)} · Slot 1</h3><div class="chips">${ATTRIBUTES[1][q].map(a=>`<span class="chip">${esc(a)}</span>`).join('')}</div></section>`).join('')+`<section class="attribute-col"><h3>Slots 2–4</h3><p class="muted">Blue: Set 1<br>Purple: Set 1 / Set 2<br>Gold: Set 1 / Set 2</p></section><section class="attribute-col"><h3>Slot 5</h3><p class="muted">Guaranteed Gold on activation: Radiant Sun.</p></section>`;
+}
+function exportHistory(){const lines=[`Wonton Tracker export`,new Date().toLocaleString(),`Total stones: ${state.totalStones}`,`Reforges: ${state.reforgeCount}`,'',...state.holes.map(h=>`Slot ${h.id}: ${h.active?holeLabel(h):'Inactive'} | progress ${h.progress}% | pity ${h.guaranteeCounter}/90 | locked ${h.locked?'yes':'no'}`),'','History:',...state.history.slice().reverse().map(h=>`${time(h.at)} - ${h.text}`)];const blob=new Blob([lines.join('\n')],{type:'text/plain'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`wonton-tracker-${new Date().toISOString().slice(0,10)}.txt`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),500)}
+
+$('#reforge-btn').onclick=()=>{state=reforge(state);render()};
+$('#edit-btn').onclick=openEdit; $('#save-edit-btn').onclick=saveEdit;
+$('#attributes-btn').onclick=()=>{$('#attributes-dialog').showModal()};
+$('#reset-btn').onclick=()=>{if(confirm('Reset all slots, pity, cost, history and saved plans?')){state=resetState();render()}};
+$('#save-plan-btn').onclick=()=>{const name=prompt('Plan name',`Plan ${state.schemes.length+1}`);if(name!==null){state=saveScheme(state,name.trim());render()}};
+$('#clear-history-btn').onclick=()=>{if(confirm('Clear activity history?')){state.history=[];render()}};
+$('#export-btn').onclick=exportHistory;
+renderAttributeGuide(); render();
+
+  </script>
+</body>
+</html>
