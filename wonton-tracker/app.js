@@ -168,8 +168,10 @@ function renderLiveTools() {
   $('#mode-tools').innerHTML = `<div class="section-head"><div><p class="eyebrow observed">USER-OBSERVED · LIVE ONLY</p><h2>Observed pity analytics</h2></div><span class="status-pill">Official hard pity: 90</span></div>
     <div class="analytics-grid">${state.slots.slice(0, 4).map(slot => {
       const stats = observedStats(state.observedGoldIntervals[slot.id]);
-      return `<article class="analytics-card"><span>Slot ${slot.id}</span><strong>${slot.pity}/90 · ${Math.round(slot.pity / 90 * 100)}%</strong><small>${stats.count ? `Avg ${stats.average} · Median ${stats.median} · n=${stats.count}` : 'No observed Gold samples'}</small><p class="help">${90 - slot.pity} visible pity to next hard pity · ${cost} Stone${cost === 1 ? '' : 's'} per future roll</p></article>`;
-    }).join('')}</div><p class="help">Intervals are USER-OBSERVED, not official soft pity. Resource projections reach the next hard-pity trigger; they do not guarantee a desired appearance or set.</p>`;
+      const remaining = 90 - slot.pity;
+      const worstCaseStones = remaining * cost;
+      return `<article class="analytics-card"><span>Slot ${slot.id}</span><strong>${slot.pity}/90 · ${Math.round(slot.pity / 90 * 100)}%</strong><small>${stats.count ? `Avg ${stats.average} · Median ${stats.median} · n=${stats.count}` : 'No observed Gold samples'}</small><p class="help">${remaining} visible pity to next hard pity · ${cost} Stone${cost === 1 ? '' : 's'} per future roll · worst-case at current locks: ${worstCaseStones} Stones / ${beadsForStones(worstCaseStones).toLocaleString()} beads</p></article>`;
+    }).join('')}</div><p class="help">Intervals are USER-OBSERVED, not official soft pity. Worst-case values assume the current lock count stays unchanged and only bound the next hard-pity trigger; they do not guarantee a desired appearance or set.</p>`;
 }
 
 function renderPracticeTools() {
@@ -180,6 +182,7 @@ function renderPracticeTools() {
       <label class="field"><span>Quality model</span><select id="practice-model" name="practice-model">${option('official', 'Official 82 / 15 / 3', state.mode)}${option('community', 'Community 3 / 4 / 5 Gold', state.mode)}</select></label>
       <label class="field"><span>Goal</span><select id="batch-goal" name="batch-goal">${[['gold-2','2 Gold'],['gold-3','3 Gold'],['gold-4','4 Gold'],['set-2','2 matching Gold sets'],['set-3','3 matching Gold sets']].map(([v,l]) => option(v,l,state.goals.goal)).join('')}</select></label>
       <label class="field"><span>Batch runs</span><select id="batch-runs" name="batch-runs">${[100,1000,10000].map(value => option(String(value), value.toLocaleString(), String(value) === String(state.goals.runs || 100) ? String(value) : '')).join('')}</select></label>
+      <label class="field"><span>Batch strategy</span><select id="batch-strategy" name="batch-strategy">${option('lock-gold', 'Unlock all, then auto-lock useful Gold', state.goals.strategy)}${option('no-lock', 'Never auto-lock', state.goals.strategy)}</select></label>
       <label class="field"><span>Max reforges/run</span><input id="batch-max" name="batch-max" type="number" min="1" max="5000" value="${state.goals.maxReforges}"></label>
     </div><div class="button-row"><button class="btn secondary" id="apply-seed-btn">Apply seed &amp; restart</button><button class="btn primary" id="batch-btn">Run deterministic batch</button></div>
     <p class="help"><span class="official">Official:</span> Blue 82%, Purple 15%, Gold 3%, hard pity 90. <span class="community">Community/Unofficial:</span> Gold soft tiers and 2% / 3.5% / 5% early unlock. Practice only.</p><div id="batch-result"></div>`;
@@ -191,7 +194,7 @@ function renderPracticeTools() {
   });
   $('#batch-btn').addEventListener('click', () => {
     const next = clone(practiceState);
-    next.goals.goal = $('#batch-goal').value; next.goals.runs = Number($('#batch-runs').value); next.goals.maxReforges = Number($('#batch-max').value);
+    next.goals.goal = $('#batch-goal').value; next.goals.runs = Number($('#batch-runs').value); next.goals.strategy = $('#batch-strategy').value; next.goals.maxReforges = Number($('#batch-max').value);
     setCurrent(next);
     lastBatch = runBatch(practiceState, { runs: next.goals.runs, goal: next.goals.goal, strategy: next.goals.strategy, maxReforges: next.goals.maxReforges });
     render();

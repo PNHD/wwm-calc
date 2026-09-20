@@ -62,3 +62,13 @@ test('batch simulation is deterministic for identical seed and state', () => {
   const options = { runs: 100, goal: 'gold-2', maxReforges: 250 };
   assert.deepEqual(runBatch(state, options), runBatch(state, options));
 });
+
+
+test('batch supports both auto-lock and never-lock strategies', () => {
+  const state = createPracticeState({ seed: 'strategy' });
+  const lockGold = runBatch(state, { runs: 25, goal: 'gold-2', strategy: 'lock-gold', maxReforges: 250 });
+  const noLock = runBatch(state, { runs: 25, goal: 'gold-2', strategy: 'no-lock', maxReforges: 250 });
+  assert.equal(lockGold.strategy, 'lock-gold');
+  assert.equal(noLock.strategy, 'no-lock');
+  assert.deepEqual(noLock, runBatch(state, { runs: 25, goal: 'gold-2', strategy: 'no-lock', maxReforges: 250 }));
+});
