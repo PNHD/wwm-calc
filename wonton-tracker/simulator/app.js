@@ -277,11 +277,11 @@
     const reached = Sim.goalReached(state, goal);
     const nextStones = Sim.costForLocks(locks);
     els.totalStones.textContent = state.totalStones.toLocaleString();
-    els.totalValue.textContent = `${beadsForStones(state.totalStones).toLocaleString()} Echo Beads · ≈ ${usdForStones(state.totalStones).toFixed(2)}`;
+    els.totalValue.textContent = `${beadsForStones(state.totalStones).toLocaleString()} Echo Beads · ≈ $` + usdForStones(state.totalStones).toFixed(2);
     els.reforgeCount.textContent = state.reforgeCount.toLocaleString();
     els.goldCount.textContent = `${Sim.countGold(state)} / 4`;
     els.nextCost.textContent = `${nextStones} stone${nextStones === 1 ? '' : 's'}`;
-    els.nextValue.textContent = `${beadsForStones(nextStones).toLocaleString()} Echo Beads · ≈ ${usdForStones(nextStones).toFixed(2)}`;
+    els.nextValue.textContent = `${beadsForStones(nextStones).toLocaleString()} Echo Beads · ≈ $` + usdForStones(nextStones).toFixed(2);
     els.goalStatus.textContent = reached ? 'Goal reached' : 'Keep practicing';
     els.goalStatus.className = `goal-status ${reached ? 'reached' : ''}`;
     els.reforgeButton.querySelector('strong').textContent = `${nextStones} stone${nextStones === 1 ? '' : 's'} · ${beadsForStones(nextStones).toLocaleString()} beads`;
@@ -429,9 +429,9 @@
         <div><span>Success rate</span><strong>${(result.successRate * 100).toFixed(1)}%</strong></div>
         <div><span>Successful runs</span><strong>${result.successes}/${result.runs}</strong></div>
         <div><span>Avg. reforges</span><strong>${result.averageReforges}</strong></div>
-        <div><span>Avg. cost</span><strong>${result.averageStones} stones</strong><small>${Math.round(beadsForStones(result.averageStones)).toLocaleString()} beads · ≈ ${usdForStones(result.averageStones).toFixed(2)}</small></div>
-        <div><span>Median cost</span><strong>${result.medianStones} stones</strong><small>${beadsForStones(result.medianStones).toLocaleString()} beads · ≈ ${usdForStones(result.medianStones).toFixed(2)}</small></div>
-        <div><span>P90 cost</span><strong>${result.p90Stones} stones</strong><small>${beadsForStones(result.p90Stones).toLocaleString()} beads · ≈ ${usdForStones(result.p90Stones).toFixed(2)}</small></div>
+        <div><span>Avg. cost</span><strong>${result.averageStones} stones</strong><small>${Math.round(beadsForStones(result.averageStones)).toLocaleString()} beads · ≈ &#36;${usdForStones(result.averageStones).toFixed(2)}</small></div>
+        <div><span>Median cost</span><strong>${result.medianStones} stones</strong><small>${beadsForStones(result.medianStones).toLocaleString()} beads · ≈ &#36;${usdForStones(result.medianStones).toFixed(2)}</small></div>
+        <div><span>P90 cost</span><strong>${result.p90Stones} stones</strong><small>${beadsForStones(result.p90Stones).toLocaleString()} beads · ≈ &#36;${usdForStones(result.p90Stones).toFixed(2)}</small></div>
       </div>
       <p class="batch-note">Each run starts from the current slot setup and pity values. Results are seeded simulation statistics, not server RNG predictions.</p>`;
   }
