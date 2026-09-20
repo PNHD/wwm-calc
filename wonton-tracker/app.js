@@ -336,7 +336,15 @@ function render() {
 
 function showLiveResult() {
   const state = liveState;
-  $('#result-fields').innerHTML = state.slots.filter(slot => slot.active && slot.id < 5).map(slot => `<fieldset class="edit-card" data-result-slot="${slot.id}"><legend>Slot ${slot.id}</legend><label class="checkline"><input type="checkbox" name="result-gold-${slot.id}" data-gold="${slot.id}"> Gold observed</label><div class="form-grid"><label class="field"><span>Actual quality</span><select name="result-quality-${slot.id}" data-result-quality="${slot.id}">${['blue','purple','gold'].map(value => option(value, qualityLabel(value), slot.quality)).join('')}</select></label><label class="field"><span>Actual appearance</span><select name="result-attribute-${slot.id}" data-result-attribute="${slot.id}">${appearancesFor(slot.id, slot.quality, state.target.weapon).map(value => option(value, value, slot.attribute)).join('')}</select></label></div></fieldset>`).join('');
+  if (!state.pendingResult) {
+    announce('Log a real reforge first, then add optional details for that roll.');
+    return;
+  }
+  const markedGold = new Set(state.pendingResult.goldSlots || []);
+  $('#result-fields').innerHTML = state.slots.filter(slot => slot.active && slot.id < 5).map(slot => {
+    const marked = markedGold.has(slot.id);
+    return `<fieldset class="edit-card" data-result-slot="${slot.id}"><legend>Slot ${slot.id}</legend><label class="checkline"><input type="checkbox" name="result-gold-${slot.id}" data-gold="${slot.id}" ${marked ? 'checked disabled' : ''} ${slot.locked ? 'disabled' : ''}> ${marked ? 'Gold already recorded' : slot.locked ? 'Locked — no roll' : 'Gold observed on this roll'}</label><div class="form-grid"><label class="field"><span>Actual quality</span><select name="result-quality-${slot.id}" data-result-quality="${slot.id}">${['blue','purple','gold'].map(value => option(value, qualityLabel(value), slot.quality)).join('')}</select></label><label class="field"><span>Actual appearance</span><select name="result-attribute-${slot.id}" data-result-attribute="${slot.id}">${appearancesFor(slot.id, slot.quality, state.target.weapon).map(value => option(value, value, slot.attribute)).join('')}</select></label></div></fieldset>`;
+  }).join('');
   $('#early-unlock-row').hidden = !nextInactiveSlot(state) || !!state.pendingResult?.activatedSlot;
   $('#early-unlock').checked = false;
   document.querySelectorAll('[data-result-quality]').forEach(select => select.addEventListener('change', () => {
@@ -344,7 +352,7 @@ function showLiveResult() {
     attr.innerHTML = appearancesFor(Number(select.dataset.resultQuality), select.value, state.target.weapon).map(value => option(value, value, '')).join('');
   }));
   document.querySelectorAll('[data-gold]').forEach(input => input.addEventListener('change', () => {
-    if (!input.checked) return;
+    if (!input.checked || input.disabled) return;
     const quality = document.querySelector(`[data-result-quality="${input.dataset.gold}"]`);
     quality.value = 'gold'; quality.dispatchEvent(new Event('change'));
   }));
