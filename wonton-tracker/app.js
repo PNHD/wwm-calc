@@ -262,7 +262,7 @@ function renderReferences() {
   $('#assumptions').innerHTML = `
     <ul class="rules">
       <li><span class="official">OFFICIAL:</span> five lattices (1 Color, 3 Structure, 1 Bright Light); Blue 82%, Purple 15%, Gold 3%; Gold hard pity 90.</li>
-      <li><span class="official">OFFICIAL SET EVIDENCE:</span> NetEase weapon announcements describe set-specific Bright Light effects after Bright Light is opened. The Lab shows the matching known set on active Slot 5 only when Slots 1–4 are all the same verified set; otherwise it shows Sunlight.</li>
+      <li><span class="official">OFFICIAL PREVIEW EVIDENCE:</span> NetEase weapon previews show set-specific Bright Light effects. <span class="community">Community rule:</span> players consistently report that Bright Light changes from Sunlight only when Slots 1–4 form the same Purple or Gold set. The Lab models that rule for verified weapon sets.</li>
       <li><strong>GUIDE / STRONG COMMUNITY CONSENSUS:</strong> about 120 Taiyi Stones to fully unlock the five notches (~30 per next notch); opening nodes without locks first is the cost-efficient baseline strategy.</li>
       <li><strong>IN-GAME PLAN SYSTEM:</strong> guides document five auto-saved Optimal Plans ranked by Elegance Points plus one manual save. Lab Snapshots are separate convenience checkpoints and do not claim to reproduce that score.</li>
       <li><span class="community">COMMUNITY-REPORTED:</span> finalizing/applying a reforge clears the session's saved plans; restoring a plan does not roll back unlock-meter progress.</li>
