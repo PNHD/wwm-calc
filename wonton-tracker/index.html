@@ -14,7 +14,7 @@
     <header class="topbar">
       <div><p class="eyebrow">WHERE WINDS MEET · COMMUNITY TOOL</p><h1>Wonton Reforge Lab <span>v2</span></h1><p id="mode-subtitle" class="subtitle"></p></div>
       <div class="top-actions">
-        <nav class="mode-switch" aria-label="Lab mode"><button type="button" data-mode="live">Live Tracker</button><button type="button" data-mode="practice">Practice</button></nav>
+        <nav class="mode-switch" aria-label="Lab mode"><button type="button" data-mode="live">Real Tracker</button><button type="button" data-mode="practice">Simulator</button></nav>
         <button class="btn ghost" id="edit-btn" type="button">Edit State</button><button class="btn danger" id="reset-btn" type="button">Reset</button>
       </div>
     </header>
@@ -39,11 +39,11 @@
         </section>
       </section>
     </main>
-    <footer>Unofficial community tool. Live Tracker is a user-maintained ledger; Practice is a seeded model, not server RNG prediction.</footer>
+    <footer>Unofficial community tool. Real Tracker records what happened in game; Simulator generates seeded practice outcomes and batch estimates.</footer>
   </div>
   <dialog id="result-dialog" class="modal" aria-labelledby="result-title"><form method="dialog" id="result-form" class="modal-card"><div class="modal-head"><div><p class="eyebrow">ACTUAL IN-GAME RESULT</p><h2 id="result-title">What happened?</h2></div><button class="icon-btn" value="cancel" aria-label="Close">×</button></div><p class="muted">No special result is the default. Only record changes you actually observed.</p><div id="result-fields" class="edit-grid"></div><label id="early-unlock-row" class="checkline"><input id="early-unlock" name="early-unlock" type="checkbox"> Next slot unlocked early</label><div class="modal-actions"><button class="btn ghost" value="cancel">Later</button><button class="btn primary" id="save-result-btn" value="default">Save actual result</button></div></form></dialog>
   <dialog id="edit-dialog" class="modal" aria-labelledby="edit-title"><form id="edit-form" class="modal-card wide"><div class="modal-head"><div><p class="eyebrow">CORRECTION</p><h2 id="edit-title">Edit current state</h2></div><button class="icon-btn" type="button" data-close-edit aria-label="Close">×</button></div><div id="edit-fields" class="edit-grid"></div><div class="modal-actions"><button class="btn ghost" type="button" data-close-edit>Cancel</button><button class="btn primary" id="save-edit-btn" type="submit">Save correction</button></div></form></dialog>
-  <dialog id="gold-dialog" class="modal" aria-labelledby="gold-title"><form method="dialog" class="modal-card narrow"><p class="eyebrow">PRACTICE RESULT</p><h2 id="gold-title">Gold appeared</h2><p id="gold-message" class="muted"></p><div class="modal-actions"><button class="btn ghost" value="cancel">Continue</button><button class="btn primary" id="gold-save-btn" value="default">Save current plan</button></div></form></dialog>
+  <dialog id="gold-dialog" class="modal" aria-labelledby="gold-title"><form method="dialog" class="modal-card narrow"><p class="eyebrow">SIMULATOR RESULT</p><h2 id="gold-title">Gold appeared</h2><p id="gold-message" class="muted"></p><div class="modal-actions"><button class="btn ghost" value="cancel">Continue</button><button class="btn primary" id="gold-save-btn" value="default">Save current plan</button></div></form></dialog>
   <div id="toast" class="toast" role="status" hidden></div>
   <script type="module" src="./app.js"></script>
 </body>
