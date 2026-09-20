@@ -139,8 +139,8 @@ function renderPlans() {
   $('#plans').innerHTML = state.plans.map(plan => {
     const match = targetMatch(plan.slots, state.target);
     return `<article class="plan"><div class="plan-head"><div><strong>${escapeHtml(plan.name)}</strong><div class="help">${escapeHtml(match.label)}</div></div></div>
-      <div class="plan-slots">${plan.slots.map(slot => `<div class="mini-slot ${slot.active ? slot.quality : 'inactive'}"><strong>S${slot.id}</strong><span>${slot.active ? escapeHtml(slot.attribute) : '—'}</span></div>`).join('')}</div>
-      <div class="plan-actions"><button class="btn ghost small" data-plan-action="rename" data-plan="${plan.id}">Rename</button><button class="btn ghost small" data-plan-action="apply" data-plan="${plan.id}">Apply</button><button class="btn danger small" data-plan-action="delete" data-plan="${plan.id}">Delete</button></div></article>`;
+      <div class="plan-slots">${plan.slots.map(slot => `<div class="mini-slot ${slot.active ? slot.quality : 'inactive'}"><strong>S${slot.id} · ${slot.active ? qualityLabel(slot.quality) : 'Inactive'}</strong><span>${slot.active ? escapeHtml(slot.attribute) : '—'}</span></div>`).join('')}</div>
+      <div class="plan-actions"><button class="btn ghost small" data-plan-action="rename" data-plan="${plan.id}">Rename</button><button class="btn ghost small" data-plan-action="restore" data-plan="${plan.id}">Restore Snapshot</button><button class="btn danger small" data-plan-action="delete" data-plan="${plan.id}">Delete</button></div></article>`;
   }).join('');
   document.querySelectorAll('[data-plan-action]').forEach(button => button.addEventListener('click', () => handlePlanAction(button.dataset.planAction, Number(button.dataset.plan))));
 }
@@ -152,9 +152,16 @@ function handlePlanAction(action, id) {
     const name = prompt('Plan name', plan?.name || '');
     if (name === null) return;
     result = renamePlan(current(), id, name);
-  } else if (action === 'apply') {
+  } else if (action === 'restore') {
+    const plan = current().plans.find(item => item.id === id);
+    const ok = confirm(
+      `Restore "${plan?.name || 'this snapshot'}"?\n\n` +
+      'This is a checkpoint restore, not a merge. Saved active slots replace the current appearance in those slots, even if a slot is locked. ' +
+      'The lock itself, visible pity, unlock progress and spend stay unchanged. Saved inactive slots leave the current slot untouched.'
+    );
+    if (!ok) return;
     result = applyPlan(current(), id);
-    if (result.applied) announce('Appearance applied; pity, progress, locks, spend, and inactive slots were preserved.');
+    if (result.applied) announce('Snapshot restored. Appearance changed; locks, pity, progress and spend were preserved.');
   } else {
     if (!confirm('Delete this saved plan?')) return;
     result = deletePlan(current(), id);
