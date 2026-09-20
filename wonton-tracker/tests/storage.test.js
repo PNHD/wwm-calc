@@ -4,7 +4,7 @@ import { escapeHtml } from '../core/common.js';
 import { createLiveState, LIVE_STORAGE_KEY } from '../core/live.js';
 import { PRACTICE_STORAGE_KEY, createPracticeState } from '../core/practice.js';
 import {
-  BACKUP_SCHEMA, LEGACY_BASELINE_KEY, LEGACY_LIVE_KEY, LEGACY_PRACTICE_KEY,
+  BACKUP_SCHEMA, LEGACY_BASELINE_KEY, LEGACY_LIVE_KEY, LEGACY_PRACTICE_KEY, PREVIOUS_PRACTICE_KEY,
   exportBackup, importBackup, migrateStorage
 } from '../core/storage.js';
 
@@ -84,4 +84,37 @@ test('Practice import normalizes untrusted history cost before rendering', () =>
   const imported = importBackup(maliciousBackup, 'practice');
   assert.equal(imported.history[0].cost, 0);
   assert.equal(imported.history[0].at, '<script>alert(1)</script>');
+});
+
+test('v2 Practice session is repaired into a fresh sequential v3 session while preserving preferences', () => {
+  const old = createPracticeState({ seed: 'old-session' });
+  old.slots.forEach(slot => { slot.active = true; slot.progress = 100; });
+  old.baselineSlots = old.slots.map(slot => ({ ...slot }));
+  old.reforgeCount = 7;
+  old.totalStones = 7;
+  old.target.weapon = 'Cloudsplitter';
+  old.budget.region = 'Japan';
+  old.goals.runs = 1000;
+  old.plans = [{
+    id: 1,
+    name: 'Keep me',
+    savedAt: '',
+    slots: old.slots.map(slot => ({ id: slot.id, active: slot.active, quality: slot.quality, attribute: slot.attribute }))
+  }];
+
+  const storage = new MemoryStorage({ [PREVIOUS_PRACTICE_KEY]: JSON.stringify(old) });
+  const migrated = migrateStorage(storage);
+
+  assert.equal(migrated.report.practice, 'repaired');
+  assert.equal(migrated.practice.seed, 'old-session');
+  assert.equal(migrated.practice.reforgeCount, 0);
+  assert.equal(migrated.practice.totalStones, 0);
+  assert.deepEqual(migrated.practice.slots.map(slot => slot.active), [true, false, false, false, false]);
+  assert.deepEqual(migrated.practice.baselineSlots.map(slot => slot.active), [true, false, false, false, false]);
+  assert.equal(migrated.practice.target.weapon, 'Cloudsplitter');
+  assert.equal(migrated.practice.budget.region, 'Japan');
+  assert.equal(migrated.practice.goals.runs, 1000);
+  assert.equal(migrated.practice.plans[0].name, 'Keep me');
+  assert.ok(storage.getItem(PREVIOUS_PRACTICE_KEY), 'v2 key remains as backup');
+  assert.ok(storage.getItem(PRACTICE_STORAGE_KEY), 'repaired state stored under v3 key');
 });
