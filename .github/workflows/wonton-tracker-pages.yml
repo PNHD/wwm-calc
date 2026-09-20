@@ -11,21 +11,58 @@ on:
 
 permissions:
   contents: read
-  deployments: write
 
 jobs:
-  deploy:
+  verify-and-deploy:
     runs-on: ubuntu-latest
-    name: Deploy wonton-tracker.pages.dev
+    name: Verify and deploy wonton-tracker.pages.dev
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Deploy to Cloudflare Pages
-        id: deploy
-        uses: cloudflare/wrangler-action@v4
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy wonton-tracker --project-name=wonton-tracker --branch=main
-          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+      - name: Verify standalone site
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s wonton-tracker/index.html
+          grep -q '<title>Wonton Tracker · Silent Voice Reforge</title>' wonton-tracker/index.html
+          grep -q 'Gold pity' wonton-tracker/index.html
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          html = Path("wonton-tracker/index.html").read_text()
+          blocks = re.findall(r"<script>(.*?)</script>", html, re.S)
+          assert len(blocks) == 1, f"expected one inline script, got {len(blocks)}"
+          Path("/tmp/wonton-tracker.js").write_text(blocks[0])
+          PY
+          node --check /tmp/wonton-tracker.js
+
+      - name: Check Cloudflare credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${CLOUDFLARE_API_TOKEN}" ] || [ -z "${CLOUDFLARE_ACCOUNT_ID}" ]; then
+            echo "::error::Add CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID as GitHub Actions repository secrets."
+            exit 1
+          fi
+
+      - name: Install Wrangler
+        run: npm install --global wrangler@4
+
+      - name: Ensure Pages project exists
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! wrangler pages project list --json | jq -e '.[] | select(.name == "wonton-tracker")' >/dev/null; then
+            wrangler pages project create wonton-tracker --production-branch=main
+          fi
+
+      - name: Deploy production
+        shell: bash
+        run: |
+          set -euo pipefail
+          wrangler pages deploy wonton-tracker --project-name=wonton-tracker --branch=main
