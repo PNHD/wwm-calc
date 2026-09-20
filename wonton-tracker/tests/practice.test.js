@@ -110,3 +110,25 @@ test('active Bright Light follows a verified full matching set and falls back to
   normalized = normalizePracticeState(normalized);
   assert.equal(normalized.slots[4].attribute, 'Sunlight');
 });
+
+
+test('batch matching-set goals recognize real weapon set names', () => {
+  const state = createPracticeState({ seed: 'batch-real-set' });
+  state.target.weapon = 'Cloudsplitter';
+  state.slots.forEach(slot => { slot.active = true; slot.progress = 100; });
+  state.slots[0].quality = 'gold';
+  state.slots[0].attribute = 'Set - Flying Fire';
+  state.slots[1].quality = 'gold';
+  state.slots[1].attribute = 'Set - Flying Fire';
+  state.slots[2].quality = 'blue';
+  state.slots[2].attribute = 'Set - Winter Gale';
+  state.slots[3].quality = 'blue';
+  state.slots[3].attribute = 'Set - Winter Gale';
+
+  const alreadyMatched = runBatch(state, { runs: 1, goal: 'set-2', strategy: 'no-lock', maxReforges: 1 });
+  assert.equal(alreadyMatched.successes, 1);
+  assert.equal(alreadyMatched.averageReforges, 0);
+
+  const lockAndChase = runBatch(state, { runs: 1, goal: 'set-3', strategy: 'lock-gold', maxReforges: 1 });
+  assert.equal(lockAndChase.averageStones, 5, 'two matching Gold set nodes should be auto-locked before the chase roll');
+});
