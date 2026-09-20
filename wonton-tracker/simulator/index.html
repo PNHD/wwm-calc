@@ -55,10 +55,10 @@
       </section>
 
       <section class="metrics" aria-label="Practice totals">
-        <article class="metric"><span>Total spent</span><strong id="total-stones">0</strong><small>Taiyi Stones</small></article>
+        <article class="metric"><span>Total spent</span><strong id="total-stones">0</strong><small id="total-value">0 Echo Beads · ≈ $0.00</small></article>
         <article class="metric"><span>Reforges</span><strong id="reforge-count">0</strong><small>this run</small></article>
         <article class="metric"><span>Gold slots</span><strong id="gold-count">0 / 4</strong><small>rerollable slots</small></article>
-        <article class="metric"><span>Next roll</span><strong id="next-cost">1 stone</strong><small>from current locks</small></article>
+        <article class="metric"><span>Next roll</span><strong id="next-cost">1 stone</strong><small id="next-value">200 Echo Beads · ~$2.78</small></article>
         <article class="metric"><span>Goal</span><strong id="goal-status" class="goal-status">Keep practicing</strong>
           <select id="goal" aria-label="Interactive practice goal">
             <option value="gold-2">2 Gold</option>
@@ -101,6 +101,7 @@
           <li><strong>Official mode:</strong> Blue 82%, Purple 15%, Gold 3%; Gold is guaranteed by the 90th reroll for each rerolled Slot 1–4.</li>
           <li><strong>Community mode:</strong> keeps Purple at 15% and models Gold as 3% through pity 30, 4% at 31–60, and 5% at 61–89. These soft tiers are not official game documentation.</li>
           <li>Lock cost is modeled as 1 / 2 / 5 / 10 Taiyi Stones for 0 / 1 / 2 / 3 locked reforgeable slots.</li>
+          <li><strong>Price assumption:</strong> 1 Taiyi Stone = 200 Echo Beads; best-value top-up ≈ $100 = 7,200 Echo Beads (≈72 beads per $1).</li>
           <li>Slot 5 is treated as fixed Gold · Sunlight when active and does not reroll.</li>
           <li>Attribute names are training labels. Only Set 1 / Set 2 matching is used for matching-set goals.</li>
         </ul>
