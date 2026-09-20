@@ -31,4 +31,3 @@ export function budgetSummary(state) {
     nextBeads: beadsForStones(nextStones)
   };
 }
-

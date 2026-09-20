@@ -62,4 +62,3 @@ test('batch simulation is deterministic for identical seed and state', () => {
   const options = { runs: 100, goal: 'gold-2', maxReforges: 250 };
   assert.deepEqual(runBatch(state, options), runBatch(state, options));
 });
-

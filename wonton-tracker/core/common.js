@@ -103,4 +103,3 @@ export function escapeHtml(value) {
 export function safeText(value, fallback = '', maxLength = 120) {
   return typeof value === 'string' ? value.slice(0, maxLength) : fallback;
 }
-

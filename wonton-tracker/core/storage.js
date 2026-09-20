@@ -134,4 +134,3 @@ export function exportText(mode, state) {
   ];
   return lines.join('\n');
 }
-

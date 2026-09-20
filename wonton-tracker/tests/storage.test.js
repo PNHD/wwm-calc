@@ -63,4 +63,3 @@ test('imported strings remain inert and are escaped before HTML rendering', () =
   assert.equal(imported.plans[0].name, '<img src=x onerror=alert(1)>');
   assert.equal(escapeHtml(imported.plans[0].name), '&lt;img src=x onerror=alert(1)&gt;');
 });
-

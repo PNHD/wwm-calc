@@ -33,4 +33,3 @@ export function appearancesFor(slotId, quality) {
   const group = slotId === 1 ? APPEARANCES[1] : APPEARANCES[234];
   return group[quality] || group.blue;
 }
-
