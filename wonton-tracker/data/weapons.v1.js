@@ -158,7 +158,7 @@ export function matchingSetName(slots, weapon = '') {
 
   const profile = profileFor(weapon);
   if (profile) {
-    const knownSets = new Set(['blue', 'purple', 'gold'].flatMap(quality => profile.sets[quality]));
+    const knownSets = new Set(['purple', 'gold'].flatMap(quality => profile.sets[quality]));
     return knownSets.has(candidate) ? candidate : '';
   }
 
