@@ -275,7 +275,7 @@ function reforge(state, rng = Math.random) {
   const actText = activation.activated
     ? ` Slot ${activation.hole} activated${activation.direct ? ' early' : ''}.`
     : activation.hole ? ` Slot ${activation.hole} activation ${Math.round(activation.progress)}%.` : '';
-  pushHistory(next, `Reforge #${next.reforgeCount}: ${cost} Taiyi Stone${cost === 1 ? '' : 's'} · ${echoBeadsForStones(cost).toLocaleString()} Echo Beads · ≈ ${approxUsdForStones(cost).toFixed(2)} (${locks} locked). ${changes.join(' · ')}${actText}`.trim(), changes.some(c => c.includes('Gold')) ? 'gold' : 'info');
+  pushHistory(next, `Reforge #${next.reforgeCount}: ${cost} Taiyi Stone${cost === 1 ? '' : 's'} · ${echoBeadsForStones(cost).toLocaleString()} Echo Beads · ≈ ${formatUsdForStones(cost)} (${locks} locked). ${changes.join(' · ')}${actText}`.trim(), changes.some(c => c.includes('Gold')) ? 'gold' : 'info');
   return next;
 }
 
@@ -360,6 +360,107 @@ function approxUsdForStones(stones) {
 }
 function approxUsd(state) {
   return approxUsdForStones(state.totalStones);
+}
+function formatUsdForStones(stones) {
+  return '
+
+const KEY = 'wonton-tracker-state-v1';
+let state = load();
+const $ = (s) => document.querySelector(s);
+const slotsEl = $('#slots');
+
+function load(){ try { return JSON.parse(localStorage.getItem(KEY)) || initialState(); } catch { return initialState(); } }
+function persist(){ localStorage.setItem(KEY, JSON.stringify(state)); }
+function esc(s=''){ return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+function time(s){ try{return new Date(s).toLocaleString()}catch{return s} }
+
+function render(){
+  renderSlots(); renderTotals(); renderPlans(); renderHistory(); renderAction(); persist();
+}
+
+function renderSlots(){
+  slotsEl.innerHTML = state.holes.map(h => {
+    const q = h.active ? h.quality : 'inactive';
+    const pity = h.id === 5 ? 100 : Math.min(100, h.guaranteeCounter / HARD_PITY * 100);
+    const label = h.active ? holeLabel(h) : 'Inactive';
+    const lockDisabled = h.id === 5 || !h.active || (!h.locked && lockedActiveCount(state) >= 3);
+    return `<article class="slot ${q}" data-id="${h.id}">
+      <div class="slot-number"><span>Slot ${h.id}</span><span class="slot-badge">${h.active?'ACTIVE':'INACTIVE'}</span></div>
+      <div class="slot-quality">${h.active ? h.quality[0].toUpperCase()+h.quality.slice(1) : 'Inactive'}</div>
+      <div class="slot-attribute">${esc(label)}</div>
+      <div class="progress"><i style="width:${h.progress}%"></i></div>
+      <div class="slot-meta"><span>${h.active?'Activated':`Activation ${h.progress.toFixed(1)}%`}</span><span>${h.id===5?'Final slot':''}</span></div>
+      <div class="pity"><div class="pity-head"><span>${h.id===5?(h.active?'Guaranteed Gold':'Gold on activation'):'Gold pity'}</span><strong>${h.id===5?'—':`${h.guaranteeCounter}/${HARD_PITY}`}</strong></div><div class="pity-track"><i style="width:${pity}%"></i></div></div>
+      ${h.id<=4?`<label class="lock-row"><input type="checkbox" data-lock="${h.id}" ${h.locked?'checked':''} ${lockDisabled?'disabled':''}> Lock slot</label>`:''}
+    </article>`;
+  }).join('');
+  slotsEl.querySelectorAll('[data-lock]').forEach(el=>el.addEventListener('change',e=>{state=toggleLock(state,Number(e.target.dataset.lock),e.target.checked);render();}));
+}
+
+function renderTotals(){
+  $('#total-stones').textContent = state.totalStones;
+  $('#total-beads').textContent = `${echoBeadsForStones(state.totalStones).toLocaleString()} Echo Beads`;
+  $('#total-usd').textContent = `≈ ${formatUsdForStones(state.totalStones)} · $100 ≈ 7,200 beads`;
+  $('#reforge-count').textContent = state.reforgeCount;
+  $('#locked-count').textContent = `${lockedActiveCount(state)} / 3`;
+  const c=stoneCost(state); $('#reforge-cost').textContent = `${c} Taiyi Stone${c===1?'':'s'} · ${echoBeadsForStones(c).toLocaleString()} beads`;
+}
+function renderAction(){
+  if(state.nextHoleToActivate<=5){const h=state.holes[state.nextHoleToActivate-1];$('#action-title').textContent=`Activating Slot ${h.id}`;$('#action-note').textContent=`Current activation progress: ${h.progress.toFixed(1)}%. Reforge also rerolls every active, unlocked slot.`}
+  else{$('#action-title').textContent='All slots activated';$('#action-note').textContent='Reforge rerolls active, unlocked slots only.'}
+  if(state.goldPendingReset.length){$('#action-note').textContent += ` Gold currently shown on Slot ${state.goldPendingReset.map(i=>i+1).join(', ')} will be replaced on the next unlocked reforge.`}
+}
+function renderPlans(){
+  $('#plan-count').textContent=`${state.schemes.length}/5`;
+  $('#save-plan-btn').disabled=state.schemes.length>=5;
+  const el=$('#plans');
+  if(!state.schemes.length){el.innerHTML='<div class="empty">No saved plans yet.</div>';return}
+  el.innerHTML=[...state.schemes].reverse().map(p=>`<article class="plan"><div class="plan-head"><div><strong>${esc(p.name)}</strong><div class="muted">${time(p.timestamp)}</div></div></div><div class="plan-slots">${p.holes.map(h=>`<div class="mini-slot ${h.active?h.quality:'inactive'}"><strong>${h.id}</strong><br>${h.active?esc(h.attribute):'—'}</div>`).join('')}</div><div class="plan-actions"><button class="btn ghost small" data-apply="${p.id}">Apply</button><button class="btn danger-ghost small" data-delete="${p.id}">Delete</button></div></article>`).join('');
+  el.querySelectorAll('[data-apply]').forEach(b=>b.onclick=()=>{if(confirm('Apply this plan? Active slots in the plan will replace current quality/attribute while your current pity is preserved.')){state=applyScheme(state,Number(b.dataset.apply));render()}});
+  el.querySelectorAll('[data-delete]').forEach(b=>b.onclick=()=>{if(confirm('Delete this saved plan?')){state=deleteScheme(state,Number(b.dataset.delete));render()}});
+}
+function renderHistory(){const el=$('#history');el.innerHTML=state.history.length?state.history.map(h=>`<div class="history-item ${h.type==='gold'?'gold':''}">${esc(h.text)}<div class="muted">${time(h.at)}</div></div>`).join(''):'<div class="empty">No activity yet.</div>'}
+
+function openEdit(){
+  const el=$('#edit-slots');
+  el.innerHTML=state.holes.map(h=>{
+    const attrs=getAttributeList(h.id,h.active?h.quality:'blue');
+    return `<section class="edit-card" data-edit-card="${h.id}"><div class="edit-title"><strong>Slot ${h.id}</strong><label class="checkline"><input type="checkbox" data-field="active" ${h.active?'checked':''} ${h.id===5&&h.active?'disabled':''}> Active</label></div><div class="form-grid"><div class="field"><label>Quality</label><select data-field="quality" ${!h.active||h.id===5?'disabled':''}>${['blue','purple','gold'].map(q=>`<option value="${q}" ${q===h.quality?'selected':''}>${q[0].toUpperCase()+q.slice(1)}</option>`).join('')}</select></div><div class="field"><label>Attribute</label><select data-field="attribute" ${!h.active||h.id===5?'disabled':''}>${attrs.map(a=>`<option ${a===h.attribute?'selected':''}>${esc(a)}</option>`).join('')}</select></div><div class="field"><label>Activation progress</label><input data-field="progress" type="number" min="0" max="100" step=".1" value="${h.progress}" ${h.active?'disabled':''}></div><div class="field"><label>Gold pity</label><input data-field="pity" type="number" min="0" max="90" value="${h.guaranteeCounter}" ${h.id===5?'disabled':''}></div></div>${h.id<=4?`<label class="checkline"><input type="checkbox" data-field="locked" ${h.locked?'checked':''} ${!h.active?'disabled':''}> Locked</label>`:''}</section>`
+  }).join('');
+  el.querySelectorAll('[data-edit-card]').forEach(card=>{
+    const active=card.querySelector('[data-field="active"]'), quality=card.querySelector('[data-field="quality"]'), attr=card.querySelector('[data-field="attribute"]'), progress=card.querySelector('[data-field="progress"]'), locked=card.querySelector('[data-field="locked"]');
+    const id=Number(card.dataset.editCard);
+    function refreshAttrs(){const list=getAttributeList(id,quality.value);attr.innerHTML=list.map(a=>`<option>${esc(a)}</option>`).join('')}
+    active?.addEventListener('change',()=>{const on=active.checked;if(id!==5){quality.disabled=!on;attr.disabled=!on}progress.disabled=on;if(locked)locked.disabled=!on});
+    quality?.addEventListener('change',refreshAttrs);
+  });
+  $('#edit-dialog').showModal();
+}
+function saveEdit(){
+  document.querySelectorAll('[data-edit-card]').forEach(card=>{
+    const id=Number(card.dataset.editCard), get=f=>card.querySelector(`[data-field="${f}"]`);
+    const active=get('active')?.checked??false; const quality=get('quality')?.value||'blue'; const attr=get('attribute')?.value||''; const progress=Number(get('progress')?.value||0); const pity=Number(get('pity')?.value||0); const locked=get('locked')?.checked??false;
+    state=setHole(state,id,{active,quality,attribute:attr,progress,guaranteeCounter:pity,locked});
+  });
+  $('#edit-dialog').close(); render();
+}
+function renderAttributeGuide(){
+  $('#attribute-guide').innerHTML=['blue','purple','gold'].map(q=>`<section class="attribute-col"><h3>${q[0].toUpperCase()+q.slice(1)} · Slot 1</h3><div class="chips">${ATTRIBUTES[1][q].map(a=>`<span class="chip">${esc(a)}</span>`).join('')}</div></section>`).join('')+`<section class="attribute-col"><h3>Slots 2–4</h3><p class="muted">Blue: Set 1<br>Purple: Set 1 / Set 2<br>Gold: Set 1 / Set 2</p></section><section class="attribute-col"><h3>Slot 5</h3><p class="muted">Guaranteed Gold on activation: Radiant Sun.</p></section>`;
+}
+function exportHistory(){const lines=[`Wonton Tracker export`,new Date().toLocaleString(),`Total stones: ${state.totalStones}`,`Total Echo Beads: ${echoBeadsForStones(state.totalStones)}`,`Approx. USD: ${formatUsdForStones(state.totalStones)}`,`Reforges: ${state.reforgeCount}`,'',...state.holes.map(h=>`Slot ${h.id}: ${h.active?holeLabel(h):'Inactive'} | progress ${h.progress}% | pity ${h.guaranteeCounter}/90 | locked ${h.locked?'yes':'no'}`),'','History:',...state.history.slice().reverse().map(h=>`${time(h.at)} - ${h.text}`)];const blob=new Blob([lines.join('\n')],{type:'text/plain'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`wonton-tracker-${new Date().toISOString().slice(0,10)}.txt`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),500)}
+
+$('#reforge-btn').onclick=()=>{state=reforge(state);render()};
+$('#edit-btn').onclick=openEdit; $('#save-edit-btn').onclick=saveEdit;
+$('#attributes-btn').onclick=()=>{$('#attributes-dialog').showModal()};
+$('#reset-btn').onclick=()=>{if(confirm('Reset all slots, pity, cost, history and saved plans?')){state=resetState();render()}};
+$('#save-plan-btn').onclick=()=>{const name=prompt('Plan name',`Plan ${state.schemes.length+1}`);if(name!==null){state=saveScheme(state,name.trim());render()}};
+$('#clear-history-btn').onclick=()=>{if(confirm('Clear activity history?')){state.history=[];render()}};
+$('#export-btn').onclick=exportHistory;
+renderAttributeGuide(); render();
+
+  </script>
+</body>
+</html> + approxUsdForStones(stones).toFixed(2);
 }
 
 const KEY = 'wonton-tracker-state-v1';
