@@ -13,7 +13,7 @@ import {
 import { applyPlan, deletePlan, renamePlan, savePlan, targetMatch } from './core/plans.js';
 import { budgetSummary, PACKAGE_REFERENCE, REGIONS } from './core/pricing.js';
 import { exportBackup, exportText, importBackup, migrateStorage, persistState } from './core/storage.js';
-import { APPEARANCES, WEAPONS, WEAPON_DATA_VERSION, appearancesFor } from './data/weapons.v1.js';
+import { APPEARANCES, WEAPONS, WEAPON_DATA_VERSION, WEAPON_PROFILES, appearancesFor, setsForWeapon } from './data/weapons.v1.js';
 
 const $ = selector => document.querySelector(selector);
 const migration = migrateStorage(localStorage);
@@ -40,8 +40,9 @@ function option(value, label, selected) {
   return `<option value="${escapeHtml(value)}"${value === selected ? ' selected' : ''}>${escapeHtml(label)}</option>`;
 }
 
-function appearanceOptions(slotId, selected) {
-  const values = [...new Set(['blue', 'purple', 'gold'].flatMap(quality => appearancesFor(slotId, quality)))];
+function appearanceOptions(slotId, selected, weapon = '') {
+  const values = [...new Set(['blue', 'purple', 'gold'].flatMap(quality => appearancesFor(slotId, quality, weapon)))];
+  if (selected && !values.includes(selected)) values.push(selected);
   return values.map(value => option(value, value, value === selected ? selected : '')).join('');
 }
 
@@ -61,7 +62,7 @@ function slotCard(slot) {
     <div class="slot-top"><span class="slot-number">Slot ${slot.id}</span><span class="status-pill">${status}</span></div>
     <div class="quality">${quality}</div><div class="attribute">${attribute}</div>
     <div class="pity-head"><span>${meterLabel}</span><strong>${meterValue}</strong></div><div class="meter"><i style="width:${percent}%"></i></div>
-    <div class="slot-meta">${fixed ? 'Gold · Sunlight when active' : slot.active ? `${Math.round(slot.pity / HARD_PITY * 100)}% to hard pity` : 'No pity while inactive'}</div>
+    <div class="slot-meta">${fixed ? `Gold · ${escapeHtml(slot.attribute)} when active` : slot.active ? `${Math.round(slot.pity / HARD_PITY * 100)}% to hard pity` : 'No pity while inactive'}</div>
     ${fixed ? '' : `<label class="checkline"><input type="checkbox" name="lock-${slot.id}" data-lock="${slot.id}" ${slot.locked ? 'checked' : ''} ${slot.active ? '' : 'disabled'}><span>Lock slot</span></label>`}
   </article>`;
 }
