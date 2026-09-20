@@ -42,7 +42,10 @@
     batchStrategy: document.querySelector('#batch-strategy'),
     batchMax: document.querySelector('#batch-max'),
     batchButton: document.querySelector('#batch-run-btn'),
-    batchResult: document.querySelector('#batch-result')
+    batchResult: document.querySelector('#batch-result'),
+    planCount: document.querySelector('#plan-count'),
+    savePlanButton: document.querySelector('#save-plan-btn'),
+    plans: document.querySelector('#plans')
   };
 
   function loadState() {
@@ -195,6 +198,70 @@
     }).join('');
   }
 
+  function formatSavedAt(value) {
+    if (!value) return '';
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? '' : date.toLocaleString();
+  }
+
+  function renderPlans() {
+    els.planCount.textContent = `${state.plans.length}/${Sim.MAX_PLANS}`;
+    els.savePlanButton.disabled = state.plans.length >= Sim.MAX_PLANS;
+
+    if (!state.plans.length) {
+      els.plans.innerHTML = '<div class="empty-state">No saved plans yet.</div>';
+      return;
+    }
+
+    els.plans.innerHTML = [...state.plans].reverse().map(plan => `
+      <article class="plan-card">
+        <div class="plan-head">
+          <div>
+            <strong>${escapeHtml(plan.name)}</strong>
+            <div class="plan-time">${escapeHtml(formatSavedAt(plan.savedAt))}</div>
+          </div>
+        </div>
+        <div class="plan-slots">
+          ${plan.slots.map(slot => `
+            <div class="mini-slot ${slot.active ? slot.quality : 'inactive'}">
+              <strong>S${slot.id}</strong>
+              <span>${slot.active ? qualityLabel(slot.quality) : 'Locked'}</span>
+              <small>${slot.active ? escapeHtml(slot.attribute) : '—'}</small>
+            </div>`).join('')}
+        </div>
+        <div class="plan-actions">
+          <button class="btn ghost small" type="button" data-apply-plan="${plan.id}">Apply appearance</button>
+          <button class="btn danger small" type="button" data-delete-plan="${plan.id}">Delete</button>
+        </div>
+      </article>
+    `).join('');
+
+    els.plans.querySelectorAll('[data-apply-plan]').forEach(button => {
+      button.addEventListener('click', () => {
+        const id = Number(button.dataset.applyPlan);
+        if (!window.confirm('Apply this saved appearance? Current pity, unlock progress, locks, seed and stone spend will be preserved.')) return;
+        snapshot();
+        const result = Sim.applyPlan(state, id);
+        state = result.state;
+        persist();
+        render();
+        if (result.applied) announce(`Applied ${result.plan.name}. Progress and pity were preserved.`);
+      });
+    });
+
+    els.plans.querySelectorAll('[data-delete-plan]').forEach(button => {
+      button.addEventListener('click', () => {
+        const id = Number(button.dataset.deletePlan);
+        if (!window.confirm('Delete this saved plan?')) return;
+        const result = Sim.deletePlan(state, id);
+        state = result.state;
+        persist();
+        render();
+        if (result.deleted) announce('Saved plan deleted.');
+      });
+    });
+  }
+
   function renderModeNote() {
     const unlock = '<br><strong>Unlock flow:</strong> only Slot 1 starts active. Slots 2 → 3 → 4 → 5 unlock sequentially, up to 30 reforges each. Early-unlock chance uses the community WWMReforge v1.3 model (2% / 3.5% / 5%), because official sources do not publish those crit rates.';
     if (state.mode === 'official') {
@@ -228,6 +295,7 @@
     renderModeNote();
     renderSlots();
     renderMetrics();
+    renderPlans();
     renderHistory();
   }
 
@@ -252,6 +320,7 @@
     snapshot();
     const fresh = Sim.createInitialState({ mode: state.mode, seed: seed || state.seed });
     fresh.slots = JSON.parse(JSON.stringify(baselineSlots));
+    fresh.plans = JSON.parse(JSON.stringify(state.plans));
     state = Sim.normalizeState(fresh);
     persist();
     els.batchResult.innerHTML = '<div class="empty-state">Run a batch to see practice statistics.</div>';
@@ -366,6 +435,15 @@
       </div>
       <p class="batch-note">Each run starts from the current slot setup and pity values. Results are seeded simulation statistics, not server RNG predictions.</p>`;
   }
+
+  els.savePlanButton.addEventListener('click', () => {
+    const result = Sim.savePlan(state);
+    state = result.state;
+    persist();
+    render();
+    if (result.saved) announce(`Saved ${result.plan.name}.`);
+    else announce(`You can save up to ${Sim.MAX_PLANS} plans.`);
+  });
 
   els.reforgeButton.addEventListener('click', () => {
     snapshot();
