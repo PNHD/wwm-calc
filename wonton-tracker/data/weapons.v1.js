@@ -162,7 +162,7 @@ export function matchingSetName(slots, weapon = '') {
     return knownSets.has(candidate) ? candidate : '';
   }
 
-  return candidate.startsWith('Set - ') || candidate === 'Set 1' || candidate === 'Set 2' ? candidate : '';
+  return '';
 }
 
 export function brightLightAppearance(slots, weapon = '') {
