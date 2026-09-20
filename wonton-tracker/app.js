@@ -88,8 +88,8 @@ function renderAction() {
   const locks = activeLockCount(state);
   const cost = costForLocks(locks);
   const next = nextInactiveSlot(state);
-  $('#action-eyebrow').textContent = mode === 'live' ? 'REAL SESSION LEDGER' : 'SEEDED SIMULATION';
-  $('#action-title').textContent = mode === 'live' ? 'Record actual reforge' : 'Practice reforge';
+  $('#action-eyebrow').textContent = mode === 'live' ? 'REAL SESSION LEDGER' : 'RNG SIMULATOR';
+  $('#action-title').textContent = mode === 'live' ? 'Record actual reforge' : 'Simulate reforge';
   $('#action-note').textContent = mode === 'live'
     ? (state.pendingResult ? 'Finish recording the last observed result before adding another reforge.' : `Counters only; appearance never changes unless you record it. ${next ? `Slot ${next.id} progress advances.` : 'All slots active.'}`)
     : `${state.mode === 'official' ? 'Official 82% / 15% / 3%' : 'Community 3% / 4% / 5% Gold tiers'} · seed ${state.seed}`;
@@ -99,7 +99,7 @@ function renderAction() {
   $('#undo-btn').disabled = !state.undoStack.length;
   $('#mode-subtitle').textContent = mode === 'live'
     ? 'A deterministic ledger for real, user-observed in-game events. No outcome RNG.'
-    : 'A seeded strategy simulator. Random outcomes stay isolated from Live Tracker.';
+    : 'Generates seeded practice outcomes and batch estimates. It never changes Real Tracker data.';
 }
 
 function renderMetrics() {
@@ -337,9 +337,11 @@ $('#import-json-btn').addEventListener('click', async () => {
   catch (error) { $('#import-status').textContent = error.message; }
 });
 
-if (migration.report.live === 'migrated' || migration.report.practice === 'migrated') {
+if (migration.report.live === 'migrated' || ['migrated', 'repaired'].includes(migration.report.practice)) {
   $('#migration-note').hidden = false;
-  $('#migration-note').textContent = `Existing data migrated: Live ${migration.report.live}; Practice ${migration.report.practice}. Legacy keys were retained.`;
+  $('#migration-note').textContent = migration.report.practice === 'repaired'
+    ? 'Simulator state was reset to the corrected sequential Slot 1 start. Saved plans, targets, budget, seed and batch preferences were preserved.'
+    : `Existing data migrated: Live ${migration.report.live}; Simulator ${migration.report.practice}. Legacy keys were retained.`;
 }
 if (migration.report.errors.length) {
   $('#migration-note').hidden = false;
