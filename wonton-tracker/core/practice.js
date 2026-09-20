@@ -218,15 +218,22 @@ export function countGold(inputState) {
   return normalizePracticeState(inputState).slots.slice(0, 4).filter(slot => slot.active && slot.quality === 'gold').length;
 }
 
-export function sameGoldSetCount(inputState) {
-  const state = normalizePracticeState(inputState);
-  const allowed = new Set(setsForWeapon(state.target.weapon, 'gold'));
-  const counts = new Map();
+function matchingGoldSetGroups(state) {
+  const allowed = new Set(setsForWeapon(state.target?.weapon || '', 'gold'));
+  const groups = new Map();
   state.slots.slice(0, 4).forEach(slot => {
     if (!slot.active || slot.quality !== 'gold' || !allowed.has(slot.attribute)) return;
-    counts.set(slot.attribute, (counts.get(slot.attribute) || 0) + 1);
+    const group = groups.get(slot.attribute) || [];
+    group.push(slot);
+    groups.set(slot.attribute, group);
   });
-  return counts.size ? Math.max(...counts.values()) : 0;
+  return groups;
+}
+
+export function sameGoldSetCount(inputState) {
+  const state = normalizePracticeState(inputState);
+  const groups = matchingGoldSetGroups(state);
+  return groups.size ? Math.max(...[...groups.values()].map(group => group.length)) : 0;
 }
 
 export function goalReached(inputState, goal) {
@@ -243,15 +250,7 @@ export function autoLockGold(inputState, goal) {
   const gold = state.slots.slice(0, 4).filter(slot => slot.quality === 'gold');
   let candidates = gold;
   if (goal === 'set-2' || goal === 'set-3') {
-    const allowed = new Set(setsForWeapon(state.target.weapon, 'gold'));
-    const groups = new Map();
-    gold.forEach(slot => {
-      if (!allowed.has(slot.attribute)) return;
-      const group = groups.get(slot.attribute) || [];
-      group.push(slot);
-      groups.set(slot.attribute, group);
-    });
-    candidates = [...groups.values()].sort((a, b) => b.length - a.length)[0] || [];
+    candidates = [...matchingGoldSetGroups(state).values()].sort((a, b) => b.length - a.length)[0] || [];
   }
   candidates.slice(0, 3).forEach(slot => { slot.locked = true; });
   return state;
@@ -300,10 +299,8 @@ function goalReachedFast(state, goal) {
   const gold = state.slots.slice(0, 4).filter(slot => slot.active && slot.quality === 'gold');
   if (goal === 'set-2' || goal === 'set-3') {
     const needed = goal === 'set-2' ? 2 : 3;
-    return Math.max(
-      gold.filter(slot => slot.attribute === 'Set 1').length,
-      gold.filter(slot => slot.attribute === 'Set 2').length
-    ) >= needed;
+    const groups = matchingGoldSetGroups(state);
+    return groups.size > 0 && Math.max(...[...groups.values()].map(group => group.length)) >= needed;
   }
   return gold.length >= Math.min(4, Math.max(1, Number(String(goal || 'gold-2').replace('gold-', '')) || 2));
 }
@@ -313,9 +310,7 @@ function autoLockGoldFast(state, goal) {
   if (!state.slots.every(slot => slot.active)) return;
   let candidates = state.slots.slice(0, 4).filter(slot => slot.quality === 'gold');
   if (goal === 'set-2' || goal === 'set-3') {
-    const set1 = candidates.filter(slot => slot.attribute === 'Set 1');
-    const set2 = candidates.filter(slot => slot.attribute === 'Set 2');
-    candidates = set2.length > set1.length ? set2 : set1;
+    candidates = [...matchingGoldSetGroups(state).values()].sort((a, b) => b.length - a.length)[0] || [];
   }
   candidates.slice(0, 3).forEach(slot => { slot.locked = true; });
 }
@@ -327,6 +322,7 @@ function reforgeBatchState(state) {
     if (slot.active && !slot.locked) rollSlot(state, slot);
   });
   advanceUnlock(state);
+  if (state.slots[4].active) state.slots[4].attribute = brightLightAppearance(state.slots, state.target?.weapon || '');
 }
 
 export function runBatch(inputState, options = {}) {
