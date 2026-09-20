@@ -215,7 +215,8 @@ function renderBudget() {
   const state = current();
   const summary = budgetSummary(state);
   const regionalValue = summary.approximateRegional === null
-    ? '≈ 
+    ? '≈ ' + String.fromCharCode(36) + summary.approximateUsd.toFixed(2) + ' USD'
+    : '≈ ' + summary.referenceCurrency + ' ' + summary.approximateRegional.toLocaleString(undefined, { maximumFractionDigits: 2 });
   const packageNote = summary.referenceRegion
     ? `7,200 Echo Beads = ${summary.referenceCurrency} ${summary.referencePrice.toLocaleString()} (${summary.referenceRegion})`
     : `${PACKAGE_REFERENCE.label}; no regional package reference is stored for Other / custom`;
