@@ -64,6 +64,30 @@ Bright Light rule reported consistently:
 - full matching Purple or Gold set across Slots 1–4: Bright Light takes the matching set effect/name
 - matching Blue set is not treated as a Bright Light set trigger in the Lab
 
+## Pity-counter workflow
+
+The Live Tracker follows the Shadovex workflow rather than asking the user to re-enter every Blue/Purple appearance after every click.
+
+Shadovex Instructions tab:
+- click REFORGE once for every actual reforge
+- reset the corresponding part counter when that part unlocks or when a Legendary appears there
+- locked parts do not advance their visible counter
+- the workbook describes average community "softcaps" around 35–40, while the current shared Legendary Roll Count sample averages about 43.1
+
+Additional community evidence:
+- Bahamut guides describe each of Slots 1–4 as having an independent 90 hard-pity counter and commonly report Gold around 35–65
+- Reddit veterans commonly track each node separately and often start paying attention around 25–35
+- post-Hexi reports conflict on whether saved-plan switching preserves the hidden/extra Gold-rate state
+
+Lab policy:
+- official hard pity remains 90
+- no fixed soft-pity threshold is modeled as fact
+- every active + unlocked Slot 1–4 gains +1 per logged real reforge
+- locked and inactive slots gain nothing
+- a Gold observation resets only the selected slot counter
+- newly opened slots start a fresh visible counter in this tracker
+- exact quality/appearance entry is optional and is not required for pity tracking
+
 ## Legacy WWMReforge model — explicitly unverified
 
 Reference implementation:
