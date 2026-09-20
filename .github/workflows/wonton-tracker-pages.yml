@@ -15,7 +15,7 @@ permissions:
 jobs:
   verify-and-deploy:
     runs-on: ubuntu-latest
-    name: Verify and deploy wonton-tracker.pages.dev
+    name: Verify tracker; deploy when Cloudflare credentials are configured
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -41,19 +41,12 @@ jobs:
           PY
           node --check /tmp/wonton-tracker.js
 
-      - name: Check Cloudflare credentials
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [ -z "${CLOUDFLARE_API_TOKEN}" ] || [ -z "${CLOUDFLARE_ACCOUNT_ID}" ]; then
-            echo "::error::Add CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID as GitHub Actions repository secrets."
-            exit 1
-          fi
-
       - name: Install Wrangler
+        if: ${{ env.CLOUDFLARE_API_TOKEN != '' && env.CLOUDFLARE_ACCOUNT_ID != '' }}
         run: npm install --global wrangler@4
 
       - name: Ensure Pages project exists
+        if: ${{ env.CLOUDFLARE_API_TOKEN != '' && env.CLOUDFLARE_ACCOUNT_ID != '' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -62,6 +55,7 @@ jobs:
           fi
 
       - name: Deploy production
+        if: ${{ env.CLOUDFLARE_API_TOKEN != '' && env.CLOUDFLARE_ACCOUNT_ID != '' }}
         shell: bash
         run: |
           set -euo pipefail
