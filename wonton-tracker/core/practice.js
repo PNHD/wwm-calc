@@ -2,7 +2,7 @@ import {
   HARD_PITY, SCHEMA_VERSION, UNLOCK_ATTEMPTS, activeLockCount, clampInt,
   clone, costForLocks, createSlots, nextInactiveSlot, normalizeSlots, safeText
 } from './common.js';
-import { appearancesFor, brightLightAppearance } from '../data/weapons.v1.js';
+import { appearancesFor, brightLightAppearance, setsForWeapon } from '../data/weapons.v1.js';
 import {
   MAX_PLANS, applyPlan, deletePlan, normalizePlans, renamePlan, savePlan
 } from './plans.js';
@@ -219,11 +219,14 @@ export function countGold(inputState) {
 }
 
 export function sameGoldSetCount(inputState) {
-  const counts = { 'Set 1': 0, 'Set 2': 0 };
-  normalizePracticeState(inputState).slots.slice(0, 4).forEach(slot => {
-    if (slot.active && slot.quality === 'gold' && Object.hasOwn(counts, slot.attribute)) counts[slot.attribute] += 1;
+  const state = normalizePracticeState(inputState);
+  const allowed = new Set(setsForWeapon(state.target.weapon, 'gold'));
+  const counts = new Map();
+  state.slots.slice(0, 4).forEach(slot => {
+    if (!slot.active || slot.quality !== 'gold' || !allowed.has(slot.attribute)) return;
+    counts.set(slot.attribute, (counts.get(slot.attribute) || 0) + 1);
   });
-  return Math.max(counts['Set 1'], counts['Set 2']);
+  return counts.size ? Math.max(...counts.values()) : 0;
 }
 
 export function goalReached(inputState, goal) {
@@ -240,9 +243,15 @@ export function autoLockGold(inputState, goal) {
   const gold = state.slots.slice(0, 4).filter(slot => slot.quality === 'gold');
   let candidates = gold;
   if (goal === 'set-2' || goal === 'set-3') {
-    const set1 = gold.filter(slot => slot.attribute === 'Set 1');
-    const set2 = gold.filter(slot => slot.attribute === 'Set 2');
-    candidates = set2.length > set1.length ? set2 : set1;
+    const allowed = new Set(setsForWeapon(state.target.weapon, 'gold'));
+    const groups = new Map();
+    gold.forEach(slot => {
+      if (!allowed.has(slot.attribute)) return;
+      const group = groups.get(slot.attribute) || [];
+      group.push(slot);
+      groups.set(slot.attribute, group);
+    });
+    candidates = [...groups.values()].sort((a, b) => b.length - a.length)[0] || [];
   }
   candidates.slice(0, 3).forEach(slot => { slot.locked = true; });
   return state;
