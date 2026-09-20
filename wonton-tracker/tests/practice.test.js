@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  attributeList, createPracticeState, createSeededRng, goalReached, qualityRates, reforge, restartPractice,
+  attributeList, createPracticeState, createSeededRng, goalReached, normalizePracticeState, qualityRates, reforge, restartPractice,
   runBatch, sameGoldSetCount, undoPractice
 } from '../core/practice.js';
 
@@ -103,10 +103,10 @@ test('active Bright Light follows a verified full matching set and falls back to
     state.slots[index].quality = 'gold';
     state.slots[index].attribute = 'Set - Flying Fire';
   }
-  let normalized = reforge({ ...state, slots: state.slots.map(slot => ({ ...slot, locked: slot.id < 5 })) }).state;
+  let normalized = normalizePracticeState(state);
   assert.equal(normalized.slots[4].attribute, 'Set - Flying Fire');
 
   normalized.slots[3].attribute = 'Set - Startling Thunder';
-  normalized = reforge(normalized).state;
+  normalized = normalizePracticeState(normalized);
   assert.equal(normalized.slots[4].attribute, 'Sunlight');
 });
