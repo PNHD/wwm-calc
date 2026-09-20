@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  createPracticeState, createSeededRng, qualityRates, reforge, restartPractice,
-  runBatch, undoPractice
+  attributeList, createPracticeState, createSeededRng, goalReached, qualityRates, reforge, restartPractice,
+  runBatch, sameGoldSetCount, undoPractice
 } from '../core/practice.js';
 
 test('seeded RNG replay is deterministic', () => {
@@ -71,4 +71,42 @@ test('batch supports both auto-lock and never-lock strategies', () => {
   assert.equal(lockGold.strategy, 'lock-gold');
   assert.equal(noLock.strategy, 'no-lock');
   assert.deepEqual(noLock, runBatch(state, { runs: 25, goal: 'gold-2', strategy: 'no-lock', maxReforges: 250 }));
+});
+
+test('Practice uses the selected weapon set library instead of generic Set 1 / Set 2', () => {
+  assert.deepEqual(attributeList(2, 'gold', 'Cloudsplitter'), ['Set - Flying Fire', 'Set - Startling Thunder']);
+  assert.deepEqual(attributeList(2, 'purple', 'Cloudsplitter'), ['Set - Night Mist', 'Set - Bright Sky']);
+});
+
+test('matching-set goals recognize real weapon-specific Gold set names', () => {
+  const state = createPracticeState({ seed: 'real-sets' });
+  state.target.weapon = 'Cloudsplitter';
+  for (let index = 0; index < 3; index += 1) {
+    state.slots[index].active = true;
+    state.slots[index].progress = 100;
+    state.slots[index].quality = 'gold';
+    state.slots[index].attribute = 'Set - Flying Fire';
+  }
+  assert.equal(sameGoldSetCount(state), 3);
+  assert.equal(goalReached(state, 'set-2'), true);
+  assert.equal(goalReached(state, 'set-3'), true);
+});
+
+test('active Bright Light follows a verified full matching set and falls back to Sunlight when broken', () => {
+  const state = createPracticeState({ seed: 'bright-light' });
+  state.target.weapon = 'Cloudsplitter';
+  for (let index = 0; index < 5; index += 1) {
+    state.slots[index].active = true;
+    state.slots[index].progress = 100;
+  }
+  for (let index = 0; index < 4; index += 1) {
+    state.slots[index].quality = 'gold';
+    state.slots[index].attribute = 'Set - Flying Fire';
+  }
+  let normalized = reforge({ ...state, slots: state.slots.map(slot => ({ ...slot, locked: slot.id < 5 })) }).state;
+  assert.equal(normalized.slots[4].attribute, 'Set - Flying Fire');
+
+  normalized.slots[3].attribute = 'Set - Startling Thunder';
+  normalized = reforge(normalized).state;
+  assert.equal(normalized.slots[4].attribute, 'Sunlight');
 });
