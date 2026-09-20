@@ -46,7 +46,7 @@
         <div class="action-copy">
           <p class="eyebrow">PRACTICE ROLL</p>
           <h2>Choose locks, then roll</h2>
-          <p>Locked active slots keep their current result. Every unlocked active Slot 1–4 rerolls independently.</p>
+          <p>Only active slots reroll. You start with Slot 1; Slots 2 → 3 → 4 → 5 unlock sequentially as the meter fills.</p>
         </div>
         <div class="action-buttons">
           <button class="btn ghost" id="undo-btn" type="button">Undo</button>
@@ -86,7 +86,7 @@
           <div class="batch-controls">
             <label><span class="field-label">Runs</span><select id="batch-runs"><option>100</option><option>1000</option><option>10000</option></select></label>
             <label><span class="field-label">Goal</span><select id="batch-goal"><option value="gold-2">2 Gold</option><option value="gold-3">3 Gold</option><option value="gold-4">4 Gold</option><option value="set-2">2 matching Gold Set</option><option value="set-3">3 matching Gold Set</option></select></label>
-            <label><span class="field-label">Strategy</span><select id="batch-strategy"><option value="lock-gold">Auto-lock useful Gold</option><option value="none">Never auto-lock</option></select></label>
+            <label><span class="field-label">Strategy</span><select id="batch-strategy"><option value="lock-gold">Unlock all first, then auto-lock useful Gold</option><option value="none">Never auto-lock</option></select></label>
             <label><span class="field-label">Max reforges / run</span><input id="batch-max" type="number" min="1" max="5000" value="500" /></label>
             <button class="btn secondary wide" id="batch-run-btn" type="button">Run batch simulation</button>
           </div>
@@ -98,7 +98,10 @@
         <p class="eyebrow">MODEL NOTES</p>
         <h2>What this simulator assumes</h2>
         <ul class="rules">
-          <li><strong>Official mode:</strong> Blue 82%, Purple 15%, Gold 3%; Gold is guaranteed by the 90th reroll for each rerolled Slot 1–4.</li>
+          <li><strong>Official mode:</strong> Blue 82%, Purple 15%, Gold 3%; Gold is guaranteed by the 90th reroll for each active rerolled Slot 1–4.</li>
+          <li><strong>Sequential unlock:</strong> only Slot 1 starts active. Slots 2, 3, 4, then Bright Light / Slot 5 unlock in order. The meter is guaranteed to finish each next slot by 30 reforges, so the no-crit maximum is 120 reforges to open all four remaining slots.</li>
+          <li><strong>Early unlock / crit:</strong> modeled from WWMReforge v1.3 at 2% for attempts 1–10, 3.5% for 11–20, and 5% for 21–29. These exact early-unlock rates are community-model values, not official published probabilities.</li>
+          <li><strong>Pity start:</strong> an inactive slot does not build Gold pity. When Slots 2–4 unlock, their initial appearance is rolled and the practice pity counter starts from 0 for subsequent reforges.</li>
           <li><strong>Community mode:</strong> keeps Purple at 15% and models Gold as 3% through pity 30, 4% at 31–60, and 5% at 61–89. These soft tiers are not official game documentation.</li>
           <li>Lock cost is modeled as 1 / 2 / 5 / 10 Taiyi Stones for 0 / 1 / 2 / 3 locked reforgeable slots.</li>
           <li><strong>Price assumption:</strong> 1 Taiyi Stone = 200 Echo Beads; best-value top-up ≈ $100 = 7,200 Echo Beads (≈72 beads per $1).</li>
