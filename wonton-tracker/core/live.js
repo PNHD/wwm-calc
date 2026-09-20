@@ -53,7 +53,9 @@ export function normalizeLiveState(input) {
     ? {
         roll: state.reforgeCount,
         activatedSlot: [2, 3, 4, 5].includes(Number(source.pendingResult.activatedSlot))
-          ? Number(source.pendingResult.activatedSlot) : null
+          ? Number(source.pendingResult.activatedSlot) : null,
+        goldSlots: [...new Set(Array.isArray(source.pendingResult.goldSlots) ? source.pendingResult.goldSlots.map(Number) : [])]
+          .filter(id => id >= 1 && id <= 4)
       }
     : null;
   state.undoStack = Array.isArray(source.undoStack) ? source.undoStack.filter(value => typeof value === 'string').slice(-20) : [];
@@ -98,7 +100,7 @@ export function recordActualReforge(inputState) {
   }
 
   if (state.slots[4].active) state.slots[4].attribute = brightLightAppearance(state.slots, state.target.weapon);
-  state.pendingResult = { roll: state.reforgeCount, activatedSlot };
+  state.pendingResult = { roll: state.reforgeCount, activatedSlot, goldSlots: [] };
   state.history.unshift({
     at: new Date().toISOString(), roll: state.reforgeCount, cost, type: 'record',
     text: `Recorded actual reforge #${state.reforgeCount}${activatedSlot ? `; Slot ${activatedSlot} activated at full progress` : ''}.`
@@ -107,45 +109,95 @@ export function recordActualReforge(inputState) {
   return { state, event: { roll: state.reforgeCount, cost, activatedSlot } };
 }
 
-export function recordActualResult(inputState, details = {}) {
-  const state = normalizeLiveState(inputState);
-  if (!state.pendingResult) return { state, recorded: false, goldSlots: [], activatedSlot: null };
-  const goldIds = [...new Set(Array.isArray(details.goldSlots) ? details.goldSlots.map(Number) : [])]
-    .filter(id => id >= 1 && id <= 4 && state.slots[id - 1].active);
-  const changes = Array.isArray(details.changes) ? details.changes : [];
-
-  changes.forEach(change => {
-    const slot = state.slots[Number(change?.slotId) - 1];
-    if (!slot?.active) return;
-    if (slot.id === 5) Object.assign(slot, { quality: 'gold', attribute: 'Sunlight' });
-    else {
-      if (['blue', 'purple', 'gold'].includes(change.quality)) slot.quality = change.quality;
-      if (typeof change.attribute === 'string') slot.attribute = safeText(change.attribute, slot.attribute, 80);
-    }
-  });
-
-  goldIds.forEach(id => {
+function markGoldInPlace(state, ids) {
+  if (!state.pendingResult) return [];
+  const already = new Set(state.pendingResult.goldSlots || []);
+  const added = [];
+  [...new Set((Array.isArray(ids) ? ids : [ids]).map(Number))].forEach(id => {
     const slot = state.slots[id - 1];
+    if (!slot || id < 1 || id > 4 || !slot.active || slot.locked || already.has(id)) return;
     state.observedGoldIntervals[id].push(Math.max(1, slot.pity));
     state.observedGoldIntervals[id] = state.observedGoldIntervals[id].slice(-200);
     slot.pity = 0;
     slot.quality = 'gold';
+    already.add(id);
+    added.push(id);
+  });
+  state.pendingResult.goldSlots = [...already];
+  return added;
+}
+
+export function recordObservedGold(inputState, ids) {
+  const state = normalizeLiveState(inputState);
+  if (!state.pendingResult) return { state, recorded: false, goldSlots: [] };
+  const added = markGoldInPlace(state, ids);
+  if (added.length) {
+    state.history.unshift({
+      at: new Date().toISOString(), roll: state.reforgeCount, cost: 0, type: 'gold',
+      text: `Gold observed in Slot${added.length > 1 ? 's' : ''} ${added.join(', ')}; selected pity counter${added.length > 1 ? 's' : ''} reset.`
+    });
+    state.history = state.history.slice(0, 200);
+  }
+  if (state.slots[4].active) state.slots[4].attribute = brightLightAppearance(state.slots, state.target.weapon);
+  return { state, recorded: added.length > 0, goldSlots: added };
+}
+
+export function recordEarlyUnlock(inputState) {
+  const state = normalizeLiveState(inputState);
+  if (!state.pendingResult || state.pendingResult.activatedSlot) {
+    return { state, recorded: false, activatedSlot: state.pendingResult?.activatedSlot || null };
+  }
+  const activatedSlot = activateNext(state);
+  if (!activatedSlot) return { state, recorded: false, activatedSlot: null };
+  state.pendingResult.activatedSlot = activatedSlot;
+  state.history.unshift({
+    at: new Date().toISOString(), roll: state.reforgeCount, cost: 0, type: 'activate',
+    text: `Slot ${activatedSlot} activated early.`
+  });
+  state.history = state.history.slice(0, 200);
+  if (state.slots[4].active) state.slots[4].attribute = brightLightAppearance(state.slots, state.target.weapon);
+  return { state, recorded: true, activatedSlot };
+}
+
+export function recordActualResult(inputState, details = {}) {
+  const state = normalizeLiveState(inputState);
+  if (!state.pendingResult) return { state, recorded: false, goldSlots: [], activatedSlot: null };
+
+  const addedGold = markGoldInPlace(state, details.goldSlots || []);
+  const changes = Array.isArray(details.changes) ? details.changes : [];
+  changes.forEach(change => {
+    const slot = state.slots[Number(change?.slotId) - 1];
+    if (!slot?.active) return;
+    if (slot.id === 5) {
+      slot.quality = 'gold';
+      slot.attribute = brightLightAppearance(state.slots, state.target.weapon);
+      return;
+    }
+    if (['blue', 'purple', 'gold'].includes(change.quality)) slot.quality = change.quality;
+    if (typeof change.attribute === 'string') slot.attribute = safeText(change.attribute, slot.attribute, 80);
   });
 
-  let activatedSlot = null;
-  if (details.unlockEarly && !state.pendingResult.activatedSlot) activatedSlot = activateNext(state);
+  let activatedSlot = state.pendingResult.activatedSlot || null;
+  if (details.unlockEarly && !activatedSlot) {
+    activatedSlot = activateNext(state);
+    if (activatedSlot) state.pendingResult.activatedSlot = activatedSlot;
+  }
+
+  const allGold = [...new Set(state.pendingResult.goldSlots || [])];
   const summary = [
-    goldIds.length ? `Gold observed in Slot${goldIds.length > 1 ? 's' : ''} ${goldIds.join(', ')}` : 'No Gold recorded',
-    activatedSlot ? `Slot ${activatedSlot} activated early` : ''
+    allGold.length ? `Gold observed in Slot${allGold.length > 1 ? 's' : ''} ${allGold.join(', ')}` : 'No Gold recorded',
+    activatedSlot ? `Slot ${activatedSlot} activated` : '',
+    changes.length ? 'appearance details updated' : ''
   ].filter(Boolean).join('; ');
+
   state.history.unshift({
     at: new Date().toISOString(), roll: state.reforgeCount, cost: 0,
-    type: goldIds.length ? 'gold' : 'result', text: `${summary}.`
+    type: allGold.length || addedGold.length ? 'gold' : 'result', text: `${summary}.`
   });
   state.history = state.history.slice(0, 200);
   if (state.slots[4].active) state.slots[4].attribute = brightLightAppearance(state.slots, state.target.weapon);
   state.pendingResult = null;
-  return { state, recorded: true, goldSlots: goldIds, activatedSlot };
+  return { state, recorded: true, goldSlots: allGold, activatedSlot };
 }
 
 export function undoLive(inputState) {
