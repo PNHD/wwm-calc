@@ -299,7 +299,17 @@ function showLiveResult() {
 
 function showEdit() {
   const state = current();
-  $('#edit-fields').innerHTML = state.slots.map(slot => `<fieldset class="edit-card" data-edit-slot="${slot.id}"><legend>Slot ${slot.id}</legend><label class="checkline"><input type="checkbox" name="edit-active-${slot.id}" data-edit="active" ${slot.active ? 'checked' : ''} ${slot.id === 1 ? 'disabled' : ''}> Active</label>${slot.id === 5 ? `<p class="help">Fixed Gold · ${escapeHtml(slot.attribute)} when active. Full matching verified sets can change the Bright Light label.</p>` : `<div class="form-grid"><label class="field"><span>Quality</span><select name="edit-quality-${slot.id}" data-edit="quality">${['blue','purple','gold'].map(value => option(value,qualityLabel(value),slot.quality)).join('')}</select></label><label class="field"><span>Appearance</span><select name="edit-attribute-${slot.id}" data-edit="attribute">${appearanceOptions(slot.id,slot.attribute,state.target.weapon)}</select></label><label class="field"><span>Pity</span><input name="edit-pity-${slot.id}" data-edit="pity" type="number" min="0" max="90" value="${slot.pity}"></label><label class="field"><span>Unlock progress %</span><input name="edit-progress-${slot.id}" data-edit="progress" type="number" min="0" max="100" step="0.01" value="${slot.progress}"></label></div><label class="checkline"><input name="edit-locked-${slot.id}" data-edit="locked" type="checkbox" ${slot.locked ? 'checked' : ''}> Locked</label>`}</fieldset>`).join('');
+  $('#edit-fields').innerHTML = state.slots.map(slot => `<fieldset class="edit-card" data-edit-slot="${slot.id}"><legend>Slot ${slot.id}</legend><label class="checkline"><input type="checkbox" name="edit-active-${slot.id}" data-edit="active" ${slot.active ? 'checked' : ''} ${slot.id === 1 ? 'disabled' : ''}> Active</label>${slot.id === 5 ? `<p class="help">Fixed Gold · ${escapeHtml(slot.attribute)} when active. Full matching verified sets can change the Bright Light label.</p>` : `<div class="form-grid"><label class="field"><span>Quality</span><select name="edit-quality-${slot.id}" data-edit="quality">${['blue','purple','gold'].map(value => option(value,qualityLabel(value),slot.quality)).join('')}</select></label><label class="field"><span>Appearance</span><select name="edit-attribute-${slot.id}" data-edit="attribute">${appearancesFor(slot.id, slot.quality, state.target.weapon).map(value => option(value, value, slot.attribute)).join('')}</select></label><label class="field"><span>Pity</span><input name="edit-pity-${slot.id}" data-edit="pity" type="number" min="0" max="90" value="${slot.pity}"></label><label class="field"><span>Unlock progress %</span><input name="edit-progress-${slot.id}" data-edit="progress" type="number" min="0" max="100" step="0.01" value="${slot.progress}"></label></div><label class="checkline"><input name="edit-locked-${slot.id}" data-edit="locked" type="checkbox" ${slot.locked ? 'checked' : ''}> Locked</label>`}</fieldset>`).join('');
+  document.querySelectorAll('[data-edit-slot]').forEach(card => {
+    const quality = card.querySelector('[data-edit="quality"]');
+    const attribute = card.querySelector('[data-edit="attribute"]');
+    if (!quality || !attribute) return;
+    quality.addEventListener('change', () => {
+      const slotId = Number(card.dataset.editSlot);
+      const values = appearancesFor(slotId, quality.value, state.target.weapon);
+      attribute.innerHTML = values.map(value => option(value, value, '')).join('');
+    });
+  });
   $('#edit-dialog').showModal();
 }
 
