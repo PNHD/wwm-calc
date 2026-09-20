@@ -1,43 +1,19 @@
-# Wonton Tracker
+# Wonton Reforge Lab v2
 
-Standalone English Silent Voice reforge tracker for **Where Winds Meet**.
+One dependency-free static app for **Where Winds Meet** Silent Voice reforging.
 
-Production target: https://wonton-tracker.pages.dev
+- `/wonton-tracker/` opens Live Tracker by default.
+- `?mode=practice` opens seeded Practice.
+- `/wonton-tracker/simulator/` redirects to Practice for bookmark compatibility.
 
-## What it includes
+Live Tracker records deterministic counters and user-observed results only. It never generates an in-game outcome. Practice owns seeded RNG, official/community quality models, goals, and batches up to 10,000 runs.
 
-- Five reforge slots
-- Independent Gold pity tracking for Slots 1–4, hard pity 90
-- Manual state editor for copying real in-game pity
-- Lock-aware Taiyi Stone cost: 1 / 2 / 5 / 10
-- Activation progress model
-- Saved plans
-- Local browser persistence
-- TXT export
-- Responsive mobile/desktop UI
+Both modes share slot rendering, appearance data, pricing, targets, backup/restore, and the saved-plan implementation while retaining separate state and plan collections.
 
-This is an independent English remake inspired by the WWMReforge 1.3 community calculator by Chowiemon / 琅劳斯. It is not affiliated with Everstone Studio or NetEase Games.
-
-
-## Practice simulator
-
-Path: `/simulator/`
-
-The simulator is intentionally isolated from the real tracker:
-
-- real tracker storage remains unchanged
-- simulator state uses `wontonSimulatorState.v1`
-- simulator setup baseline uses `wontonSimulatorBaseline.v1`
-- Official mode uses 82% Blue / 15% Purple / 3% Gold with hard pity 90
-- Community mode models the WWMReforge-style 3% / 4% / 5% soft-rate tiers and is labeled unofficial
-- seeded RNG makes practice runs replayable
-- batch runs support 2/3/4 Gold and matching Set goals
-- batch auto-lock strategy can be compared with a no-auto-lock strategy
-
-Core test:
+Run all standalone checks:
 
 ```bash
-node wonton-tracker/simulator/simulator.test.js
+node --test wonton-tracker/tests/*.test.js
 ```
 
-The simulator is a practice/statistics tool only and does not predict server RNG.
+Production target: https://wonton-tracker.pages.dev

@@ -1,4 +1,4 @@
-name: Deploy Wonton Tracker to Cloudflare Pages
+name: Verify and deploy Wonton Reforge Lab
 
 on:
   push:
@@ -21,7 +21,7 @@ permissions:
 jobs:
   verify-and-deploy:
     runs-on: ubuntu-latest
-    name: Verify tracker; deploy when Cloudflare credentials are configured
+    name: Verify Lab; deploy production branch only when credentials are configured
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -30,38 +30,34 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Verify standalone site
+      - name: Verify standalone files and JavaScript syntax
         shell: bash
         run: |
           set -euo pipefail
           test -s wonton-tracker/index.html
-          grep -q '<title>Wonton Tracker · Silent Voice Reforge</title>' wonton-tracker/index.html
-          grep -q 'Gold pity' wonton-tracker/index.html
-          python3 - <<'PY'
-          from pathlib import Path
-          import re
-          html = Path("wonton-tracker/index.html").read_text()
-          blocks = re.findall(r"<script>(.*?)</script>", html, re.S)
-          assert len(blocks) == 1, f"expected one inline script, got {len(blocks)}"
-          Path("/tmp/wonton-tracker.js").write_text(blocks[0])
-          PY
-          node --check /tmp/wonton-tracker.js
-
+          test -s wonton-tracker/app.js
           test -s wonton-tracker/simulator/index.html
-          test -s wonton-tracker/simulator/simulator.js
-          test -s wonton-tracker/simulator/app.js
-          grep -q '<title>Wonton Simulator · Silent Voice Practice</title>' wonton-tracker/simulator/index.html
-          grep -q 'SAVED PLANS' wonton-tracker/simulator/index.html
-          node --check wonton-tracker/simulator/simulator.js
-          node --check wonton-tracker/simulator/app.js
-          node wonton-tracker/simulator/simulator.test.js
+          grep -q '<title>Wonton Reforge Lab v2</title>' wonton-tracker/index.html
+          grep -q '?mode=practice' wonton-tracker/simulator/index.html
+          ! grep -q 'Math.random' wonton-tracker/core/live.js
+          find wonton-tracker/core wonton-tracker/data wonton-tracker/tests -name '*.js' -print0 | xargs -0 -n1 node --check
+          node --check wonton-tracker/app.js
+
+      - name: Run Live tests
+        run: node --test wonton-tracker/tests/live.test.js
+
+      - name: Run Practice tests
+        run: node --test wonton-tracker/tests/practice.test.js
+
+      - name: Run migration, import, plan, and pricing tests
+        run: node --test wonton-tracker/tests/storage.test.js wonton-tracker/tests/shared.test.js
 
       - name: Install Wrangler
-        if: ${{ env.CLOUDFLARE_API_TOKEN != '' && env.CLOUDFLARE_ACCOUNT_ID != '' }}
+        if: ${{ github.event_name == 'push' && env.CLOUDFLARE_API_TOKEN != '' && env.CLOUDFLARE_ACCOUNT_ID != '' }}
         run: npm install --global wrangler@4
 
       - name: Ensure Pages project exists
-        if: ${{ env.CLOUDFLARE_API_TOKEN != '' && env.CLOUDFLARE_ACCOUNT_ID != '' }}
+        if: ${{ github.event_name == 'push' && env.CLOUDFLARE_API_TOKEN != '' && env.CLOUDFLARE_ACCOUNT_ID != '' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -70,8 +66,6 @@ jobs:
           fi
 
       - name: Deploy production
-        if: ${{ env.CLOUDFLARE_API_TOKEN != '' && env.CLOUDFLARE_ACCOUNT_ID != '' }}
+        if: ${{ github.event_name == 'push' && env.CLOUDFLARE_API_TOKEN != '' && env.CLOUDFLARE_ACCOUNT_ID != '' }}
         shell: bash
-        run: |
-          set -euo pipefail
-          wrangler pages deploy wonton-tracker --project-name=wonton-tracker --branch=main
+        run: wrangler pages deploy wonton-tracker --project-name=wonton-tracker --branch=main
