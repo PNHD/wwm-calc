@@ -211,9 +211,15 @@ function renderHistory() {
 function renderBudget() {
   const state = current();
   const summary = budgetSummary(state);
+  const regionalValue = summary.approximateRegional === null
+    ? `≈ ${summary.approximateUsd.toFixed(2)} USD`
+    : `≈ ${summary.referenceCurrency} ${summary.approximateRegional.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+  const packageNote = summary.referenceRegion
+    ? `7,200 Echo Beads = ${summary.referenceCurrency} ${summary.referencePrice.toLocaleString()} (${summary.referenceRegion})`
+    : `${PACKAGE_REFERENCE.label}; no regional package reference is stored for Other / custom`;
   $('#budget-content').innerHTML = `<div class="form-grid"><label class="field"><span>Region</span><select name="budget-region" data-budget="region">${REGIONS.map(value => option(value, value, state.budget.region)).join('')}</select></label><label class="field"><span>Starting Echo Beads</span><input name="budget-starting-beads" data-budget="startingBeads" type="number" min="0" value="${state.budget.startingBeads}"></label><label class="field"><span>Starting Taiyi Stones</span><input name="budget-starting-stones" data-budget="startingStones" type="number" min="0" value="${state.budget.startingStones}"></label><label class="field"><span>Base weapon / pull spend (beads)</span><input name="budget-base-weapon" data-budget="baseWeaponBeads" type="number" min="0" value="${state.budget.baseWeaponBeads}"></label></div>
-    <div class="budget-grid"><div><span>Stones used</span><strong>${summary.stonesUsed.toLocaleString()}</strong></div><div><span>Echo Beads spent</span><strong>${summary.spentBeads.toLocaleString()}</strong></div><div><span>Approx. USD reference</span><strong>≈ $${summary.approximateUsd.toFixed(2)}</strong></div><div><span>Remaining balance</span><strong>${summary.remainingBeads.toLocaleString()} beads</strong></div></div>
-    <p class="help">${PACKAGE_REFERENCE.label}. Currency is an estimate only; resource arithmetic is authoritative. Current roll: ${summary.nextStones} Stone${summary.nextStones === 1 ? '' : 's'} = ${summary.nextBeads} beads.</p>`;
+    <div class="budget-grid"><div><span>Stones used</span><strong>${summary.stonesUsed.toLocaleString()}</strong></div><div><span>Echo Beads spent</span><strong>${summary.spentBeads.toLocaleString()}</strong></div><div><span>Approx. regional reference</span><strong>${regionalValue}</strong></div><div><span>Remaining balance</span><strong>${summary.remainingBeads.toLocaleString()} beads</strong></div></div>
+    <p class="help">${packageNote}. Currency is an estimate only; resource arithmetic is authoritative. Current roll: ${summary.nextStones} Stone${summary.nextStones === 1 ? '' : 's'} = ${summary.nextBeads} beads.</p>`;
   document.querySelectorAll('[data-budget]').forEach(input => input.addEventListener('change', () => {
     const next = clone(current());
     next.budget[input.dataset.budget] = input.dataset.budget === 'region' ? input.value : Math.max(0, Number(input.value) || 0);

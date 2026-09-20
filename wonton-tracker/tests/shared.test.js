@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { beadsForStones, costForLocks } from '../core/common.js';
 import { createLiveState } from '../core/live.js';
 import { applyPlan, deletePlan, renamePlan, savePlan, targetMatch } from '../core/plans.js';
-import { budgetSummary } from '../core/pricing.js';
+import { budgetSummary, packageReferenceFor } from '../core/pricing.js';
 
 test('lock costs are exactly 1 / 2 / 5 / 10', () => {
   assert.deepEqual([0, 1, 2, 3].map(costForLocks), [1, 2, 5, 10]);
@@ -74,4 +74,17 @@ test('target matching preserves slot positions when earlier targets are omitted'
   assert.deepEqual(targetMatch(state.slots, { color: '', part1: 'Set 2' }), {
     matches: 1, total: 1, label: '1/1 target parts match'
   });
+});
+
+
+test('regional package references change the monetary estimate while bead math stays fixed', () => {
+  const state = createLiveState();
+  state.totalStones = 36;
+  state.budget.region = 'Japan';
+  const summary = budgetSummary(state);
+  assert.equal(summary.spentBeads, 7200);
+  assert.equal(summary.referenceCurrency, 'JPY');
+  assert.equal(summary.approximateRegional, 15000);
+  assert.equal(packageReferenceFor('United States').price, 99.99);
+  assert.equal(packageReferenceFor('Other / custom'), null);
 });

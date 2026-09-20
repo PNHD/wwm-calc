@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { escapeHtml } from '../core/common.js';
 import { createLiveState, LIVE_STORAGE_KEY } from '../core/live.js';
-import { PRACTICE_STORAGE_KEY } from '../core/practice.js';
+import { PRACTICE_STORAGE_KEY, createPracticeState } from '../core/practice.js';
 import {
   BACKUP_SCHEMA, LEGACY_BASELINE_KEY, LEGACY_LIVE_KEY, LEGACY_PRACTICE_KEY,
   exportBackup, importBackup, migrateStorage
@@ -62,4 +62,20 @@ test('imported strings remain inert and are escaped before HTML rendering', () =
   const imported = importBackup(exportBackup('live', state), 'live');
   assert.equal(imported.plans[0].name, '<img src=x onerror=alert(1)>');
   assert.equal(escapeHtml(imported.plans[0].name), '&lt;img src=x onerror=alert(1)&gt;');
+});
+
+
+test('Practice import normalizes untrusted history cost before rendering', () => {
+  const state = createPracticeState({ seed: 'import-safety' });
+  state.history = [{
+    roll: 1,
+    cost: '<img src=x onerror=alert(1)>',
+    changes: [],
+    activation: null,
+    hasGold: false,
+    at: '<script>alert(1)</script>'
+  }];
+  const imported = importBackup(exportBackup('practice', state), 'practice');
+  assert.equal(imported.history[0].cost, 0);
+  assert.equal(imported.history[0].at, '<script>alert(1)</script>');
 });

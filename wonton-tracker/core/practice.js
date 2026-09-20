@@ -107,7 +107,12 @@ export function normalizePracticeState(input) {
   state.baselineSlots = normalizeSlots(source.baselineSlots || state.slots);
   state.totalStones = Math.max(0, Number(source.totalStones) || 0);
   state.reforgeCount = clampInt(source.reforgeCount, 0, Number.MAX_SAFE_INTEGER);
-  state.history = Array.isArray(source.history) ? source.history.slice(0, HISTORY_LIMIT) : [];
+  state.history = Array.isArray(source.history) ? source.history.slice(0, HISTORY_LIMIT).map(event => ({
+    ...event,
+    roll: clampInt(event?.roll, 0, Number.MAX_SAFE_INTEGER),
+    cost: clampInt(event?.cost, 0, 10),
+    at: safeText(event?.at, '', 40)
+  })) : [];
   state.plans = normalizePlans(source.plans);
   for (const key of Object.keys(state.target)) state.target[key] = safeText(source.target?.[key], '', 80);
   state.budget.region = safeText(source.budget?.region, state.budget.region, 40);
