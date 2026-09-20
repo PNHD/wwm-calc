@@ -120,3 +120,22 @@ test('another reforge can be logged without resolving a no-special-result modal'
   assert.equal(state.slots[0].pity, 2);
   assert.equal(state.pendingResult.roll, 2);
 });
+
+
+test('optional detail save does not double-count a Gold already marked by quick action', () => {
+  const state = createLiveState();
+  state.slots[0].pity = 34;
+  let recorded = recordActualReforge(state).state;
+  recorded = recordObservedGold(recorded, [1]).state;
+
+  const detailed = recordActualResult(recorded, {
+    goldSlots: [1],
+    changes: [{ slotId: 1, quality: 'gold', attribute: 'Pearl' }]
+  }).state;
+
+  assert.deepEqual(detailed.observedGoldIntervals[1], [35]);
+  assert.equal(detailed.slots[0].pity, 0);
+  assert.equal(detailed.slots[0].quality, 'gold');
+  assert.equal(detailed.slots[0].attribute, 'Pearl');
+  assert.equal(detailed.pendingResult, null);
+});
