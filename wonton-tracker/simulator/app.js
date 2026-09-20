@@ -4,7 +4,7 @@
   const Sim = window.WontonSimulator;
   if (!Sim) throw new Error('WontonSimulator core failed to load');
 
-  const BASELINE_KEY = 'wontonSimulatorBaseline.v1';
+  const BASELINE_KEY = 'wontonSimulatorBaseline.v2';
   const ECHO_BEADS_PER_STONE = 200;
   const ECHO_BEADS_PER_100_USD = 7200;
   const beadsForStones = stones => stones * ECHO_BEADS_PER_STONE;
@@ -105,22 +105,43 @@
 
   function slotCard(slot) {
     const fixed = slot.id === 5;
-    const pity = fixed ? 0 : slot.pity;
-    const pityPercent = fixed ? 100 : Math.min(100, (pity / Sim.HARD_PITY) * 100);
+    const nextUnlock = Sim.nextUnlockSlotId(state);
+    const isNextUnlock = !slot.active && slot.id === nextUnlock;
+    const barValue = slot.active
+      ? (fixed ? 100 : Math.min(100, (slot.pity / Sim.HARD_PITY) * 100))
+      : (isNextUnlock ? slot.progress : 0);
+    const status = slot.active ? 'Active' : (isNextUnlock ? 'Unlocking' : 'Waiting');
+    const mainLabel = slot.active
+      ? qualityLabel(slot.quality)
+      : (isNextUnlock ? `Unlocking ${Math.round(slot.progress)}%` : 'Locked');
+    const detail = slot.active
+      ? escapeHtml(slot.attribute)
+      : (isNextUnlock
+          ? `Attempt ${slot.activationAttempts}/30 · can unlock early`
+          : `Unlock Slot ${slot.id - 1} first`);
+    const meterLabel = slot.active
+      ? (fixed ? 'Fixed Gold' : 'Gold pity')
+      : (isNextUnlock ? 'Unlock progress' : 'Gold pity');
+    const meterValue = slot.active
+      ? (fixed ? '—' : `${slot.pity}/90`)
+      : (isNextUnlock ? `${Math.round(slot.progress)}%` : 'Not started');
+
     return `
-      <article class="slot-card ${slot.quality} ${slot.active ? '' : 'inactive'}" data-slot="${slot.id}">
+      <article class="slot-card ${slot.active ? slot.quality : 'inactive'}" data-slot="${slot.id}">
         <div class="slot-topline">
           <span class="slot-number">Slot ${slot.id}</span>
-          <span class="status-pill">${slot.active ? 'Active' : 'Inactive'}</span>
+          <span class="status-pill">${status}</span>
         </div>
-        <div class="quality">${slot.active ? qualityLabel(slot.quality) : 'Inactive'}</div>
-        <div class="attribute">${slot.active ? escapeHtml(slot.attribute) : 'Enable it in Edit setup'}</div>
+        <div class="quality">${mainLabel}</div>
+        <div class="attribute">${detail}</div>
         <div class="pity-row">
-          <span>${fixed ? 'Fixed Gold' : 'Gold pity'}</span>
-          <strong>${fixed ? '—' : `${pity}/90`}</strong>
+          <span>${meterLabel}</span>
+          <strong>${meterValue}</strong>
         </div>
-        <div class="pity-bar" aria-hidden="true"><i style="width:${pityPercent}%"></i></div>
-        ${fixed ? '<div class="lock-note">Slot 5 is not rerolled.</div>' : `
+        <div class="pity-bar" aria-hidden="true"><i style="width:${barValue}%"></i></div>
+        ${fixed
+          ? '<div class="lock-note">Slot 5 becomes fixed Gold · Sunlight when unlocked.</div>'
+          : `
           <label class="lock-control">
             <input type="checkbox" data-lock="${slot.id}" ${slot.locked ? 'checked' : ''} ${!slot.active ? 'disabled' : ''} />
             <span>Lock this slot</span>
@@ -159,20 +180,27 @@
     els.history.innerHTML = state.history.slice(0, 30).map(event => {
       const changes = event.changes.length
         ? event.changes.map(change => `S${change.slot} ${qualityLabel(change.quality)} · ${escapeHtml(change.attribute)} · pity ${change.pity}`).join('<br>')
-        : 'All active reforgeable slots were locked.';
+        : 'No active unlocked slot changed.';
+      let activationText = '';
+      if (event.activation && event.activation.slot) {
+        activationText = event.activation.activated
+          ? `<br><strong>Unlocked Slot ${event.activation.slot}</strong>${event.activation.direct ? ' early' : ' at full meter'}${event.activation.quality ? ` · ${qualityLabel(event.activation.quality)} ${escapeHtml(event.activation.attribute)}` : ''}`
+          : `<br>Slot ${event.activation.slot} unlock: ${Math.round(event.activation.progress)}% (${event.activation.attempts}/30)`;
+      }
       return `
         <div class="history-item">
           <div class="history-head"><strong>Roll #${event.roll}</strong><span>${event.cost} stone${event.cost === 1 ? '' : 's'}</span></div>
-          <div>${changes}</div>
+          <div>${changes}${activationText}</div>
         </div>`;
     }).join('');
   }
 
   function renderModeNote() {
+    const unlock = '<br><strong>Unlock flow:</strong> only Slot 1 starts active. Slots 2 → 3 → 4 → 5 unlock sequentially, up to 30 reforges each. Early-unlock chance uses the community WWMReforge v1.3 model (2% / 3.5% / 5%), because official sources do not publish those crit rates.';
     if (state.mode === 'official') {
-      els.modeNote.innerHTML = '<strong>Official-rate mode:</strong> 82% Blue / 15% Purple / 3% Gold with Gold guaranteed by 90 on each rerolled slot.';
+      els.modeNote.innerHTML = '<strong>Official-rate mode:</strong> 82% Blue / 15% Purple / 3% Gold with Gold guaranteed by 90 on each active rerolled slot.' + unlock;
     } else {
-      els.modeNote.innerHTML = '<strong>Community model:</strong> uses the WWMReforge-style 3% → 4% → 5% Gold tiers after 30/60 pity. This soft-rate behavior is unofficial.';
+      els.modeNote.innerHTML = '<strong>Community quality model:</strong> uses the WWMReforge-style 3% → 4% → 5% Gold tiers after 30/60 pity. These soft-rate tiers are unofficial.' + unlock;
     }
   }
 
