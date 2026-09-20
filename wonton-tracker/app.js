@@ -212,7 +212,138 @@ function renderBudget() {
   const state = current();
   const summary = budgetSummary(state);
   const regionalValue = summary.approximateRegional === null
-    ? `≈ ${summary.approximateUsd.toFixed(2)} USD`
+    ? '≈ 
+  const packageNote = summary.referenceRegion
+    ? `7,200 Echo Beads = ${summary.referenceCurrency} ${summary.referencePrice.toLocaleString()} (${summary.referenceRegion})`
+    : `${PACKAGE_REFERENCE.label}; no regional package reference is stored for Other / custom`;
+  $('#budget-content').innerHTML = `<div class="form-grid"><label class="field"><span>Region</span><select name="budget-region" data-budget="region">${REGIONS.map(value => option(value, value, state.budget.region)).join('')}</select></label><label class="field"><span>Starting Echo Beads</span><input name="budget-starting-beads" data-budget="startingBeads" type="number" min="0" value="${state.budget.startingBeads}"></label><label class="field"><span>Starting Taiyi Stones</span><input name="budget-starting-stones" data-budget="startingStones" type="number" min="0" value="${state.budget.startingStones}"></label><label class="field"><span>Base weapon / pull spend (beads)</span><input name="budget-base-weapon" data-budget="baseWeaponBeads" type="number" min="0" value="${state.budget.baseWeaponBeads}"></label></div>
+    <div class="budget-grid"><div><span>Stones used</span><strong>${summary.stonesUsed.toLocaleString()}</strong></div><div><span>Echo Beads spent</span><strong>${summary.spentBeads.toLocaleString()}</strong></div><div><span>Approx. regional reference</span><strong>${regionalValue}</strong></div><div><span>Remaining balance</span><strong>${summary.remainingBeads.toLocaleString()} beads</strong></div></div>
+    <p class="help">${packageNote}. Currency is an estimate only; resource arithmetic is authoritative. Current roll: ${summary.nextStones} Stone${summary.nextStones === 1 ? '' : 's'} = ${summary.nextBeads} beads.</p>`;
+  document.querySelectorAll('[data-budget]').forEach(input => input.addEventListener('change', () => {
+    const next = clone(current());
+    next.budget[input.dataset.budget] = input.dataset.budget === 'region' ? input.value : Math.max(0, Number(input.value) || 0);
+    setCurrent(next); render();
+  }));
+}
+
+function renderReferences() {
+  $('#attribute-guide').innerHTML = `<p class="help">Dataset ${WEAPON_DATA_VERSION}. Names come from accepted project data; missing weapon-specific mappings are not invented.</p><div class="attribute-columns">${['blue','purple','gold'].map(quality => `<div><strong>${qualityLabel(quality)}</strong><p>${APPEARANCES[1][quality].map(escapeHtml).join(' · ')}</p></div>`).join('')}</div>`;
+  $('#assumptions').innerHTML = `<ul class="rules"><li><span class="official">Official:</span> 5 nodes; Blue 82%, Purple 15%, Gold 3%; Gold hard pity 90.</li><li><span class="community">Community/Unofficial:</span> 3% / 4% / 5% soft-rate tiers and 2% / 3.5% / 5% early unlock probabilities. Used only in Practice.</li><li><span class="observed">USER-OBSERVED:</span> Live Gold intervals, averages, and medians.</li><li>Live mode never infers server pity or generates outcomes.</li></ul>`;
+}
+
+function render() {
+  document.querySelectorAll('[data-mode]').forEach(button => button.classList.toggle('active', button.dataset.mode === mode));
+  renderSlots(); renderAction(); renderMetrics(); renderTargets(); renderPlans();
+  mode === 'live' ? renderLiveTools() : renderPracticeTools();
+  renderHistory(); renderBudget(); renderReferences();
+}
+
+function showLiveResult() {
+  const state = liveState;
+  $('#result-fields').innerHTML = state.slots.filter(slot => slot.active && slot.id < 5).map(slot => `<fieldset class="edit-card" data-result-slot="${slot.id}"><legend>Slot ${slot.id}</legend><label class="checkline"><input type="checkbox" name="result-gold-${slot.id}" data-gold="${slot.id}"> Gold observed</label><div class="form-grid"><label class="field"><span>Actual quality</span><select name="result-quality-${slot.id}" data-result-quality="${slot.id}">${['blue','purple','gold'].map(value => option(value, qualityLabel(value), slot.quality)).join('')}</select></label><label class="field"><span>Actual appearance</span><select name="result-attribute-${slot.id}" data-result-attribute="${slot.id}">${appearancesFor(slot.id, slot.quality).map(value => option(value, value, slot.attribute)).join('')}</select></label></div></fieldset>`).join('');
+  $('#early-unlock-row').hidden = !nextInactiveSlot(state) || !!state.pendingResult?.activatedSlot;
+  $('#early-unlock').checked = false;
+  document.querySelectorAll('[data-result-quality]').forEach(select => select.addEventListener('change', () => {
+    const attr = document.querySelector(`[data-result-attribute="${select.dataset.resultQuality}"]`);
+    attr.innerHTML = appearancesFor(Number(select.dataset.resultQuality), select.value).map(value => option(value, value, '')).join('');
+  }));
+  document.querySelectorAll('[data-gold]').forEach(input => input.addEventListener('change', () => {
+    if (!input.checked) return;
+    const quality = document.querySelector(`[data-result-quality="${input.dataset.gold}"]`);
+    quality.value = 'gold'; quality.dispatchEvent(new Event('change'));
+  }));
+  $('#result-dialog').showModal();
+}
+
+function showEdit() {
+  const state = current();
+  $('#edit-fields').innerHTML = state.slots.map(slot => `<fieldset class="edit-card" data-edit-slot="${slot.id}"><legend>Slot ${slot.id}</legend><label class="checkline"><input type="checkbox" name="edit-active-${slot.id}" data-edit="active" ${slot.active ? 'checked' : ''} ${slot.id === 1 ? 'disabled' : ''}> Active</label>${slot.id === 5 ? '<p class="help">Fixed Gold · Sunlight when active.</p>' : `<div class="form-grid"><label class="field"><span>Quality</span><select name="edit-quality-${slot.id}" data-edit="quality">${['blue','purple','gold'].map(value => option(value,qualityLabel(value),slot.quality)).join('')}</select></label><label class="field"><span>Appearance</span><select name="edit-attribute-${slot.id}" data-edit="attribute">${appearanceOptions(slot.id,slot.attribute)}</select></label><label class="field"><span>Pity</span><input name="edit-pity-${slot.id}" data-edit="pity" type="number" min="0" max="90" value="${slot.pity}"></label><label class="field"><span>Unlock progress %</span><input name="edit-progress-${slot.id}" data-edit="progress" type="number" min="0" max="100" step="0.01" value="${slot.progress}"></label></div><label class="checkline"><input name="edit-locked-${slot.id}" data-edit="locked" type="checkbox" ${slot.locked ? 'checked' : ''}> Locked</label>`}</fieldset>`).join('');
+  $('#edit-dialog').showModal();
+}
+
+function saveEdit() {
+  const next = clone(current());
+  document.querySelectorAll('[data-edit-slot]').forEach(card => {
+    const id = Number(card.dataset.editSlot); const slot = next.slots[id - 1];
+    slot.active = id === 1 || card.querySelector('[data-edit="active"]').checked;
+    if (id < 5) {
+      slot.quality = card.querySelector('[data-edit="quality"]').value;
+      slot.attribute = card.querySelector('[data-edit="attribute"]').value;
+      slot.pity = Number(card.querySelector('[data-edit="pity"]').value);
+      slot.progress = Number(card.querySelector('[data-edit="progress"]').value);
+      slot.locked = card.querySelector('[data-edit="locked"]').checked;
+    }
+  });
+  next.slots = normalizeSlots(next.slots);
+  if (mode === 'practice') next.baselineSlots = clone(next.slots);
+  setCurrent(mode === 'practice' ? normalizePracticeState(next) : normalizeLiveState(next));
+  $('#edit-dialog').close();
+  render(); announce('State correction saved.');
+}
+
+function download(name, content, type) {
+  const url = URL.createObjectURL(new Blob([content], { type }));
+  const link = document.createElement('a'); link.href = url; link.download = name; link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 500);
+}
+
+document.querySelectorAll('[data-mode]').forEach(button => button.addEventListener('click', () => {
+  mode = button.dataset.mode; history.replaceState(null, '', mode === 'practice' ? '?mode=practice' : './'); render();
+}));
+
+$('#primary-btn').addEventListener('click', () => {
+  if (mode === 'live') {
+    if (liveState.pendingResult) return showLiveResult();
+    const result = recordActualReforge(liveState); setCurrent(result.state); render(); showLiveResult();
+  } else {
+    const result = reforge(practiceState); setCurrent(result.state); render();
+    if (result.event.hasGold) { $('#gold-message').textContent = `Gold on Slot${result.event.goldSlots.length > 1 ? 's' : ''} ${result.event.goldSlots.join(', ')}.`; $('#gold-dialog').showModal(); }
+  }
+});
+
+$('#undo-btn').addEventListener('click', () => { const result = mode === 'live' ? undoLive(liveState) : undoPractice(practiceState); setCurrent(result.state); render(); if (result.undone) announce('Last reforge undone.'); });
+$('#edit-btn').addEventListener('click', showEdit);
+$('#edit-form').addEventListener('submit', event => { event.preventDefault(); saveEdit(); });
+document.querySelectorAll('[data-close-edit]').forEach(button => button.addEventListener('click', () => $('#edit-dialog').close()));
+$('#save-result-btn').addEventListener('click', () => {
+  const goldSlots = [...document.querySelectorAll('[data-gold]:checked')].map(input => Number(input.dataset.gold));
+  const changes = [...document.querySelectorAll('[data-result-slot]')].map(card => ({ slotId: Number(card.dataset.resultSlot), quality: card.querySelector('[data-result-quality]').value, attribute: card.querySelector('[data-result-attribute]').value }));
+  const result = recordActualResult(liveState, { goldSlots, changes, unlockEarly: $('#early-unlock').checked });
+  setCurrent(result.state); render(); announce('Actual result recorded.');
+});
+
+$('#save-plan-btn').addEventListener('click', () => { const name = prompt('Plan name', `Plan ${current().plans.length + 1}`); if (name === null) return; const result = savePlan(current(), name); setCurrent(result.state); render(); announce(result.saved ? 'Plan saved.' : 'Plan limit is five.'); });
+$('#gold-save-btn').addEventListener('click', () => { const result = savePlan(practiceState); setCurrent(result.state); render(); announce(result.saved ? 'Practice plan saved.' : 'Plan limit is five.'); });
+$('#gold-dialog').addEventListener('close', () => { if (practiceState.pendingGold) { const next = clone(practiceState); next.pendingGold = null; setCurrent(next); } });
+
+$('#reset-btn').addEventListener('click', () => {
+  if (!confirm(mode === 'live' ? 'Reset the Live session? Saved plans, target, and budget settings will remain.' : 'Restart Practice from its baseline and seed?')) return;
+  if (mode === 'live') { const next = createLiveState(); next.plans = clone(liveState.plans); next.target = clone(liveState.target); next.budget = clone(liveState.budget); setCurrent(next); }
+  else setCurrent(restartPractice(practiceState).state);
+  lastBatch = null; render();
+});
+
+$('#clear-history-btn').addEventListener('click', () => { const next = clone(current()); next.history = []; setCurrent(next); render(); });
+$('#export-json-btn').addEventListener('click', () => download(`wonton-reforge-lab-${mode}.json`, exportBackup(mode, current()), 'application/json'));
+$('#export-txt-btn').addEventListener('click', () => download(`wonton-reforge-lab-${mode}.txt`, exportText(mode, current()), 'text/plain'));
+$('#import-json-btn').addEventListener('click', async () => {
+  const file = $('#import-file').files[0];
+  if (!file) { $('#import-status').textContent = 'Choose a JSON backup first.'; return; }
+  try { setCurrent(importBackup(await file.text(), mode)); $('#import-status').textContent = 'Backup imported safely.'; render(); }
+  catch (error) { $('#import-status').textContent = error.message; }
+});
+
+if (migration.report.live === 'migrated' || migration.report.practice === 'migrated') {
+  $('#migration-note').hidden = false;
+  $('#migration-note').textContent = `Existing data migrated: Live ${migration.report.live}; Practice ${migration.report.practice}. Legacy keys were retained.`;
+}
+if (migration.report.errors.length) {
+  $('#migration-note').hidden = false;
+  $('#migration-note').textContent = `Legacy data was left untouched because it could not be migrated safely: ${migration.report.errors.join(' ')}`;
+}
+
+render();
+ + summary.approximateUsd.toFixed(2) + ' USD'
     : `≈ ${summary.referenceCurrency} ${summary.approximateRegional.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
   const packageNote = summary.referenceRegion
     ? `7,200 Echo Beads = ${summary.referenceCurrency} ${summary.referencePrice.toLocaleString()} (${summary.referenceRegion})`

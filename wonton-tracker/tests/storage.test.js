@@ -75,7 +75,13 @@ test('Practice import normalizes untrusted history cost before rendering', () =>
     hasGold: false,
     at: '<script>alert(1)</script>'
   }];
-  const imported = importBackup(exportBackup('practice', state), 'practice');
+  const maliciousBackup = JSON.stringify({
+    schema: BACKUP_SCHEMA,
+    version: 2,
+    mode: 'practice',
+    state
+  });
+  const imported = importBackup(maliciousBackup, 'practice');
   assert.equal(imported.history[0].cost, 0);
   assert.equal(imported.history[0].at, '<script>alert(1)</script>');
 });
