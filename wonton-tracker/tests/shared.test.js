@@ -88,3 +88,60 @@ test('regional package references change the monetary estimate while bead math s
   assert.equal(packageReferenceFor('United States').price, 99.99);
   assert.equal(packageReferenceFor('Other / custom'), null);
 });
+
+test('restoring a snapshot overwrites locked-slot appearance but preserves the lock and pity', () => {
+  let state = createLiveState();
+
+  // Plan A: Slot 1 Gold, Slot 2 not yet active.
+  state.slots[0].quality = 'gold';
+  state.slots[0].attribute = 'Peach Crystal';
+  state = savePlan(state, 'Plan A').state;
+  const planA = state.plans[0].id;
+
+  // Current state later has Slot 2 active and Gold. Slot 1 is locked.
+  state.slots[0].quality = 'blue';
+  state.slots[0].attribute = 'Ink Dust';
+  state.slots[0].locked = true;
+  state.slots[0].pity = 31;
+  state.slots[1].active = true;
+  state.slots[1].progress = 100;
+  state.slots[1].quality = 'gold';
+  state.slots[1].attribute = 'Set 1';
+
+  state = applyPlan(state, planA).state;
+
+  assert.equal(state.slots[0].quality, 'gold');
+  assert.equal(state.slots[0].attribute, 'Peach Crystal');
+  assert.equal(state.slots[0].locked, true, 'restore keeps the current lock state');
+  assert.equal(state.slots[0].pity, 31, 'restore keeps the current visible pity');
+  assert.equal(state.slots[1].quality, 'gold', 'saved inactive slot leaves the current slot untouched');
+  assert.equal(state.slots[1].attribute, 'Set 1');
+});
+
+test('restoring a later snapshot can replace the appearance of a currently locked Gold slot', () => {
+  let state = createLiveState();
+  state.slots[1].active = true;
+  state.slots[1].progress = 100;
+
+  // Plan B: S1 Blue, S2 Gold.
+  state.slots[0].quality = 'blue';
+  state.slots[0].attribute = 'Ink Dust';
+  state.slots[1].quality = 'gold';
+  state.slots[1].attribute = 'Set 1';
+  state = savePlan(state, 'Plan B').state;
+  const planB = state.plans[0].id;
+
+  // Before restore, S1 is Gold and locked.
+  state.slots[0].quality = 'gold';
+  state.slots[0].attribute = 'Peach Crystal';
+  state.slots[0].locked = true;
+  state.slots[0].pity = 22;
+
+  state = applyPlan(state, planB).state;
+
+  assert.equal(state.slots[0].quality, 'blue', 'snapshot appearance overwrites the locked slot');
+  assert.equal(state.slots[0].attribute, 'Ink Dust');
+  assert.equal(state.slots[0].locked, true, 'the lock itself remains enabled');
+  assert.equal(state.slots[0].pity, 22, 'visible pity remains unchanged');
+  assert.equal(state.slots[1].quality, 'gold');
+});
