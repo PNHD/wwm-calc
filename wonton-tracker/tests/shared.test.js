@@ -169,6 +169,12 @@ test('Bright Light becomes the matching full-set light and otherwise remains Sun
   state.slots[3].attribute = 'Set - Startling Thunder';
   assert.equal(brightLightAppearance(state.slots, 'Cloudsplitter'), 'Sunlight');
 
+  for (let id = 1; id <= 4; id += 1) {
+    state.slots[id - 1].quality = 'blue';
+    state.slots[id - 1].attribute = 'Set - Winter Gale';
+  }
+  assert.equal(brightLightAppearance(state.slots, 'Cloudsplitter'), 'Sunlight', 'blue matching sets do not change Bright Light');
+
   state.slots[0].quality = 'purple';
   state.slots[0].attribute = 'Set - Night Mist';
   state.slots[1].quality = 'purple';
