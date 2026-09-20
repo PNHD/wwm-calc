@@ -4,6 +4,7 @@ import { beadsForStones, costForLocks } from '../core/common.js';
 import { createLiveState } from '../core/live.js';
 import { applyPlan, deletePlan, renamePlan, savePlan, targetMatch } from '../core/plans.js';
 import { budgetSummary, packageReferenceFor } from '../core/pricing.js';
+import { appearancesFor, brightLightAppearance, WEAPON_PROFILES } from '../data/weapons.v1.js';
 
 test('lock costs are exactly 1 / 2 / 5 / 10', () => {
   assert.deepEqual([0, 1, 2, 3].map(costForLocks), [1, 2, 5, 10]);
@@ -144,4 +145,37 @@ test('restoring a later snapshot can replace the appearance of a currently locke
   assert.equal(state.slots[0].locked, true, 'the lock itself remains enabled');
   assert.equal(state.slots[0].pity, 22, 'visible pity remains unchanged');
   assert.equal(state.slots[1].quality, 'gold');
+});
+
+
+test('weapon-specific appearance data uses Shadovex set names', () => {
+  assert.deepEqual(WEAPON_PROFILES.Cloudsplitter.sets.gold, ['Set - Flying Fire', 'Set - Startling Thunder']);
+  assert.ok(appearancesFor(1, 'gold', 'Cloudsplitter').includes('Pearl'));
+  assert.ok(appearancesFor(1, 'gold', 'Cloudsplitter').includes('Set - Flying Fire'));
+  assert.deepEqual(appearancesFor(2, 'gold', 'Cloudsplitter'), ['Set - Flying Fire', 'Set - Startling Thunder']);
+  assert.deepEqual(appearancesFor(2, 'purple', 'Cloudsplitter'), ['Set - Night Mist', 'Set - Bright Sky']);
+});
+
+test('Bright Light becomes the matching full-set light and otherwise remains Sunlight', () => {
+  const state = createLiveState();
+  for (let id = 1; id <= 4; id += 1) {
+    state.slots[id - 1].active = true;
+    state.slots[id - 1].quality = 'gold';
+    state.slots[id - 1].attribute = 'Set - Flying Fire';
+  }
+  state.slots[4].active = true;
+  assert.equal(brightLightAppearance(state.slots, 'Cloudsplitter'), 'Set - Flying Fire');
+
+  state.slots[3].attribute = 'Set - Startling Thunder';
+  assert.equal(brightLightAppearance(state.slots, 'Cloudsplitter'), 'Sunlight');
+
+  state.slots[0].quality = 'purple';
+  state.slots[0].attribute = 'Set - Night Mist';
+  state.slots[1].quality = 'purple';
+  state.slots[1].attribute = 'Set - Night Mist';
+  state.slots[2].quality = 'purple';
+  state.slots[2].attribute = 'Set - Night Mist';
+  state.slots[3].quality = 'purple';
+  state.slots[3].attribute = 'Set - Night Mist';
+  assert.equal(brightLightAppearance(state.slots, 'Cloudsplitter'), 'Set - Night Mist');
 });
