@@ -4,7 +4,7 @@ import {
 } from './core/common.js';
 import {
   createLiveState, normalizeLiveState, observedStats, recordActualReforge,
-  recordActualResult, undoLive
+  recordActualResult, recordEarlyUnlock, recordObservedGold, undoLive
 } from './core/live.js';
 import {
   createPracticeState, normalizePracticeState, reforge, restartPractice, runBatch,
@@ -84,23 +84,68 @@ function renderSlots() {
   }));
 }
 
+function renderLiveQuickActions() {
+  const container = $('#live-quick-actions');
+  if (mode !== 'live') {
+    container.hidden = true;
+    container.innerHTML = '';
+    return;
+  }
+
+  container.hidden = false;
+  const state = liveState;
+  const pending = state.pendingResult;
+  if (!pending) {
+    container.innerHTML = '<span class="quick-help">After you log a real reforge, only mark Gold or an early unlock if you actually saw one.</span>';
+    return;
+  }
+
+  const goldButtons = state.slots.slice(0, 4)
+    .filter(slot => slot.active && !slot.locked)
+    .map(slot => {
+      const marked = (pending.goldSlots || []).includes(slot.id);
+      return `<button class="btn ${marked ? 'gold-hit marked' : 'ghost'} small" type="button" data-live-gold="${slot.id}" ${marked ? 'disabled' : ''}>${marked ? '✓ ' : ''}Gold S${slot.id} · ${slot.pity}/90</button>`;
+    }).join('');
+  const canEarlyUnlock = !!nextInactiveSlot(state) && !pending.activatedSlot;
+  container.innerHTML = `
+    <div class="quick-label">Special result on roll #${state.reforgeCount}</div>
+    <div class="quick-buttons">${goldButtons || '<span class="quick-help">No unlocked rerollable slots.</span>'}
+      ${canEarlyUnlock ? '<button class="btn ghost small" type="button" id="quick-early-unlock">Next slot opened early</button>' : ''}
+      <button class="btn ghost small" type="button" id="quick-details">Record appearance details</button>
+    </div>
+    <div class="quick-help">No Gold? Do nothing—just log the next reforge. Each active, unlocked slot keeps its own counter.</div>`;
+
+  container.querySelectorAll('[data-live-gold]').forEach(button => button.addEventListener('click', () => {
+    const result = recordObservedGold(liveState, [Number(button.dataset.liveGold)]);
+    setCurrent(result.state); render();
+    if (result.recorded) announce(`Slot ${button.dataset.liveGold} Gold recorded; that pity counter reset.`);
+  }));
+  $('#quick-early-unlock')?.addEventListener('click', () => {
+    const result = recordEarlyUnlock(liveState);
+    setCurrent(result.state); render();
+    if (result.recorded) announce(`Slot ${result.activatedSlot} marked as unlocked early.`);
+  });
+  $('#quick-details')?.addEventListener('click', showLiveResult);
+}
+
 function renderAction() {
   const state = current();
   const locks = activeLockCount(state);
   const cost = costForLocks(locks);
   const next = nextInactiveSlot(state);
   $('#action-eyebrow').textContent = mode === 'live' ? 'REAL SESSION LEDGER' : 'RNG SIMULATOR';
-  $('#action-title').textContent = mode === 'live' ? 'Record actual reforge' : 'Simulate reforge';
+  $('#action-title').textContent = mode === 'live' ? 'Log real reforge' : 'Simulate reforge';
   $('#action-note').textContent = mode === 'live'
-    ? (state.pendingResult ? 'Finish recording the last observed result before adding another reforge.' : `Counters only; appearance never changes unless you record it. ${next ? `Slot ${next.id} progress advances.` : 'All slots active.'}`)
-    : `${state.mode === 'official' ? 'Official 82% / 15% / 3%' : 'Community 3% / 4% / 5% Gold tiers'} · seed ${state.seed}`;
+    ? `One click = one real in-game reforge. Active unlocked Slots 1–4 each gain +1 to their own counter; locked/inactive slots do not. ${next ? `Slot ${next.id} unlock progress also advances.` : 'All slots are open.'}`
+    : `${state.mode === 'official' ? 'Official 82% / 15% / 3%' : 'Legacy community quality model'} · seed ${state.seed}`;
   $('#primary-btn').textContent = mode === 'live'
-    ? (state.pendingResult ? 'Record pending result' : `Record · ${cost} Stone${cost === 1 ? '' : 's'}`)
+    ? `Log reforge · ${cost} Stone${cost === 1 ? '' : 's'}`
     : `Reforge · ${cost} Stone${cost === 1 ? '' : 's'}`;
   $('#undo-btn').disabled = !state.undoStack.length;
   $('#mode-subtitle').textContent = mode === 'live'
-    ? 'A deterministic ledger for real, user-observed in-game events. No outcome RNG.'
+    ? 'A deterministic per-slot pity ledger for real in-game reforges. No outcome RNG.'
     : 'Generates seeded practice outcomes and batch estimates. It never changes Real Tracker data.';
+  renderLiveQuickActions();
 }
 
 function renderMetrics() {
@@ -183,13 +228,22 @@ function handlePlanAction(action, id) {
 function renderLiveTools() {
   const state = liveState;
   const cost = costForLocks(activeLockCount(state));
-  $('#mode-tools').innerHTML = `<div class="section-head"><div><p class="eyebrow observed">USER-OBSERVED · LIVE ONLY</p><h2>Observed pity analytics</h2></div><span class="status-pill">Official hard pity: 90</span></div>
+  $('#mode-tools').innerHTML = `<div class="section-head"><div><p class="eyebrow observed">PER-SLOT PITY LEDGER · LIVE ONLY</p><h2>Each Slot 1–4 has its own counter</h2></div><span class="status-pill">Official hard pity: 90</span></div>
     <div class="analytics-grid">${state.slots.slice(0, 4).map(slot => {
       const stats = observedStats(state.observedGoldIntervals[slot.id]);
       const remaining = 90 - slot.pity;
       const worstCaseStones = remaining * cost;
-      return `<article class="analytics-card"><span>Slot ${slot.id}</span><strong>${slot.pity}/90 · ${Math.round(slot.pity / 90 * 100)}%</strong><small>${stats.count ? `Avg ${stats.average} · Median ${stats.median} · n=${stats.count}` : 'No observed Gold samples'}</small><p class="help">${remaining} visible pity to next hard pity · ${cost} Stone${cost === 1 ? '' : 's'} per future roll · worst-case at current locks: ${worstCaseStones} Stones / ${beadsForStones(worstCaseStones).toLocaleString()} beads</p></article>`;
-    }).join('')}</div><p class="help">Intervals are USER-OBSERVED, not official soft pity. Worst-case values assume the current lock count stays unchanged and only bound the next hard-pity trigger; they do not guarantee a desired appearance or set.</p>`;
+      const stateLine = !slot.active ? 'Not active · counter not started'
+        : slot.locked ? 'Locked · counter paused'
+        : slot.pity >= 35 ? 'Community watch zone · not guaranteed'
+        : 'Counter advances on every unlocked reforge';
+      const costLine = !slot.active || slot.locked
+        ? stateLine
+        : `${remaining} to official hard pity · current roll costs ${cost} Stone${cost === 1 ? '' : 's'} · same-lock upper bound ${worstCaseStones} Stones / ${beadsForStones(worstCaseStones).toLocaleString()} beads`;
+      return `<article class="analytics-card"><span>Slot ${slot.id}</span><strong>${slot.active ? `${slot.pity}/90 · ${Math.round(slot.pity / 90 * 100)}%` : 'Not started'}</strong><small>${stats.count ? `Your Gold intervals: avg ${stats.average} · median ${stats.median} · n=${stats.count}` : stateLine}</small><p class="help">${costLine}</p></article>`;
+    }).join('')}</div>
+    <p class="help"><strong>What to count:</strong> every active + unlocked slot gains +1 on each real reforge; a locked or inactive slot gains nothing; when a slot hits Gold, reset only that slot to 0. A newly opened slot starts a fresh counter in this tracker.</p>
+    <p class="help"><span class="community">Community reference only:</span> Shadovex recommends watching each slot separately and says its typical “softcap” is around 35–40; the shared sheet sample currently averages about 43.1. Bahamut players report many Gold hits around 35–65, while some players start locking around 25–30. None of these are an official guarantee; only 90 is published as hard pity.</p>`;
 }
 
 function renderPracticeTools() {
@@ -345,8 +399,9 @@ document.querySelectorAll('[data-mode]').forEach(button => button.addEventListen
 
 $('#primary-btn').addEventListener('click', () => {
   if (mode === 'live') {
-    if (liveState.pendingResult) return showLiveResult();
-    const result = recordActualReforge(liveState); setCurrent(result.state); render(); showLiveResult();
+    const result = recordActualReforge(liveState);
+    setCurrent(result.state); render();
+    if (result.event.activatedSlot) announce(`Slot ${result.event.activatedSlot} reached full unlock progress.`);
   } else {
     const result = reforge(practiceState); setCurrent(result.state); render();
     if (result.event.hasGold) { $('#gold-message').textContent = `Gold on Slot${result.event.goldSlots.length > 1 ? 's' : ''} ${result.event.goldSlots.join(', ')}.`; $('#gold-dialog').showModal(); }
