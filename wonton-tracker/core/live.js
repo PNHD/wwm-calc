@@ -4,6 +4,7 @@ import {
   normalizeSlots, safeText
 } from './common.js';
 import { normalizePlans } from './plans.js';
+import { brightLightAppearance } from '../data/weapons.v1.js';
 
 export const LIVE_STORAGE_KEY = 'wontonReforgeLab.live.v2';
 
@@ -56,6 +57,10 @@ export function normalizeLiveState(input) {
       }
     : null;
   state.undoStack = Array.isArray(source.undoStack) ? source.undoStack.filter(value => typeof value === 'string').slice(-20) : [];
+  if (state.slots[4].active) {
+    state.slots[4].quality = 'gold';
+    state.slots[4].attribute = brightLightAppearance(state.slots, state.target.weapon);
+  }
   return state;
 }
 
@@ -92,6 +97,7 @@ export function recordActualReforge(inputState) {
     if (next.activationAttempts >= UNLOCK_ATTEMPTS) activatedSlot = activateNext(state);
   }
 
+  if (state.slots[4].active) state.slots[4].attribute = brightLightAppearance(state.slots, state.target.weapon);
   state.pendingResult = { roll: state.reforgeCount, activatedSlot };
   state.history.unshift({
     at: new Date().toISOString(), roll: state.reforgeCount, cost, type: 'record',
@@ -137,6 +143,7 @@ export function recordActualResult(inputState, details = {}) {
     type: goldIds.length ? 'gold' : 'result', text: `${summary}.`
   });
   state.history = state.history.slice(0, 200);
+  if (state.slots[4].active) state.slots[4].attribute = brightLightAppearance(state.slots, state.target.weapon);
   state.pendingResult = null;
   return { state, recorded: true, goldSlots: goldIds, activatedSlot };
 }
