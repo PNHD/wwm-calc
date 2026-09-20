@@ -1,5 +1,7 @@
-const assert = require('node:assert/strict');
-const sim = require('./simulator.js');
+import assert from 'node:assert/strict';
+
+await import('./simulator.js');
+const sim = globalThis.WontonSimulator;
 
 function run(name, fn) {
   try {
@@ -29,25 +31,70 @@ run('community mode uses 3/4/5 percent gold soft tiers', () => {
   assert.equal(sim.qualityRates('community', 90).gold, 1);
 });
 
-run('pity is clamped to 0..90', () => {
-  assert.equal(sim.clampPity(-5), 0);
-  assert.equal(sim.clampPity(52.9), 52);
-  assert.equal(sim.clampPity(999), 90);
+run('community unlock crit model uses 2 / 3.5 / 5 percent tiers', () => {
+  assert.equal(sim.activationChance(1), 0.02);
+  assert.equal(sim.activationChance(10), 0.02);
+  assert.equal(sim.activationChance(11), 0.035);
+  assert.equal(sim.activationChance(20), 0.035);
+  assert.equal(sim.activationChance(21), 0.05);
+  assert.equal(sim.activationChance(29), 0.05);
 });
 
-run('seeded RNG is deterministic', () => {
-  const a = sim.createSeededRng('practice-42');
-  const b = sim.createSeededRng('practice-42');
-  assert.deepEqual([a(), a(), a()], [b(), b(), b()]);
+run('fresh simulator starts with only Slot 1 active', () => {
+  const state = sim.createInitialState({ seed: 'fresh-start' });
+  assert.deepEqual(state.slots.map(slot => slot.active), [true, false, false, false, false]);
+  assert.deepEqual(state.slots.map(slot => slot.progress), [100, 0, 0, 0, 0]);
+  assert.equal(sim.nextUnlockSlotId(state), 2);
 });
 
-run('locked slots do not change while unlocked slots reforge', () => {
-  const state = sim.createInitialState({ mode: 'official', seed: 'locked-test' });
-  state.slots.forEach((slot, index) => {
-    slot.active = index < 4;
-    slot.pity = 10;
-  });
+run('inactive slots do not reroll or build pity before they unlock', () => {
+  const state = sim.createInitialState({ mode: 'official', seed: 'no-early-unlock' });
   state.slots[0].locked = true;
+
+  const probe = sim.createSeededRng('no-early-unlock');
+  assert.ok(probe() > sim.activationChance(1), 'chosen seed should not crit Slot 2 on the first unlock attempt');
+
+  const next = sim.reforge(state).state;
+  assert.equal(next.slots[1].active, false);
+  assert.equal(next.slots[1].pity, 0);
+  assert.equal(next.slots[2].active, false);
+  assert.equal(next.slots[2].pity, 0);
+  assert.equal(next.slots[3].active, false);
+  assert.equal(next.slots[3].pity, 0);
+  assert.ok(next.slots[1].progress > 0 && next.slots[1].progress < 100);
+});
+
+run('next slot is guaranteed to unlock by its 30th activation attempt', () => {
+  const state = sim.createInitialState({ mode: 'official', seed: 'unlock-at-30' });
+  state.slots[0].locked = true;
+  state.slots[1].progress = 96.67;
+  state.slots[1].activationAttempts = 29;
+
+  const next = sim.reforge(state);
+  assert.equal(next.state.slots[1].active, true);
+  assert.equal(next.state.slots[1].progress, 100);
+  assert.equal(next.state.slots[1].pity, 0);
+  assert.equal(next.event.activation.slot, 2);
+  assert.equal(next.event.activation.activated, true);
+});
+
+run('only active unlocked slots reroll', () => {
+  const state = sim.createInitialState({ mode: 'official', seed: 'active-only' });
+  const beforeSlot3 = JSON.parse(JSON.stringify(state.slots[2]));
+  const next = sim.reforge(state);
+  assert.equal(next.event.changes.every(change => change.slot === 1), true);
+  assert.equal(next.state.slots[2].active, false);
+  assert.deepEqual(next.state.slots[2], beforeSlot3);
+});
+
+run('locked active slots do not change while unlocked active slots reforge', () => {
+  const state = sim.createInitialState({ mode: 'official', seed: 'locked-test' });
+  state.slots[1].active = true;
+  state.slots[1].progress = 100;
+  state.slots[0].pity = 10;
+  state.slots[1].pity = 10;
+  state.slots[0].locked = true;
+
   const before = JSON.parse(JSON.stringify(state.slots[0]));
   const next = sim.reforge(state);
   assert.deepEqual(next.state.slots[0], before);
@@ -57,8 +104,6 @@ run('locked slots do not change while unlocked slots reforge', () => {
 
 run('hard pity produces gold and resets pity', () => {
   const state = sim.createInitialState({ mode: 'official', seed: 'hard-pity' });
-  state.slots.forEach(slot => { slot.active = false; });
-  state.slots[0].active = true;
   state.slots[0].pity = 89;
   const next = sim.reforge(state);
   assert.equal(next.state.slots[0].quality, 'gold');
@@ -67,7 +112,11 @@ run('hard pity produces gold and resets pity', () => {
 
 run('goal detection supports 2 gold, 3 gold and all four', () => {
   const state = sim.createInitialState();
-  state.slots.slice(0, 4).forEach(slot => { slot.active = true; slot.quality = 'blue'; });
+  state.slots.slice(0, 4).forEach(slot => {
+    slot.active = true;
+    slot.progress = 100;
+    slot.quality = 'blue';
+  });
   state.slots[0].quality = 'gold';
   state.slots[1].quality = 'gold';
   assert.equal(sim.goalReached(state, 'gold-2'), true);
@@ -78,9 +127,8 @@ run('goal detection supports 2 gold, 3 gold and all four', () => {
   assert.equal(sim.goalReached(state, 'gold-4'), true);
 });
 
-run('batch simulator returns deterministic aggregate metrics', () => {
+run('batch simulator remains deterministic with sequential unlocking', () => {
   const setup = sim.createInitialState({ mode: 'official', seed: 'batch-seed' });
-  setup.slots.slice(0, 4).forEach(slot => { slot.active = true; slot.pity = 0; });
   const resultA = sim.runBatch(setup, { runs: 25, goal: 'gold-2', maxReforges: 250 });
   const resultB = sim.runBatch(setup, { runs: 25, goal: 'gold-2', maxReforges: 250 });
   assert.deepEqual(resultA, resultB);
@@ -90,7 +138,8 @@ run('batch simulator returns deterministic aggregate metrics', () => {
   assert.ok(resultA.averageStones >= 0);
 });
 
-run('simulator storage key is isolated from real tracker state', () => {
-  assert.equal(sim.STORAGE_KEY, 'wontonSimulatorState.v1');
+run('simulator v2 storage is isolated from tracker and old broken simulator state', () => {
+  assert.equal(sim.STORAGE_KEY, 'wontonSimulatorState.v2');
+  assert.notEqual(sim.STORAGE_KEY, 'wontonSimulatorState.v1');
   assert.notEqual(sim.STORAGE_KEY, 'weaponState');
 });
