@@ -400,11 +400,14 @@
       state.lastRoll = null;
 
       if (strategy === 'lock-gold') state = autoLockGold(state, goal);
-      let success = goalReached(state, goal);
+      const isSuccessful = current => strategy === 'lock-gold'
+        ? allSlotsUnlocked(current) && goalReached(current, goal)
+        : goalReached(current, goal);
+      let success = isSuccessful(state);
       while (!success && state.reforgeCount < maxReforges) {
         state = reforge(state).state;
         if (strategy === 'lock-gold') state = autoLockGold(state, goal);
-        success = goalReached(state, goal);
+        success = isSuccessful(state);
       }
 
       if (success) successCount += 1;
