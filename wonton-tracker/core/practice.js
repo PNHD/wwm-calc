@@ -7,7 +7,7 @@ import {
   MAX_PLANS, applyPlan, deletePlan, normalizePlans, renamePlan, savePlan
 } from './plans.js';
 
-export const PRACTICE_STORAGE_KEY = 'wontonReforgeLab.practice.v2';
+export const PRACTICE_STORAGE_KEY = 'wontonReforgeLab.practice.v3';
 export const LEGACY_PRACTICE_STORAGE_KEY = 'wontonSimulatorState.v2';
 export const STORAGE_KEY = PRACTICE_STORAGE_KEY;
 export { HARD_PITY, UNLOCK_ATTEMPTS, MAX_PLANS, applyPlan, deletePlan, renamePlan, savePlan };
