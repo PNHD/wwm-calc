@@ -11,5 +11,6 @@ Supersedes version 3; navigation only, reverify Git and Airtable metadata.
 - Permissions: local sourced repairs/checkpoints and ongoing task-branch push from owner's push instruction; owner explicitly requests Airtable update. No main merge/deploy, destructive Git, installs, spend or subagents. Original transcript read-only.
 - Sources: active AGENTS.md, accepted T96/Jade docs, current source/tests/migrations and new audit. Registry: AI Ops Hub appEODGQfOtZgG4R9 / WWM-BUILD reckt0RLcBexGJtGR. Stale Sept16 mutable state superseded by current metadata only.
 - Preview: http://127.0.0.1:4187/; isolated browser contexts.
-- NEXT_ACTION: independent/PO review of the immutable task-branch candidate; main merge/deploy remain separate gates. Finish task-branch push and Airtable readback before returning.
+- Standing release authorization, 2026-09-30: Product Owner requests publishing completed validated changes to wonton-wwm.pages.dev every time. Ordinary PR/required-CI/merge/Pages update is authorized; protection bypass, destructive Git, spend and credential changes remain forbidden.
+- NEXT_ACTION: PR and required CI for the Attunement/backlog candidate; merge and verify the exact live Pages SHA plus focused behavior, then update/read back Airtable. This supersedes the earlier separate-permission note for ordinary publication of this correction.
 - NEXT_LAUNCH: ORCA:CURRENT:NONE; SESSION_ACTION: MILESTONE_COMPLETE for bounded technical correction; USER_ACTION: NONE; broader calibration/release open.
