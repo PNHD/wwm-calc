@@ -419,6 +419,8 @@ export default function ProductShell({ active, onNavigate, roleControl, actions,
   const [onboarded, setOnboarded] = useState(Boolean(stored.onboarded) || Boolean(route));
   const [previewLegacyGvgShare, setPreviewLegacyGvgShare] = useState(Boolean(gvgSharePayload()));
   const activeRef = useRef(active);
+  const onNavigateRef = useRef(onNavigate);
+  onNavigateRef.current = onNavigate;
   const initializedRef = useRef(false);
 
   useEffect(() => {
@@ -444,7 +446,7 @@ export default function ProductShell({ active, onNavigate, roleControl, actions,
         if ("pveView" in parsed) {
           setPveView(parsed.pveView);
           const tab = TAB_FOR_PVE[parsed.pveView];
-          if (tab) onNavigate(tab);
+          if (tab) onNavigateRef.current(tab);
         }
       } else {
         setWorkspace("gvg"); setLastWorkspace("gvg");
@@ -453,8 +455,10 @@ export default function ProductShell({ active, onNavigate, roleControl, actions,
       }
     };
     window.addEventListener("hashchange", handleHash);
+    // Catch navigation between initial render and listener registration.
+    handleHash();
     return () => window.removeEventListener("hashchange", handleHash);
-  }, [onNavigate]);
+  }, []);
 
   useEffect(() => {
     if (initializedRef.current) return;
