@@ -96,3 +96,74 @@ test("Global T96 observed runtime state exposes panel, complete-build comparison
   fs.writeFileSync("runtime-smoke-diagnostic.txt", `completed\n${JSON.stringify(acceptance, null, 2)}\n`, "utf8");
   await page.screenshot({ path: "runtime-smoke.png", fullPage: true });
 });
+
+
+test("Every visible PvE Path survives selection and a saved-path refresh", async ({ page }) => {
+  const errors = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await page.goto("http://127.0.0.1:4173/#pve/build", { waitUntil: "networkidle" });
+  const paths = await page.locator(".build-path-list button strong").allTextContents();
+  expect(paths.length).toBeGreaterThanOrEqual(8);
+  for (const path of paths) {
+    await page.locator(".build-path-list button").filter({ hasText: path }).click();
+    await expect(page.locator(".build-summary-band strong")).toHaveText(path);
+  }
+  await page.locator(".build-path-list button").filter({ hasText: "Silkbind-Jade" }).click();
+  await page.reload({ waitUntil: "networkidle" });
+  await expect(page.locator(".build-summary-band strong")).toHaveText("Silkbind-Jade");
+  await expect(page.locator("body")).not.toContainText("NaN");
+  expect(errors).toEqual([]);
+});
+
+
+test("Advanced PvE tools remain reachable with current roll units and historical count units", async ({ page }) => {
+  const errors = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await page.goto("http://127.0.0.1:4173/#pve/gear", { waitUntil: "networkidle" });
+  await page.getByRole("button", { name: "Load observed T96", exact: true }).click();
+  await page.locator(".workspace-advanced-nav summary").click();
+  await page.getByRole("button", { name: /^Stat Priority/ }).click();
+  await expect(page.getByRole("heading", { name: /Stat Priority — Modeled Impact/ })).toBeVisible();
+  await expect(page.locator(".analysis-workspace-detail")).toContainText("percentage points");
+  const critGain = page.locator(".analysis-workspace-detail div.flex").filter({ has: page.locator("span", { hasText: /^Crit Rate$/ }) }).first();
+  await expect(critGain).toContainText("+9%");
+  const penGain = page.locator(".analysis-workspace-detail div.flex").filter({ has: page.locator("span", { hasText: /^Formless Pen$/ }) }).first();
+  await expect(penGain).toContainText("+13");
+  for (const [route, heading] of [["cultivate", /Cultivation Summary/], ["transmute", /Transmute/], ["bis", /Best-in-Slot|BiS Gear|Build Reference/i]]) {
+    await page.goto(`http://127.0.0.1:4173/#pve/${route}`, { waitUntil: "networkidle" });
+    await expect(page.locator(".analysis-workspace-detail")).toBeVisible();
+    await expect(page.locator(".analysis-workspace-detail")).toContainText(heading);
+  }
+  await page.goto("http://127.0.0.1:4173/#pve/cultivate", { waitUntil: "networkidle" });
+  await expect(page.locator(".analysis-workspace-detail")).toContainText("95下 max-roll units");
+  const expectedCount = await page.evaluate(() => {
+    const data = JSON.parse(localStorage.getItem("wwm_chars_v3"));
+    const character = data.chars.find((item) => item.id === data.activeCharId);
+    const gear = character.schemes.find((item) => item.id === data.activeSchemeId).gear;
+    return (gear.filter((item) => item.isEquipped).flatMap((item) => item.subs).filter((sub) => sub.type === "Max Phys Atk").reduce((sum, sub) => sum + parseFloat(sub.val), 0) / 63.8).toFixed(2);
+  });
+  const maxAttackTile = page.locator(".analysis-workspace-detail div.border.rounded-xl.p-5").filter({ has: page.locator("span", { hasText: /^Max Phys Atk$/ }) });
+  await expect(maxAttackTile).toContainText(expectedCount + " rolls");
+
+  expect(errors).toEqual([]);
+});
+
+
+test("Invalid shell storage and routes fall back without losing build data", async ({ page }) => {
+  const errors = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await page.goto("http://127.0.0.1:4173/#pve/gear", { waitUntil: "networkidle" });
+  await page.getByRole("button", { name: "Load observed T96", exact: true }).click();
+  const builds = await page.evaluate(() => localStorage.getItem("wwm_chars_v3"));
+  for (const raw of ["null", "[]", JSON.stringify({ workspace: "missing", pveView: "missing", gvgView: "missing" })]) {
+    await page.evaluate((raw) => localStorage.setItem("wwm_product_shell_v2", raw), raw);
+    await page.reload({ waitUntil: "networkidle" });
+    await expect(page.getByRole("navigation", { name: "Product workspaces" })).toBeVisible();
+    expect(await page.evaluate(() => localStorage.getItem("wwm_chars_v3"))).toBe(builds);
+  }
+  for (const route of ["#pve/missing-tool", "#gvg/missing-tool"]) {
+    await page.goto("http://127.0.0.1:4173/" + route, { waitUntil: "networkidle" });
+    await expect(page.getByTestId(route.startsWith("#pve") ? "pve-overview" : "gvg-overview")).toBeVisible();
+  }
+  expect(errors).toEqual([]);
+});

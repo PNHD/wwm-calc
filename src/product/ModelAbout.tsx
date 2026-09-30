@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { ExternalLink, Info, ShieldCheck } from "lucide-react";
 import "./model-about.css";
 
@@ -9,7 +8,6 @@ const MODEL_EVIDENCE_REVIEWED = "2026-08-24";
 const OFFICIAL_NEWS_CHECKED = "2026-09-02";
 
 export default function ModelAbout({ workspace, page, path, tier }: { workspace: Workspace; page: string; path?: string; tier?: string }) {
-  const [open, setOpen] = useState(false);
   const context = {
     app: "WWM Calc",
     version: "1.1.0",
@@ -23,16 +21,18 @@ export default function ModelAbout({ workspace, page, path, tier }: { workspace:
     privacy: "No player names, private notes, match history, gear inventory, or local identifiers are included automatically.",
   };
   const title = encodeURIComponent(`[Data issue] ${workspace} / ${page}`);
-  const body = encodeURIComponent(`Please describe the incorrect or outdated data.\n\nContext (safe to share):\n\n\`\`\`json\n${JSON.stringify(context, null, 2)}\n\`\`\`\n`);
+  const body = encodeURIComponent(`Please describe the incorrect or outdated data.
+
+Context (safe to share):
+
+\`\`\`json
+${JSON.stringify(context, null, 2)}
+\`\`\`
+`);
   const issueUrl = `https://github.com/PNHD/wwm-calc/issues/new?title=${title}&body=${body}`;
 
-  return <details className="model-about" data-testid="model-about" open={open} onToggle={(event) => {
-    if (event.currentTarget.open !== open) setOpen(event.currentTarget.open);
-  }}>
-    <summary onClick={(event) => {
-      event.preventDefault();
-      setOpen((value) => !value);
-    }}><Info size={14} aria-hidden="true" /><span>Model & About</span></summary>
+  return <details className="model-about" data-testid="model-about">
+    <summary><Info size={14} aria-hidden="true" /><span>Model & About</span></summary>
     <div className="model-about-popover">
       <div className="model-about-heading"><ShieldCheck size={18} aria-hidden="true" /><div><strong>WWM Calc V1.1</strong><small>{PATCH} · model evidence reviewed {MODEL_EVIDENCE_REVIEWED} · official news checked {OFFICIAL_NEWS_CHECKED}</small></div></div>
       <dl>

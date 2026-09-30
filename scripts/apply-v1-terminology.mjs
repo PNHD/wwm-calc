@@ -10,7 +10,7 @@ function replaceAllChecked(path, pairs) {
 
 function stabilizeV1RuntimeAcceptance() {
   const path = "scripts/runtime-v1-release-acceptance.spec.mjs";
-  let source = fs.readFileSync(path, "utf8");
+  let source = fs.readFileSync(path, "utf8").replace(/\r\n/g, "\n");
   const ambiguous = `await expect(arenaPage.getByText(/Invalid Arena share/i)).toBeVisible();`;
   const precise = `await expect(arenaPage.getByRole("heading", { name: "Invalid Arena share", exact: true })).toBeVisible();`;
   if (source.includes(ambiguous)) source = source.replace(ambiguous, precise);

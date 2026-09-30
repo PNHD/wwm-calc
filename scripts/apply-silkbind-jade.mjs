@@ -249,6 +249,20 @@ if(!app.includes('jadeObjective')) throw new Error('[jade-2.0] objective UI miss
 if(!inner.includes('Exact current Direct Crit numeric value is intentionally not fabricated')) throw new Error('[jade-2.0] Blossom evidence correction missing');
 if(!att.includes('vernal-frequent-projectile')) throw new Error('[jade-2.1] current Vernal Attunement family missing');
 
+// rotationStats also calls these helpers during render, before Best Build.
+const helpersStart = app.indexOf('  const jadeAttunementsForCombo =');
+const helpersEnd = app.indexOf(helperAnchor, helpersStart);
+const rotationStart = app.indexOf('  // 4. Compute rotation damage.');
+if (helpersStart > rotationStart && rotationStart >= 0 && helpersEnd > helpersStart) {
+  const helpers = app.slice(helpersStart, helpersEnd);
+  app = app.slice(0, helpersStart) + app.slice(helpersEnd);
+  app = app.replace('  // 4. Compute rotation damage.', helpers + '  // 4. Compute rotation damage.');
+}
+app = app.replace('jadeScenarioForCombo(equippedGear), jadeObjective, priceJadeEvent);',
+  'jadeScenarioForCombo(getActiveGear().filter((item) => isItemEquipped(item, getActiveGear()))), jadeObjective, priceJadeEvent);');
+app = app.replace('{ ...jadeScenario, cacheSalt: `stat|${activeTier.name}|${jadeObjective}` },',
+  'jadeScenarioForCombo(getActiveGear().filter((item) => isItemEquipped(item, getActiveGear()))),');
+
 fs.writeFileSync(appPath,app,'utf8');
 fs.writeFileSync(innerPath,inner,'utf8');
 fs.writeFileSync(attPath,att,'utf8');
