@@ -1,16 +1,13 @@
 # PM_STATE_SNAPSHOT
 
-Version: 2026-09-30 / 4. Timestamp: 2026-09-30T08:53:52.347Z.
-Supersedes version 3; navigation only, reverify Git and Airtable metadata.
+Version: 2026-09-30 / 5. Timestamp: 2026-09-30T09:14:44.982Z.
+Supersedes v4; navigation only, reverify Git/Pages/CI/Airtable.
 
-- Goal: reconcile WWM Calc correctness backlog using sourced data and accepted T96 boundaries.
-- Closed gate: earlier backlog repair pushed e290a63013685c6b7b830f6c9c569cb4ac883acd on fix/current-backlog-20260930. Current Attunement correction technical PASS WITH CONDITIONS; independent/PO/release acceptance unclaimed.
-- Repo: PNHD/wwm-calc; original D:/WWM Calc preserved. Active worktree D:/WWM Calc-backlog-20260930, branch fix/attunement-catalog-20260930, starting HEAD e290a63013685c6b7b830f6c9c569cb4ac883acd; base/main reference 647e19f2d5bf6baf150d20e7c419c13018333415. Resolve final candidate SHA from Git and Airtable.
-- Evidence: docs/ATTUNEMENT_CATALOG_AUDIT_20260930.md; .local-evidence/backlog-20260930/attunement-*; 25 existing + 2 focused browser checks PASS, lint/build/OCR PASS; 45 Bleed reference events increase/67 unchanged; migration hashes stable. Accepted earlier repairs retained.
-- UNKNOWNs: full current client pool, per-slot availability/caps, Global calibration for reference Paths; unmodeled Shield/Healing/secondary effects; independent review, CI, PO and release acceptance. Actual runtime account/model/effort/quota not exposed.
-- Permissions: local sourced repairs/checkpoints and ongoing task-branch push from owner's push instruction; owner explicitly requests Airtable update. No main merge/deploy, destructive Git, installs, spend or subagents. Original transcript read-only.
-- Sources: active AGENTS.md, accepted T96/Jade docs, current source/tests/migrations and new audit. Registry: AI Ops Hub appEODGQfOtZgG4R9 / WWM-BUILD reckt0RLcBexGJtGR. Stale Sept16 mutable state superseded by current metadata only.
-- Preview: http://127.0.0.1:4187/; isolated browser contexts.
-- Standing release authorization, 2026-09-30: Product Owner requests publishing completed validated changes to wonton-wwm.pages.dev every time. Ordinary PR/required-CI/merge/Pages update is authorized; protection bypass, destructive Git, spend and credential changes remain forbidden.
-- NEXT_ACTION: PR and required CI for the Attunement/backlog candidate; merge and verify the exact live Pages SHA plus focused behavior, then update/read back Airtable. This supersedes the earlier separate-permission note for ordinary publication of this correction.
-- NEXT_LAUNCH: ORCA:CURRENT:NONE; SESSION_ACTION: MILESTONE_COMPLETE for bounded technical correction; USER_ACTION: NONE; broader calibration/release open.
+- Goal: publish completed validated WWM fixes to canonical wonton-wwm.pages.dev and verify exact SHA/behavior.
+- Standing owner permission: ordinary task-branch/PR/required-CI/merge/Pages publication after each completed change, with Airtable writeback. No protection bypass, destructive Git, spend, credential changes or subagents.
+- Repo/worktree: PNHD/wwm-calc; D:/WWM Calc-backlog-20260930; fix/shared-route-publication-20260930 from main a5957a95136fc89c7e671123e9f4182517cf1645. Original checkout and preexisting EOL-only modifications preserved.
+- Accepted refs: backlog e290a63, Attunement f2cc6e8, standing policy0e3a358; PR51 required CI PASS and merged a5957a9. Pages production15b2164a is exact a5957a9; live Bleed/Arena pass. V1 production acceptance FAILED on mobile shared-build navigation, reproduced unchanged locally and in main CI36693951309; not claimed release PASS.
+- Current correction: stable ProductShell hash subscription uses latest callback ref and syncs current hash on registration, closing missed-event gaps during remount/render. Existing unmodified runtime-production-v1.spec.mjs FAIL before/PASS after; full build/TS PASS. Evidence .local-evidence/backlog-20260930/shared-route-* and pages-*.
+- UNKNOWNs: full current-client Attunement pool/caps, non-calibrated Path numeric models and unsupported effect families remain separate; runtime account/model/effort/quota not exposed.
+- NEXT_ACTION: finish focused validation; commit/push correction, PR/required CI/merge, then verify exact final Pages SHA plus production V1/Arena/Attunement and main CI; update/read back Airtable.
+- NEXT_LAUNCH: ORCA:CURRENT:RESUME; SESSION_ACTION: CONTINUE_SAME_SESSION; USER_ACTION: NONE. Source docs: AGENTS.md, accepted T96/Jade/audit and existing production contracts; Airtable AI Ops Hub / WWM-BUILD.
