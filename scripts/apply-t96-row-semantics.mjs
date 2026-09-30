@@ -12,7 +12,8 @@ const write = (path, content) => fs.writeFileSync(path, content, "utf8");
 
 function replaceRequired(source, from, to, label) {
   const normalized = source.replace(/\r\n/g, "\n");
-  if (label === "parser semantic helper import" && normalized.includes('import { applyGearRowSemantics, type GearSubRole } from "../data/gearAttunement.ts";')) return source;
+  if (label === "parser semantic helper import" && normalized.includes('from "../data/gearAttunement.ts";')) return source;
+  if (label === "App semantic imports" && normalized.includes('from "./data/gearAttunement";')) return source;
   if (normalized.includes(to)) return source;
   if (!normalized.includes(from)) {
     console.warn(`[t96-row-semantics] Anchor not present after prior migrations: ${label}`);

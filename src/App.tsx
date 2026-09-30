@@ -1,3 +1,4 @@
+import { GLOBAL_T96_ROLL_CAPS } from "./data/globalT96Rules";
 import { BAMBOOCUT_AB_FIXTURES, BAMBOOCUT_MODEL_UNKNOWNS, BAMBOOCUT_SKILL_EVIDENCE, PATH_MODEL_MATURITY, recommendationConfidence } from "./data/modelTrust";
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
@@ -52,6 +53,7 @@ import {
   ATTUNEMENT_SELECT_OPTIONS,
   applyGearRowSemantics,
   getWeaponAttunementById,
+  getAttunementContribution,
   isAttunementStatKey,
   toGearFormRows,
   type GearSubRole,
@@ -825,14 +827,15 @@ const yieldToEventLoop = (() => {
 })();
 
 // Sums all sub-stat values from a gear list into PanelStats keys via SUB_MAP.
-const sumGearSubs = (gear: GearItem[]): Partial<Record<keyof PanelStats, number>> => {
-  const sums: Partial<Record<keyof PanelStats, number>> = {};
+const sumGearSubs = (gear: GearItem[], buildKey = "bamboocut-dust"): Partial<Record<keyof PanelStats, number>> => {
+  const sums: Partial<Record<keyof PanelStats, number>> = { attunedBonus: 0 };
   gear.forEach(item => {
     item.subs.forEach(sub => {
       const isAttunementRow = (sub as any).role === "attunement" || sub.type === "Attuned Bonus" || Boolean((sub as any).attunementId);
       if (isAttunementRow) {
         const value = Number.parseFloat(String(sub.val ?? "").replace("%", ""));
-        if (Number.isFinite(value)) sums.attunedBonus = (sums.attunedBonus || 0) + value;
+        const contribution = getAttunementContribution(sub, buildKey);
+        if (Number.isFinite(value) && contribution) sums[contribution.key] = (sums[contribution.key] || 0) + contribution.value;
         return;
       }
       const key = SUB_MAP[sub.type];
@@ -904,8 +907,8 @@ const detectSet4pc = (gear: GearItem[]): { weaponSet: string; armorSet: string }
   return { weaponSet: pick(w), armorSet: pick(a) };
 };
 
-const computeGearPanel = (current: PanelStats, gear: GearItem[], baseOverride?: Partial<PanelStats> | null, ownElement?: string): PanelStats => {
-  const gearSum = sumGearSubs(gear);
+const computeGearPanel = (current: PanelStats, gear: GearItem[], baseOverride?: Partial<PanelStats> | null, ownElement?: string, buildKey = "bamboocut-dust"): PanelStats => {
+  const gearSum = sumGearSubs(gear, buildKey);
   const next = { ...current };
   (Object.values(SUB_MAP) as (keyof PanelStats)[]).forEach(key => {
     // Use the player's calibrated gearless base when available, else the fixed ref.
@@ -2616,7 +2619,7 @@ export default function App() {
     if (autoGearPanel) {
       const allGear = getActiveGear();
       const equippedGear = allGear.filter((it) => isItemEquipped(it, allGear));
-      const projected = computeGearPanel(panel, equippedGear, activeScheme?.baseOverride, innerAttrName(selectedBuild));
+      const projected = computeGearPanel(panel, equippedGear, activeScheme?.baseOverride, innerAttrName(selectedBuild), selectedBuild);
       if (selectedBuild === "bamboocut-dust") {
         projected.outerPen += iwStats.outerPen; projected.pzPen += iwStats.pzPen;
         projected.crit += iwStats.crit; projected.aff += iwStats.aff;
@@ -2675,7 +2678,7 @@ export default function App() {
     }
     const allGear = getActiveGear();
     const equipped = allGear.filter(it => isItemEquipped(it, allGear));
-    const gearSum = sumGearSubs(equipped);
+    const gearSum = sumGearSubs(equipped, selectedBuild);
     // The in-game Combat Attributes screen ALREADY includes inner-way (心法)
     // bonuses, but adjustedPanel adds iwStats on top of the base (LOCKED #2). So
     // the calibrated base must subtract BOTH gear sub-stats AND inner-way stats —
@@ -2802,6 +2805,53 @@ export default function App() {
     return calcBaseline(activeTier, selectedBuild);
   }, [activeTier, selectedBuild]);
 
+  const jadeAttunementsForCombo = (combo: GearItem[]) => {
+    const bonuses: Record<string, number> = {};
+    combo.forEach((gear) => gear.subs.forEach((sub) => {
+      const family = resolveJadeAttunementFamily((sub as any).displayName || sub.type);
+      if (!family) return;
+      const value = parseSubValue(sub.val);
+      if (Number.isFinite(value) && value > 0) bonuses[family.id] = (bonuses[family.id] || 0) + value;
+    }));
+    return bonuses;
+  };
+  const jadeScenarioForCombo = (combo: GearItem[]) => {
+    const objectiveScenario = jadeObjective === JADE_OBJECTIVES.SHORT_FIGHT_BURST
+      ? {
+          duration: Math.min(Number((jadeScenario as Record<string, any>).duration || 60), 20),
+          firstQiBreakTime: Math.min(Number((jadeScenario as Record<string, any>).firstQiBreakTime ?? 5), 5),
+          qiBreakDuration: Math.min(Number((jadeScenario as Record<string, any>).qiBreakDuration || 8), 8),
+        }
+      : {};
+    const gearSignature = combo.map((gear) => gear.id).sort().join(",");
+    return {
+      ...jadeScenario,
+      ...objectiveScenario,
+      attunementBonuses: jadeAttunementsForCombo(combo),
+      // Candidate identity is intentionally part of the cache key because two
+      // pieces can aggregate to the same visible panel while differing in set /
+      // Attunement semantics that are consumed by event pricing.
+      cacheSalt: `${activeTier.name}|${food ? 1 : 0}|${bowSelect}|${selectedInnerWays.join(",")}|${gearSignature}`,
+    };
+  };
+  const priceJadeEvent = (event: any, eventPanel: PanelStats) => {
+    const appSkill = JADE_SKILL_TEMPLATES[event.id]?.appSkill;
+    if (!appSkill) return 0;
+    return calcSkill(
+      { name: appSkill, count: 1, isDingyin: false, generalBonus: 0, yishui: 0, tiaozhan: 1 },
+      eventPanel,
+      activeTier,
+      {
+        set: eventPanel.set || adjustedPanel.set,
+        datang: false,
+        yishui: false,
+        buildKey: "silkbind-jade",
+        weaponStars: (eventPanel as any).weaponStars ?? (adjustedPanel as any).weaponStars,
+        armorSet: (eventPanel as any).armorSet ?? (adjustedPanel as any).armorSet,
+      } as any,
+    ).total;
+  };
+
   // 4. Compute rotation damage. Global T96 Bamboocut-Dust uses the same event
   // timeline as Gear Compare / Best Build so ranking and the displayed DPS cannot drift.
   const rotationStats = useMemo(() => {
@@ -2859,7 +2909,7 @@ export default function App() {
     }
 
     if (selectedBuild === "silkbind-jade") {
-      const jadeCurrent = evaluateSilkbindJadeCached(adjustedPanel, jadeScenarioForCombo(equippedGear), jadeObjective, priceJadeEvent);
+      const jadeCurrent = evaluateSilkbindJadeCached(adjustedPanel, jadeScenarioForCombo(getActiveGear().filter((item) => isItemEquipped(item, getActiveGear()))), jadeObjective, priceJadeEvent);
       const items = jadeCurrent.perSkill.map((row: any) => ({
         name: row.name, count: row.events, isDingyin: false, generalBonus: 0, yishui: 0, tiaozhan: 1,
         perHit: row.events ? row.damage / row.events : 0, total: row.damage,
@@ -3116,58 +3166,11 @@ export default function App() {
   // Scans the whole gear pool (all items, equipped or not) for this scheme,
   // groups by slot, and finds the gear combination with the highest graduation
   // rate. Mirrors the live grad-rate pipeline so its numbers match the panel.
-  const jadeAttunementsForCombo = (combo: GearItem[]) => {
-    const bonuses: Record<string, number> = {};
-    combo.forEach((gear) => gear.subs.forEach((sub) => {
-      const family = resolveJadeAttunementFamily((sub as any).displayName || sub.type);
-      if (!family) return;
-      const value = parseSubValue(sub.val);
-      if (Number.isFinite(value) && value > 0) bonuses[family.id] = (bonuses[family.id] || 0) + value;
-    }));
-    return bonuses;
-  };
-  const jadeScenarioForCombo = (combo: GearItem[]) => {
-    const objectiveScenario = jadeObjective === JADE_OBJECTIVES.SHORT_FIGHT_BURST
-      ? {
-          duration: Math.min(Number((jadeScenario as Record<string, any>).duration || 60), 20),
-          firstQiBreakTime: Math.min(Number((jadeScenario as Record<string, any>).firstQiBreakTime ?? 5), 5),
-          qiBreakDuration: Math.min(Number((jadeScenario as Record<string, any>).qiBreakDuration || 8), 8),
-        }
-      : {};
-    const gearSignature = combo.map((gear) => gear.id).sort().join(",");
-    return {
-      ...jadeScenario,
-      ...objectiveScenario,
-      attunementBonuses: jadeAttunementsForCombo(combo),
-      // Candidate identity is intentionally part of the cache key because two
-      // pieces can aggregate to the same visible panel while differing in set /
-      // Attunement semantics that are consumed by event pricing.
-      cacheSalt: `${activeTier.name}|${food ? 1 : 0}|${bowSelect}|${selectedInnerWays.join(",")}|${gearSignature}`,
-    };
-  };
-  const priceJadeEvent = (event: any, eventPanel: PanelStats) => {
-    const appSkill = JADE_SKILL_TEMPLATES[event.id]?.appSkill;
-    if (!appSkill) return 0;
-    return calcSkill(
-      { name: appSkill, count: 1, isDingyin: false, generalBonus: 0, yishui: 0, tiaozhan: 1 },
-      eventPanel,
-      activeTier,
-      {
-        set: eventPanel.set || adjustedPanel.set,
-        datang: false,
-        yishui: false,
-        buildKey: "silkbind-jade",
-        weaponStars: (eventPanel as any).weaponStars ?? (adjustedPanel as any).weaponStars,
-        armorSet: (eventPanel as any).armorSet ?? (adjustedPanel as any).armorSet,
-      } as any,
-    ).total;
-  };
-
   // ponytail: single source for "gear combo → in-combat panel → rotation total".
   // Mirrors adjustedPanel's buff pipeline; reused by Best Build, gear contribution,
   // and the set/bow comparison tables.
   const comboInCombat = (combo: GearItem[], bowOverride?: string, diagnostics?: { panelOverride?: Partial<PanelStats>; excludedBuffIds?: string[]; disableStarweave?: boolean }): { total: number; crit: number; perSkill?: { name: string; dmg: number }[] } => {
-    let p = computeGearPanel(panel, combo, activeScheme?.baseOverride, innerAttrName(selectedBuild));
+    let p = computeGearPanel(panel, combo, activeScheme?.baseOverride, innerAttrName(selectedBuild), selectedBuild);
     if (food) { p.minOuter += activeTier.foodMin; p.maxOuter += activeTier.foodMax; }
     const bow = bowOverride ?? bowSelect;
     if (bow === "crit") p.crit += 3.7; else if (bow === "prec") p.prec += 3.3; else if (bow === "aff") p.aff += 1.8;
@@ -3353,37 +3356,37 @@ export default function App() {
   // 5. Live Stat Priority: % graduation gain/loss per substat roll, computed against the CURRENT panel
   const statPriorityList = useMemo(() => {
     const ALL_STAT_ROLLS: { key: keyof PanelStats; label: string; roll: number; unit: string }[] = [
-      { key: "maxOuter", label: "Max Phys ATK", roll: 77.8, unit: "" },
-      { key: "minOuter", label: "Min Phys ATK", roll: 77.8, unit: "" },
-      { key: "outerPen", label: "Phys Pen", roll: 11.0, unit: "%" },
-      { key: "crit", label: "Crit Rate", roll: 11.0, unit: "%" },
+      { key: "maxOuter", label: "Max Phys ATK", roll: GLOBAL_T96_ROLL_CAPS.maxOuter, unit: "" },
+      { key: "minOuter", label: "Min Phys ATK", roll: GLOBAL_T96_ROLL_CAPS.minOuter, unit: "" },
+      { key: "outerPen", label: "Phys Pen", roll: GLOBAL_T96_ROLL_CAPS.physicalPen, unit: "" },
+      { key: "crit", label: "Crit Rate", roll: GLOBAL_T96_ROLL_CAPS.crit, unit: "%" },
       { key: "critDmg", label: "Crit DMG", roll: 5.0, unit: "%" },
-      { key: "aff", label: "Affinity Rate", roll: 4.4, unit: "%" },
+      { key: "aff", label: "Affinity Rate", roll: GLOBAL_T96_ROLL_CAPS.affinity, unit: "%" },
       { key: "affDmg", label: "Affinity DMG", roll: 5.0, unit: "%" },
-      { key: "prec", label: "Precision", roll: 8.0, unit: "%" },
-      { key: "maxPz", label: "Max Bamboocut ATK", roll: 44.2, unit: "" },
-      { key: "pzPen", label: "Formless Pen", roll: 11.0, unit: "%" },
+      { key: "prec", label: "Precision", roll: GLOBAL_T96_ROLL_CAPS.precision, unit: "%" },
+      { key: "maxPz", label: `Max ${innerAttrName(selectedBuild)} ATK`, roll: GLOBAL_T96_ROLL_CAPS.maxElement, unit: "" },
+      { key: "pzPen", label: "Formless Pen", roll: GLOBAL_T96_ROLL_CAPS.elementPen, unit: "" },
       { key: "dcrit", label: "Direct Crit Rate", roll: 4.6, unit: "%" },
       { key: "umbAll", label: "Art of Umbrella Boost", roll: 3.2, unit: "%" },
-      { key: "umbMartial", label: "Umb Martial Art Skill DMG Boost", roll: 5.0, unit: "%" },
+      { key: "umbMartial", label: "Umb Martial Art Skill DMG Boost", roll: GLOBAL_T96_ROLL_CAPS.weaponMartial, unit: "%" },
       { key: "ropeAll", label: "Art of Rope Dart Boost", roll: 3.2, unit: "%" },
-      { key: "ropeMartial", label: "Rope Dart Martial Art Skill DMG Boost", roll: 5.0, unit: "%" },
+      { key: "ropeMartial", label: "Rope Dart Martial Art Skill DMG Boost", roll: GLOBAL_T96_ROLL_CAPS.weaponMartial, unit: "%" },
       { key: "swordAll", label: "Art of Sword Boost", roll: 3.2, unit: "%" },
-      { key: "swordMartial", label: "Sword Martial Art Skill DMG Boost", roll: 5.0, unit: "%" },
+      { key: "swordMartial", label: "Sword Martial Art Skill DMG Boost", roll: GLOBAL_T96_ROLL_CAPS.weaponMartial, unit: "%" },
       { key: "spearAll", label: "Art of Spear Boost", roll: 3.2, unit: "%" },
-      { key: "spearMartial", label: "Spear Martial Art Skill DMG Boost", roll: 5.0, unit: "%" },
+      { key: "spearMartial", label: "Spear Martial Art Skill DMG Boost", roll: GLOBAL_T96_ROLL_CAPS.weaponMartial, unit: "%" },
       { key: "fanAll", label: "Art of Fan Boost", roll: 3.2, unit: "%" },
-      { key: "fanMartial", label: "Fan Martial Art Skill DMG Boost", roll: 5.0, unit: "%" },
+      { key: "fanMartial", label: "Fan Martial Art Skill DMG Boost", roll: GLOBAL_T96_ROLL_CAPS.weaponMartial, unit: "%" },
       { key: "twinbladesAll", label: "Art of Dual Blades Boost", roll: 3.2, unit: "%" },
-      { key: "twinbladesMartial", label: "Dual Blades Martial Art Skill DMG Boost", roll: 5.0, unit: "%" },
+      { key: "twinbladesMartial", label: "Dual Blades Martial Art Skill DMG Boost", roll: GLOBAL_T96_ROLL_CAPS.weaponMartial, unit: "%" },
       { key: "modaoAll", label: "Art of Mo Blade Boost", roll: 3.2, unit: "%" },
-      { key: "modaoMartial", label: "Mo Blade Martial Art Skill DMG Boost", roll: 5.0, unit: "%" },
+      { key: "modaoMartial", label: "Mo Blade Martial Art Skill DMG Boost", roll: GLOBAL_T96_ROLL_CAPS.weaponMartial, unit: "%" },
       { key: "hengdaoAll", label: "Art of Heng Blade Boost", roll: 3.2, unit: "%" },
-      { key: "hengdaoMartial", label: "Heng Blade Martial Art Skill DMG Boost", roll: 5.0, unit: "%" },
+      { key: "hengdaoMartial", label: "Heng Blade Martial Art Skill DMG Boost", roll: GLOBAL_T96_ROLL_CAPS.weaponMartial, unit: "%" },
       { key: "gauntletsAll", label: "Art of Gauntlets Boost", roll: 3.2, unit: "%" },
-      { key: "gauntletsMartial", label: "Gauntlets Martial Art Skill DMG Boost", roll: 5.0, unit: "%" },
-      { key: "allArts", label: "All Martial Art Skill DMG Boost", roll: 5.0, unit: "%" },
-      { key: "bossDmg", label: "Boss DMG", roll: 2.0, unit: "%" },
+      { key: "gauntletsMartial", label: "Gauntlets Martial Art Skill DMG Boost", roll: GLOBAL_T96_ROLL_CAPS.weaponMartial, unit: "%" },
+      { key: "allArts", label: "All Martial Art Skill DMG Boost", roll: GLOBAL_T96_ROLL_CAPS.allArts, unit: "%" },
+      { key: "bossDmg", label: "Boss DMG", roll: GLOBAL_T96_ROLL_CAPS.bossDmg, unit: "%" },
       { key: "outerDmg", label: "Phys DMG", roll: 2.0, unit: "%" },
     ];
 
@@ -3425,7 +3428,7 @@ export default function App() {
       if (selectedBuild === "silkbind-jade") {
         return evaluateSilkbindJadeCached(
           p,
-          { ...jadeScenario, cacheSalt: `stat|${activeTier.name}|${jadeObjective}` },
+          jadeScenarioForCombo(getActiveGear().filter((item) => isItemEquipped(item, getActiveGear()))),
           jadeObjective,
           priceJadeEvent,
         ).totalDamage;
@@ -3440,6 +3443,7 @@ export default function App() {
           buildKey: selectedBuild,
           weaponStars: (adjustedPanel as any).weaponStars,
           armorSet: (p as any).armorSet ?? (adjustedPanel as any).armorSet,
+          skillOverride: skillOverrides[item.name],
         } as any);
         total += dmg;
       });
@@ -3447,9 +3451,9 @@ export default function App() {
     };
     const gradFor = (p: PanelStats) => (totalFor(p) / baselineScore) * 100;
 
-    const baseGrad = rotationStats.gradRate;
-    const baseTotal = rotationStats.totalDmg;
-    const rotTime = getRotationTimeForBuild(selectedBuild);
+    const baseTotal = totalFor(adjustedPanel);
+    const baseGrad = baselineScore > 0 ? baseTotal / baselineScore * 100 : 0;
+    const rotTime = selectedBuild === "silkbind-jade" ? Number(jadeScenarioForCombo(getActiveGear()).duration || 60) : getRotationTimeForBuild(selectedBuild);
 
     const rows = STAT_ROLLS.map(({ key, label, roll, unit }) => {
       const cur = adjustedPanel[key] as number;
@@ -3469,7 +3473,7 @@ export default function App() {
       gains: [...rows].sort((a, b) => b.gain - a.gain),
       losses: [...rows].sort((a, b) => a.loss - b.loss),
     };
-  }, [adjustedPanel, activeTier, datang, yishui, selectedBuild, baselineScore, rotationStats.gradRate, rotationStats.totalDmg, selectedInnerWays, innerWayTiers, cinderAsh, starweaveDistanceBonusPct, jadeObjective, jadeScenario]);
+  }, [adjustedPanel, activeTier, datang, yishui, selectedBuild, baselineScore, rotationStats.gradRate, rotationStats.totalDmg, selectedInnerWays, innerWayTiers, cinderAsh, starweaveDistanceBonusPct, jadeObjective, jadeScenario, activeScheme?.gear, skillOverrides]);
 
   // Helper to dynamically calculate stats for any stored profile
   const getDynamicProfileStats = (prof: typeof profiles[0], buildKey = selectedBuild) => {
@@ -3648,7 +3652,7 @@ export default function App() {
   const currentCompareCombat = comboInCombat(equippedGear);
   const currentCompareDps = compareRotationTime > 0 ? currentCompareCombat.total / compareRotationTime : 0;
   const menuPanelForCombo = (combo: GearItem[]) => {
-    const p = computeGearPanel(panel, combo, activeScheme?.baseOverride, innerAttrName(selectedBuild));
+    const p = computeGearPanel(panel, combo, activeScheme?.baseOverride, innerAttrName(selectedBuild), selectedBuild);
     p.outerPen += iwStats.outerPen; p.pzPen += iwStats.pzPen; p.crit += iwStats.crit; p.aff += iwStats.aff;
     p.dcrit += iwStats.dcrit; p.daff += iwStats.daff; p.critDmg += iwStats.critDmg; p.affDmg += iwStats.affDmg;
     p.outerDmg += iwStats.outerDmg; p.pzDmg += iwStats.pzDmg; p.prec += iwStats.prec;
@@ -3694,7 +3698,7 @@ export default function App() {
   };
   const currentSkillDps = aggregateSkillDps(currentCompareCombat.perSkill);
   const comparePanelForDiagnostics = (combo: GearItem[]): PanelStats => {
-    const p = computeGearPanel(panel, combo, activeScheme?.baseOverride, innerAttrName(selectedBuild));
+    const p = computeGearPanel(panel, combo, activeScheme?.baseOverride, innerAttrName(selectedBuild), selectedBuild);
     if (food) { p.minOuter += activeTier.foodMin; p.maxOuter += activeTier.foodMax; }
     if (bowSelect === "crit") p.crit += 3.7;
     else if (bowSelect === "prec") p.prec += 3.3;
@@ -4006,7 +4010,7 @@ export default function App() {
               });
               const observedGear = GLOBAL_T96_OBSERVED_GEAR.map((item) => ({ ...item, subs: item.subs.map((sub) => ({ ...sub })) })) as GearItem[];
               const observedEquipped = observedGear.filter((item) => isItemEquipped(item, observedGear));
-              const observedGearSum = sumGearSubs(observedEquipped);
+              const observedGearSum = sumGearSubs(observedEquipped, "bamboocut-dust");
               const observedResidual: Partial<PanelStats> = {};
               CALIB_FIELDS.forEach((field) => {
                 const key = field.key;
@@ -4177,7 +4181,7 @@ export default function App() {
       )}
 
       {selectedBuild === "silkbind-jade" && (() => {
-        const result = evaluateSilkbindJadeCached(adjustedPanel, jadeScenarioForCombo(equippedGear), jadeObjective, priceJadeEvent);
+        const result = evaluateSilkbindJadeCached(adjustedPanel, jadeScenarioForCombo(getActiveGear().filter((item) => isItemEquipped(item, getActiveGear()))), jadeObjective, priceJadeEvent);
         return <JadeHealthPanel
           result={result}
           objective={jadeObjective}
@@ -4551,7 +4555,7 @@ export default function App() {
           </button>
           {activeScheme?.baseOverride && (
             <div className="workspace-build-group" style={{ order: 5, fontSize: 11, color: '#8b949e', marginTop: 4, lineHeight: 1.45 }}>
-              Calibration sticks to your character, not to one gear set. When you swap gear (e.g. after Best Build), the panel re-computes for the new gear automatically — the numbers change but stay correct. <b style={{ color: '#7ee787' }}>No need to re-calibrate.</b>
+              Calibration is saved for this scheme and is independent of its equipped gear set. When you swap gear (e.g. after Best Build), the panel re-computes for the new gear automatically — the numbers change but stay correct. <b style={{ color: '#7ee787' }}>Recalibrate after unmodeled progression or a menu-panel mismatch.</b>
             </div>
           )}
           {calibOpen && (
@@ -4563,7 +4567,7 @@ export default function App() {
                 </div>
                 <div className="modal-body">
                   <p style={{ fontSize: 12.5, color: 'var(--text-sub)', lineHeight: 1.5, marginTop: 0 }}>
-                    Type the numbers from your in-game <b>Combat Attributes</b> screen. First make sure the <b>same Inner Ways are selected here as in-game</b> — the app subtracts your gear sub-stats <i>and</i> inner-way stats to learn this character's true base, so the in-combat panel matches the game exactly (no double-counting). Re-calibrate if you change gear or inner ways.
+                    Type the numbers from your in-game <b>Combat Attributes</b> screen. First make sure the <b>same Inner Ways are selected here as in-game</b> — the app subtracts the equipped gear and selected static Attribute Buffs to learn the residual base. Conditional effects stay on the combat timeline. Gear and Inner Way changes recompute automatically; recalibrate when unmodeled character progression changes the base or the calculated menu panel no longer matches the game.
                   </p>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 14px' }}>
                     {CALIB_FIELDS.map(f => (
@@ -5503,7 +5507,7 @@ export default function App() {
                 <div className="grad-tabs">
                   {[
                     { key: "manual", label: "Manual Sheet", tip: "View and manually edit the full combat-attribute panel. Inputs are read-only when panel auto-computes from gear." },
-                    { key: "priority", label: "Stat Priority", tip: "Which stats to add or drop to graduate fastest — shows the DPS gained per stat point." },
+                    { key: "priority", label: "Stat Priority", tip: "Simulate displayed increments and compare modeled DPS plus historical graduation percentage-point changes." },
                     { key: "cultivate", label: "Cultivate (beta)", tip: "Substat summary, tuned lines to upgrade, and the next 8 rolls worth investing in." },
                     { key: "compare", label: "Compare", tip: "Compare each equipped gear piece to see which replacement raises modeled DPS the most." },
                     { key: "transmute", label: "Transmute Advice", tip: "Per-slot suggestions for the best primary and additional substat configuration." },
@@ -6159,10 +6163,10 @@ export default function App() {
             <div className="bg-[#141619] border border-[#23262c] rounded-xl p-6 shadow-lg">
               <div className="border-b border-[#f0b400]/25 pb-4 mb-5">
                 <h2 className="text-lg font-bold font-serif text-slate-100 flex items-center gap-2">
-                  <TrendingUp className="text-[#f0b400] w-5 h-5" /> Stat Priority — Graduation Impact
+                  <TrendingUp className="text-[#f0b400] w-5 h-5" /> Stat Priority — Modeled Impact
                 </h2>
                 <p className="text-slate-500 text-sm mt-1">
-                  Live ranking for <strong className="text-[#f0b400]">{(BUILD_PROFILES as any)[selectedBuild]?.label || "your build"}</strong>, computed from your current panel ({rotationStats.gradRate.toFixed(1)}% graduation). Each row simulates adding/removing <strong>one typical substat roll</strong> on a single sub-stat and shows the resulting change in graduation %.
+                  Live ranking for <strong className="text-[#f0b400]">{(BUILD_PROFILES as any)[selectedBuild]?.label || "your build"}</strong>, computed from your current panel ({rotationStats.gradRate.toFixed(1)}% graduation). Each row simulates the displayed stat increment. Native T96 stats use verified max rolls; other rows are hypothetical increments, not verified roll caps. Graduation changes are percentage points against a historical T91 baseline, not current T96 completion.
                 </p>
               </div>
 
@@ -6179,13 +6183,13 @@ export default function App() {
                 {/* Gains column */}
                 <div>
                   <h3 className="text-[13px] uppercase tracking-wider font-bold text-emerald-400 mb-2 flex items-center gap-1.5">
-                    <TrendingUp className="w-3.5 h-3.5" /> Adding +1 substat roll
+                    <TrendingUp className="w-3.5 h-3.5" /> Adding the displayed increment
                   </h3>
                   <div className="flex items-center gap-2 text-[10px] uppercase tracking-wider text-slate-500 font-mono mb-1">
                     <span className="w-4" /><span className="w-32">Stat</span><span className="w-12 text-right">Roll</span>
                     <div className="flex-1" />
                     <span className="w-16 text-right text-sky-300">DPS gain</span>
-                    <span className="w-16 text-right text-emerald-400">% gain</span>
+                    <span className="w-16 text-right text-emerald-400">Grad. pp</span>
                   </div>
                   <div className="space-y-1.5">
                     {statPriorityList.gains.map((g, idx) => {
@@ -6202,11 +6206,11 @@ export default function App() {
                               style={{ width: `${width}%` }}
                             />
                           </div>
-                          <span className="w-16 font-mono text-right text-sky-300 text-[12px]" title="DPS added by one more max roll of this stat">
+                          <span className="w-16 font-mono text-right text-sky-300 text-[12px]" title="Modeled DPS added by the displayed increment">
                             +{Math.round(g.gainDps).toLocaleString()}
                           </span>
                           <span className="w-16 font-mono text-right font-bold text-emerald-400">
-                            +{g.gain.toFixed(3)}%
+                            +{g.gain.toFixed(3)} pp
                           </span>
                         </div>
                       );
@@ -6217,7 +6221,7 @@ export default function App() {
                 {/* Losses column */}
                 <div>
                   <h3 className="text-[13px] uppercase tracking-wider font-bold text-rose-400 mb-2 flex items-center gap-1.5">
-                    <TrendingDown className="w-3.5 h-3.5" /> Removing 1 substat roll
+                    <TrendingDown className="w-3.5 h-3.5" /> Removing up to the displayed increment
                   </h3>
                   <div className="space-y-1.5">
                     {statPriorityList.losses.map((g, idx) => {
@@ -6235,7 +6239,7 @@ export default function App() {
                             />
                           </div>
                           <span className="w-16 font-mono text-right font-bold text-rose-400">
-                            {g.loss.toFixed(3)}%
+                            {g.loss.toFixed(3)} pp
                           </span>
                         </div>
                       );
@@ -6249,33 +6253,7 @@ export default function App() {
               </p>
             </div>
 
-            {/* General T91 Priority Rules Guide */}
-            <div className="bg-[#141619] border border-[#23262c] rounded-xl p-6 shadow-lg">
-              <h3 className="text-sm uppercase tracking-widest font-extrabold text-[#f0b400] font-serif border-b border-[#23262c] pb-2 mb-4">
-                General Theorycrafting Guide · T96 Global 2.1
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 text-sm text-slate-300 leading-relaxed">
-                <div className="space-y-3">
-                  <p>
-                    <strong className="text-[#f0b400]">1. Physical Penetration (Phys Pen)</strong>: The most crucial core attribute until reaching the optimal cap in dungeon content (use the selected T96 boss resistance; exact dungeon caps remain encounter-specific). Every point of Phys Pen below this threshold provides massive exponential damage amplification.
-                  </p>
-                  <p>
-                    <strong className="text-[#f0b400]">2. Critical Rate Cap (80%)</strong>: The absolute maximum Critical Rate in Where Winds Meet is capped at <strong className="text-orange-400">80%</strong>. If your combined character attributes and passive/active buffs push your Crit beyond 80%, the surplus is ignored. Aim for roughly 73% unbuffed so that party buffs safely top you off at the optimal 80% maximum.
-                  </p>
-                  <p>
-                    <strong className="text-[#f0b400]">3. Critical Damage (Crit DMG %)</strong>: Crit DMG works in direct synergy with Crit Rate. Once your critical chance is secure, augmenting critical multipliers scales your total active DPS and Everspring Umbrella execution chain jumps exponentially.
-                  </p>
-                </div>
-                <div className="space-y-3">
-                  <p>
-                    <strong className="text-[#f0b400]">4. Affinity Rate (Cap 40%) & Bamboocut</strong>: Bamboocut Dust damage scales heavily with your overall break stats. Although Affinity is restricted to an absolute <strong className="text-orange-400">40%</strong> maximum cap in-game, adding Affinity attributes on current Global gear remains a powerful build option to convert graze hits into full-powered breaking attacks.
-                  </p>
-                  <p>
-                    <strong className="text-[#f0b400]">5. Substat Relaying (Inherit mechanics)</strong>: When refining current Global gear, always prioritize relaying/inheriting attributes that have reached diamond/gold thresholds (such as Phys Pen 9.0%, Max Atk 63.8, Crit 7.4%, etc.). A carefully put-together set can singlehandedly contribute over 40% of your graduation progression.
-                  </p>
-                </div>
-              </div>
-            </div>
+            <p className="text-sm text-slate-400">Rankings depend on the selected Path, target, rotation and combat conditions. Check actual replacements in Gear Compare; this table does not prove that a stat can be rolled on a particular slot or Relaid item.</p>
           </div>
         )}
                     </div>
@@ -6291,7 +6269,7 @@ export default function App() {
                     🎯 Cultivation Summary
                   </h2>
                   <p className="text-slate-500 text-sm mt-1">
-                    Compare your current in-combat panel against the fully-graduated target panel.
+                    Historical T91 reference: compare equipped substat counts using 95下 max-roll units. This is not a calibrated T96 graduation target.
                   </p>
                   <p className="text-amber-500/70 text-[11.5px] mt-1">
                     Class graduation targets are still legacy T91 references. T96 gear quality now uses verified 100上 roll caps; a 100% class-graduation score is not yet an authoritative T96 target.
@@ -6429,7 +6407,8 @@ export default function App() {
                 };
 
                 // get active gear items
-                const activeGear = getActiveGear();
+                const cultivateInventory = getActiveGear();
+                const activeGear = cultivateInventory.filter((item) => isItemEquipped(item, cultivateInventory));
 
                 // Compute summed substats per gearType
                 const currentSubsSum: Record<string, number> = {};
@@ -6450,17 +6429,17 @@ export default function App() {
                   .filter(([k]) => SUB_MAP[k] && /^(umb|rope|sword|spear|fan|twinblades|modao|hengdao|gauntlets)(All|Martial|Special|Charged)$/.test(SUB_MAP[k] as string))
                   .reduce((s, [, v]) => s + (v || 0), 0);
                 const COUNT_CATS: { key: string; label: string; roll: number; sum: number }[] = [
-                  { key: "maxOuter",  label: "Max Phys Atk",     roll: 77.8, sum: currentSubsSum["Max Phys Atk"] || 0 },
-                  { key: "strength",  label: "Strength",     roll: 40.4, sum: currentSubsSum["Strength"] || 0 },
-                  { key: "crit",      label: "Crit Rate",        roll: 7.4,  sum: currentSubsSum["Crit Rate"] || 0 },
-                  { key: "agility",   label: "Agility",      roll: 40.4, sum: currentSubsSum["Agility"] || 0 },
-                  { key: "prec",      label: "Precision",        roll: 6.6,  sum: currentSubsSum["Precision"] || 0 },
-                  { key: "power",     label: "Power",        roll: 40.4, sum: currentSubsSum["Power"] || 0 },
-                  { key: "aff",       label: "Affinity Rate",    roll: 3.6,  sum: currentSubsSum["Affinity Rate"] || 0 },
-                  { key: "minOuter",  label: "Min Phys Atk",     roll: 77.8, sum: currentSubsSum["Min Phys Atk"] || 0 },
+                  { key: "maxOuter",  label: "Max Phys Atk",     roll: WWM_DATA.tiers["95下"].subCaps.subMaxOuter, sum: currentSubsSum["Max Phys Atk"] || 0 },
+                  { key: "strength",  label: "Strength",     roll: WWM_DATA.tiers["95下"].subCaps.jin, sum: currentSubsSum["Strength"] || 0 },
+                  { key: "crit",      label: "Crit Rate",        roll: WWM_DATA.tiers["95下"].subCaps.subCrit * 100,  sum: currentSubsSum["Crit Rate"] || 0 },
+                  { key: "agility",   label: "Agility",      roll: WWM_DATA.tiers["95下"].subCaps.min, sum: currentSubsSum["Agility"] || 0 },
+                  { key: "prec",      label: "Precision",        roll: WWM_DATA.tiers["95下"].subCaps.subPrec * 100,  sum: currentSubsSum["Precision"] || 0 },
+                  { key: "power",     label: "Power",        roll: WWM_DATA.tiers["95下"].subCaps.shi, sum: currentSubsSum["Power"] || 0 },
+                  { key: "aff",       label: "Affinity Rate",    roll: WWM_DATA.tiers["95下"].subCaps.subAff * 100,  sum: currentSubsSum["Affinity Rate"] || 0 },
+                  { key: "minOuter",  label: "Min Phys Atk",     roll: WWM_DATA.tiers["95下"].subCaps.subMinOuter, sum: currentSubsSum["Min Phys Atk"] || 0 },
                   { key: "boss",      label: "Boss DMG",         roll: 2.6,  sum: currentSubsSum["Boss DMG%"] || 0 },
-                  { key: "ownWeapon", label: "Own Weapon Boost", roll: 5.2,  sum: ownWeaponSum },
-                  { key: "allWeapon", label: "All Martial Arts", roll: 2.6,  sum: currentSubsSum["All Martial Arts"] || 0 },
+                  { key: "ownWeapon", label: "Own Weapon Boost", roll: WWM_DATA.tiers["95下"].subCaps.subOwnWeapon * 100,  sum: ownWeaponSum },
+                  { key: "allWeapon", label: "All Martial Arts", roll: WWM_DATA.tiers["95下"].subCaps.subAllWeapon * 100,  sum: currentSubsSum["All Martial Arts"] || 0 },
                 ];
 
                 const tiles = COUNT_CATS.map(cat => {
@@ -7536,7 +7515,8 @@ export default function App() {
                       <React.Fragment key={sidx}>
                         {sub.role === "primary" && <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Normal rolls · Primary</div>}
                         {sub.role === "additional" && formSubs[sidx - 1]?.role !== "additional" && <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 6 }}>Normal rolls · Additional</div>}
-                        {sub.role === "attunement" && <div style={{ fontSize: 11, fontWeight: 700, color: '#34d399', textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 6 }}>Attunement · Weapon Martial Art Skill DMG Boost</div>}
+                        {sub.role === "attunement" && <div style={{ fontSize: 11, fontWeight: 700, color: '#34d399', textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 6 }}>Normal Attunement</div>}
+                        {sub.role === "attunement" && sub.attunementId && <small>Attunement effect: {getAttunementContribution(sub, selectedBuild) || (selectedBuild === "silkbind-jade" && resolveJadeAttunementFamily(sub.attunementId)) ? "included for this Path" : "stored; no modeled effect for this Path"}. Confirm the client tooltip; reference entries are not verified current rolls.</small>}
                       <div className="flex-row" style={{ gap: '8px', alignItems: 'center' }}>
                         <SearchableSelect
                           value={sub.role === "attunement" ? (sub.attunementId ?? "") : sub.type}
@@ -7567,9 +7547,11 @@ export default function App() {
                             setFormSubs(next);
                           }}
                           options={sub.role === "attunement"
-                            ? [{ value: "", label: "Select Attunement / Empty" }, ...ATTUNEMENT_SELECT_OPTIONS]
-                            : subStatOptionsForSlot(selectedSlot).filter((option) => !isAttunementStatKey(option.value))}
-                          placeholder={sub.role === "attunement" ? "Search weapon Attunement..." : "Search stat..."}
+                            ? [{ value: "", label: "Select Attunement / Empty" }, ...ATTUNEMENT_SELECT_OPTIONS,
+                                ...(sub.attunementId && !ATTUNEMENT_SELECT_OPTIONS.some((option) => option.value === sub.attunementId)
+                                  ? [{ value: sub.attunementId, label: sub.displayName || sub.type, group: "Saved legacy — confirm client" }] : [])]
+                            : subStatOptionsForSlot(selectedSlot)}
+                          placeholder={sub.role === "attunement" ? "Search Attunement..." : "Search stat..."}
                         />
                         <input
                           type="text"

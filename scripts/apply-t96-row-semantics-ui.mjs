@@ -6,6 +6,7 @@ const normalizeEol = (value) => value.replace(/\r\n/g, "\n");
 
 const replaceRegexOnce = (regex, replacement, label) => {
   const normalized = normalizeEol(source);
+  if (label === "manual Attunement selector" && normalized.includes('value={sub.role === "attunement" ? (sub.attunementId ?? "") : sub.type}')) return;
   if (typeof replacement === "string" && normalized.includes(replacement)) return;
   const matches = normalized.match(regex);
   if (!matches) throw new Error(`[t96-row-semantics-ui] Missing structural match: ${label}`);
@@ -98,5 +99,18 @@ replaceRegexOnce(
   "Retuned terminology",
 );
 
+source = source.replaceAll("Attunement · Weapon Martial Art Skill DMG Boost", "Normal Attunement");
+source = source.replaceAll("Search weapon Attunement...", "Search Attunement...");
+source = source.replace('...ATTUNEMENT_SELECT_OPTIONS]', `...ATTUNEMENT_SELECT_OPTIONS,
+                                ...(sub.attunementId && !ATTUNEMENT_SELECT_OPTIONS.some((option) => option.value === sub.attunementId)
+                                  ? [{ value: sub.attunementId, label: sub.displayName || sub.type, group: "Saved legacy — confirm client" }] : [])]`);
+source = source.replace('subStatOptionsForSlot(selectedSlot).filter((option) => !isAttunementStatKey(option.value))', 'subStatOptionsForSlot(selectedSlot)');
+source = source.replace('SUB_STAT_OPTIONS.filter((option) => !isAttunementStatKey(option.value))', 'subStatOptionsForSlot(selectedSlot)');
+
+// Keep model coverage next to the section heading, outside the input row.
+source = source.replace(/\n\s*\{sub\.role === "attunement" && sub\.attunementId && <small style=\{\{ flex: 1 \}\}>[\s\S]*?<\/small>\}/, "");
+if (!source.includes('Attunement effect:')) {
+  source = source.replace('>Normal Attunement</div>}', '>Normal Attunement</div>}\n                        {sub.role === "attunement" && sub.attunementId && <small>Attunement effect: {getAttunementContribution(sub, selectedBuild) || (selectedBuild === "silkbind-jade" && resolveJadeAttunementFamily(sub.attunementId)) ? "included for this Path" : "stored; no modeled effect for this Path"}. Confirm the client tooltip; reference entries are not verified current rolls.</small>}');
+}
 fs.writeFileSync(path, source, "utf8");
 console.log("[t96-row-semantics-ui] PASS — Add Gear uses repository-backed Attunement choices and exposes Retuned only on ordinary rolls.");

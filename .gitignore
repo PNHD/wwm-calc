@@ -24,3 +24,6 @@ coverage/
 wwm-math-clone/
 live_app.js
 live_index.html
+
+# Local audit evidence
+.local-evidence/

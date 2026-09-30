@@ -205,9 +205,14 @@ test("V1 required responsive surfaces render at 1440, 1024 and 390 with Model/Ab
   for (const route of ["#pve/overview", "#gvg/overview", "#library", "#arena/overview"]) {
     await page.goto(`${BASE}${route}`, { waitUntil: "networkidle" });
     const about = page.getByTestId("model-about");
+    const aboutHeading = about.getByText("WWM Calc V1.1", { exact: true });
     await expect(about).toBeVisible();
+    if (await about.evaluate((element) => element.open)) {
+      await about.locator("summary").click();
+      await expect(aboutHeading).toBeHidden();
+    }
     await about.locator("summary").click();
-    await expect(about.getByText("WWM Calc V1.1", { exact: true })).toBeVisible();
+    await expect(aboutHeading).toBeVisible();
     await expect(about.getByRole("link", { name: /Report bad data/i })).toHaveAttribute("href", /github\.com\/PNHD\/wwm-calc\/issues\/new/);
   }
   await assertClean(runtime);

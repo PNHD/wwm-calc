@@ -18,3 +18,4 @@
 - Work on a task branch and use the pull-request / required-CI flow; do not instruct direct pushes to protected `main`.
 - Push, merge, deployment, and other external mutations require explicit authorization.
 - Canonical production is Cloudflare Pages at `wonton-wwm.pages.dev`; V1 release verification is exact-SHA production evidence.
+- Standing Product Owner authorization (2026-09-30): after each completed, validated change, publish it to `https://wonton-wwm.pages.dev/` through the task-branch / PR / required-CI flow, then verify the exact live SHA and relevant behavior. This includes ordinary push/PR/merge/Pages deployment needed for that update; it does not authorize bypassing protection, destructive Git, paid actions or credential changes. Update Airtable with the verified production result and any remaining conditions.

@@ -38,10 +38,10 @@ import "./model-assumptions.css";
 import "./workspace-redesign.css";
 import "./workspaces/compare-v2.css";
 
-export type ProductTab = "details" | "gear-analyzer" | "gear-compare" | "inventory-optimizer" | "simulation" | "team" | "rotations" | "skill-editor" | "settings" | "profile";
+export type ProductTab = "priority" | "cultivate" | "transmute" | "bis" | "details" | "gear-analyzer" | "gear-compare" | "inventory-optimizer" | "simulation" | "team" | "rotations" | "skill-editor" | "settings" | "profile";
 type BaseWorkspace = "pve" | "gvg";
 type ProductWorkspace = BaseWorkspace | "library";
-type PveView = "overview" | "build" | "gear" | "compare" | "best-build" | "combat" | "simulation" | "rotations" | "skill-editor" | "team" | "profile";
+type PveView = "priority" | "cultivate" | "transmute" | "bis" | "overview" | "build" | "gear" | "compare" | "best-build" | "combat" | "simulation" | "rotations" | "skill-editor" | "team" | "profile";
 type GvgView = "overview" | "roster" | "builds" | "strategy" | "timeline" | "objectives" | "matches" | "commander" | "support" | "share";
 
 type NavItem<T extends string> = { key: T; label: string; hint: string; icon: typeof Home };
@@ -57,6 +57,10 @@ const PVE_PRIMARY: NavItem<PveView>[] = [
 ];
 
 const PVE_SECONDARY: NavItem<PveView>[] = [
+  { key: "priority", label: "Stat Priority", hint: "Modeled stat increments", icon: BarChart3 },
+  { key: "cultivate", label: "Cultivate", hint: "Historical T91 reference", icon: Target },
+  { key: "transmute", label: "Transmute", hint: "Replacement stat advice", icon: Repeat2 },
+  { key: "bis", label: "Build Reference", hint: "Historical slot guidance", icon: BookOpen },
   { key: "rotations", label: "Rotations", hint: "Execution lab", icon: Repeat2 },
   { key: "skill-editor", label: "Skill Editor", hint: "Advanced theorycraft", icon: FlaskConical },
   { key: "team", label: "Team", hint: "Party context", icon: Users },
@@ -80,6 +84,7 @@ const GVG_SECONDARY: NavItem<GvgView>[] = [
 ];
 
 const TAB_FOR_PVE: Partial<Record<PveView, ProductTab>> = {
+  priority: "priority", cultivate: "cultivate", transmute: "transmute", bis: "bis",
   build: "settings",
   gear: "gear-analyzer",
   compare: "gear-compare",
@@ -93,6 +98,7 @@ const TAB_FOR_PVE: Partial<Record<PveView, ProductTab>> = {
 };
 
 const PVE_FOR_TAB: Record<ProductTab, PveView> = {
+  priority: "priority", cultivate: "cultivate", transmute: "transmute", bis: "bis",
   details: "combat",
   "gear-analyzer": "gear",
   "gear-compare": "compare",
@@ -139,7 +145,16 @@ interface StoredShellState {
 
 function readStoredShell(): StoredShellState {
   try {
-    return JSON.parse(localStorage.getItem(SHELL_STORAGE_KEY) || "{}") as StoredShellState;
+    const raw = JSON.parse(localStorage.getItem(SHELL_STORAGE_KEY) || "{}");
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+    return {
+      workspace: ["pve", "gvg", "library"].includes(raw.workspace) ? raw.workspace : undefined,
+      lastWorkspace: ["pve", "gvg"].includes(raw.lastWorkspace) ? raw.lastWorkspace : undefined,
+      pveView: [...PVE_PRIMARY, ...PVE_SECONDARY].some((item) => item.key === raw.pveView) ? raw.pveView : undefined,
+      gvgView: [...GVG_PRIMARY, ...GVG_SECONDARY].some((item) => item.key === raw.gvgView) ? raw.gvgView : undefined,
+      inspectorCollapsed: raw.inspectorCollapsed === true,
+      onboarded: raw.onboarded === true,
+    };
   } catch {
     return {};
   }
@@ -152,8 +167,8 @@ function explicitRoute() {
   const match = hash.match(/^#(pve|gvg)\/([a-z-]+)/);
   if (!match) return null;
   return match[1] === "pve"
-    ? { workspace: "pve" as const, pveView: match[2] as PveView }
-    : { workspace: "gvg" as const, gvgView: match[2] as GvgView };
+    ? { workspace: "pve" as const, pveView: [...PVE_PRIMARY, ...PVE_SECONDARY].some((item) => item.key === match[2]) ? match[2] as PveView : "overview" as const }
+    : { workspace: "gvg" as const, gvgView: [...GVG_PRIMARY, ...GVG_SECONDARY].some((item) => item.key === match[2]) ? match[2] as GvgView : "overview" as const };
 }
 
 function updateRoute(workspace: BaseWorkspace, view: PveView | GvgView) {
@@ -373,6 +388,7 @@ function PveInspector({ context, page, collapsed, onToggle, onNavigate }: {
 }) {
   if (page === "overview") return null;
   const next: Record<PveView, { label: string; view: PveView }> = {
+    priority: { label: "Compare Gear", view: "compare" }, cultivate: { label: "Manage Gear", view: "gear" }, transmute: { label: "Compare Gear", view: "compare" }, bis: { label: "Open Build", view: "build" },
     overview: { label: "Open Build", view: "build" }, build: { label: "Manage Gear", view: "gear" }, gear: { label: "Compare Candidate", view: "compare" }, compare: { label: "Run Best Build", view: "best-build" }, "best-build": { label: "Review Combat", view: "combat" }, combat: { label: "Open Simulation", view: "simulation" }, simulation: { label: "Review Rotations", view: "rotations" }, rotations: { label: "Open Simulation", view: "simulation" }, "skill-editor": { label: "Review Combat", view: "combat" }, team: { label: "Review Combat", view: "combat" }, profile: { label: "Back to Overview", view: "overview" },
   };
   return (
@@ -425,7 +441,11 @@ export default function ProductShell({ active, onNavigate, roleControl, actions,
       }
       if (parsed.workspace === "pve") {
         setWorkspace("pve"); setLastWorkspace("pve");
-        if ("pveView" in parsed) setPveView(parsed.pveView);
+        if ("pveView" in parsed) {
+          setPveView(parsed.pveView);
+          const tab = TAB_FOR_PVE[parsed.pveView];
+          if (tab) onNavigate(tab);
+        }
       } else {
         setWorkspace("gvg"); setLastWorkspace("gvg");
         if ("gvgView" in parsed) setGvgView(parsed.gvgView);
@@ -434,7 +454,7 @@ export default function ProductShell({ active, onNavigate, roleControl, actions,
     };
     window.addEventListener("hashchange", handleHash);
     return () => window.removeEventListener("hashchange", handleHash);
-  }, []);
+  }, [onNavigate]);
 
   useEffect(() => {
     if (initializedRef.current) return;
