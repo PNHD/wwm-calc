@@ -4,6 +4,9 @@ import {
   applyGearRowSemantics,
   matchWeaponAttunementText,
   toGearFormRows,
+  getAttunementContribution,
+  getWeaponAttunementById,
+  ATTUNEMENT_SELECT_OPTIONS,
 } from "../src/data/gearAttunement.ts";
 
 const failures = [];
@@ -116,10 +119,32 @@ expect(legacy[1]?.type === "Rope Dart Martial Art Skill DMG Boost" && legacy[1]?
 expect(legacy[1]?.isRetuned === false && legacy[1]?.isTuned === false, "legacy Attunement must never remain marked Retuned");
 expect(!legacy[1]?.attunementId, "legacy family-level key must not guess a specific weapon identity");
 
+const bleed = parseSubStats("Strategic Sword - Bleed DMG Boost 5.2%").find((row) => row.attunementId === "strategic-sword-bleed");
+expect(bleed?.val === "5.2" && bleed.role === "attunement" && !bleed.isTuned, "Bleed OCR must retain value, identity and semantic role");
+expect(getAttunementContribution(bleed ?? { type: "Other", val: "" }, "bellstrike-umbra")?.value === 5.2, "Bleed must reach the existing Umbra bleed-event mask");
+expect(getAttunementContribution(bleed ?? { type: "Other", val: "" }, "bamboocut-dust") === null, "Bleed must not boost Everspring events");
+const ordinaryMartial = applyGearRowSemantics([{ type: "Umb Martial Art Skill DMG Boost", val: "5.8", role: "additional" }]);
+expect(ordinaryMartial[0]?.role === "primary", "Explicit ordinary Martial rows must not become Attunement");
+expect(getAttunementContribution({ type: "Phys Pen", val: "11", role: "attunement", attunementId: "physical-penetration" }, "bellstrike-umbra")?.key === "outerPen", "Physical Pen Attunement must not become a generic damage bonus");
+expect(getAttunementContribution({ type: "Formless Penetration", val: "13", role: "attunement", attunementId: "formless-penetration" }, "bamboocut-dust")?.key === "pzPen", "Formless Pen must reach its panel bucket");
+expect(getAttunementContribution({ type: "Mystery", val: "99", role: "attunement", attunementId: "unknown" }, "bamboocut-dust") === null, "Unknown Attunement cannot inflate DPS");
+expect(getAttunementContribution({ type: "Attuned Bonus", val: "20" }, "bamboocut-dust")?.value === 20, "Legacy generic Attunement must remain compatible");
+expect(getWeaponAttunementById("thundercry-blade")?.family === "mo-blade" && getWeaponAttunementById("phalanxbane-blade")?.family === "mo-blade", "Mo Blades cannot be mapped to Sword/Spear");
+expect(getWeaponAttunementById("snowparting-blade")?.family === "heng-blade", "Snowparting must use the Heng Blade family");
+expect(ATTUNEMENT_SELECT_OPTIONS.find((row) => row.value === "strategic-sword")?.group.includes("reference"), "Community Strategic Sword label must not be offered as confirmed Normal Attunement");
+expect(ATTUNEMENT_SELECT_OPTIONS.some((row) => row.value === "strategic-sword-bleed"), "Manual catalog must include Bleed");
+expect(matchWeaponAttunementText("Strategic Sword Critical Rate 9.0%") === null, "A weapon name alone is not an Attunement label");
+expect(matchWeaponAttunementText("Strategic Sword Special Skill Damage Boost 5%")?.id !== "vernal-frequent-projectile", "Generic Special Skill wording must not select Vernal for another weapon");
+expect(matchWeaponAttunementText("Strategic Sword - Bleeding DMG Boost 5.2%")?.id === "strategic-sword-bleed", "Community Bleeding spelling must reuse the Bleed identity");
+expect(ATTUNEMENT_SELECT_OPTIONS.some((row) => row.label.includes("Shield Boost")) && ATTUNEMENT_SELECT_OPTIONS.some((row) => row.label.includes("Deepdaze")), "Shield and Draught candidates must survive catalog audit");
+expect(matchWeaponAttunementText("Physical Penetration 11") === null, "Ordinary Penetration OCR must not be relabeled Attunement without context");
+const wrappedBleed = parseSubStats(["Critical Rate 8.1%", "Agility 46.4", "Min Physical Attack 68.4", "[Turn]Max Physical Attack 73.1", "Power 40", "Strategic Sword - 5.2%", "Bleed DMG Boost"].join("\n"));
+expect(wrappedBleed.find((row) => row.attunementId === "strategic-sword-bleed")?.val === "5.2", "Wrapped Bleed OCR must not borrow the adjacent ordinary value");
+
 const app = fs.readFileSync("src/App.tsx", "utf8");
 const scanner = fs.readFileSync("src/components/OcrScanner.tsx", "utf8");
 const parser = fs.readFileSync("src/utils/ocrParser.ts", "utf8");
-expect(app.includes("Attunement · Weapon Martial Art Skill DMG Boost"), "Add Gear must expose a separate Attunement section");
+expect(app.includes("Normal Attunement"), "Add Gear must expose a separate Attunement section");
 expect(app.includes("Retuned ✦"), "Add Gear ordinary-row checkbox must use Retuned terminology");
 expect(!app.includes("Tuned substat (select one line)"), "legacy Tuned-substat heading must be removed");
 expect(app.includes('options={sub.role === "attunement"'), "manual Add Gear must switch the selector by semantic role");

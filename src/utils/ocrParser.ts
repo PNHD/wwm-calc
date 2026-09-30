@@ -1,5 +1,5 @@
 import { parseHybridGlobalEnglishRows } from "./ocrGlobalEnglish.ts";
-import { applyGearRowSemantics, type GearSubRole } from "../data/gearAttunement.ts";
+import { applyGearRowSemantics, matchWeaponAttunementText, type GearSubRole } from "../data/gearAttunement.ts";
 
 export interface OcrSub {
   type: string;
@@ -299,6 +299,8 @@ const isRetunedStatLine = (lcLine: string): boolean => {
 };
 
 export const matchStatType = (lcLine: string): string => {
+  const attunement = matchWeaponAttunementText(lcLine);
+  if (attunement) return attunement.statKey;
   for (const rule of STAT_PATTERNS) {
     if (rule.exclude) {
       const excluded = rule.exclude.some(ex => ex.every(kw => lcLine.includes(kw)));
@@ -411,7 +413,9 @@ export const parseSubStats = (text: string): OcrSub[] => {
 
     if (matchedType && parsedSubs.length < 6) {
       const isTuned = isRetunedStatLine(lcLine);
-      parsedSubs.push({ type: matchedType, val: valStr, isTuned });
+      const definition = matchWeaponAttunementText(line);
+      parsedSubs.push({ type: matchedType, val: valStr, isTuned: definition ? false : isTuned,
+        ...(definition ? { role: "attunement" as const, attunementId: definition.id, displayName: definition.displayName } : {}) });
     }
   }
 

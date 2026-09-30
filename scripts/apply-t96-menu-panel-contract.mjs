@@ -5,7 +5,11 @@ let source = fs.readFileSync(path, "utf8");
 
 function replaceRequired(from, to, label) {
   const normalizedSource = source.replace(/\r\n/g, "\n");
-  if (normalizedSource.includes(to)) return;
+  // Accept the newer build-aware attunement calls without rewriting them.
+  const compatibleSource = normalizedSource
+    .replaceAll('innerAttrName(selectedBuild), selectedBuild)', 'innerAttrName(selectedBuild))')
+    .replaceAll('sumGearSubs(observedEquipped, "bamboocut-dust")', 'sumGearSubs(observedEquipped)');
+  if (compatibleSource.includes(to)) return;
   if (!normalizedSource.includes(from)) throw new Error(`[t96-menu-panel] Missing patch anchor: ${label}`);
   const eol = source.includes("\r\n") ? "\r\n" : "\n";
   source = source.replace(from.replaceAll("\n", eol), to.replaceAll("\n", eol));

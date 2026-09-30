@@ -53,6 +53,7 @@ import {
   ATTUNEMENT_SELECT_OPTIONS,
   applyGearRowSemantics,
   getWeaponAttunementById,
+  getAttunementContribution,
   isAttunementStatKey,
   toGearFormRows,
   type GearSubRole,
@@ -826,14 +827,15 @@ const yieldToEventLoop = (() => {
 })();
 
 // Sums all sub-stat values from a gear list into PanelStats keys via SUB_MAP.
-const sumGearSubs = (gear: GearItem[]): Partial<Record<keyof PanelStats, number>> => {
-  const sums: Partial<Record<keyof PanelStats, number>> = {};
+const sumGearSubs = (gear: GearItem[], buildKey = "bamboocut-dust"): Partial<Record<keyof PanelStats, number>> => {
+  const sums: Partial<Record<keyof PanelStats, number>> = { attunedBonus: 0 };
   gear.forEach(item => {
     item.subs.forEach(sub => {
       const isAttunementRow = (sub as any).role === "attunement" || sub.type === "Attuned Bonus" || Boolean((sub as any).attunementId);
       if (isAttunementRow) {
         const value = Number.parseFloat(String(sub.val ?? "").replace("%", ""));
-        if (Number.isFinite(value)) sums.attunedBonus = (sums.attunedBonus || 0) + value;
+        const contribution = getAttunementContribution(sub, buildKey);
+        if (Number.isFinite(value) && contribution) sums[contribution.key] = (sums[contribution.key] || 0) + contribution.value;
         return;
       }
       const key = SUB_MAP[sub.type];
@@ -905,8 +907,8 @@ const detectSet4pc = (gear: GearItem[]): { weaponSet: string; armorSet: string }
   return { weaponSet: pick(w), armorSet: pick(a) };
 };
 
-const computeGearPanel = (current: PanelStats, gear: GearItem[], baseOverride?: Partial<PanelStats> | null, ownElement?: string): PanelStats => {
-  const gearSum = sumGearSubs(gear);
+const computeGearPanel = (current: PanelStats, gear: GearItem[], baseOverride?: Partial<PanelStats> | null, ownElement?: string, buildKey = "bamboocut-dust"): PanelStats => {
+  const gearSum = sumGearSubs(gear, buildKey);
   const next = { ...current };
   (Object.values(SUB_MAP) as (keyof PanelStats)[]).forEach(key => {
     // Use the player's calibrated gearless base when available, else the fixed ref.
@@ -2617,7 +2619,7 @@ export default function App() {
     if (autoGearPanel) {
       const allGear = getActiveGear();
       const equippedGear = allGear.filter((it) => isItemEquipped(it, allGear));
-      const projected = computeGearPanel(panel, equippedGear, activeScheme?.baseOverride, innerAttrName(selectedBuild));
+      const projected = computeGearPanel(panel, equippedGear, activeScheme?.baseOverride, innerAttrName(selectedBuild), selectedBuild);
       if (selectedBuild === "bamboocut-dust") {
         projected.outerPen += iwStats.outerPen; projected.pzPen += iwStats.pzPen;
         projected.crit += iwStats.crit; projected.aff += iwStats.aff;
@@ -2676,7 +2678,7 @@ export default function App() {
     }
     const allGear = getActiveGear();
     const equipped = allGear.filter(it => isItemEquipped(it, allGear));
-    const gearSum = sumGearSubs(equipped);
+    const gearSum = sumGearSubs(equipped, selectedBuild);
     // The in-game Combat Attributes screen ALREADY includes inner-way (心法)
     // bonuses, but adjustedPanel adds iwStats on top of the base (LOCKED #2). So
     // the calibrated base must subtract BOTH gear sub-stats AND inner-way stats —
@@ -3168,7 +3170,7 @@ export default function App() {
   // Mirrors adjustedPanel's buff pipeline; reused by Best Build, gear contribution,
   // and the set/bow comparison tables.
   const comboInCombat = (combo: GearItem[], bowOverride?: string, diagnostics?: { panelOverride?: Partial<PanelStats>; excludedBuffIds?: string[]; disableStarweave?: boolean }): { total: number; crit: number; perSkill?: { name: string; dmg: number }[] } => {
-    let p = computeGearPanel(panel, combo, activeScheme?.baseOverride, innerAttrName(selectedBuild));
+    let p = computeGearPanel(panel, combo, activeScheme?.baseOverride, innerAttrName(selectedBuild), selectedBuild);
     if (food) { p.minOuter += activeTier.foodMin; p.maxOuter += activeTier.foodMax; }
     const bow = bowOverride ?? bowSelect;
     if (bow === "crit") p.crit += 3.7; else if (bow === "prec") p.prec += 3.3; else if (bow === "aff") p.aff += 1.8;
@@ -3650,7 +3652,7 @@ export default function App() {
   const currentCompareCombat = comboInCombat(equippedGear);
   const currentCompareDps = compareRotationTime > 0 ? currentCompareCombat.total / compareRotationTime : 0;
   const menuPanelForCombo = (combo: GearItem[]) => {
-    const p = computeGearPanel(panel, combo, activeScheme?.baseOverride, innerAttrName(selectedBuild));
+    const p = computeGearPanel(panel, combo, activeScheme?.baseOverride, innerAttrName(selectedBuild), selectedBuild);
     p.outerPen += iwStats.outerPen; p.pzPen += iwStats.pzPen; p.crit += iwStats.crit; p.aff += iwStats.aff;
     p.dcrit += iwStats.dcrit; p.daff += iwStats.daff; p.critDmg += iwStats.critDmg; p.affDmg += iwStats.affDmg;
     p.outerDmg += iwStats.outerDmg; p.pzDmg += iwStats.pzDmg; p.prec += iwStats.prec;
@@ -3696,7 +3698,7 @@ export default function App() {
   };
   const currentSkillDps = aggregateSkillDps(currentCompareCombat.perSkill);
   const comparePanelForDiagnostics = (combo: GearItem[]): PanelStats => {
-    const p = computeGearPanel(panel, combo, activeScheme?.baseOverride, innerAttrName(selectedBuild));
+    const p = computeGearPanel(panel, combo, activeScheme?.baseOverride, innerAttrName(selectedBuild), selectedBuild);
     if (food) { p.minOuter += activeTier.foodMin; p.maxOuter += activeTier.foodMax; }
     if (bowSelect === "crit") p.crit += 3.7;
     else if (bowSelect === "prec") p.prec += 3.3;
@@ -4008,7 +4010,7 @@ export default function App() {
               });
               const observedGear = GLOBAL_T96_OBSERVED_GEAR.map((item) => ({ ...item, subs: item.subs.map((sub) => ({ ...sub })) })) as GearItem[];
               const observedEquipped = observedGear.filter((item) => isItemEquipped(item, observedGear));
-              const observedGearSum = sumGearSubs(observedEquipped);
+              const observedGearSum = sumGearSubs(observedEquipped, "bamboocut-dust");
               const observedResidual: Partial<PanelStats> = {};
               CALIB_FIELDS.forEach((field) => {
                 const key = field.key;
@@ -7513,7 +7515,8 @@ export default function App() {
                       <React.Fragment key={sidx}>
                         {sub.role === "primary" && <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Normal rolls · Primary</div>}
                         {sub.role === "additional" && formSubs[sidx - 1]?.role !== "additional" && <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 6 }}>Normal rolls · Additional</div>}
-                        {sub.role === "attunement" && <div style={{ fontSize: 11, fontWeight: 700, color: '#34d399', textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 6 }}>Attunement · Weapon Martial Art Skill DMG Boost</div>}
+                        {sub.role === "attunement" && <div style={{ fontSize: 11, fontWeight: 700, color: '#34d399', textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 6 }}>Normal Attunement</div>}
+                        {sub.role === "attunement" && sub.attunementId && <small>Attunement effect: {getAttunementContribution(sub, selectedBuild) || (selectedBuild === "silkbind-jade" && resolveJadeAttunementFamily(sub.attunementId)) ? "included for this Path" : "stored; no modeled effect for this Path"}. Confirm the client tooltip; reference entries are not verified current rolls.</small>}
                       <div className="flex-row" style={{ gap: '8px', alignItems: 'center' }}>
                         <SearchableSelect
                           value={sub.role === "attunement" ? (sub.attunementId ?? "") : sub.type}
@@ -7544,9 +7547,11 @@ export default function App() {
                             setFormSubs(next);
                           }}
                           options={sub.role === "attunement"
-                            ? [{ value: "", label: "Select Attunement / Empty" }, ...ATTUNEMENT_SELECT_OPTIONS]
-                            : subStatOptionsForSlot(selectedSlot).filter((option) => !isAttunementStatKey(option.value))}
-                          placeholder={sub.role === "attunement" ? "Search weapon Attunement..." : "Search stat..."}
+                            ? [{ value: "", label: "Select Attunement / Empty" }, ...ATTUNEMENT_SELECT_OPTIONS,
+                                ...(sub.attunementId && !ATTUNEMENT_SELECT_OPTIONS.some((option) => option.value === sub.attunementId)
+                                  ? [{ value: sub.attunementId, label: sub.displayName || sub.type, group: "Saved legacy — confirm client" }] : [])]
+                            : subStatOptionsForSlot(selectedSlot)}
+                          placeholder={sub.role === "attunement" ? "Search Attunement..." : "Search stat..."}
                         />
                         <input
                           type="text"
