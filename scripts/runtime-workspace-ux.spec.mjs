@@ -1,3 +1,4 @@
+import { verifyProfileOwnership } from "./runtime-profile-owner-modal.helpers.mjs";
 import fs from "node:fs";
 import { test, expect } from "@playwright/test";
 
@@ -145,4 +146,76 @@ test("Responsive visual QA covers PvE, Arena V2 and Guild War V2", async ({ page
   await page.goto(`${BASE}#pve/overview`); await expect(page.getByRole("navigation", { name: "PvE mobile navigation" })).toBeVisible();
   await page.goto(`${BASE}#arena/overview`); await expect(page.getByRole("navigation", { name: "Arena mobile navigation" })).toBeVisible();
   await page.goto(`${BASE}#gvg/overview`); await expect(page.getByRole("navigation", { name: "Guild War mobile navigation" })).toBeVisible();
+});
+
+for (const width of [390, 1440]) test(`character ownership survives equal scheme IDs, switching and refresh at ${width}`, async ({ page }) => {
+  const errors = [];
+  page.on("pageerror", error => errors.push(error.message));
+  await verifyProfileOwnership(page, BASE, width);
+  expect(errors).toEqual([]);
+});
+
+test("changing character invalidates jobs even when its scheme is byte-identical", async ({ page }) => {
+  const errors = [];
+  page.on("pageerror", error => errors.push(error.message));
+  await page.goto(BASE + "#pve/combat", { waitUntil: "networkidle" });
+  const tools = async () => { const closed = page.locator(".workspace-tools:not([open]) > summary"); if (await closed.count()) await closed.click(); };
+  await tools(); await page.getByRole("button", { name: "Load observed T96", exact: true }).click();
+  const fixture = await page.evaluate(() => {
+    const root = JSON.parse(localStorage.getItem("wwm_chars_v3"));
+    const a = structuredClone(root.chars.find(char => char.id === root.activeCharId));
+    const scheme = a.schemes.find(item => item.id === root.activeSchemeId);
+    scheme.gear = scheme.gear.flatMap(item => Array.from({ length: 4 }, (_, i) => ({ ...item, id: `${item.id}:job-${i}`, subs: [{ type: "Max Physical ATK", val: String(100 + i), isTuned: false }], isEquipped: item.isEquipped && i === 0 })));
+    a.schemes = [scheme];
+    const twin = { ...structuredClone(a), id: "job-twin", name: "Identical scheme owner" };
+    return { root: { ...root, chars: [a, twin], activeCharId: a.id }, aId: a.id };
+  });
+  await tools(); await page.getByRole("button", { name: "Data", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Export / Import Data", exact: true });
+  await dialog.getByLabel("Data Content:", { exact: true }).fill(JSON.stringify(fixture.root));
+  await Promise.all([page.waitForEvent("load"), dialog.getByRole("button", { name: "Import", exact: true }).click()]);
+  await page.waitForLoadState("networkidle");
+  const selectRole = async id => {
+    await tools(); await page.getByRole("combobox", { name: "Current role", exact: true }).selectOption(id);
+    const open = page.locator(".workspace-tools[open] > summary"); if (await open.count()) await open.click();
+  };
+  // The first load derives the new inventory panel. Copy that settled scheme so
+  // the owner switch cannot be detected accidentally through a content difference.
+  const settled = await page.evaluate(aId => {
+    const root = JSON.parse(localStorage.getItem("wwm_chars_v3"));
+    root.chars.find(char => char.id === "job-twin").schemes = structuredClone(root.chars.find(char => char.id === aId).schemes);
+    return root;
+  }, fixture.aId);
+  await tools(); await page.getByRole("button", { name: "Data", exact: true }).click();
+  await dialog.getByLabel("Data Content:", { exact: true }).fill(JSON.stringify(settled));
+  await Promise.all([page.waitForEvent("load"), dialog.getByRole("button", { name: "Import", exact: true }).click()]);
+  await page.waitForLoadState("networkidle");
+  const persistedSchemes = await page.evaluate(aId => {
+    const root = JSON.parse(localStorage.getItem("wwm_chars_v3"));
+    return { owner: root.chars.find(char => char.id === aId).schemes, twin: root.chars.find(char => char.id === "job-twin").schemes };
+  }, fixture.aId);
+  // Report differing persisted fields if hydration fails, then require byte identity.
+  expect(persistedSchemes.twin).toEqual(persistedSchemes.owner);
+  expect(JSON.stringify(persistedSchemes.twin)).toBe(JSON.stringify(persistedSchemes.owner));
+  await page.goto(BASE + "#pve/simulation", { waitUntil: "networkidle" });
+  await page.evaluate(() => {
+    window.Worker = class {
+      postMessage(job) { window.__lateOwnerWorker = () => this.onmessage({ data: { generation: job.generation, fingerprint: job.fingerprint, error: "WRONG_PROFILE_WORKER_RESULT" } }); }
+      terminate() {}
+    };
+  });
+  await page.getByRole("button", { name: /Run Simulation/ }).click();
+  await expect(page.getByRole("button", { name: "Cancel simulation" })).toBeVisible();
+  await selectRole("job-twin");
+  await page.evaluate(() => window.__lateOwnerWorker());
+  await expect(page.locator("body")).not.toContainText("WRONG_PROFILE_WORKER_RESULT");
+  await expect(page.getByRole("button", { name: "Cancel simulation" })).toHaveCount(0);
+  await selectRole(fixture.aId);
+  await page.goto(BASE + "#pve/best-build", { waitUntil: "networkidle" });
+  await page.getByRole("button", { name: "Find best build", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Cancel search" })).toBeVisible();
+  await selectRole("job-twin");
+  await expect(page.getByRole("button", { name: "Cancel search" })).toHaveCount(0);
+  await expect(page.locator("body")).not.toContainText("Best combination");
+  expect(errors).toEqual([]);
 });
