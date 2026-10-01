@@ -1,6 +1,6 @@
 import { GLOBAL_T96_ROLL_CAPS } from "./data/globalT96Rules";
 import { BAMBOOCUT_AB_FIXTURES, BAMBOOCUT_MODEL_UNKNOWNS, BAMBOOCUT_SKILL_EVIDENCE, PATH_MODEL_MATURITY, recommendationConfidence } from "./data/modelTrust";
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import {
   Shield,
   HelpCircle,
@@ -2968,7 +2968,7 @@ export default function App() {
   const combatConfigJson = JSON.stringify(combatConfig);
   const combatScheme = useRef(activeScheme?.id);
   const loadingCombatConfig = useRef<string | null>(null);
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (combatScheme.current === activeScheme?.id) return;
     combatScheme.current = activeScheme?.id;
     setProfileRecoveryMessage("");
@@ -2985,8 +2985,9 @@ export default function App() {
     setJadeObjective(saved.jadeObjective); setJadeScenarioOverrides(saved.jadeScenarioOverrides);
     previousRotationBuild.current = saved.selectedBuild;
   }, [activeScheme?.id]);
-  useEffect(() => {
-    if (!activeScheme) return;
+  // Persist visible combat controls before paint; an immediate refresh must use them.
+  useLayoutEffect(() => {
+    if (!activeScheme || combatScheme.current !== activeScheme.id) return;
     if (loadingCombatConfig.current && loadingCombatConfig.current !== combatConfigJson) return;
     loadingCombatConfig.current = null;
     if (JSON.stringify(activeScheme.combatConfig) === combatConfigJson) return;
