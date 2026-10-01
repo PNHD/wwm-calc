@@ -63,7 +63,9 @@ Use this only when the Cloudflare project supports Direct Upload and Wrangler is
 npm run deploy:worker
 ```
 
-runs `wrangler deploy` through the Cloudflare Vite plugin. That is a Workers deployment path and must not be assumed to update the existing `wonton-wwm.pages.dev` Pages project.
+runs `wrangler deploy`. The unused Cloudflare Vite plugin has been removed; the active Vite build uses React and Tailwind only. This explicit Workers command must not be assumed to update the existing `wonton-wwm.pages.dev` Pages project.
+
+For local bundle inspection use `npm run preview`, which builds and serves `dist` through Vite on `127.0.0.1`. It does not start a Worker emulator or require a Cloudflare login.
 
 ## Required evidence when deployment does not update
 

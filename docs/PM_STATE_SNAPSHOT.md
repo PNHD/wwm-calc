@@ -1,5 +1,14 @@
 # WWM-BUILD PM_STATE_SNAPSHOT
 
+## Superseding navigation checkpoint — renewed full audit
+
+2026-10-01: Product Owner renewed autonomous audit/research/correction and live-publication scope. Supersedes the source-gate WAIT_FOR_D3 next action below; unsupported numerics remain unavailable. Same session/worktree/branch, one writer, no subagents.
+GOAL / CURRENT GATE: Close the supported correction increment through candidate validation → PR/required CI → merge/Pages → exact-SHA desktop/mobile smoke. Full numerical upstream coverage remains PARTIAL/SOURCE_BLOCKED.
+VERIFIED: Recovered HEAD f75064c512014246c1d99ef1c1397f2312807d1b; main61ca3b5624873ba70425a04e4fa2dfdafe19faaf. First candidate31 static checks/46 browser checks PASS; game-import precision/unit/validation/stale-preview corrections and current official-image disclosure; dev-tool lockfile remediation now audits zero vulnerabilities. Final layout/lockfile delta and publication pending.
+SOURCE / EVIDENCE: DEEP_AUDIT_20261001.md, PROJECT_STATE.md, GLOBAL_SOURCE_GATE_20261001.md; ignored .local-evidence/upstream-20261001/deep-audit/. Prior accepted release evidence retained.
+NEXT TASK: Review/validate final candidate and publish normally, verify exact live ref and repaired flows, sync/read back Airtable/00-NOW.
+CONTROL: CONTINUE_SAME_SESSION; USER_ACTION NONE; ACCOUNT_POLICY AUTO_HEADROOM; NEXT_LAUNCH ORCA_CODEX:AUTO_HEADROOM:RESUME; current SESSION_REF01a0f790-08a6-7042-a834-0afc1be39513; SAME D:/WWM Calc-upstream-20261001 / feat/upstream-20261001. No prior provider-session resume.
+
 ## Superseding navigation checkpoint — Global source gate
 
 Timestamp: 2026-10-01T13:15:07Z. Version: source qualification / operational PM recovery. Supersedes the previous next-task and runtime fields below; accepted Team/UI evidence is retained. Navigation only; reverify mutable state.

@@ -1,5 +1,7 @@
 # Global source qualification gate
 
+Superseding public-news audit: the September 23 and both September 30 image notices were downloaded again and read in full during the renewed audit. All three SHA256 hashes match the retained copies. They cover appearances/events, not new combat coefficients or retune weights; the old "image notices not re-audited" statement below is historical. See DEEP_AUDIT_20261001.md for the correction/release record. Numerical source limits remain in force.
+
 Verified 2026-10-01T13:15:07Z. Work item: WWM-BUILD-UPSTREAM-20261001. Scope: qualify the remaining numerical sources; preserve released UI/state/evaluator work. Security: SECURITY-N/A (research and documentation only).
 
 ## Recovered release and ownership

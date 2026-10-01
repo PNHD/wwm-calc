@@ -1444,6 +1444,7 @@ export default function App() {
   const [isHelpOpen, setIsHelpOpen] = useState<boolean>(false);
   const [gameImportRaw, setGameImportRaw] = useState<string>("");
   const [gameImportResult, setGameImportResult] = useState<ImportResult | null>(null);
+  const [gameImportReviewed, setGameImportReviewed] = useState(false);
   const [gameImportError, setGameImportError] = useState<string>("");
   const [isExportImportModalOpen, setIsExportImportModalOpen] = useState<boolean>(false);
   const [profileImportError, setProfileImportError] = useState("");
@@ -2216,6 +2217,7 @@ export default function App() {
 
   const parseGameImport = () => {
     setGameImportError("");
+    setGameImportReviewed(false);
     try {
       setGameImportResult(parseGameData(gameImportRaw));
     } catch (e: any) {
@@ -2225,7 +2227,7 @@ export default function App() {
   };
 
   const applyGameImport = () => {
-    if (!gameImportResult) return;
+    if (!gameImportResult || !gameImportReviewed) return;
     const cur = getActiveGear();
     const importedSlots = new Set(gameImportResult.pieces.map(p => p.slot));
     // Unequip whatever is currently equipped in the slots we're importing (kept in
@@ -3281,6 +3283,7 @@ export default function App() {
     return () => { simulationGeneration.current++; bestBuildGeneration.current++; simulationWorker.current?.terminate(); };
   }, [jobFingerprint]);
   useEffect(() => { setRotationImportPreview(null); setRotationImportError(""); }, [selectedBuild]);
+  useEffect(() => { setGameImportResult(null); setGameImportReviewed(false); }, [selectedBuild, charsData.activeCharId, charsData.activeSchemeId]);
   const runSimulation = () => {
     cancelSimulation();
     setSimResult(null); setSimError("");
@@ -5247,10 +5250,10 @@ export default function App() {
         const bookmarklet = `javascript:(function(){var t=localStorage.getItem('h72na_data_token');if(!t){var c=document.cookie.match(/token=([^;]+)/);if(c)t=c[1]}if(!t){alert('Not logged in to the WWM dashboard.');return}var x=new XMLHttpRequest();x.open('GET','https://s2.easebar.com/78ae9d90792a3e9b/role/roleInfo',true);x.withCredentials=true;x.setRequestHeader('access_token',t);x.onload=function(){try{var j=JSON.parse(x.responseText);if(!j.data||!j.data.wearEquipsDetailed){alert('Could not load gear data.');return}navigator.clipboard.writeText(JSON.stringify(j.data)).then(function(){alert('Gear copied! Paste it into the calculator.')}).catch(function(){prompt('Copy this:',JSON.stringify(j.data))})}catch(e){alert('Error: '+e.message)}};x.send()})()`;
         const res = gameImportResult;
         return (
-          <div className="modal" onClick={() => setIsGameImportOpen(false)}>
-            <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 620, maxHeight: "88vh", display: "flex", flexDirection: "column" }}>
+          <div className="modal" onClick={() => setIsGameImportOpen(false)} onKeyDown={event => { if (event.key === "Escape") { event.stopPropagation(); setIsGameImportOpen(false); } }}>
+            <div className="modal-content" role="dialog" aria-modal="true" aria-labelledby="game-import-title" onClick={e => e.stopPropagation()} style={{ maxWidth: 620, maxHeight: "88vh", display: "flex", flexDirection: "column" }}>
               <div className="modal-header">
-                <h2>📥 Import Equipped Gear from Game <span style={{ fontSize: 11, color: "#f0b400", fontWeight: 600 }}>(Beta)</span></h2>
+                <h2 id="game-import-title">📥 Import Equipped Gear from Game <span style={{ fontSize: 11, color: "#f0b400", fontWeight: 600 }}>(Beta)</span></h2>
                 <button type="button" className="close-btn" aria-label="Close game import" onClick={() => setIsGameImportOpen(false)}>&times;</button>
               </div>
               <div className="modal-body" style={{ padding: 20, overflowY: "auto" }}>
@@ -5266,27 +5269,27 @@ export default function App() {
                 </div>
 
                 <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-                  <input readOnly value={bookmarklet} onFocus={e => e.currentTarget.select()}
+                  <input aria-label="Gear bookmarklet" readOnly value={bookmarklet} onFocus={e => e.currentTarget.select()}
                     style={{ flex: 1, padding: "6px 8px", background: "#15161a", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 6, color: "#8b949e", fontSize: 11, fontFamily: "monospace" }} />
-                  <button type="button" onClick={() => { navigator.clipboard.writeText(bookmarklet); }}
-                    style={{ padding: "6px 12px", fontSize: 12, fontWeight: 700, borderRadius: 6, border: "1px solid rgba(88,166,255,0.5)", background: "rgba(88,166,255,0.15)", color: "#58a6ff", cursor: "pointer", whiteSpace: "nowrap" }}>Copy bookmarklet</button>
+                  <button type="button" onClick={async () => { try { await navigator.clipboard.writeText(bookmarklet); } catch { setGameImportError("Clipboard unavailable. Select the bookmarklet field and copy it manually."); } }}
+                    style={{ padding: "6px 12px", minHeight: 44, fontSize: 12, fontWeight: 700, borderRadius: 6, border: "1px solid rgba(88,166,255,0.5)", background: "rgba(88,166,255,0.15)", color: "#58a6ff", cursor: "pointer", whiteSpace: "nowrap" }}>Copy bookmarklet</button>
                 </div>
 
-                <textarea value={gameImportRaw} onChange={e => setGameImportRaw(e.target.value)}
+                <textarea autoFocus aria-label="Copied equipped gear JSON" value={gameImportRaw} onChange={e => { setGameImportRaw(e.target.value); setGameImportResult(null); setGameImportReviewed(false); setGameImportError(""); }}
                   placeholder="Paste the copied gear JSON here..."
                   style={{ width: "100%", height: 90, padding: 8, background: "#15161a", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 6, color: "#e0e0e0", fontSize: 12, fontFamily: "monospace", resize: "vertical" }} />
                 <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
                   <button type="button" onClick={parseGameImport}
-                    style={{ padding: "6px 14px", fontSize: 12, fontWeight: 700, borderRadius: 6, border: "1px solid rgba(126,231,135,0.5)", background: "rgba(126,231,135,0.15)", color: "#7ee787", cursor: "pointer" }}>Parse</button>
+                    style={{ padding: "6px 14px", minHeight: 44, fontSize: 12, fontWeight: 700, borderRadius: 6, border: "1px solid rgba(126,231,135,0.5)", background: "rgba(126,231,135,0.15)", color: "#7ee787", cursor: "pointer" }}>Parse</button>
                   {res && (
-                    <button type="button" onClick={applyGameImport}
-                      style={{ padding: "6px 14px", fontSize: 12, fontWeight: 700, borderRadius: 6, border: "1px solid rgba(245,180,0,0.6)", background: "rgba(245,180,0,0.18)", color: "#f0b400", cursor: "pointer" }}>
+                    <button type="button" onClick={applyGameImport} disabled={!gameImportReviewed}
+                      style={{ padding: "6px 14px", minHeight: 44, fontSize: 12, fontWeight: 700, borderRadius: 6, border: "1px solid rgba(245,180,0,0.6)", background: "rgba(245,180,0,0.18)", color: "#f0b400", opacity: gameImportReviewed ? 1 : .5, cursor: gameImportReviewed ? "pointer" : "not-allowed" }}>
                       ✓ Import &amp; equip {res.pieces.length} pieces
                     </button>
                   )}
                 </div>
 
-                {gameImportError && <p style={{ color: "#ff7b72", fontSize: 12, marginTop: 10 }}>{gameImportError}</p>}
+                {gameImportError && <p role="alert" style={{ color: "#ff7b72", fontSize: 12, marginTop: 10 }}>{gameImportError}</p>}
 
                 {res && (
                   <div style={{ marginTop: 14 }}>
@@ -5317,8 +5320,9 @@ export default function App() {
                       </details>
                     )}
                     <p style={{ marginTop: 10, fontSize: 11, color: "#6e7681" }}>
-                      Values are exact from the game. Set bonus isn't imported (pick it per piece after). Importing equips these and unequips the current piece in each slot (old pieces stay in your pool).
+                      Confirmed stat IDs retain their rolled values. Amber labels use a historical roll heuristic; armor slot order is inferred. Weapon slots use the current Path: <b>{(BUILD_PROFILES as any)[selectedBuild]?.label || selectedBuild}</b>. Set bonus isn't imported (pick it per piece after). Importing equips these and unequips the current piece in each slot (old pieces stay in your pool).
                     </p>
+                    <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, minHeight: 44 }}><input style={{ width: 18, minWidth: 18, height: 18, flex: "0 0 auto", margin: 0 }} type="checkbox" checked={gameImportReviewed} onChange={event => setGameImportReviewed(event.target.checked)} />I checked slots, stats, and the current Path against my game.</label>
                   </div>
                 )}
               </div>

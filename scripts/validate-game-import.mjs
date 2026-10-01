@@ -1,0 +1,28 @@
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+import { pathToFileURL } from "node:url";
+import { buildSync } from "esbuild";
+
+const dir = path.resolve("node_modules/.cache/game-import");
+fs.mkdirSync(dir, { recursive: true });
+const file = path.join(dir, "parser.mjs");
+buildSync({ stdin: { contents: "export * from './src/utils/gameImport.ts'; export * from './src/data/affixMap.ts';", resolveDir: process.cwd() }, outfile: file, bundle: true, platform: "node", format: "esm" });
+const { parseGameData, resolveAffixStat } = await import(pathToFileURL(file).href);
+const payload = affixes => JSON.stringify({ data: { roleName: "Test", level: 95, wearEquipsDetailed: { "1": { exVo: { baseAffixes: affixes.map(equipmentDetails => ({ equipmentDetails })) } } } } });
+const parse = affixes => parseGameData(payload(affixes));
+const value = row => parse([row]).pieces[0].subs[0].val;
+assert.equal(value([9293008, .5, .94]), "0.5", "flat attack below one must not become a percentage");
+assert.equal(value([9293019, 1, .94]), "100", "a known rate at one is 100%, not 1%");
+assert.equal(value([9293019, .06956, .94]), "6.956", "retain the dashboard's rolled precision");
+assert.equal(value([9293008, 59.972, .94]), "59.972");
+assert.equal(value([9293019, 0, .94]), "0");
+assert.throws(() => parseGameData(payload([[9293008, 1, .94]]).replace('"Test"', JSON.stringify("字".repeat(200 * 1024)))), /too large/, "bound UTF-8 bytes as well as characters");
+const sample = parse([[9293019, .06956, .94], [9293008, 59.972, .94], [9293007, 59.972, .94]]);
+assert.equal(sample.pieces[0].slot, "Umbrella");
+assert.deepEqual(sample.pieces[0].subs.map(row => row.type), ["Crit Rate", "Max Phys Atk", "Min Phys Atk"]);
+assert.ok(parse([[9999998, 59.972, .94]]).pieces[0].subs[0].flagged, "all heuristic labels need review");
+for (const id of ["constructor", "__proto__", "toString"]) assert.equal(resolveAffixStat(id), null);
+for (const row of [[9293008, -1, .94], [9293008, null, .94], [9293008, "59.972", .94], [null, 59.972, .94], [9293008, 59.972, 0]]) assert.throws(() => parse([row]));
+for (const raw of ["null", "[]", "{", " ".repeat(512 * 1024 + 1), '{"wearEquipsDetailed":{"constructor":{}}}', payload([]), payload([[9999999, 12345, .94]]), payload([[9293008, 1, .94]]).replace('"equipmentDetails":[9293008,1,0.94]', '"equipmentDetails":[9293008,1e309,0.94]')]) assert.throws(() => parseGameData(raw));
+console.log("PASS game import: unit boundaries, exact rolled values, inferred labels, malformed data and bounded/prototype guards");

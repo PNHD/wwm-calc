@@ -10,14 +10,14 @@
     "validate:t96-product": "node scripts/validate-t96-product.mjs && node scripts/validate-t96-menu-panel.mjs && node scripts/validate-bamboocut-trust.mjs && node scripts/validate-bamboocut-attunement-runtime.mjs && node scripts/validate-bamboocut-factor-diagnostic.mjs && node scripts/validate-bamboocut-mechanics-audit.mjs",
     "validate:jade": "node scripts/validate-silkbind-jade.mjs",
     "validate:arena": "node scripts/apply-arena-library.mjs && node scripts/apply-arena-product-surface.mjs && node scripts/apply-v1-release-hardening.mjs && node scripts/apply-v1-release-ui.mjs && node scripts/apply-v1-terminology.mjs && node scripts/validate-arena-model.mjs && node scripts/validate-library.mjs",
-    "validate:v1-release": "node scripts/apply-v1-release-hardening.mjs && node scripts/apply-v1-release-ui.mjs && node scripts/apply-v1-terminology.mjs && node scripts/validate-v1-storage-registry.mjs && node scripts/validate-v1-storage-security.mjs",
+    "validate:v1-release": "node scripts/apply-v1-release-hardening.mjs && node scripts/apply-v1-release-ui.mjs && node scripts/apply-v1-terminology.mjs && node scripts/validate-v1-storage-registry.mjs && node scripts/validate-v1-storage-security.mjs && node scripts/validate-game-import.mjs",
     "validate:pages-dist": "node scripts/validate-pages-dist.mjs",
     "audit:global-v2": "npm run apply:global-v2",
     "predev": "npm run apply:global-v2",
     "dev": "vite",
     "prebuild": "npm run apply:global-v2 && node scripts/write-build-info.mjs",
     "build": "vite build",
-    "preview": "npm run build && wrangler dev",
+    "preview": "npm run build && vite preview --host 127.0.0.1",
     "lint": "tsc --noEmit",
     "deploy": "npm run deploy:pages",
     "deploy:pages": "npm run build && wrangler pages deploy dist --project-name wonton-wwm",
@@ -34,13 +34,12 @@
     "vite": "^6.2.3"
   },
   "devDependencies": {
-    "@cloudflare/vite-plugin": "^1.42.1",
     "@types/node": "^25.9.3",
     "@types/react": "^19.0.8",
     "@types/react-dom": "^19.0.3",
     "autoprefixer": "^10.4.21",
     "tailwindcss": "^4.1.14",
     "typescript": "~5.8.2",
-    "wrangler": "^4.103.0"
+    "wrangler": "^4.145.0"
   }
 }
