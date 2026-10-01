@@ -540,7 +540,7 @@ export default function ProductShell({ active, onNavigate, roleControl, actions,
       {workspace === "gvg" && gvgView === "share" && !gvgSharePayload() && <GvgSharePrivacyPanel onBack={() => goGvg("overview")} />}
       {workspace === "gvg" && gvgView === "share" && previewLegacyGvgShare && gvgSharePayload() && <GvgSharedLanding payload={gvgSharePayload()} onView={() => setPreviewLegacyGvgShare(false)} onBack={closeLegacyGvgShare} />}
       {workspace === "gvg" && gvgView !== "overview" && (gvgView !== "share" || (Boolean(gvgSharePayload()) && !previewLegacyGvgShare)) && <div className={`workspace-gvg-host is-${gvgView}`}><GuildWarWorkspace key={gvgView} onClose={() => goGvg("overview")} />{/* COMPETITIVE_V2_GVG_ROUTE_KEY */}</div>}
-      {workspace === "library" && <LibraryWorkspace context={context} onOpenPve={goPve} onOpenGvg={goGvg} onExit={() => switchWorkspace(lastWorkspace)} />}
+      {workspace === "library" && <LibraryWorkspace context={context} onOpenPve={goPve} onOpenGvg={goGvg} onExit={() => { const returnHash = history.state?.libraryReturnHash; if (typeof returnHash === "string" && /^#(pve|gvg|arena|training-terrace)\//.test(returnHash)) { history.replaceState(null, ""); location.hash = returnHash; } else switchWorkspace(lastWorkspace); }} />}
 
       {workspace !== "library" && <nav className="workspace-mobile-nav" aria-label={`${workspace === "pve" ? "PvE" : "Guild War"} mobile navigation`}>
         {workspace === "pve" ? mobilePve.map((key) => {

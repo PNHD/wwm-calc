@@ -16,6 +16,19 @@ const tools = async page => { const summary = page.locator('.workspace-tools:not
 const observed = async page => { await tools(page); await page.getByRole("button", { name: "Load observed T96", exact: true }).click(); };
 const hook = page => page.evaluate(() => window.__WWM_SCENARIO_DIAGNOSTIC__);
 
+test("leaving PvE unmounts and closes its gear editor", async ({ page }) => {
+  await page.goto(base + "#pve/gear", { waitUntil: "networkidle" });
+  await page.getByRole("button", { name: "Add gear", exact: true }).click();
+  await expect(page.getByPlaceholder("Enter gear name")).toBeVisible();
+  await page.evaluate(() => { location.hash = "#library/pve"; });
+  await expect(page.locator(".library-page")).toBeVisible();
+  await expect(page.getByPlaceholder("Enter gear name")).toHaveCount(0);
+  await expect(page.locator(".arsenal-workspace")).toHaveCount(0);
+  await page.evaluate(() => { location.hash = "#pve/gear"; });
+  await expect(page.locator(".arsenal-workspace")).toBeVisible();
+  await expect(page.getByPlaceholder("Enter gear name")).toHaveCount(0);
+});
+
 test("legacy default and current set/rotation share analytic expectation and seeded sampling error", async ({ page }) => {
   await page.addInitScript(value => {
     localStorage.setItem("wwm_chars_v3", JSON.stringify({ chars: [{ id: "legacy", name: "Legacy Main Hero", schemes: [{ id: "legacy-scheme", name: "Scheme 1", ...value }] }], activeCharId: "legacy", activeSchemeId: "legacy-scheme" }));
@@ -169,7 +182,7 @@ for (const [width, height] of [[390, 844], [1024, 768], [1363, 936], [1440, 900]
         for (let parent = el.parentElement; parent; parent = parent.parentElement) {
           const style = getComputedStyle(parent), p = parent.getBoundingClientRect();
           if (['auto', 'scroll'].includes(style.overflowX) && parent.scrollWidth > parent.clientWidth) scrollable = true;
-          if (['hidden', 'clip'].includes(style.overflowX) && (r.left < p.left - 1 || r.right > p.right + 1)) return [{ index, scrollable, control: el.getAttribute('aria-label') || el.textContent?.slice(0, 70), ancestor: parent.className }];
+          if (['hidden', 'clip', 'auto', 'scroll'].includes(style.overflowX) && (r.left < p.left - 1 || r.right > p.right + 1)) return [{ index, scrollable, control: el.getAttribute('aria-label') || el.textContent?.slice(0, 70), ancestor: parent.className }];
         }
         return [];
       }));
@@ -181,7 +194,7 @@ for (const [width, height] of [[390, 844], [1024, 768], [1363, 936], [1440, 900]
         if (await target.isEnabled()) await target.click({ trial: true });
         const rect = await target.boundingBox();
         expect(rect.x).toBeGreaterThanOrEqual(0);
-        expect(rect.x + rect.width).toBeLessThanOrEqual(width + 1);
+        expect(rect.x + rect.width).toBeLessThanOrEqual(Math.min(width, bounds.inspectorLeft) + 1);
       }
       expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
       await page.evaluate(() => { document.querySelectorAll('.rotation-table').forEach(el => el.scrollLeft = 0); window.scrollTo(0, 0); });
@@ -195,6 +208,9 @@ for (const [width, height] of [[390, 844], [1024, 768], [1363, 936], [1440, 900]
       await page.reload({ waitUntil: "networkidle" });
       await expect(page.locator('.arsenal-workspace')).toHaveCount(0);
       await page.screenshot({ path: `${dir}/library-${width}.png`, fullPage: false });
+      await page.getByRole("button", { name: "Close Library", exact: true }).click();
+      await expect(page).toHaveURL(new RegExp(`#${workspace}$`));
+      await expect(page.locator('.library-page')).toHaveCount(0);
     }
     await page.goto(base + '#gvg/overview', { waitUntil: 'networkidle' });
     await expect(page.getByTestId('gvg-overview')).toBeVisible();

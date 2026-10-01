@@ -25,7 +25,11 @@ test("predicted equip equals actual complete-build equip, including coefficient 
   const defaultReport = await hook(page);
   const skillName = await page.locator('tbody tr td[title]').first().getAttribute('title');
   expect(skillName).toBeTruthy();
-  await page.evaluate(name => localStorage.setItem("wwm_skill_overrides", JSON.stringify({ [name]: { outerRatio: 0, fixed: 0, eleRatio: 0 } })), skillName);
+  await page.goto(base + "#pve/skill-editor", { waitUntil: "networkidle" });
+  await page.getByLabel("Skill to preview").selectOption(skillName);
+  for (const label of ["Physical ratio", "Element ratio", "Fixed damage"]) await page.getByLabel(label, { exact: true }).fill("0");
+  await page.getByRole("button", { name: "Apply to rotation DPS", exact: true }).click();
+  await expect.poll(async () => (await hook(page)).current1106Dps).toBeLessThan(defaultReport.current1106Dps);
   await page.reload({ waitUntil: "networkidle" });
   const before = await hook(page);
   expect(before.current1106Dps).toBeLessThan(defaultReport.current1106Dps);

@@ -84,7 +84,7 @@ function parseRoute(): RouteState {
 
 function writeHash(hash: string) {
   if (window.location.hash === hash) return;
-  window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}${hash}`);
+  window.history.replaceState(window.history.state, "", `${window.location.pathname}${window.location.search}${hash}`);
 }
 
 function readStringArray(key: string): string[] {

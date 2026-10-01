@@ -333,6 +333,7 @@ type StoredCombatConfig = {
 };
 const validCombatConfig = (value: unknown): value is StoredCombatConfig => {
   if (!isPlainRecord(value)) return false;
+  try { cloneBoundedJson(value); } catch { return false; }
   const v = value as Record<string, any>;
   return ["selectedBuild", "tierKey", "bowSelect", "activeRotationPresetId"].every(key => typeof v[key] === "string")
   && Object.hasOwn(BUILD_PROFILES, v.selectedBuild)
@@ -343,7 +344,7 @@ const validCombatConfig = (value: unknown): value is StoredCombatConfig => {
   && isPlainRecord(v.innerWayTiers) && Object.values(v.innerWayTiers).every(tier => Number.isInteger(tier) && Number(tier) >= 1 && Number(tier) <= 6)
   && ["skillOverrides", "timingOverrides"].every(key => isPlainRecord(v[key]) && Object.values(v[key]).every(row => isPlainRecord(row) && Object.values(row).every(field => typeof field === "number" ? Number.isFinite(field) : typeof field === "string" && field.length <= 120)))
   && Object.values(JADE_OBJECTIVES).includes(v.jadeObjective) && isPlainRecord(v.jadeScenarioOverrides) && Object.values(v.jadeScenarioOverrides).every(field => typeof field === "number" ? Number.isFinite(field) : typeof field === "string" || typeof field === "boolean")
-  && (v.editedRotation === null || Array.isArray(v.editedRotation) && v.editedRotation.length <= 100 && v.editedRotation.every(row => isPlainRecord(row) && typeof row.name === "string" && typeof row.count === "number" && Number.isFinite(row.count) && row.count >= 0 && row.count <= 10000));
+  && (v.editedRotation === null || Boolean(normalizePreset({ id: "profile-rotation", name: "Profile rotation", buildKey: v.selectedBuild, rotation: v.editedRotation })) && v.editedRotation.every(row => isPlainRecord(row) && typeof row.isDingyin === "boolean" && [row.generalBonus, row.yishui, row.tiaozhan].every(Number.isFinite)));
 };
 
 export interface Scheme {
@@ -1408,14 +1409,10 @@ export default function App() {
   const [xinfaModalIndex, setXinfaModalIndex] = useState<number | null>(null);
 
   const isItemEquipped = (item: GearItem, allGear: GearItem[]): boolean => {
-    if (item.isEquipped !== undefined) {
-      return item.isEquipped;
-    }
+    if (item.isEquipped === false) return false;
     const slotItems = allGear.filter(g => g.slot === item.slot);
     const explicitlyEquipped = slotItems.find(g => g.isEquipped === true);
-    if (explicitlyEquipped) {
-      return false;
-    }
+    if (explicitlyEquipped) return explicitlyEquipped.id === item.id;
     return slotItems[0]?.id === item.id;
   };
 
@@ -1614,6 +1611,8 @@ export default function App() {
     // dropdown). Drop any legacy Bow/Ring items saved in older data.
     return (activeScheme?.gear ?? []).filter(it => it.slot !== "Bow/Ring");
   };
+  const activeGear = getActiveGear();
+  const equippedGear = activeGear.filter((item) => isItemEquipped(item, activeGear));
 
   const saveActiveGear = (newGear: GearItem[]) => {
     const updatedChars = charsData.chars.map(c => {
@@ -2870,9 +2869,9 @@ export default function App() {
   // One combat evaluator for the headline, Compare, Best Build and Priority.
   // The historical graduation denominator remains the accepted fixed reference.
   function evaluateCombatPanel(p: PanelStats, combo?: GearItem[], diagnostics?: { excludedBuffIds?: string[]; disableStarweave?: boolean }, customRotation?: RotationItem[]) {
-    if (!(combo ?? getActiveGear().filter(item => isItemEquipped(item, getActiveGear()))).length) return { total: 0, dps: 0, breakdown: { crit: 0, aff: 0, normal: 0, abrasion: 0 }, samples: [], perSkill: [] };
+    if (!(combo ?? equippedGear).length) return { total: 0, dps: 0, breakdown: { crit: 0, aff: 0, normal: 0, abrasion: 0 }, samples: [], perSkill: [] };
     if (selectedBuild === "silkbind-jade") {
-      const result = evaluateSilkbindJadeCached(p, jadeScenarioForCombo(combo ?? getActiveGear().filter(item => isItemEquipped(item, getActiveGear()))), jadeObjective, priceJadeEvent);
+      const result = evaluateSilkbindJadeCached(p, jadeScenarioForCombo(combo ?? equippedGear), jadeObjective, priceJadeEvent);
       return { total: result.totalDamage, dps: result.dps, breakdown: { crit: 0, aff: 0, normal: result.totalDamage, abrasion: 0 }, samples: [], perSkill: result.perSkill.map((row: any) => ({ name: row.name, dmg: row.damage, casts: row.events })) };
     }
     const candidate = diagnostics?.disableStarweave ? { ...p, weaponStars: false } : p;
@@ -3569,7 +3568,6 @@ export default function App() {
     }));
   };
 
-  const activeGear = getActiveGear();
   const arsenalRows: ArsenalRow[] = activeGear
     .map((item) => {
       const contribution = getGearItemCompareStats(item).totalGradDelta;
@@ -3610,7 +3608,6 @@ export default function App() {
       if (left.score !== right.score) return right.score - left.score;
       return left.name.localeCompare(right.name);
     });
-  const equippedGear = activeGear.filter((item) => isItemEquipped(item, activeGear));
   const compareRotationTime = getRotationTimeForBuild(selectedBuild);
   const currentCompareCombat = comboInCombat(equippedGear);
   const currentCompareDps = compareRotationTime > 0 ? currentCompareCombat.total / compareRotationTime : 0;
@@ -3673,7 +3670,11 @@ export default function App() {
     return p;
   };
   const currentDiagnosticPanel = comparePanelForDiagnostics(equippedGear);
-  const compareRows: GearCompareRow[] = activeGear.map((item) => {
+  // Price the visible slot; inactive pages only retain the two exact acceptance references.
+  const compareInventory = activeGear.filter(item => workspace === "compare"
+    ? item.slot === (gearFilterSlot === "ALL" ? "Umbrella" : gearFilterSlot)
+    : activeScheme?.name === GLOBAL_T96_OBSERVED_PRESET_META.scheme && ["Nightfarer Armor", "Nightfarer Armor 1129"].includes(item.name));
+  const compareRows: GearCompareRow[] = compareInventory.map((item) => {
     const candidateCombo = [
       ...equippedGear.filter((candidate) => candidate.slot !== item.slot),
       item,
@@ -3954,7 +3955,13 @@ export default function App() {
       <ProductShell
         active={activeProductTab}
         onNavigate={openProductTab}
-        onRouteChange={(workspace, page) => setShellRoute(previous => previous.workspace === workspace && previous.page === page ? previous : { workspace, page })}
+        onRouteChange={(workspace, page) => {
+          setShellRoute(previous => previous.workspace === workspace && previous.page === page ? previous : { workspace, page });
+          if (workspace !== "pve") {
+            setIsHelpOpen(false); setIsGameImportOpen(false); setIsDmgStatsOpen(false);
+            setIsItemModalOpen(false); setIsExportImportModalOpen(false); setIsBatchOcrModalOpen(false); setIsXinfaModalOpen(false);
+          }
+        }}
         onNewEmpty={() => createEmptyProfile("New empty profile")}
         roleControl={(
           <select
@@ -5106,7 +5113,7 @@ export default function App() {
 
       </>}
       {/* ── HELP / HOW-TO MODAL ── */}
-      {isHelpOpen && (
+      {shellRoute.workspace === "pve" && isHelpOpen && (
         <div className="modal" onClick={() => setIsHelpOpen(false)}>
           <div className="modal-content modal-content-large" onClick={e => e.stopPropagation()} style={{ maxHeight: '88vh', display: 'flex', flexDirection: 'column' }}>
             <div className="modal-header">
@@ -5186,7 +5193,7 @@ export default function App() {
       )}
 
       {/* ── IMPORT FROM GAME MODAL ── */}
-      {isGameImportOpen && (() => {
+      {shellRoute.workspace === "pve" && isGameImportOpen && (() => {
         const bookmarklet = `javascript:(function(){var t=localStorage.getItem('h72na_data_token');if(!t){var c=document.cookie.match(/token=([^;]+)/);if(c)t=c[1]}if(!t){alert('Not logged in to the WWM dashboard.');return}var x=new XMLHttpRequest();x.open('GET','https://s2.easebar.com/78ae9d90792a3e9b/role/roleInfo',true);x.withCredentials=true;x.setRequestHeader('access_token',t);x.onload=function(){try{var j=JSON.parse(x.responseText);if(!j.data||!j.data.wearEquipsDetailed){alert('Could not load gear data.');return}navigator.clipboard.writeText(JSON.stringify(j.data)).then(function(){alert('Gear copied! Paste it into the calculator.')}).catch(function(){prompt('Copy this:',JSON.stringify(j.data))})}catch(e){alert('Error: '+e.message)}};x.send()})()`;
         const res = gameImportResult;
         return (
@@ -5271,7 +5278,7 @@ export default function App() {
       })()}
 
       {/* ── DAMAGE STATISTICS MODAL (in-game style) ── */}
-      {isDmgStatsOpen && (() => {
+      {shellRoute.workspace === "pve" && isDmgStatsOpen && (() => {
         const pct = rotationStats.compositionPct;
         const c1 = pct.crit, c2 = c1 + pct.aff, c3 = c2 + pct.normal;
         const donutBg = `conic-gradient(#f0b400 0% ${c1}%, #ff8c42 ${c1}% ${c2}%, #8b949e ${c2}% ${c3}%, #ff5c5c ${c3}% 100%)`;
@@ -5852,7 +5859,7 @@ export default function App() {
 
                       <div className="flex flex-wrap items-center gap-3 bg-[#141619] border border-[#23262c] rounded-xl p-4">
                         <span className="text-[10px] uppercase tracking-widest text-[#a19683] font-mono">Skill</span>
-                        <select value={editorSkillName} onChange={e => setEditorSkillName(e.target.value)}
+                        <select aria-label="Skill to preview" value={editorSkillName} onChange={e => setEditorSkillName(e.target.value)}
                           className="flex-1 min-w-[200px] bg-[#111316] border border-[#23262c] rounded px-2 py-1 text-slate-100 text-[12.5px]">
                           {buildSkillNames.length === 0 && <option value="">(no skills in this build)</option>}
                           {buildSkillNames.map(n => <option key={n} value={n}>{translateSkillName(n)}</option>)}
@@ -5917,7 +5924,7 @@ export default function App() {
                               return (
                                 <label key={f.key} className="flex flex-col gap-1 text-[11.5px] text-slate-300">
                                   <span className="flex items-center gap-1">{f.label}{changed && <span className="text-[#f0b400]" title="edited">●</span>}</span>
-                                  <input type="number" step={f.step} value={val}
+                                  <input aria-label={f.label} type="number" step={f.step} value={val}
                                     onChange={e => { const n = Number(e.target.value); if (!isNaN(n)) setSkillField(f.key, n); }}
                                     className="bg-[#111316] border border-[#23262c] rounded px-2 py-1 text-slate-100 text-[12.5px]" />
                                   <span className="text-[10px] text-slate-500">orig {String(p.orig[f.key])}</span>
@@ -7323,7 +7330,7 @@ export default function App() {
       )}
 
       {/* ── EDIT ITEM MODAL ── */}
-      {isItemModalOpen && (
+      {shellRoute.workspace === "pve" && isItemModalOpen && (
         <div className="modal product-gear-modal" onClick={() => setIsItemModalOpen(false)}>
           <div className="modal-content" onClick={e => e.stopPropagation()} style={{ width: '560px', maxWidth: '95%' }}>
             <div className="modal-header">
@@ -7628,7 +7635,7 @@ export default function App() {
         )}
 
       {/* ── EXPORT/IMPORT MODAL ── */}
-      {isExportImportModalOpen && (
+      {shellRoute.workspace === "pve" && isExportImportModalOpen && (
         <div className="modal" onClick={() => setIsExportImportModalOpen(false)}>
           <div className="modal-content modal-content-export" onClick={e => e.stopPropagation()} style={{ height: '80vh', display: 'flex', flexDirection: 'column' }}>
             <div className="modal-header">
@@ -7765,7 +7772,7 @@ export default function App() {
       )}
 
       {/* ── BATCH OCR MODAL ── */}
-      {isBatchOcrModalOpen && (
+      {shellRoute.workspace === "pve" && isBatchOcrModalOpen && (
         <div className="modal" onClick={() => setIsBatchOcrModalOpen(false)}>
           <div className="modal-content modal-content-large" onClick={e => e.stopPropagation()} style={{ width: '900px', maxWidth: '95%', height: '80vh', display: 'flex', flexDirection: 'column' }}>
             <div className="modal-header">
@@ -7834,7 +7841,7 @@ export default function App() {
       )}
 
       {/* ── SELECT XINFA MODAL ── */}
-      {isXinfaModalOpen && (
+      {shellRoute.workspace === "pve" && isXinfaModalOpen && (
         <div className="modal" onClick={() => setIsXinfaModalOpen(false)}>
           <div className="modal-content modal-content-large" onClick={e => e.stopPropagation()} style={{ width: '900px', maxWidth: '95%', height: '80vh', display: 'flex', flexDirection: 'column' }}>
             <div className="modal-header">

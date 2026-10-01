@@ -225,6 +225,7 @@ test("V1 representative scale completes and records relative browser timings", a
   if (await page.locator('.workspace-tools:not([open]) > summary').count()) await page.locator('.workspace-tools > summary').click();
   const observed = page.getByRole("button", { name: /Load observed T96/i });
   if (await observed.count()) { await observed.click(); await page.waitForTimeout(250); }
+  const baselineDps = await page.evaluate(() => window.__WWM_SCENARIO_DIAGNOSTIC__.headlineDps);
   for (const count of [50, 100, 250]) {
     await page.evaluate((count) => {
       const root = JSON.parse(localStorage.getItem("wwm_chars_v3") || "{}");
@@ -239,6 +240,7 @@ test("V1 representative scale completes and records relative browser timings", a
     await page.reload({ waitUntil: "networkidle" });
     timings.pveInventory[count] = Date.now() - start;
     await assertNoOverflow(page);
+    expect(await page.evaluate(() => window.__WWM_SCENARIO_DIAGNOSTIC__.headlineDps)).toBeCloseTo(baselineDps, 8);
   }
 
   const arena = arenaSeed();
