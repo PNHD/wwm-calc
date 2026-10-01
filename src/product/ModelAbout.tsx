@@ -41,7 +41,8 @@ ${JSON.stringify(context, null, 2)}
         <div><dt>EXPERIMENTAL ASSUMPTIONS</dt><dd>Community/reference assumptions explicitly marked in their surfaces.</dd></div>
       </dl>
       <p>Arena output is not empirical win probability. Guild War output is not a guaranteed match result. Community builds are references, not authoritative recommendations.</p>
-      <p>Official news includes Global 2.2 (September 30). Numerical changes in the September 23/30 image notices remain unverified; numerical calibration remains {PATCH}. Nameless Sword Sword Energy's non-player condition was clarified September 16; uncalibrated Paths remain references.</p>
+      <p>Official news includes Global 2.2. The September 23/30 notices cover appearances and events; they do not establish new combat coefficients or retune weights. Numerical calibration remains {PATCH}. Nameless Sword Sword Energy's non-player condition was clarified September 16; uncalibrated Paths remain references.</p>
+      <a href="https://www.wherewindsmeetgame.com/news/official/929update.html" target="_blank" rel="noreferrer">Official September 30 notes <ExternalLink size={13} aria-hidden="true" /></a>
       <a href={issueUrl} target="_blank" rel="noreferrer">Report bad data <ExternalLink size={13} aria-hidden="true" /></a>
     </div>
   </details>;

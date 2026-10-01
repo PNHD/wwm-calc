@@ -100,9 +100,9 @@ export const AFFIX_INTERNAL_ID: Record<string, number> = {
  *  Order: explicit override → internal-id naming (level1 ∘ level2). */
 export function resolveAffixStat(affixId: number | string): string | null {
   const id = String(affixId);
-  if (AFFIX_STAT[id]) return AFFIX_STAT[id];
-  const internal = AFFIX_INTERNAL_ID[id];
-  if (internal !== undefined && INTERNAL_STAT[internal]) return INTERNAL_STAT[internal];
+  if (Object.hasOwn(AFFIX_STAT, id)) return AFFIX_STAT[id];
+  const internal = Object.hasOwn(AFFIX_INTERNAL_ID, id) ? AFFIX_INTERNAL_ID[id] : undefined;
+  if (internal !== undefined && Object.hasOwn(INTERNAL_STAT, internal)) return INTERNAL_STAT[internal];
   return null;
 }
 

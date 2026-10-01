@@ -1,0 +1,36 @@
+# WWM Build full audit and supported correction increment
+
+Scope renewed by the Product Owner on 2026-10-01: independently audit/research, correct demonstrably outdated or defective behavior, validate every workspace, then publish through the normal PR/CI/Pages flow. Same worktree/branch; no subagents, destructive Git, credential changes or paid actions.
+
+## Verified findings and corrections
+
+| Finding | Evidence / resulting behavior |
+| --- | --- |
+| Game-import units guessed from magnitude | Reproduced before repair: confirmed flat ATK `0.5` became `50`; confirmed rate `1` became `1%`. Units now follow confirmed stat identity: `0.5` ATK and `100%` rate. No affix IDs or tier values were added. |
+| Imported roll precision lost | Confirmed payload `.06956` Crit and `59.972` ATK became `7` and `60`. Parser now retains `6.956%` and `59.972`, including equip/save/reload. |
+| Malformed/prototype input accepted | Reused existing bounded JSON inspector; allowlisted own-key slot/affix lookup; invalid IDs/numbers/quality, empty unsupported imports, huge/deep JSON and forbidden keys fail before gear mutation. All heuristic stat labels are marked inferred. |
+| Preview could outlive edited input | Changing JSON clears the parsed preview and review state. Changing active Path/profile/scheme also clears the preview. Confirmation states armor-order/legacy-label uncertainty and current-Path weapon ownership; imported slots are replaced while old gear remains in the pool. |
+| Game modal keyboard/clipboard states | Added named dialog/inputs, initial focus, Escape closure, clipboard failure with manual-copy recovery and explicit disabled review state. Actual mobile/desktop screenshots prompted a native checkbox width fix and 44px action controls. |
+| News disclosure outdated | Downloaded/read all three September 23/30 images. They cover cosmetic releases and events; removed the outdated "image notices remain unverified" wording and added the official source link. Calibration remains Global2.1/T96; current Global2.2 news is distinct. |
+| Development lockfile advisories | Full audit found five high dependency-path findings through unused Cloudflare Vite plugin and Wrangler/Miniflare/Sharp/Undici. Removed the unused plugin; Wrangler4.103.0→4.145.0, Sharp0.34.5→0.35.4 and Undici7.28.0→7.29.1 in the lockfile. Final all-dependency audit: zero. Changed package versions are confined to dev tooling. Node22 is supported by the updated packages. No shared node_modules junction was replaced or installed into. |
+| Preview/deploy documentation drift | Local preview used a Worker emulator even though this is a static Vite/Pages product. Preview now serves dist through existing Vite on localhost; deployment docs no longer claim the removed plugin drives the explicit Workers command. Canonical release remains normal PR/CI/Pages. |
+
+## Source reconciliation
+
+Fresh upstream heads remain MIT M1zuke `7239b2981357d279a67806568a88753208087b20` and GPL greydust `4b14226287fcdb0335f8a35181cc746d161b5ba2`. Current open MIT items include missing Jade HP, weapon-slot ownership and multiple Qi windows; those issue reports are leads, not proof of Global numerical calibration. No third-party implementation, assets or coefficient tables were copied in this pass.
+
+Official news [index](https://www.wherewindsmeetgame.com/news/), [September23](https://www.wherewindsmeetgame.com/news/official/921update.html), [September30](https://www.wherewindsmeetgame.com/news/official/929update.html), [Sword Energy clarification](https://www.wherewindsmeetgame.com/news/official/PerilousEminencePatchNotes.html) and [scoped April30 retune rules](https://www.wherewindsmeetgame.com/news/official/430update.html) were checked. The broader public source search did not establish complete version-matched Global action mappings or weighted legal pools. It does not establish absence everywhere. Keep the previous GLOBAL_SOURCE_GATE_20261001.md provenance decisions and numerical-unavailable boundary.
+
+Fresh image SHA256: September23 `45526273c310a9d946cb017d53652f0f6e24eab07e4ac9fd7ccf65420d82cda3`; September30 part1 `ceadc28539f0a4ef0b926daaa90b5d70ba90bd4b040412d9e3d9e2baf610c376`; part2 `8e543a8a687324da05b9b5ef3f8adb85497b71fba2bfc1584beedd9142f01781`.
+
+## Acceptance evidence
+
+First candidate: Node22.23.2 build/typecheck and 31 static checks passed; two complete repeated migrations changed `[]` then `[]`. Browser suite 46/46 passed over PvE/Arena/Guild War/Library/Training, all visible Paths, 390/1024/1363/1440 layouts, profile/import recovery, seeded/stale-worker cancellation, rotation/reference round trips, actual equip parity and Team saved-context ownership. New game-import regressions run inside the existing required V1 suite; parser regressions run inside validate:v1-release.
+
+Representative scale: 50/100/250 item render timings729/799/940ms, Arena12 profiles67ms, Guild War30 roster151ms/strategy223ms, Library80 entries26ms. This is a repeated-item browser workload, not a proof of arbitrary distinct-inventory optimization complexity. Existing optimization stayed intact; no speculative worker/refactor or dependency was added to the runtime.
+
+Raw logs, source captures/hashes, parser reproduction and executor-reviewed mobile/desktop screenshots: ignored `.local-evidence/upstream-20261001/deep-audit/`. Failed first browser selector attempt was stopped and retained; corrected selector run passed. Separate independent review and subjective Product Owner acceptance are not claimed. Authenticated dashboard extraction was not exercised; fixtures validate the copied-payload path.
+
+Final local delta: Node22 build/typecheck/31 checks and repeated-migration byte equality passed again after lockfile/layout corrections; repaired import browser2/2 passed again. UTF-8 byte-limit edge is included in the parser regression. Full lockfile audit is zero, all changed dependency versions are dev-only, and updated Node engine requirements are compatible. Executor reviewed exact diff, source notices and real 390/1440 modal screenshots. Required CI must verify the committed candidate with a fresh locked install, since local node_modules is the preserved sibling-worktree junction.
+
+Final candidate SHA, required CI and exact-SHA production smoke: PENDING. Whole numerical upstream coverage remains PARTIAL/SOURCE_BLOCKED; this independently releasable correction increment does not claim full Global coefficient support.
