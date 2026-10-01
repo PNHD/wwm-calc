@@ -213,7 +213,8 @@ test("empty build manual gear, compare actual equip, complete search, simulation
 
 for (const [width, height] of [[390, 844], [1024, 768], [1363, 936], [1440, 900]]) {
   test(`workspace audit, accessible controls and ancestor bounds at ${width}`, async ({ page }) => {
-    test.setTimeout(120000);
+    // Mobile audits individually scroll and trial-click hundreds of table controls.
+    test.setTimeout(180000);
     await page.setViewportSize({ width, height });
     const errors = [];
     page.on("pageerror", e => errors.push(e.message));

@@ -1,15 +1,16 @@
 # WWM-BUILD PM_STATE_SNAPSHOT
 
-Timestamp: 2026-10-01T12:03:06.597291+00:00. Version: Team release candidate. Supersedes the 2026-10-01T11:01:53 snapshot. Navigation only; reverify mutable state.
+Timestamp: 2026-10-01T12:42:08.817253+00:00. Version: Team corrected PR54 candidate. Supersedes the Team release candidate snapshot. Navigation only; reverify mutable state.
 
 GOAL: Complete WWM-BUILD in reviewed, tested increments published for owner testing.
 REPO: PNHD/wwm-calc. Original workspace D:/WWM Calc remains preserved.
 WORKTREE / BRANCH: D:/WWM Calc-upstream-20261001 / feat/upstream-20261001; preserved and reused.
 BASE / LAST VERIFIED MAIN AND PAGES: 34278144c32e875f79ac40b9f404ce5acda4b41c, PR53 merged, required Validate36853476821 SUCCESS. Exact live build-info re-read in this takeover; fresh production import2/2 PASS. Earlier V1/Arena receipts preserved.
-IMMUTABLE CODE: 0f0a315563000240548c8c8a18e680660b907bee. Subsequent documentation checkpoint is separate.
+IMMUTABLE CODE: Team evaluator 0f0a315563000240548c8c8a18e680660b907bee; context persistence fix 9f7824a6025022e9ea6a3a0949fb7ca5e026d51d. Subsequent test/docs checkpoint is separate.
 CLOSED GATE: PR53 publication verified; saved Team context repair local PASS WITH CONDITIONS. Node22 build/typecheck,30 checks, byte-identical migrations,27 required browser checks,4 rendered layout matrices and2 final Team cases PASS.
-CURRENT GATE: Task branch push/PR/required CI/ordinary merge/Pages; verify exact merged SHA and repaired desktop/mobile production flows.
-CHANGES: Saved-profile Team evaluator, shared custom target, fail-closed context/Path/gear/target, mobile controls/buff alignment, Jade migration idempotency guards, import reload synchronization, production HP smoke unit.
+FINAL CORRECTION VALIDATION: Node22 build/typecheck,30 checks,byte-identical migrations PASS; affected browser matrix24/25, followed by all four layout audits PASS4/4 with a180-second per-case budget. Override/rotation reload and Team parity PASS. Earlier failed CI and local attempts retained.
+CURRENT GATE: PR54 first required Validate36859303235 FAIL (Path-refresh race); shared load/save fix locally verified. Push corrected candidate, require fresh CI PASS, ordinary merge/Pages; verify exact merged SHA and repaired desktop/mobile production flows.
+CHANGES: Before-paint shared context load/save with active-scheme guard; saved-profile Team evaluator, shared custom target, fail-closed context/Path/gear/target, mobile controls/buff alignment, Jade migration idempotency guards, import reload synchronization, production HP smoke unit.
 RAW EVIDENCE: .local-evidence/upstream-20261001/team-takeover/; original publish/ and prior evidence retained. Failed environment/fixture logs preserved separately.
 SOURCE DOCS: AGENTS.md, RELEASE_TEAM_20261001.md, RELEASE_UI_20261001.md, UPSTREAM_MILESTONE_20261001.md, UPSTREAM_DELTA_MATRIX_20261001.md, THIRD_PARTY_NOTICES.md.
 ACCEPTANCE: Independent UI/Team repairs locally validated; full upstream milestone PARTIAL/SOURCE_BLOCKED. No separate independent reviewer or PO acceptance claimed.

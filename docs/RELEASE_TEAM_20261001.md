@@ -1,6 +1,6 @@
 # Team saved-profile evaluator release
 
-Base: `34278144c32e875f79ac40b9f404ce5acda4b41c` (PR #53). Immutable code: `0f0a315563000240548c8c8a18e680660b907bee`. Worktree and branch remain D:/WWM Calc-upstream-20261001 / feat/upstream-20261001. Existing dirty implementation was recovered and completed; original checkout, other worktrees and generated evidence were preserved.
+Base: `34278144c32e875f79ac40b9f404ce5acda4b41c` (PR #53). Team evaluator code: `0f0a315563000240548c8c8a18e680660b907bee`; context persistence correction: `9f7824a6025022e9ea6a3a0949fb7ca5e026d51d`. Worktree and branch remain D:/WWM Calc-upstream-20261001 / feat/upstream-20261001. Existing dirty implementation was recovered and completed; original checkout, other worktrees and generated evidence were preserved.
 
 The prior session stopped after merging PR #53 and beginning a Team repair. Its raw reproduction shows headline 61,266.44125288431 versus Team 50,603 for the same observed profile. Current GitHub metadata confirms PR #53 merged at the base above, required Validate run 36853476821 succeeded, and canonical Pages build-info serves that exact SHA. Its V1/Arena receipts remain preserved; the two previously failing production import cases now pass after synchronizing the tests with the import-triggered reload.
 
@@ -16,6 +16,10 @@ The three saved-profile parity cases produce 53,928.73446385795 (Dust with a rea
 
 Raw logs, manifests and reviewed desktop/mobile images: ignored `.local-evidence/upstream-20261001/team-takeover/` and `visual-qa/team-*.{json,png}`. Review is scoped executor source/runtime/rendered review; no separate independent reviewer or Product Owner acceptance is claimed. Security classification: SECURITY-FOCUSED for stored-context validation and own-key target lookup; existing import/storage boundaries are retained.
 
-Publication: pending task-branch PR, required CI, ordinary merge, exact-SHA Pages and repaired production checks. Standing authorization in AGENTS.md applies without routine reconfirmation.
+PR #54's first required Validate run 36859303235 failed the existing immediate Path-refresh test: Jade reverted to the preceding Path. The shared combat-context load/save effects now run before paint, and the save checks that the active scheme has loaded. This retains the visible Path on immediate reload without letting a switched profile overwrite its incoming context. Override and custom-count reload, same-ID import, profile switching and Team parity are covered by the existing acceptance cases. The first save-only attempt failed two persistence cases; those failures remain recorded and the paired load/save correction closes them.
+
+Final persistence correction: Node22 build/typecheck, 30/30 checks and byte-identical migrations PASS. The affected browser matrix passed 24/25; its mobile layout audit exceeded its 120-second budget while individually scrolling/trial-clicking more than 300 controls. Direct Rotations/Team/Library screenshot probes finished in under one second each. This exhaustive audit now has a 180-second budget with all original assertions retained; four-width rerun PASS 4/4 (4.9 minutes). Raw failed/rejected attempts are retained and do not count as PASS.
+
+Publication: PR #54 open; corrected required CI, ordinary merge, exact-SHA Pages and repaired production checks pending. Standing authorization in AGENTS.md applies without routine reconfirmation.
 
 Whole upstream milestone remains PARTIAL / SOURCE_BLOCKED. Ordered Global skill/hit/cancel/DoT/reach/buff/resource mappings, disputed Sword Energy/penetration/Piercing Dart calibration and weighted legal retune pools remain unavailable/reference; this increment does not invent them.
