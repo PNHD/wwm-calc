@@ -1452,14 +1452,58 @@ export default function App() {
   const [isXinfaModalOpen, setIsXinfaModalOpen] = useState<boolean>(false);
   const [xinfaModalIndex, setXinfaModalIndex] = useState<number | null>(null);
 
-  useEffect(() => {
-    if (!isExportImportModalOpen) return;
+  useLayoutEffect(() => {
+    if (!isExportImportModalOpen && !isGameImportOpen) return;
+    const selector = isExportImportModalOpen ? '.modal-content-export' : '[aria-labelledby="game-import-title"]';
+    const dialog = document.querySelector<HTMLElement>(selector);
+    if (!dialog) return;
     const active = document.activeElement as HTMLElement | null;
-    const opener = active?.closest(".workspace-tools")?.querySelector("summary") ?? active;
-    setProfileImportError("");
-    document.getElementById("export-import-textarea")?.focus();
-    return () => { if (opener?.isConnected) opener.focus(); };
-  }, [isExportImportModalOpen]);
+    // Tools collapses when an action opens a dialog; return to its visible summary.
+    const fallback = document.querySelector<HTMLElement>(".workspace-tools > summary");
+    const opener = active && !dialog.contains(active)
+      ? active.closest(".workspace-tools")?.querySelector<HTMLElement>("summary") ?? active
+      : fallback;
+    if (isExportImportModalOpen) setProfileImportError("");
+    const initial = dialog.querySelector<HTMLElement>(isExportImportModalOpen ? "#export-import-textarea" : 'textarea[aria-label="Copied equipped gear JSON"]');
+    const isolated: { element: HTMLElement; inert: boolean }[] = [];
+    // Isolate siblings along the dialog's ancestry without making the dialog inert.
+    for (let branch: HTMLElement | null = dialog; branch && branch !== document.body; branch = branch.parentElement) {
+      for (const sibling of Array.from(branch.parentElement?.children ?? [])) {
+        if (sibling !== branch && sibling instanceof HTMLElement) {
+          isolated.push({ element: sibling, inert: sibling.inert });
+          sibling.inert = true;
+        }
+      }
+    }
+    const focusable = () => Array.from(dialog.querySelectorAll<HTMLElement>('button, a[href], input, select, textarea, summary, [tabindex]'))
+      .filter(element => element.tabIndex >= 0 && !element.matches(":disabled") && !element.closest("[inert]") && element.getClientRects().length > 0 && getComputedStyle(element).visibility !== "hidden");
+    const focusInside = () => (initial ?? focusable()[0])?.focus();
+    const onFocus = (event: FocusEvent) => { if (!dialog.contains(event.target as Node)) focusInside(); };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault(); event.stopPropagation();
+        if (isExportImportModalOpen) setIsExportImportModalOpen(false);
+        else setIsGameImportOpen(false);
+      } else if (event.key === "Tab") {
+        const controls = focusable();
+        const first = controls[0], last = controls[controls.length - 1];
+        if (!first) { event.preventDefault(); return; }
+        if (!dialog.contains(document.activeElement) || event.shiftKey && document.activeElement === first || !event.shiftKey && document.activeElement === last) {
+          event.preventDefault(); (event.shiftKey ? last : first).focus();
+        }
+      }
+    };
+    document.addEventListener("keydown", onKey, true);
+    document.addEventListener("focusin", onFocus, true);
+    focusInside();
+    return () => {
+      document.removeEventListener("keydown", onKey, true);
+      document.removeEventListener("focusin", onFocus, true);
+      isolated.forEach(({ element, inert }) => { element.inert = inert; });
+      const target = opener?.isConnected && opener.getClientRects().length > 0 ? opener : fallback;
+      if (target?.isConnected && target.getClientRects().length > 0 && !target.closest("[inert]")) target.focus();
+    };
+  }, [isExportImportModalOpen, isGameImportOpen]);
 
   const isItemEquipped = (item: GearItem, allGear: GearItem[]): boolean => {
     if (item.isEquipped === false) return false;
@@ -1649,6 +1693,8 @@ export default function App() {
     if (!activeChar) return null;
     return activeChar.schemes.find(s => s.id === charsData.activeSchemeId) ?? null;
   }, [activeChar, charsData.activeSchemeId]);
+
+  const activeProfileKey = JSON.stringify([charsData.activeCharId, charsData.activeSchemeId]);
 
   const importProfiles = (raw: string) => {
     try {
@@ -2698,7 +2744,7 @@ export default function App() {
   // (which reads basePanel) but left scheme.panel stale — so saves/exports
   // showed old numbers that didn't match the in-game panel. Skip if unchanged.
   useEffect(() => {
-    if (!autoGearPanel || !activeScheme || combatScheme.current !== activeScheme.id || (loadingCombatConfig.current && loadingCombatConfig.current !== combatConfigJson)) return;
+    if (!autoGearPanel || !activeScheme || combatProfile.current !== activeProfileKey || (loadingCombatConfig.current && loadingCombatConfig.current !== combatConfigJson)) return;
     const cur = activeScheme.panel;
     let same = true;
     for (const k of Object.keys(basePanel) as (keyof PanelStats)[]) {
@@ -2706,7 +2752,7 @@ export default function App() {
     }
     if (same) return;
     setCharsData(prev => {
-      if (prev.activeSchemeId !== activeScheme.id) return prev;
+      if (prev.activeCharId !== charsData.activeCharId || prev.activeSchemeId !== activeScheme.id) return prev;
       const updated = {
         ...prev,
         chars: prev.chars.map(c => c.id === prev.activeCharId ? {
@@ -2717,7 +2763,7 @@ export default function App() {
       localStorage.setItem("wwm_chars_v3", JSON.stringify(updated));
       return updated;
     });
-  }, [basePanel, autoGearPanel, activeScheme?.id]);
+  }, [basePanel, autoGearPanel, activeProfileKey]);
 
   // Base-calibration: gearlessBase[stat] = in-game panel − equipped-gear sub-stats.
   // Stored per-scheme; computeGearPanel then reproduces the in-game panel exactly
@@ -2968,11 +3014,12 @@ export default function App() {
 
   const combatConfig: StoredCombatConfig = { selectedBuild, tierKey, selectedInnerWays, innerWayTiers, food, bowSelect, datang, yishui, yishuiPen, qianying, cinderAsh, starweaveDistance, customDef, customRes, skillOverrides, timingOverrides, editedRotation, activeRotationPresetId, jadeObjective, jadeScenarioOverrides };
   const combatConfigJson = JSON.stringify(combatConfig);
-  const combatScheme = useRef(activeScheme?.id);
+  const combatProfile = useRef(activeProfileKey);
   const loadingCombatConfig = useRef<string | null>(null);
   useLayoutEffect(() => {
-    if (combatScheme.current === activeScheme?.id) return;
-    combatScheme.current = activeScheme?.id;
+    if (combatProfile.current === activeProfileKey) return;
+    combatProfile.current = activeProfileKey;
+    loadingCombatConfig.current = null;
     setProfileRecoveryMessage("");
     const saved = activeScheme?.combatConfig;
     if (!validCombatConfig(saved)) return; // Legacy schemes retain their existing configuration.
@@ -2986,15 +3033,15 @@ export default function App() {
     setEditedRotation(saved.editedRotation); setActiveRotationPresetId(saved.activeRotationPresetId);
     setJadeObjective(saved.jadeObjective); setJadeScenarioOverrides(saved.jadeScenarioOverrides);
     previousRotationBuild.current = saved.selectedBuild;
-  }, [activeScheme?.id]);
+  }, [activeProfileKey]);
   // Persist visible combat controls before paint; an immediate refresh must use them.
   useLayoutEffect(() => {
-    if (!activeScheme || combatScheme.current !== activeScheme.id) return;
+    if (!activeScheme || combatProfile.current !== activeProfileKey) return;
     if (loadingCombatConfig.current && loadingCombatConfig.current !== combatConfigJson) return;
     loadingCombatConfig.current = null;
     if (JSON.stringify(activeScheme.combatConfig) === combatConfigJson) return;
     setCharsData(previous => {
-      if (previous.activeSchemeId !== activeScheme.id) return previous;
+      if (previous.activeCharId !== charsData.activeCharId || previous.activeSchemeId !== activeScheme.id) return previous;
       if (activeScheme.combatConfig && !validCombatConfig(activeScheme.combatConfig)) {
         if (!backupDomainValue("wwm_chars_v3", JSON.stringify(previous))) { setProfileRecoveryMessage("Invalid combat configuration could not be backed up. Original data was retained; export it before changing this profile."); return previous; }
         setProfileRecoveryMessage("Invalid combat configuration was backed up; this profile uses the current controls. Export your data to retain the original.");
@@ -3003,7 +3050,7 @@ export default function App() {
       try { localStorage.setItem("wwm_chars_v3", JSON.stringify(next)); } catch { setRotationImportError("Profile storage is full/unavailable. Export your data before leaving."); }
       return next;
     });
-  }, [combatConfigJson, activeScheme?.id]);
+  }, [combatConfigJson, activeProfileKey]);
 
   // Standard Rotation Guide: the reference (wherewindsmath) canonical ability
   // sequences per build/path — read-only execution guide (NOT used for DPS, since
@@ -3267,7 +3314,7 @@ export default function App() {
     const subPriority = Object.entries(counts).filter(([, value]) => value > 0).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([key]) => BIS_STAT_LABELS[key] || key);
     return SLOTS.map((slot) => ({ slot: slot.name, mainStat: BIS_STAT_LABELS[SLOT_MAIN_STAT[slot.name]] || SLOT_MAIN_STAT[slot.name], subPriority }));
   }, [cultivateClass]);
-  const jobFingerprint = JSON.stringify([selectedBuild, adjustedPanel, activeTier, activeScheme, selectedInnerWays, innerWayTiers, food, bowSelect, datang, yishui, cinderAsh, starweaveDistanceBonusPct, jadeObjective, jadeScenario, skillOverrides, timingOverrides, editedRotation, shellRoute, workspace, activeTab, activeProductTab, gradModalActiveTab, isSimOpen, simRuns, simSeed]);
+  const jobFingerprint = JSON.stringify([activeProfileKey, selectedBuild, adjustedPanel, activeTier, activeScheme, selectedInnerWays, innerWayTiers, food, bowSelect, datang, yishui, cinderAsh, starweaveDistanceBonusPct, jadeObjective, jadeScenario, skillOverrides, timingOverrides, editedRotation, shellRoute, workspace, activeTab, activeProductTab, gradModalActiveTab, isSimOpen, simRuns, simSeed]);
   const currentJobFingerprint = useRef(jobFingerprint);
   currentJobFingerprint.current = jobFingerprint;
   const cancelSimulation = () => {
@@ -5275,7 +5322,7 @@ export default function App() {
                     style={{ padding: "6px 12px", minHeight: 44, fontSize: 12, fontWeight: 700, borderRadius: 6, border: "1px solid rgba(88,166,255,0.5)", background: "rgba(88,166,255,0.15)", color: "#58a6ff", cursor: "pointer", whiteSpace: "nowrap" }}>Copy bookmarklet</button>
                 </div>
 
-                <textarea autoFocus aria-label="Copied equipped gear JSON" value={gameImportRaw} onChange={e => { setGameImportRaw(e.target.value); setGameImportResult(null); setGameImportReviewed(false); setGameImportError(""); }}
+                <textarea aria-label="Copied equipped gear JSON" value={gameImportRaw} onChange={e => { setGameImportRaw(e.target.value); setGameImportResult(null); setGameImportReviewed(false); setGameImportError(""); }}
                   placeholder="Paste the copied gear JSON here..."
                   style={{ width: "100%", height: 90, padding: 8, background: "#15161a", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 6, color: "#e0e0e0", fontSize: 12, fontFamily: "monospace", resize: "vertical" }} />
                 <div style={{ display: "flex", gap: 8, marginTop: 8 }}>

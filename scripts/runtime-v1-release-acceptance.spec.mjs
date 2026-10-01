@@ -1,3 +1,4 @@
+import { verifyProfileModalFocus } from "./runtime-profile-owner-modal.helpers.mjs";
 import fs from "node:fs";
 import { test, expect } from "@playwright/test";
 import { defaultArenaState } from "../src/arena/arena-core.mjs";
@@ -331,5 +332,11 @@ test("V1 representative scale completes and records relative browser timings", a
   await expect(page.locator(".library-card")).toHaveCount(1);
   timings.libraryFilterMs = Date.now() - start;
   fs.writeFileSync("V1_PERFORMANCE_REPORT.json", JSON.stringify({ success: true, timings, scale: { pveInventory: [50,100,250], arenaProfiles: 12, gvgRoster: 30, libraryEntries: 80 } }, null, 2));
+  await assertClean(runtime);
+});
+
+for (const width of [390, 1440]) test(`Data and game dialogs contain focus and restore visible Tools at ${width}`, async ({ page }) => {
+  const runtime = runtimeWatch(page);
+  await verifyProfileModalFocus(page, BASE, width);
   await assertClean(runtime);
 });

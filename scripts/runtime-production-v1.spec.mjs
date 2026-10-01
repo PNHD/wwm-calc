@@ -1,3 +1,4 @@
+import { verifyProfileOwnership, verifyProfileModalFocus } from "./runtime-profile-owner-modal.helpers.mjs";
 import fs from "node:fs";
 import { test, expect } from "@playwright/test";
 import { defaultArenaState } from "../src/arena/arena-core.mjs";
@@ -121,6 +122,12 @@ test("production is exact main SHA and V1 critical surfaces pass", async ({ page
   }
   await expect(page.getByTestId("shared-build-landing")).toBeVisible();
 
+  // Run the repaired flows only after the exact deployment precondition above.
+  const profileOwnership = [], profileModalFocus = [];
+  for (const width of [390, 1440]) {
+    profileOwnership.push(await verifyProfileOwnership(page, base, width));
+    profileModalFocus.push(await verifyProfileModalFocus(page, base, width));
+  }
   expect(pageErrors).toEqual([]);
   expect(consoleErrors).toEqual([]);
   const report = {
@@ -133,6 +140,8 @@ test("production is exact main SHA and V1 critical surfaces pass", async ({ page
     productionBranch: buildInfo.branch,
     browserSmoke: { pve: true, arena: true, trainingTerrace: true, trainingRoute: true, trainingInput: true, trainingDelta: true, trainingReloadPersistence: true, arenaTrainingIsolation: true, guildWar: true, library: true, pageErrors, consoleErrors },
     mobile390: { pveGear: true, arenaMatchup: true, trainingTerrace: true, guildWarRoster: true, libraryShared: true, noHorizontalOverflow: true },
+    profileOwnership,
+    profileModalFocus,
     migrationSmoke: { guildWarCorruptStorageRecovered: true, originalPreservedBeforeEdit: true, backupPreserved: true },
     securitySmoke: { versionedReadOnlyLibraryShare: true },
   };
