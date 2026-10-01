@@ -3030,13 +3030,13 @@ export default function App() {
   }, [editedRotation, adjustedPanel, activeTier, datang, yishui, selectedBuild, skillOverrides, timingOverrides, selectedInnerWays, innerWayTiers, cinderAsh, starweaveDistanceBonusPct, jadeObjective, jadeScenario]);
 
   // ── Buff-uptime timeline simulator ───────────────────────────────────────────
-  // Lays the rotation on a real timeline (cast times from skillTiming) and models
-  // stacking inner-way buffs RAMPING UP, so DPS reflects realistic buff uptime
+  // Distributes aggregate cast counts and models selected buff-ramp assumptions.
+  // This diagnostic is not an exact ordered action replay.
   // (like wherewindsmath). Base panel = adjustedPanel with the inner-way buffs
   // stripped back out (the sim re-adds them as timeline buffs); food/script stay.
   // At full uptime this reproduces the verified rotation DPS.
   const timelineSim = useMemo(() => {
-    // Uses the app's CALIBRATED rotation (the verified T91-Global number). NOTE:
+    // Uses the active aggregate rotation. Historical counts are a reference. NOTE:
     // the reference's exact ability sequence exists (wwmRotation) but only ~half of
     // its abilities have a priced T91-Global equivalent, so pricing it directly
     // under-counts (partial mapping) — it is surfaced read-only in DPS Compare, not
@@ -3072,10 +3072,8 @@ export default function App() {
 
   // ── Phase 3: Skill editor ───────────────────────────────────────────────────
   // Pick a skill, tweak its coefficients, and see the per-hit damage recompute
-  // live through previewSkill (reuses the verified calcSkill via a temp SKILL_DB
-  // inject — calc.ts and the real skills are never modified). Calculator/preview
-  // ONLY: edits do NOT feed the rotation DPS (that would need an explicit override,
-  // a later phase).
+  // live through previewSkill without mutating SKILL_DB. Explicit Apply persists
+  // an override in the current profile and feeds the shared combat evaluator.
   const buildSkillNames = useMemo(() => {
     const seen = new Set<string>(); const out: string[] = [];
     for (const it of getRotationForBuild(selectedBuild)) if (!seen.has(it.name)) { seen.add(it.name); out.push(it.name); }
@@ -4929,7 +4927,7 @@ export default function App() {
               </label>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, fontSize: 11.5, color: '#8b949e' }}>
-              <span title="DPS Expectation is a THEORETICAL ceiling (perfect rotation + full buff uptime). A real parse loses ~10-20% to rotation downtime, buff ramp-up and execution. This factor estimates your realistic sustained DPS — tune it to match your in-game parse. Graduation % is unaffected.">
+              <span title="Optional user-selected percentage applied to modeled DPS. This is a reference projection, not measured execution loss. Historical graduation is unaffected.">
                 Parse projection ⓘ
               </span>
               <input
@@ -5140,7 +5138,7 @@ export default function App() {
               <ul style={{ marginTop: 0, paddingLeft: 18 }}>
                 <li><b>Enter gear:</b> use each slot tab + <b>+ Add Gear</b>, or <b>Batch OCR</b> to read screenshots automatically — best when you own many pieces. Add <i>every</i> gearbox you own, not just equipped ones, so Best Build has the full pool to choose from.</li>
                 <li><b>Pick path:</b> the <b>Panel Simulator</b> dropdown (e.g. Bamboocut-Dust) — pick the build you actually play.</li>
-                <li><b>Calibrate:</b> press <b>⚙ Calibrate panel to in-game</b>, open your in-game <b>Combat Attributes</b> (C key), type those numbers, save. The button turns to <b>✓ Calibrated</b>. This makes every DPS number realistic. Tip: select the same Inner Ways in the app as in-game first.</li>
+                <li><b>Calibrate:</b> press <b>Recalibrate panel</b>, enter your current character-menu attributes and save the gear baseline. Modeled DPS still depends on the active combat assumptions. Select the same Inner Ways as in-game first.</li>
               </ul>
 
               <h3 style={{ color: '#f0b400', margin: '14px 0 6px' }}>2 · The headline numbers</h3>
@@ -5854,7 +5852,7 @@ export default function App() {
                       <div className="bg-[#1e1a12] border border-[#f0b400]/30 rounded-xl p-4">
                         <h3 className="text-sm font-bold text-[#f0b400] mb-2 flex items-center gap-2">🎚️ Skill Editor <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#f0b400]/15 text-[#f0b400]/80">beta</span></h3>
                         <p className="text-[12px] text-slate-300 leading-relaxed">
-                          Pick a skill, edit its coefficients, and watch the per-hit damage recompute live through the verified formula. <b>Preview only</b> — edits don't change the rotation DPS or the real skill (the damage math is untouched). Values use your current panel, tier and in-combat buffs.
+                          Editing coefficients updates this per-hit preview. Choose <b>Apply to rotation DPS</b> to save an override in the current profile and recompute the active build. Custom values are modeling assumptions, not verified game data. The preview uses your current panel, tier and in-combat buffs.
                         </p>
                       </div>
 
@@ -5936,7 +5934,7 @@ export default function App() {
                           <label className="flex items-center gap-2 text-[11px] text-slate-300"><input type="checkbox" checked={Boolean(editorOverrides?.isCharge ?? p.orig.isCharge)} onChange={(event) => setSkillField("isCharge", event.target.checked ? 1 : 0)} /> Charged-skill flag</label>
 
                           <p className="text-[11px] text-slate-500 leading-snug">
-                            Classification fields (type / weapon-type / charge / set bonus) decide how the skill is bucketed and aren't safe to edit in v1. To make an edit affect rotation DPS you'd wire an override — a later phase.
+                            Classification fields (type / weapon-type / charge / set bonus) remain fixed. Apply an override explicitly to affect rotation DPS; remove it to restore the model defaults.
                           </p>
                         </>
                       ) : (
