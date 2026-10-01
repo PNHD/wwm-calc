@@ -38,7 +38,8 @@ export async function verifyProfileOwnership(page, base, width) {
   expect(bPanel.maxOuter).toBeCloseTo(fixture.aPanel.maxOuter - 10, 8);
   expect(await panel(fixture.aId)).toEqual(fixture.aPanel);
   const bDps = await dps(); expect(bDps).not.toBe(aDps);
-  await food.check();
+  await food.locator("..").click();
+  await expect(food).toBeChecked();
   await expect.poll(async () => (await config("owner-b")).food).toBe(true);
   expect(await config("owner-b")).toMatchObject({ customDef: 777, tierKey: "custom" });
   expect(await config(fixture.aId)).toEqual(fixture.aConfig);
