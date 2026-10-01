@@ -212,7 +212,7 @@ for (const [width, height] of [[390, 844], [1024, 768], [1363, 936], [1440, 900]
         expect(rect.x + rect.width).toBeLessThanOrEqual(Math.min(width, bounds.inspectorLeft) + 1);
       }
       expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
-      await page.evaluate(() => { document.querySelectorAll('.rotation-table').forEach(el => el.scrollLeft = 0); window.scrollTo(0, 0); });
+      await page.evaluate(() => { document.querySelectorAll('.rotation-table').forEach(el => el.scrollLeft = 0); document.body.scrollTop = 0; document.documentElement.scrollTop = 0; window.scrollTo(0, 0); });
       await page.screenshot({ path: `${dir}/${route}-${width}.png`, fullPage: false });
     }
     for (const workspace of ["pve/gear", "gvg/overview", "arena/overview"]) {
