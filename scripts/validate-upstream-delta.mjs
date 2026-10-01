@@ -21,7 +21,7 @@ const original = await bundle("original", "export * from './src/utils/calc.ts'; 
   });
 } }]);
 const current = await bundle("current", source);
-const { calcSkill, TIERS, getRotationForBuild, simulateTimeline, evaluateScenario, simulateDamage, simulateOrdered, normalizePreset, normalizeReference } = current;
+const { calcSkill, TIERS, getRotationForBuild, simulateTimeline, evaluateScenario, simulateDamage, simulateOrdered, normalizePreset, normalizeReference, duplicatePreset } = current;
 const tier = TIERS["405|0.65b"];
 const panel = { minOuter: 1614, maxOuter: 2777, minPz: 327, maxPz: 835, outerPen: 43.5, pzPen: 18, crit: 132.5, prec: 122.1, aff: 17.8, critDmg: 54, affDmg: 35, dcrit: 4.6, daff: 0, set: "none" };
 const opts = { set: "none", datang: false, yishui: false, buildKey: "bamboocut-dust" };
@@ -82,6 +82,14 @@ assert.equal(normalizePreset({ name: "invalid key", buildKey: "constructor", rot
 const legacy = normalizePreset({ id: "old", name: "legacy", rotation: [{ name: rotation[0].name, count: 4 }] });
 assert.equal(legacy.schemaVersion, 2);
 assert.equal(legacy.rotation[0].count, 4);
+const sourcePreset = normalizePreset({ id: "source", name: "Reference", buildKey: references[0].buildKey, rotation: [], reference: references[0] });
+const copiedPreset = duplicatePreset(sourcePreset, "Reference copy");
+assert.notEqual(copiedPreset.id, sourcePreset.id);
+assert.deepEqual(copiedPreset.reference, sourcePreset.reference);
+assert.equal(copiedPreset.buildKey, sourcePreset.buildKey);
+assert.equal(copiedPreset.schemaVersion, sourcePreset.schemaVersion);
+copiedPreset.reference.steps[0].skillId = "changed-in-copy";
+assert.notEqual(copiedPreset.reference.steps[0].skillId, sourcePreset.reference.steps[0].skillId);
 
 const action = (at, rest = {}) => ({ skillId: "verified-test-hit", at, castTime: 1, hitOffsets: [0], ...rest });
 const encounter = { schemaVersion: 1, mode: "ordered", buildKey: "test-only", fixedWindowSec: 30, openingResources: { energy: 0 }, qiWindows: [{ startSec: 5, durationSec: 2, lowQiLeadSec: 1 }, { startSec: 20, durationSec: 3, lowQiLeadSec: 2 }], actions: [

@@ -1017,6 +1017,8 @@ const parseProfileImport = (raw: string): CharsData => {
   if (!isPlainRecord(data) || !Array.isArray(data.chars) || !data.chars.length || data.chars.some(c => !named(c) || !Array.isArray(c.schemes) || !c.schemes.length || c.schemes.some(s =>
     !named(s) || !isPlainRecord(s.panel) || !["minOuter", "maxOuter", "minPz", "maxPz", "crit", "aff", "prec"].every(key => Number.isFinite((s.panel as any)[key]))
     || Object.entries(s.panel).some(([key, value]) => typeof (INITIAL_PANEL as any)[key] === "number" && !Number.isFinite(value))
+    || (s.baseOverride !== undefined && (!isPlainRecord(s.baseOverride) || Object.entries(s.baseOverride).some(([key, value]) => typeof (INITIAL_PANEL as any)[key] === "number" && !Number.isFinite(value))))
+    || (s.combatConfig !== undefined && !validCombatConfig(s.combatConfig))
     || !Array.isArray(s.gear) || s.gear.some(g => !named(g) || !["slot", "set"].every(key => typeof (g as any)[key] === "string") || !["gold", "purple", "blue"].includes(g.quality) || !Array.isArray(g.subs) || g.subs.some(sub => !isPlainRecord(sub) || typeof sub.type !== "string" || typeof sub.val !== "string"))
   ))) throw new Error("Invalid profile, panel or gear structure. Current profiles were retained.");
   if (new Set(data.chars.map(c => c.id)).size !== data.chars.length || data.chars.some(c => new Set(c.schemes.map(s => s.id)).size !== c.schemes.length || c.schemes.some(s => new Set(s.gear.map(g => g.id)).size !== s.gear.length))) throw new Error("Duplicate profile, scheme or gear IDs.");

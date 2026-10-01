@@ -1,13 +1,21 @@
 import assert from "node:assert/strict";
-import {
+import { execFileSync } from "node:child_process";
+if (import.meta.url.includes("/scripts/validate-v11-silkbind-jade-migration.mjs") && !import.meta.url.includes("/.cache/ocr-validator/")) {
+  execFileSync(process.execPath, ["node_modules/typescript/bin/tsc", "-p", "tsconfig.ocr-validator.json"], { stdio: "inherit" });
+  await import("../node_modules/.cache/ocr-validator/scripts/validate-v11-silkbind-jade-migration.mjs");
+} else {
+  await runChecks();
+}
+async function runChecks() {
+const {
   applyGearRowSemantics,
   getWeaponAttunementById,
   matchWeaponAttunementText,
-} from "../src/data/gearAttunement.ts";
-import {
+} = await import("../src/data/gearAttunement.ts");
+const {
   jadeAttunementCovers,
   resolveJadeAttunementFamily,
-} from "../src/pathModels/silkbindJade.mjs";
+} = await import("../src/pathModels/silkbindJade.mjs");
 
 const canonicalType = "Vernal Frequent Projectile DMG Boost";
 const migrate = (row) => applyGearRowSemantics([row]);
@@ -45,3 +53,4 @@ assert.equal(jadeAttunementCovers("vernal-light-heavy-derived", "umbrella-heavy-
 assert.equal(jadeAttunementCovers("vernal-light-heavy-derived", "spring-away"), false);
 
 console.log("[v11-silkbind-jade-migration] PASS — canonical migration, matcher precedence, aliases, and eligibility are deterministic.");
+}

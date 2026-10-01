@@ -30,12 +30,15 @@ for (const width of [390, 1440]) test(`Data import validates before replacement,
   await expect(input).toBeFocused();
   const broken = JSON.parse(before); broken.chars[0].schemes[0].gear = [{}];
   const duplicate = JSON.parse(before); duplicate.chars.push(duplicate.chars[0]);
-  for (const raw of ["{", '{"chars":[]}', JSON.stringify(broken), JSON.stringify(duplicate), '{"chars":[],"__proto__":{"polluted":true}}', " ".repeat(512 * 1024 + 1)]) {
+  const badBase = JSON.parse(before); badBase.chars[0].schemes[0].baseOverride = { maxOuter: "invalid" };
+  const badContext = JSON.parse(before); badContext.chars[0].schemes[0].combatConfig.selectedBuild = "constructor";
+  for (const raw of ["{", '{"chars":[]}', JSON.stringify(broken), JSON.stringify(duplicate), JSON.stringify(badBase), JSON.stringify(badContext), '{"chars":[],"__proto__":{"polluted":true}}', " ".repeat(512 * 1024 + 1)]) {
     await input.fill(raw);
     await dialog.getByRole("button", { name: "Import", exact: true }).click();
     await expect(dialog.getByRole("alert")).toBeVisible();
     expect(await page.evaluate(() => localStorage.getItem("wwm_chars_v3"))).toBe(before);
   }
+  await page.screenshot({ path: `${dir}/import-error-${width}.png`, fullPage: false });
   await input.press("Escape");
   await expect(dialog).toHaveCount(0);
   await expect(page.locator(".workspace-tools > summary")).toBeFocused();

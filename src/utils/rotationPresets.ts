@@ -42,5 +42,5 @@ export function normalizePreset(value: unknown): RotationPreset | null {
 }
 
 export function duplicatePreset(preset: RotationPreset, name: string): RotationPreset {
-  return { id: crypto.randomUUID(), name: name.trim() || `${preset.name} copy`, rotation: preset.rotation.map((item) => ({ ...item })) };
+  return { ...structuredClone(preset), id: crypto.randomUUID(), name: name.trim() || `${preset.name} copy` };
 }
