@@ -84,7 +84,7 @@ function parseRoute(): RouteState {
 
 function writeHash(hash: string) {
   if (window.location.hash === hash) return;
-  window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}${hash}`);
+  window.history.replaceState(window.history.state, "", `${window.location.pathname}${window.location.search}${hash}`);
 }
 
 function readStringArray(key: string): string[] {
@@ -246,7 +246,7 @@ function BuildCard({ entry, currentPatch, favorite, onFavorite, onView, onCompar
     <h3>{entry.title}</h3>
     {entry.subtitle && <p className="library-card-subtitle">{entry.subtitle}</p>}
     {entry.weapons?.length ? <div className="library-weapons">{entry.weapons.map((weapon) => <span key={weapon}>{weapon}</span>)}</div> : null}
-    <div className="library-card-meta"><span>{entry.region}</span><span>{entry.tier}</span><span>Patch {entry.patch}</span></div>
+    <div className="library-card-meta">{Array.from(new Set([entry.region, entry.tier, `Patch ${entry.patch}`])).map(label => <span key={label}>{label}</span>)}</div>
     {entry.build.modeledDps != null && <div className="library-card-metric"><small>Modeled DPS</small><strong>{formatDps(entry.build.modeledDps)}</strong></div>}
     <MaturityChips entry={entry} currentPatch={currentPatch} />
     <small className="library-reviewed">Last reviewed {formatDate(entry.lastReviewedDate)}</small>

@@ -5,7 +5,7 @@ const timelinePath = "src/utils/rotationTimeline.ts";
 let app = fs.readFileSync(appPath, "utf8");
 let timeline = fs.readFileSync(timelinePath, "utf8");
 
-if (app.includes("starweavePieces >= 2") && app.includes("timelineResult.total")) {
+if (app.includes("starweavePieces >= 2") && (app.includes("timelineResult.total") || app.includes("function evaluateCombatPanel"))) {
   console.log("[t96-product] Already applied; preserving downstream scenario transforms.");
   process.exit(0);
 }

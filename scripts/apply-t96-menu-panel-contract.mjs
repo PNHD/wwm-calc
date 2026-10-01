@@ -109,6 +109,7 @@ replaceRequired(
 // versioned residual from that exact snapshot, gear and the four supplied T6
 // Inner Ways so loading it reproduces the game panel and can immediately compare
 // the spare 1129 chest without asking the owner to re-enter anything.
+if (!source.includes('combatConfig: { ...combatConfig, selectedBuild: GLOBAL_T96_OBSERVED_PRESET_META.buildKey')) {
 replaceRequired(
 `              const character: Character = {
                 id: \`char-t96-\${now}\`,
@@ -167,6 +168,7 @@ replaceRequired(
               localStorage.setItem("wwm_chars_v3", JSON.stringify(next));`,
 "observed preset residual + four T6 Inner Ways",
 );
+}
 
 if (!source.includes("observedResidual")) throw new Error("[t96-menu-panel] observed residual was not generated");
 if (!source.includes('selectedBuild === "bamboocut-dust"')) throw new Error("[t96-menu-panel] Bamboocut menu contract missing");

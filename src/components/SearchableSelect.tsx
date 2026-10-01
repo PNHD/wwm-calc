@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback, useId } from 'react';
 import ReactDOM from 'react-dom';
 
 interface SearchableSelectProps {
@@ -12,6 +12,8 @@ interface SearchableSelectProps {
 export default function SearchableSelect({ value, onChange, options, placeholder = 'Select...', className = '' }: SearchableSelectProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
+  const [highlighted, setHighlighted] = useState(0);
+  const listId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState({ top: 0, left: 0, width: 0, maxHeight: 320 });
@@ -80,12 +82,14 @@ export default function SearchableSelect({ value, onChange, options, placeholder
     onChange(val);
     setOpen(false);
     setSearch('');
-    inputRef.current?.blur();
   };
+  const visibleOptions = [...grouped.values()].flat();
+  useEffect(() => { if (open) document.getElementById(`${listId}-${highlighted}`)?.scrollIntoView({ block: 'nearest' }); }, [open, highlighted, listId]);
 
   const dropdown = open ? ReactDOM.createPortal(
     <div
       ref={dropdownRef}
+      id={listId} role="listbox"
       style={{
         position: 'fixed',
         top: pos.top,
@@ -121,13 +125,14 @@ export default function SearchableSelect({ value, onChange, options, placeholder
           {items.map(o => (
             <div
               key={o.value}
+              id={`${listId}-${visibleOptions.indexOf(o)}`} role="option" aria-selected={o.value === value}
               onMouseDown={e => { e.preventDefault(); handleSelect(o.value); }}
               style={{
                 padding: '5px 8px',
                 fontSize: 12,
                 color: o.value === value ? '#60a5fa' : '#f1f5f9',
                 cursor: 'pointer',
-                background: 'transparent',
+                background: visibleOptions[highlighted] === o ? '#1e293b' : 'transparent',
               }}
               onMouseEnter={e => (e.currentTarget.style.background = '#1e293b')}
               onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
@@ -145,13 +150,20 @@ export default function SearchableSelect({ value, onChange, options, placeholder
     <div style={{ position: 'relative', display: 'inline-block', width: '100%', flex: '1.5' }} className={className}>
       <input
         ref={inputRef}
+        role="combobox" aria-label={placeholder} aria-expanded={open} aria-controls={open ? listId : undefined} aria-autocomplete="list" aria-activedescendant={open && visibleOptions[highlighted] ? `${listId}-${highlighted}` : undefined}
         type="text"
         value={open ? search : selectedLabel}
         placeholder={placeholder}
         title={selectedLabel || placeholder}
-        onChange={e => setSearch(e.target.value)}
-        onFocus={() => { setOpen(true); setSearch(''); updatePos(); }}
-        onKeyDown={e => { if (e.key === 'Escape') { setOpen(false); setSearch(''); inputRef.current?.blur(); } }}
+        onChange={e => { setOpen(true); setSearch(e.target.value); setHighlighted(0); updatePos(); }}
+        onClick={() => { if (!open) { setOpen(true); setSearch(''); setHighlighted(0); updatePos(); } }}
+        onFocus={() => { setOpen(true); setSearch(''); setHighlighted(0); updatePos(); }}
+        onKeyDown={e => {
+          if (e.key === 'Escape') { e.preventDefault(); setOpen(false); setSearch(''); }
+          else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); setOpen(true); setHighlighted(index => Math.max(0, Math.min(visibleOptions.length - 1, index + (e.key === 'ArrowDown' ? 1 : -1)))); }
+          else if (e.key === 'Enter' && open && visibleOptions[highlighted]) { e.preventDefault(); handleSelect(visibleOptions[highlighted].value); }
+          else if (e.key === 'Tab') { setOpen(false); setSearch(''); }
+        }}
         style={{
           width: '100%',
           height: 28,

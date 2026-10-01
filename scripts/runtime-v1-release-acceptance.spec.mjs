@@ -205,7 +205,7 @@ test("V1 required responsive surfaces render at 1440, 1024 and 390 with Model/Ab
   for (const route of ["#pve/overview", "#gvg/overview", "#library", "#arena/overview"]) {
     await page.goto(`${BASE}${route}`, { waitUntil: "networkidle" });
     const about = page.getByTestId("model-about");
-    const aboutHeading = about.getByText("WWM Calc V1.1", { exact: true });
+    const aboutHeading = about.getByText("WWM Build Lab", { exact: true });
     await expect(about).toBeVisible();
     if (await about.evaluate((element) => element.open)) {
       await about.locator("summary").click();
@@ -222,8 +222,10 @@ test("V1 representative scale completes and records relative browser timings", a
   const runtime = runtimeWatch(page);
   const timings = { pveInventory: {}, arenaBuildDecisionMs: null, gvgRosterRenderMs: null, gvgStrategyMs: null, libraryFilterMs: null }; // COMPETITIVE_V2_V1_PERF_TIMING_NAME
   await page.goto(`${BASE}#pve/gear`, { waitUntil: "networkidle" });
+  if (await page.locator('.workspace-tools:not([open]) > summary').count()) await page.locator('.workspace-tools > summary').click();
   const observed = page.getByRole("button", { name: /Load observed T96/i });
   if (await observed.count()) { await observed.click(); await page.waitForTimeout(250); }
+  const baselineDps = await page.evaluate(() => window.__WWM_SCENARIO_DIAGNOSTIC__.headlineDps);
   for (const count of [50, 100, 250]) {
     await page.evaluate((count) => {
       const root = JSON.parse(localStorage.getItem("wwm_chars_v3") || "{}");
@@ -238,6 +240,7 @@ test("V1 representative scale completes and records relative browser timings", a
     await page.reload({ waitUntil: "networkidle" });
     timings.pveInventory[count] = Date.now() - start;
     await assertNoOverflow(page);
+    expect(await page.evaluate(() => window.__WWM_SCENARIO_DIAGNOSTIC__.headlineDps)).toBeCloseTo(baselineDps, 8);
   }
 
   const arena = arenaSeed();

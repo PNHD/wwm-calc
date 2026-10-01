@@ -34,7 +34,7 @@ if (!(app.includes("comboInCombat(candidateCombo).total") || (app.includes("cons
   failures.push("src/App.tsx: missing replacement panel and rotation evaluation");
 }
 requireText("src/App.tsx", app, "deltaDps", "absolute replacement DPS delta");
-requireText("src/App.tsx", app, "timelineResult.total", "timeline-driven optimizer ranking");
+requireText("src/App.tsx", app, "const result = evaluateCombatPanel(p, combo, diagnostics);", "shared scenario drives optimizer ranking");
 
 requireText("src/utils/globalT96Gear.ts", scorer, "const overall = modeledContribution * 0.85 + buildFit * 0.15", "cap-independent item diagnostic score");
 forbidText("src/utils/globalT96Gear.ts", scorer, "rollQuality * 0.5", "roll cap used in build ranking");

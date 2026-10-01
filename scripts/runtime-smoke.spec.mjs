@@ -43,6 +43,7 @@ test("production build completes the observed T96 decision flow", async ({ page 
   const navCombat = productNav.getByRole("button", { name: /^Combat\b/i });
   for (const locator of [navBuild, navGear, navCompare, navBestBuild, navCombat]) await expect(locator).toBeVisible();
 
+  if (await page.locator('.workspace-tools:not([open]) > summary').count()) await page.locator('.workspace-tools > summary').click();
   const loadObserved = page.getByRole("button", { name: /Load observed T96/i });
   await expect(loadObserved).toBeVisible();
   await loadObserved.click();

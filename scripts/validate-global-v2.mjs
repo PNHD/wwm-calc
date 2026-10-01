@@ -26,8 +26,8 @@ requireText("index.html", indexHtml, "Global 2.1 · Tier 96", "Global 2.1 docume
 
 requireText("src/utils/calc.ts", calc, 'const t96 = TIERS["405|0.65b"]', "current 100-upper tier baseline");
 requireText("src/utils/calc.ts", calc, "GLOBAL_V2_SKILL_OUTCOME_RULES", "current skill outcome rules");
-requireText("src/utils/calc.ts", calc, "let critEff = Math.min(0.8, critRateInput / 100 / jR);", "base Crit cap before Direct Crit");
-requireText("src/utils/calc.ts", calc, "let dirCrit = (panel.dcrit || 0) / 100;", "separate Direct Crit input");
+requireText("src/utils/calc.ts", calc, "let critEff = Math.max(0, Math.min(0.8, critRateInput / 100 / jR));", "base Crit probability domain and cap before Direct Crit");
+requireText("src/utils/calc.ts", calc, "let dirCrit = Math.max(0, (panel.dcrit || 0) / 100);", "separate nonnegative Direct Crit input");
 requireText("src/utils/calc.ts", calc, "const critBeforePrecision = Math.min(critEff + dirCrit, 0.8 + dirCrit);", "Direct Crit added after the base cap");
 requireText("src/utils/calc.ts", calc, "* pPrec", "Precision gate after Crit/Affinity resolution");
 

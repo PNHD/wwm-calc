@@ -39,7 +39,7 @@ const newPool = `    const rawPool = getActiveGear();
       setBestBuildRunning(false);
       return;
     }`;
-if (!hasNormalized(source, newPool)) {
+if (!hasNormalized(source, newPool) && !source.includes('setBestBuildError(`No valid complete build: missing')) {
   source = replaceNormalized(source, oldPool, newPool, "optimizer pool anchor");
 }
 

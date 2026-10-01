@@ -59,14 +59,17 @@ assert.ok(
   app.includes("comboInCombat(candidateCombo).total") || (app.includes("const candidateCombat = comboInCombat(candidateCombo)") && app.includes("candidateCombat.total")),
   "Gear Compare must rerun the complete build",
 );
-assert.ok(app.includes("timelineResult.total"), "Bamboocut ranking must consume timeline total damage");
+assert.ok(app.includes("const result = evaluateCombatPanel(p, combo, diagnostics);"), "Bamboocut ranking must consume the shared complete-scenario evaluator");
+const shared = fs.readFileSync("src/utils/scenarioEvaluation.ts", "utf8");
+assert.ok(shared.includes("total: result.total"), "Shared Bamboocut evaluator must return timeline total damage");
 assert.ok(app.includes("return baselineScore > 0 ? (totalDmg / baselineScore) * 100 : 0;"), "Best Build internal rank must be monotonic modeled damage");
 assert.ok(!app.includes("Subtract a tiny penalty per overcap point"), "Best Build must not use a hidden Crit-overcap tie penalty");
 assert.ok(!app.includes("rollQuality * 0.5"), "roll quality must not decide a build winner");
 
 // Stat Priority must perturb the current complete panel and rerun the same T96
 // conditional timeline instead of falling back to a universal static weight table.
-assert.ok(app.includes("conditionalBuffs = buildTimelineBuffs"), "Stat Priority must rebuild conditional timeline effects");
+assert.ok(app.includes('buffs: buildTimelineBuffs(selectedInnerWays, innerWayTiers).filter(buff => !buff.id.endsWith(":static")'), "Shared scenario must rebuild conditional timeline effects without duplicating static buffs");
+assert.ok(app.includes("const totalFor = (p: PanelStats) => evaluateCombatPanel(p).total;"), "Stat Priority must call the same evaluator");
 assert.ok(app.includes("getScenarioRotationForBuild(selectedBuild)"), "Stat Priority/current DPS must consume the shared scenario rotation");
 assert.ok(app.includes("starweaveDistanceBonusPct"), "distance assumption must reach timeline callers");
 assert.ok(combatWorkspace.includes("Marginal modeled DPS from one additional Global max roll"));
@@ -105,7 +108,7 @@ assert.ok(combatWorkspace.includes("No interpolation is assumed between 4m and 8
 
 // Cinder is a real scenario toggle: the off state removes the observed Fire
 // sources, but never applies +4% as a blanket Physical multiplier.
-assert.ok(app.includes("const [cinderAsh, setCinderAsh] = useState(true)"));
+assert.ok(app.includes("const [cinderAsh, setCinderAsh] = useState(() => getCustomConfig()?.cinderAsh ?? true)"));
 assert.ok(app.includes('!["Divinecraft - Fire", "Fire - Solid Foundation"].includes(item.name)'));
 assert.ok(app.includes("onCinderAshChange={setCinderAsh}"));
 assert.ok(combatWorkspace.includes("never blanket +4% Physical damage"));
