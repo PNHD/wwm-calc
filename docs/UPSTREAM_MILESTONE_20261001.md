@@ -46,3 +46,8 @@ Audit the official delta and accessible client evidence before changing any coef
 - Preserve established Global Tier-96 anchors and fail-closed/path ownership. Unsupported Healing/Shield/Draught or other Path coefficients stay visibly unavailable/reference until evidence supports them. Do useful independent work while one numerical item is source-blocked.
 - Deliver immutable candidate SHA, changed-file list, before/after numerical evidence, raw check logs, screenshots, provenance/license inventory and unresolved source blockers. Update/read back Airtable and Space.
 - Continue internally until this bounded milestone passes or a genuine capability/evidence/D3 gate; do not stop after each subtask awaiting "next". Do not mark complete from prose, upstream badges, tests that only mirror fixtures, or a green build alone.
+
+
+## Superseding local UI gate — 2026-10-01T09:04:09Z
+
+Tested/built code `989457ced42939ebc1046b377287a71b6dcc32af`; build,30 static checks,42 browser checks and four-width executor source/visual review passed locally. Twelve live-audit dispositions, numerical/CPU evidence and remaining conditions: [UI_ACCEPTANCE_20261001.md](UI_ACCEPTANCE_20261001.md). Whole milestone PARTIAL/SOURCE_BLOCKED; Node22 and independent review remain unperformed; publication HOLD. Next: Qualify attributable versioned Global skill/effect mappings and weighted legal retune pools; then close Node22 runtime and independent-review gates before publication.

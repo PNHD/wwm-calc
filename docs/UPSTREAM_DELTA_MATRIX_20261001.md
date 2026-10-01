@@ -37,3 +37,8 @@ Runtime: installed Node v24.15.0 differs from declared >=22.16 <23; no existing 
 | Optional preview | Deferred | No dependency or publication expansion |
 
 Evidence and exact run results: UPSTREAM_ACCEPTANCE_20261001.md and ignored .local-evidence/upstream-20261001/. Whole milestone: PARTIAL / SOURCE_BLOCKED. Publication HOLD.
+
+
+## Superseding local UI gate — 2026-10-01T09:04:09Z
+
+Tested/built code `989457ced42939ebc1046b377287a71b6dcc32af`; build,30 static checks,42 browser checks and four-width executor source/visual review passed locally. Twelve live-audit dispositions, numerical/CPU evidence and remaining conditions: [UI_ACCEPTANCE_20261001.md](UI_ACCEPTANCE_20261001.md). Whole milestone PARTIAL/SOURCE_BLOCKED; Node22 and independent review remain unperformed; publication HOLD. Next: Qualify attributable versioned Global skill/effect mappings and weighted legal retune pools; then close Node22 runtime and independent-review gates before publication.

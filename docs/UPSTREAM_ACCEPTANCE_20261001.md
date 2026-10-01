@@ -1,3 +1,5 @@
+> Historical upstream phase evidence (code8631b88). Superseded for the current UI gate by [UI_ACCEPTANCE_20261001.md](UI_ACCEPTANCE_20261001.md), tested code `989457ced42939ebc1046b377287a71b6dcc32af`. Publication HOLD.
+
 # Upstream candidate local evidence
 
 Work item: WWM-BUILD-UPSTREAM-20261001. Date: 2026-10-01.
