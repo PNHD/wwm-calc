@@ -146,5 +146,6 @@ test("production is exact main SHA and V1 critical surfaces pass", async ({ page
     securitySmoke: { versionedReadOnlyLibraryShare: true },
   };
   fs.writeFileSync("V1_PRODUCTION_SMOKE.json", JSON.stringify(report, null, 2), "utf8");
+  await page.setViewportSize({ width: 390, height: 844 });
   await page.screenshot({ path: "v1-production-mobile-smoke.png", fullPage: true });
 });
