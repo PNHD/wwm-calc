@@ -424,21 +424,16 @@ export function getRotationTimeForBuild(buildKey?: string): number {
   return ROTATION_TIME;
 }
 
-export function calcSkill(
-  rot: RotationItem,
-  panel: PanelStats,
-  tier: TierConstants,
-  opts: { set: string; datang: boolean; yishui: boolean; buildKey?: string; armorSet?: string; weaponStars?: boolean; skillOverride?: Partial<SkillDefinition> }
-) {
-  let sk = SKILL_DB[rot.name];
+export function getSkillDefinition(name: string, buildKey?: string): SkillDefinition | undefined {
+  let sk = Object.hasOwn(SKILL_DB, name) ? SKILL_DB[name] : undefined;
   if (!sk) {
-    const cnClass = BUILD_MAP_TO_CHINESE[opts.buildKey || "bamboocut-dust"] || "破竹尘";
+    const cnClass = BUILD_MAP_TO_CHINESE[buildKey || "bamboocut-dust"] || "破竹尘";
     const cfg = ClassConfig.ROTATIONS[cnClass];
     const classSkills = cfg && cfg.skillDatabase ? cfg.skillDatabase : SkillData[cnClass];
-    const dynSk = classSkills ? classSkills[rot.name] : null;
+    const dynSk = classSkills && Object.hasOwn(classSkills, name) ? classSkills[name] : null;
     if (dynSk) {
       const wKey = getWeaponTypeKeyFromChinese(dynSk.weaponType || "");
-      const isXinfa = dynSk.type === "心法" || rot.name.includes("Resonance") || rot.name.includes("Camps") || rot.name.includes("xinfa") || rot.name.includes("歌") || rot.name.includes("章") || rot.name.includes("法") || rot.name.includes("心经");
+      const isXinfa = dynSk.type === "心法" || name.includes("Resonance") || name.includes("Camps") || name.includes("xinfa") || name.includes("歌") || name.includes("章") || name.includes("法") || name.includes("心经");
       
       sk = {
         outerRatio: dynSk.outerRatio || 0,
@@ -454,9 +449,20 @@ export function calcSkill(
         special: dynSk.special || "",
         csBonus: dynSk.csBonus || 0,
       };
-      SKILL_DB[rot.name] = sk;
+
     }
   }
+
+  return sk;
+}
+
+export function calcSkill(
+  rot: RotationItem,
+  panel: PanelStats,
+  tier: TierConstants,
+  opts: { set: string; datang: boolean; yishui: boolean; buildKey?: string; armorSet?: string; weaponStars?: boolean; skillOverride?: Partial<SkillDefinition> }
+) {
+  let sk = getSkillDefinition(rot.name, opts.buildKey);
 
   if (!sk) return { perHit: 0, total: 0, breakdown: { crit: 0, aff: 0, normal: 0, abrasion: 0 }, sim: { pCrit: 0, pAff: 0, pWhite: 0, pGraze: 0, critHit: 0, affHit: 0, normHit: 0, grazeHit: 0, casts: 0 } };
   if (opts.skillOverride) sk = { ...sk, ...opts.skillOverride };
@@ -484,11 +490,11 @@ export function calcSkill(
   if (set === "ivorybloom") {
     critRateInput += 5.0;
   }
-  let critEff = Math.min(0.8, critRateInput / 100 / jR);
-  let affEff = Math.min(0.4, (panel.aff || 0) / 100 / jR);
+  let critEff = Math.max(0, Math.min(0.8, critRateInput / 100 / jR));
+  let affEff = Math.max(0, Math.min(0.4, (panel.aff || 0) / 100 / jR));
   let precEff = Math.min(1.0, 0.65 + Math.max(0, (panel.prec || 0) - 65) / 100 / jR);
-  let dirCrit = (panel.dcrit || 0) / 100;
-  let dirAff = (panel.daff || 0) / 100;
+  let dirCrit = Math.max(0, (panel.dcrit || 0) / 100);
+  let dirAff = Math.max(0, (panel.daff || 0) / 100);
   // Jadeware 4pc: +7.5% Direct Affinity Rate vs qi-imbalanced targets (assume boss).
   if (set === "jadeware") dirAff += 0.075;
 
@@ -504,7 +510,9 @@ export function calcSkill(
   } else {
     pPrec = precEff;
     const critBeforePrecision = Math.min(critEff + dirCrit, 0.8 + dirCrit);
-    pAff = affEff + dirAff;
+    // Imported/reference panels can exceed the probability domain. Affinity
+    // retains its existing priority; direct rates never create extra outcomes.
+    pAff = Math.min(1, affEff + dirAff);
     pCrit = (critBeforePrecision + pAff > 1 ? Math.max(0, 1 - pAff) : critBeforePrecision) * pPrec;
     pGraze = Math.max(0, (1 - pPrec) * (1 - pAff));
   }

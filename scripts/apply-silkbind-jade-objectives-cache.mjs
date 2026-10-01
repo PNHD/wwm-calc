@@ -40,7 +40,7 @@ const after = `  const jadeScenarioForCombo = (combo: GearItem[]) => {
 const hasCurrentObjectiveCacheHelper = hasNormalized(source, 'const jadeScenarioForCombo = (combo: GearItem[]) => {')
   && hasNormalized(source, 'const objectiveScenario = jadeObjective === JADE_OBJECTIVES.SHORT_FIGHT_BURST')
   && hasNormalized(source, 'const gearSignature = combo.map((gear) => gear.id).sort().join(",")')
-  && hasNormalized(source, '|${gearSignature}`');
+  && (hasNormalized(source, '|${gearSignature}`') || hasNormalized(source, 'cacheSalt: JSON.stringify([activeTier.name, food, bowSelect, selectedInnerWays, innerWayTiers, gearSignature, skillOverrides, timingOverrides])'));
 
 if (!hasCurrentObjectiveCacheHelper) {
   source = replaceNormalized(source, before, after, 'Missing generated Jade scenario helper anchor.');

@@ -16,6 +16,7 @@ function replaceRequired(source,from,to,label){
 }
 function replaceRegexRequired(source,re,to,label){
   const normalized=source.replace(/\r\n/g,'\n');
+  if (normalized.includes('function evaluateCombatPanel') && label === 'Jade combo evaluator branch') return source;
   if(typeof to==='string' && normalized.includes(to)) return source;
   if(!re.test(normalized)) throw new Error(`[jade-2.0] Missing regex anchor: ${label}`);
   const replaced=normalized.replace(re,to);
@@ -132,7 +133,7 @@ $2`,
     'Jade combo evaluator branch');
 }
 
-if(!app.includes('const jadeCurrent = evaluateSilkbindJadeCached(')){
+if(!app.includes('const jadeCurrent = evaluateSilkbindJadeCached(') && !app.includes('function evaluateCombatPanel')){
   const marker='    let totalDmg = 0;\n    const items = rotation.map((item) => {';
   const jadeCurrent=`    if (selectedBuild === "silkbind-jade") {
       const jadeCurrent = evaluateSilkbindJadeCached(adjustedPanel, jadeScenarioForCombo(equippedGear), jadeObjective, priceJadeEvent);
@@ -153,7 +154,7 @@ if(!app.includes('const jadeCurrent = evaluateSilkbindJadeCached(')){
   app=replaceRequired(app,marker,jadeCurrent,'Jade current-build DPS branch');
 }
 
-if(!app.includes('if (selectedBuild === "silkbind-jade") {\n        return evaluateSilkbindJadeCached')){
+if(!app.includes('if (selectedBuild === "silkbind-jade") {\n        return evaluateSilkbindJadeCached') && !app.includes('function evaluateCombatPanel')){
   const marker=`      let total = 0;
       getScenarioRotationForBuild(selectedBuild).forEach((item) => {`;
   const branch=`      if (selectedBuild === "silkbind-jade") {

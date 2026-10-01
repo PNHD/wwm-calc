@@ -13,7 +13,7 @@
 // engine's value is being reusable for EDITED rotations / skills / team members.
 
 import { calcSkill, getRotationForBuild, getRotationTimeForBuild } from "./calc";
-import type { PanelStats, RotationItem } from "../types";
+import type { PanelStats, RotationItem, SkillDefinition } from "../types";
 
 // Derive tier/opts types straight from calcSkill so this stays in sync with it.
 type CalcTier = Parameters<typeof calcSkill>[2];
@@ -44,13 +44,14 @@ export function simulateRotation(
   tier: CalcTier,
   opts: CalcOpts,
   rotationTime: number,
+  skillOverrides: Record<string, Partial<SkillDefinition>> = {},
 ): RotationSim {
   let totalDmg = 0;
   const breakdown = { crit: 0, aff: 0, normal: 0, abrasion: 0 };
   const perSkill: SimSkill[] = [];
 
   for (const item of rotation) {
-    const r = calcSkill(item, panel, tier, opts);
+    const r = calcSkill(item, panel, tier, { ...opts, skillOverride: skillOverrides[item.name] });
     totalDmg += r.total;
     if (r.breakdown) {
       breakdown.crit += r.breakdown.crit;

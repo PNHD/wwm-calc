@@ -2,6 +2,10 @@ import fs from "node:fs";
 
 const path = "src/App.tsx";
 let source = fs.readFileSync(path, "utf8").replace(/\r\n/g, "\n");
+if (source.includes("const totalFor = (p: PanelStats) => evaluateCombatPanel(p).total;")) {
+  console.log("[t96-stat-priority] Shared scenario evaluator already owns Priority.");
+  process.exit(0);
+}
 
 const normalizeEol = (value) => value.replace(/\r\n/g, "\n");
 const hasNormalized = (value, expected) => normalizeEol(value).includes(expected);

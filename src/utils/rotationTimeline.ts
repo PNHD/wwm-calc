@@ -9,7 +9,7 @@
 import { calcSkill } from "./calc";
 import { lookupTiming } from "../data/skillTiming";
 import { INNER_WAYS } from "../data/innerways";
-import type { PanelStats, RotationItem, TierConstants } from "../types";
+import type { PanelStats, RotationItem, TierConstants, SkillDefinition } from "../types";
 
 type CalcOpts = Parameters<typeof calcSkill>[3];
 type BuffTrigger = "static" | "any-damage" | "martial-art" | "resonance";
@@ -56,6 +56,8 @@ export interface TimelineResult {
   duration: number;
   fullUptimeDps: number;
   uptimeLoss: number;
+  samples: ReturnType<typeof calcSkill>["sim"][];
+  breakdown: ReturnType<typeof calcSkill>["breakdown"];
 }
 
 const BUFF_PALETTE = ["#e0b45a", "#4fb27c", "#bd8fdb", "#5f97c6", "#e05a41", "#4fc9c0", "#d68f5f", "#9ab04f"];
@@ -210,6 +212,7 @@ export function simulateTimeline(
   opts: CalcOpts,
   window: number,
   timingOverrides: Record<string, { castTime?: number }> = {},
+  skillOverrides: Record<string, Partial<SkillDefinition>> = {},
 ): TimelineResult {
   const isT96Bamboocut = opts.buildKey === "bamboocut-dust";
   const allBuffs = [...buffs];
@@ -244,6 +247,8 @@ export function simulateTimeline(
   const casts: TLCast[] = [];
   const skillMap = new Map<string, { casts: number; dmg: number }>();
   let total = 0;
+  const samples: ReturnType<typeof calcSkill>["sim"][] = [];
+  const breakdown = { crit: 0, aff: 0, normal: 0, abrasion: 0 };
   let previousTime = 0;
 
   // Bamboocut timeline owns these conditional effects. Passing the old toggles to
@@ -271,7 +276,9 @@ export function simulateTimeline(
       if (cur > 0 && scopeMatches(b, event.item)) applyDelta(panel, b.maxDelta, cur / b.maxStacks);
     });
 
-    const r = calcSkill({ ...event.item, count: 1 }, panel, tier, eventOpts);
+    const r = calcSkill({ ...event.item, count: 1 }, panel, tier, { ...eventOpts, skillOverride: skillOverrides[event.item.name] });
+    samples.push(r.sim);
+    for (const key of Object.keys(breakdown) as (keyof typeof breakdown)[]) breakdown[key] += r.breakdown[key];
     total += r.total;
     const agg = skillMap.get(event.item.name) || { casts: 0, dmg: 0 };
     agg.casts += 1;
@@ -334,7 +341,7 @@ export function simulateTimeline(
       for (const b of allBuffs) {
         if (b.scope === "martial-art" && isMartialArt(item)) applyDelta(scoped, b.maxDelta, 1);
       }
-      full += calcSkill(item, scoped, tier, eventOpts).total;
+      full += calcSkill(item, scoped, tier, { ...eventOpts, skillOverride: skillOverrides[item.name] }).total;
     }
   }
   const fullUptimeDps = window > 0 ? full / window : 0;
@@ -348,5 +355,7 @@ export function simulateTimeline(
     duration,
     fullUptimeDps,
     uptimeLoss: fullUptimeDps > 0 ? Math.max(0, 1 - dps / fullUptimeDps) : 0,
+    samples,
+    breakdown,
   };
 }

@@ -15,6 +15,16 @@
   --workspace-warning:#ddb36f;
 }
 
+/* Advanced sheets are siblings of the main workspace and share its rail bounds. */
+@media(min-width:761px){
+  .app-root[data-product-workspace="pve"]>.analysis-workspace-detail{width:auto!important;max-width:none!important;margin-left:calc(var(--workspace-nav-width) + 16px)!important;margin-right:16px!important}
+}
+@media(min-width:1181px){
+  .app-root[data-product-workspace="pve"]:has(.workspace-inspector:not(.is-collapsed))>.analysis-workspace-detail{margin-right:calc(var(--workspace-inspector-width) + 16px)!important}
+}
+.analysis-workspace-detail [data-testid="umbra-reference-library"],.analysis-workspace-detail [aria-label="Rotation import preview"]{overflow-wrap:anywhere;min-width:0}
+.analysis-workspace-detail [data-testid="umbra-reference-library"] select{max-width:100%}
+
 .product-shell-root{position:relative;z-index:130;color:var(--workspace-text)}
 .product-masthead.product-masthead-v2{position:sticky!important;top:0!important;z-index:300!important;min-height:var(--workspace-header-height);display:grid!important;grid-template-columns:minmax(190px,1fr) auto auto minmax(280px,auto)!important;align-items:center!important;gap:12px!important;padding:9px 18px!important;background:#0a0f1a!important;border-bottom:1px solid var(--workspace-border)!important;box-shadow:none!important}
 .product-masthead-v2 .product-brand{appearance:none;border:0;background:transparent;color:inherit;padding:0;cursor:pointer;text-align:left;min-width:0}

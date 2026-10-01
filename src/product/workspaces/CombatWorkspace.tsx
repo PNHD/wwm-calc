@@ -20,6 +20,7 @@ interface CombatWorkspaceProps {
   foodMin?: number;
   foodMax?: number;
   cinderAsh?: boolean;
+  cinderAshAvailable?: boolean;
   starweaveDistance?: "near" | "far";
   enemy: { name: string; defense: number; physicalResistance: number; attributeResistance: number };
   stats: { label: string; menu: string; combat: string; derived?: boolean }[];
@@ -61,7 +62,7 @@ export default function CombatWorkspace(props: CombatWorkspaceProps) {
         <div className="product-section-heading"><div><h2>Active combat assumptions</h2><p>These inputs are shared by current DPS, Gear Compare, Stat Priority and Best Build.</p></div><button type="button" className="product-secondary-button" onClick={props.onConfigure}>Configure build</button></div>
         <div className="combat-assumption-grid is-compact">
           <label className="product-switch"><input type="checkbox" checked={props.food} onChange={(event) => props.onFoodChange(event.target.checked)} /><span aria-hidden="true" /><strong>Attack-Boosting Food<small>+{foodMin} Min / +{foodMax} Max Physical Attack</small></strong></label>
-          <label className="product-switch"><input type="checkbox" checked={cinderAsh} disabled={!props.onCinderAshChange} onChange={(event) => props.onCinderAshChange?.(event.target.checked)} /><span aria-hidden="true" /><strong>Cinder Ash<small>Includes observed Divinecraft / Fire sources; never blanket +4% Physical damage</small></strong></label>
+          <label className="product-switch"><input type="checkbox" checked={cinderAsh} disabled={!props.onCinderAshChange || !props.cinderAshAvailable} onChange={(event) => props.onCinderAshChange?.(event.target.checked)} /><span aria-hidden="true" /><strong>Cinder Ash<small>{props.cinderAshAvailable ? "Includes mapped Divinecraft / Fire sources; never blanket +4% Physical damage" : "Unavailable: this rotation has no verified Global Fire-source mapping."}</small></strong></label>
           <label className="combat-enemy"><span>Starweave distance</span><select value={starweaveDistance} disabled={!props.onStarweaveDistanceChange} onChange={(event) => props.onStarweaveDistanceChange?.(event.target.value as "near" | "far")}><option value="near">Near · ≤4m · +0% distance component</option><option value="far">Far · ≥8m · +1% max tooltip component</option></select><small>No interpolation is assumed between 4m and 8m.</small></label>
           <div className="combat-enemy"><span>Target profile</span><strong>{props.enemy.name}</strong><small>Boss · single target · DEF {props.enemy.defense} / Physical RES {props.enemy.physicalResistance}% / Attribute RES {props.enemy.attributeResistance}%</small></div>
           <div className="combat-rotation"><span>Reference window</span><strong>{props.duration}s sustained</strong><small>{Math.round(props.totalDamage).toLocaleString()} modeled damage · Infinite Vitality ON</small></div>

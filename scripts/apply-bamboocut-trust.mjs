@@ -7,6 +7,7 @@ const hasNormalized = (value, expected) => normalizeEol(value).includes(expected
 
 const required = (from, to, label) => {
   if (hasNormalized(app, to)) return;
+  if (app.includes('function evaluateCombatPanel') && ['panel override hook', 'conditional mechanic exclusion', 'Bamboocut per-source diagnostics'].includes(label)) return;
   if (!hasNormalized(app, from)) throw new Error(`[bamboocut-trust] Missing patch anchor: ${label}`);
   const eol = app.includes("\r\n") ? "\r\n" : "\n";
   app = app.replace(from.replaceAll("\n", eol), to.replaceAll("\n", eol));
