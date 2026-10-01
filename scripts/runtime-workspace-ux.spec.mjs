@@ -174,6 +174,7 @@ test("changing character invalidates jobs even when its scheme is byte-identical
   const dialog = page.getByRole("dialog", { name: "Export / Import Data", exact: true });
   await dialog.getByLabel("Data Content:", { exact: true }).fill(JSON.stringify(fixture.root));
   await Promise.all([page.waitForEvent("load"), dialog.getByRole("button", { name: "Import", exact: true }).click()]);
+  await page.waitForLoadState("networkidle");
   const selectRole = async id => {
     await tools(); await page.getByRole("combobox", { name: "Current role", exact: true }).selectOption(id);
     const open = page.locator(".workspace-tools[open] > summary"); if (await open.count()) await open.click();
@@ -188,6 +189,7 @@ test("changing character invalidates jobs even when its scheme is byte-identical
   await tools(); await page.getByRole("button", { name: "Data", exact: true }).click();
   await dialog.getByLabel("Data Content:", { exact: true }).fill(JSON.stringify(settled));
   await Promise.all([page.waitForEvent("load"), dialog.getByRole("button", { name: "Import", exact: true }).click()]);
+  await page.waitForLoadState("networkidle");
   expect(await page.evaluate(aId => {
     const root = JSON.parse(localStorage.getItem("wwm_chars_v3"));
     return JSON.stringify(root.chars.find(char => char.id === aId).schemes) === JSON.stringify(root.chars.find(char => char.id === "job-twin").schemes);
