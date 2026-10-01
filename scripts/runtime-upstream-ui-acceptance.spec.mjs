@@ -4,8 +4,8 @@ import { pathToFileURL } from "node:url";
 import { buildSync, transformSync } from "esbuild";
 import { test, expect } from "@playwright/test";
 
-const base = "http://127.0.0.1:4173/";
-const dir = ".local-evidence/upstream-20261001/ui-resume";
+const base = process.env.PRODUCTION_URL || "http://127.0.0.1:4173/";
+const dir = process.env.UI_EVIDENCE_DIR || ".local-evidence/upstream-20261001/ui-resume";
 fs.mkdirSync(dir, { recursive: true });
 buildSync({ entryPoints: ["src/utils/damageSimulation.ts"], bundle: true, format: "esm", platform: "node", outfile: `${dir}/samples.mjs` });
 const { simulateDamage } = await import(pathToFileURL(`${process.cwd()}/${dir}/samples.mjs`).href);
@@ -15,6 +15,52 @@ const historical = new Function(transformSync(literals, { loader: "ts" }).code +
 const tools = async page => { const summary = page.locator('.workspace-tools:not([open]) > summary'); if (await summary.count()) await summary.click(); };
 const observed = async page => { await tools(page); await page.getByRole("button", { name: "Load observed T96", exact: true }).click(); };
 const hook = page => page.evaluate(() => window.__WWM_SCENARIO_DIAGNOSTIC__);
+
+for (const width of [390, 1440]) test(`Data import validates before replacement, restores same-ID context and closes by Escape at ${width}`, async ({ page }) => {
+  const errors = [];
+  page.on("pageerror", error => errors.push(error.message));
+  await page.setViewportSize({ width, height: 900 });
+  await page.goto(base + "#pve/simulation", { waitUntil: "networkidle" });
+  await observed(page);
+  const before = await page.evaluate(() => localStorage.getItem("wwm_chars_v3"));
+  const open = async () => { await tools(page); await page.getByRole("button", { name: "Data", exact: true }).click(); };
+  await open();
+  const dialog = page.getByRole("dialog", { name: "Export / Import Data", exact: true });
+  const input = page.getByLabel("Data Content:", { exact: true });
+  await expect(input).toBeFocused();
+  const broken = JSON.parse(before); broken.chars[0].schemes[0].gear = [{}];
+  const duplicate = JSON.parse(before); duplicate.chars.push(duplicate.chars[0]);
+  for (const raw of ["{", '{"chars":[]}', JSON.stringify(broken), JSON.stringify(duplicate), '{"chars":[],"__proto__":{"polluted":true}}', " ".repeat(512 * 1024 + 1)]) {
+    await input.fill(raw);
+    await dialog.getByRole("button", { name: "Import", exact: true }).click();
+    await expect(dialog.getByRole("alert")).toBeVisible();
+    expect(await page.evaluate(() => localStorage.getItem("wwm_chars_v3"))).toBe(before);
+  }
+  await input.press("Escape");
+  await expect(dialog).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Data", exact: true })).toBeFocused();
+  await open();
+  const imported = JSON.parse(before);
+  const char = imported.chars.find(c => c.id === imported.activeCharId);
+  const scheme = char.schemes.find(s => s.id === imported.activeSchemeId);
+  char.name = "Imported same-ID profile";
+  scheme.combatConfig.starweaveDistance = "far";
+  scheme.combatConfig.food = false;
+  await input.fill(JSON.stringify(imported));
+  await dialog.getByRole("button", { name: "Import", exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.getByRole("combobox", { name: "Current profile", exact: true })).toContainText(char.name);
+  let stored = await page.evaluate(() => JSON.parse(localStorage.getItem("wwm_chars_v3")));
+  expect(stored.chars.find(c => c.id === stored.activeCharId).schemes.find(s => s.id === stored.activeSchemeId).combatConfig).toEqual(scheme.combatConfig);
+  expect(await page.evaluate(() => localStorage.getItem("wwm_chars_v3__recovery_backup_v1"))).toBe(before);
+  await open();
+  await dialog.getByText("Upload File", { exact: true }).locator("input").setInputFiles({ name: "backup.json", mimeType: "application/json", buffer: Buffer.from(before) });
+  await expect(dialog).toHaveCount(0);
+  stored = await page.evaluate(() => JSON.parse(localStorage.getItem("wwm_chars_v3")));
+  expect(stored.chars.find(c => c.id === stored.activeCharId).name).not.toBe(char.name);
+  expect(await page.evaluate(() => ({}).polluted)).toBeUndefined();
+  expect(errors).toEqual([]);
+});
 
 test("leaving PvE unmounts and closes its gear editor", async ({ page }) => {
   await page.goto(base + "#pve/gear", { waitUntil: "networkidle" });
@@ -226,11 +272,11 @@ for (const [width, height] of [[390, 844], [1024, 768], [1363, 936], [1440, 900]
       await page.evaluate(() => { document.querySelectorAll('.rotation-table').forEach(el => el.scrollLeft = 0); document.body.scrollTop = 0; document.documentElement.scrollTop = 0; window.scrollTo(0, 0); });
       await page.screenshot({ path: `${dir}/${route}-${width}.png`, fullPage: false });
     }
-    for (const workspace of ["pve/gear", "gvg/overview", "arena/overview", "training-terrace/overview"]) {
+    for (const workspace of ["pve/gear", "pve/simulation", "gvg/overview", "arena/overview", "training-terrace/overview"]) {
       await page.goto(base + "#" + workspace, { waitUntil: "networkidle" });
       await page.getByRole("button", { name: "Library", exact: true }).click();
       await expect(page.locator('.library-page')).toBeVisible();
-      await expect(page.locator('.arsenal-workspace, .arena-main, .workspace-gvg-host')).toHaveCount(0);
+      await expect(page.locator('.arsenal-workspace, .arena-main, .workspace-gvg-host, .combat-workspace, .advanced-workspace')).toHaveCount(0);
       await page.reload({ waitUntil: "networkidle" });
       await expect(page.locator('.arsenal-workspace')).toHaveCount(0);
       await page.screenshot({ path: `${dir}/library-${width}.png`, fullPage: false });

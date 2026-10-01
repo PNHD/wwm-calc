@@ -1009,6 +1009,21 @@ const sanitizeChars = <T,>(data: T): T => {
   );
   return data;
 };
+
+const parseProfileImport = (raw: string): CharsData => {
+  if (raw.length > 512 * 1024) throw new Error("Profile backup exceeds 512 KB.");
+  const data = cloneBoundedJson(JSON.parse(raw), { maxChars: 512 * 1024 }) as CharsData;
+  const named = (value: any) => isPlainRecord(value) && typeof value.id === "string" && value.id.trim() && typeof value.name === "string";
+  if (!isPlainRecord(data) || !Array.isArray(data.chars) || !data.chars.length || data.chars.some(c => !named(c) || !Array.isArray(c.schemes) || !c.schemes.length || c.schemes.some(s =>
+    !named(s) || !isPlainRecord(s.panel) || !["minOuter", "maxOuter", "minPz", "maxPz", "crit", "aff", "prec"].every(key => Number.isFinite((s.panel as any)[key]))
+    || Object.entries(s.panel).some(([key, value]) => typeof (INITIAL_PANEL as any)[key] === "number" && !Number.isFinite(value))
+    || !Array.isArray(s.gear) || s.gear.some(g => !named(g) || !["slot", "set"].every(key => typeof (g as any)[key] === "string") || !["gold", "purple", "blue"].includes(g.quality) || !Array.isArray(g.subs) || g.subs.some(sub => !isPlainRecord(sub) || typeof sub.type !== "string" || typeof sub.val !== "string"))
+  ))) throw new Error("Invalid profile, panel or gear structure. Current profiles were retained.");
+  if (new Set(data.chars.map(c => c.id)).size !== data.chars.length || data.chars.some(c => new Set(c.schemes.map(s => s.id)).size !== c.schemes.length || c.schemes.some(s => new Set(s.gear.map(g => g.id)).size !== s.gear.length))) throw new Error("Duplicate profile, scheme or gear IDs.");
+  const active = data.chars.find(c => c.id === data.activeCharId);
+  if (!active?.schemes.some(s => s.id === data.activeSchemeId)) throw new Error("Active profile or scheme is missing.");
+  return sanitizeChars(data);
+};
 // ---------------------------------------------------------------------------
 
 const BUILD_PROFILES = {
@@ -1404,9 +1419,18 @@ export default function App() {
   const [gameImportResult, setGameImportResult] = useState<ImportResult | null>(null);
   const [gameImportError, setGameImportError] = useState<string>("");
   const [isExportImportModalOpen, setIsExportImportModalOpen] = useState<boolean>(false);
+  const [profileImportError, setProfileImportError] = useState("");
   const [isBatchOcrModalOpen, setIsBatchOcrModalOpen] = useState<boolean>(false);
   const [isXinfaModalOpen, setIsXinfaModalOpen] = useState<boolean>(false);
   const [xinfaModalIndex, setXinfaModalIndex] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!isExportImportModalOpen) return;
+    const opener = document.activeElement as HTMLElement | null;
+    setProfileImportError("");
+    document.getElementById("export-import-textarea")?.focus();
+    return () => { if (opener?.isConnected) opener.focus(); };
+  }, [isExportImportModalOpen]);
 
   const isItemEquipped = (item: GearItem, allGear: GearItem[]): boolean => {
     if (item.isEquipped === false) return false;
@@ -1596,6 +1620,18 @@ export default function App() {
     if (!activeChar) return null;
     return activeChar.schemes.find(s => s.id === charsData.activeSchemeId) ?? null;
   }, [activeChar, charsData.activeSchemeId]);
+
+  const importProfiles = (raw: string) => {
+    try {
+      const parsed = parseProfileImport(raw);
+      if (!backupDomainValue("wwm_chars_v3", JSON.stringify(charsData))) throw new Error("Could not back up current profiles. Export them and free local storage before importing.");
+      localStorage.setItem("wwm_chars_v3", JSON.stringify(parsed));
+      // Reload also restores combat context when the imported scheme keeps its ID.
+      window.location.reload();
+    } catch (error) {
+      setProfileImportError(error instanceof Error ? error.message : "Unable to import profiles. Current profiles were retained.");
+    }
+  };
 
   useEffect(() => {
     if (activeScheme) {
@@ -7635,8 +7671,8 @@ export default function App() {
 
       {/* ── EXPORT/IMPORT MODAL ── */}
       {isExportImportModalOpen && (
-        <div className="modal" onClick={() => setIsExportImportModalOpen(false)}>
-          <div className="modal-content modal-content-export" onClick={e => e.stopPropagation()} style={{ height: '80vh', display: 'flex', flexDirection: 'column' }}>
+        <div className="modal" onClick={() => setIsExportImportModalOpen(false)} onKeyDown={event => { if (event.key === "Escape") { event.stopPropagation(); setIsExportImportModalOpen(false); } }}>
+          <div className="modal-content modal-content-export" role="dialog" aria-modal="true" aria-label="Export / Import Data" onClick={e => e.stopPropagation()} style={{ height: '80vh', display: 'flex', flexDirection: 'column' }}>
             <div className="modal-header">
               <h2>Export / Import Data</h2>
               <button type="button" className="close-btn" aria-label="Close data" onClick={() => setIsExportImportModalOpen(false)}>&times;</button>
@@ -7674,16 +7710,17 @@ export default function App() {
                 1. Click <b>Export Data</b> — your full build (gear, stats, inner ways) is copied to the clipboard as text.<br />
                 2. Send that text to a friend (Discord, paste-bin, etc.).<br />
                 3. They open this same window, paste it into the box below, and click <b>Import</b>.<br />
+                Import replaces the profiles on this device and preserves a local recovery backup.<br />
                 <span style={{ color: "#6e7681" }}>This is a text copy, not a website link — nothing is uploaded. Prefer a file? Use <b>Download to File</b>.</span>
               </div>
               <div className="export-import-buttons" style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
                 <button
-                  onClick={() => {
+                  onClick={async () => {
                     const str = JSON.stringify(charsData, null, 2);
                     const textarea = document.getElementById("export-import-textarea") as HTMLTextAreaElement;
                     if (textarea) textarea.value = str;
-                    navigator.clipboard.writeText(str);
-                    alert("Data copied to clipboard!");
+                    try { await navigator.clipboard.writeText(str); alert("Data copied to clipboard!"); }
+                    catch { alert("Clipboard unavailable. Copy the generated text below or download a file."); }
                   }}
                   className="primary-btn"
                 >
@@ -7710,22 +7747,10 @@ export default function App() {
                     onChange={(e) => {
                       const file = e.target.files?.[0];
                       if (!file) return;
+                      if (file.size > 512 * 1024) { setProfileImportError("Profile backup exceeds 512 KB."); return; }
                       const reader = new FileReader();
-                      reader.onload = (ev) => {
-                        try {
-                          const parsed = sanitizeChars(JSON.parse(ev.target?.result as string));
-                          if (parsed.chars && Array.isArray(parsed.chars)) {
-                            setCharsData(parsed);
-                            localStorage.setItem("wwm_chars_v3", JSON.stringify(parsed));
-                            alert("Data imported successfully!");
-                            setIsExportImportModalOpen(false);
-                          } else {
-                            alert("Invalid file structure.");
-                          }
-                        } catch {
-                          alert("Failed to parse JSON file.");
-                        }
-                      };
+                      reader.onload = () => importProfiles(String(reader.result));
+                      reader.onerror = () => setProfileImportError("Could not read the backup file. Current profiles were retained.");
                       reader.readAsText(file);
                     }}
                   />
@@ -7733,31 +7758,17 @@ export default function App() {
                 <button
                   onClick={() => {
                     const textarea = document.getElementById("export-import-textarea") as HTMLTextAreaElement;
-                    if (textarea && textarea.value.trim()) {
-                      try {
-                        const parsed = sanitizeChars(JSON.parse(textarea.value.trim()));
-                        if (parsed.chars && Array.isArray(parsed.chars)) {
-                          setCharsData(parsed);
-                          localStorage.setItem("wwm_chars_v3", JSON.stringify(parsed));
-                          alert("Data imported successfully!");
-                          setIsExportImportModalOpen(false);
-                        } else {
-                          alert("Invalid data structure.");
-                        }
-                      } catch {
-                        alert("Failed to parse JSON string.");
-                      }
-                    } else {
-                      alert("Please paste data content into the text area first.");
-                    }
+                    if (textarea?.value.trim()) importProfiles(textarea.value.trim());
+                    else setProfileImportError("Paste a profile backup into Data Content first.");
                   }}
                   className="secondary-btn"
                 >
-                  Paste to Import
+                  Import
                 </button>
               </div>
               <div className="export-import-textarea-container" style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-                <label className="export-import-label">Data Content:</label>
+                <label className="export-import-label" htmlFor="export-import-textarea">Data Content:</label>
+                {profileImportError && <p role="alert">{profileImportError}</p>}
                 <textarea
                   id="export-import-textarea"
                   className="export-import-textarea"

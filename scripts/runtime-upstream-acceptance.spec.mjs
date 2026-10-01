@@ -1,8 +1,8 @@
 import fs from "node:fs";
 import { test, expect } from "@playwright/test";
 
-const base = "http://127.0.0.1:4173/";
-const dir = ".local-evidence/upstream-20261001";
+const base = process.env.PRODUCTION_URL || "http://127.0.0.1:4173/";
+const dir = process.env.UPSTREAM_EVIDENCE_DIR || ".local-evidence/upstream-20261001";
 fs.mkdirSync(dir, { recursive: true });
 const observed = async page => {
   await page.goto(base + "#pve/gear", { waitUntil: "networkidle" });
