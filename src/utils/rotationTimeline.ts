@@ -162,7 +162,7 @@ function starweaveBuff(color: string, distanceBonusPct = 0): TimelineBuff {
   };
 }
 
-function applyDelta(p: PanelStats, d: BuffDelta, k: number) {
+export function applyDelta(p: PanelStats, d: BuffDelta, k: number) {
   p.outerPen += (d.outerPen || 0) * k;
   p.pzPen += (d.pzPen || 0) * k;
   p.crit += (d.crit || 0) * k;

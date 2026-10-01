@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import { test, expect } from "@playwright/test";
 
-const BASE = "http://127.0.0.1:4173/";
+const BASE = process.env.PRODUCTION_URL || "http://127.0.0.1:4173/";
 const qaDir = "visual-qa";
 fs.mkdirSync(qaDir, { recursive: true });
 
@@ -9,6 +9,88 @@ async function switchWorkspace(page, name) { const switcher = page.getByRole("na
 async function pve(page, name) { await page.getByLabel("PvE navigation").getByRole("button", { name: new RegExp(`^${name}`) }).click(); }
 async function gvg(page, name) { await page.getByLabel("Guild War navigation").getByRole("button", { name: new RegExp(`^${name}`) }).click(); }
 async function noOverflow(page) { const metrics = await page.evaluate(() => ({ viewport: innerWidth, document: document.documentElement.scrollWidth, body: document.body.scrollWidth })); expect(metrics.document).toBeLessThanOrEqual(metrics.viewport + 1); expect(metrics.body).toBeLessThanOrEqual(metrics.viewport + 1); }
+
+for (const width of [390, 1440]) test(`Team preserves saved solo DPS and rejects missing context at ${width}`, async ({ page }) => {
+  const errors = [];
+  page.on("pageerror", error => errors.push(error.message));
+  await page.setViewportSize({ width, height: 1000 });
+  await page.goto(BASE + "#pve/combat", { waitUntil: "networkidle" });
+  const tools = async () => { if (await page.locator('.workspace-tools:not([open]) > summary').count()) await page.locator('.workspace-tools > summary').click(); };
+  await tools();
+  await page.getByRole("button", { name: "Load observed T96", exact: true }).click();
+  await page.goto(BASE + "#pve/rotations", { waitUntil: "networkidle" });
+  const skillName = await page.locator('tbody tr td[title]').first().getAttribute("title");
+  expect(skillName).toBeTruthy();
+  const profiles = await page.evaluate(skillName => {
+    const data = JSON.parse(localStorage.getItem("wwm_chars_v3"));
+    const source = data.chars.find(c => c.id === data.activeCharId).schemes.find(s => s.id === data.activeSchemeId);
+    const paths = ["bamboocut-dust", "bellstrike-umbra", "silkbind-jade"];
+    const clones = paths.map((path, index) => {
+      const scheme = structuredClone(source);
+      scheme.id = `team-scheme-${index}`;
+      scheme.combatConfig = { ...scheme.combatConfig, selectedBuild: path, food: index !== 1, bowSelect: index === 1 ? "aff" : "crit", selectedInnerWays: index === 2 ? ["blossom_barrage", "breaking_point"] : ["morale_chant", "breaking_point"], tierKey: index === 1 ? "custom" : "405|0.65b", customDef: 480, customRes: 0.8, starweaveDistance: "far", skillOverrides: {}, timingOverrides: {} };
+      if (index === 0) scheme.combatConfig.skillOverrides[skillName] = { outerRatio: 0, eleRatio: 0, fixed: 0 };
+      return { id: `team-char-${index}`, name: `Saved ${path}`, schemes: [scheme] };
+    });
+    const missing = structuredClone(clones[0]); missing.id = "team-missing"; missing.name = "Missing context"; delete missing.schemes[0].combatConfig;
+    const empty = structuredClone(clones[0]); empty.id = "team-empty"; empty.name = "Empty profile"; empty.schemes[0].gear = [];
+    const unknown = structuredClone(clones[0]); unknown.id = "team-unknown"; unknown.name = "Unknown target"; unknown.schemes[0].combatConfig.tierKey = "constructor";
+    data.chars.push(...clones, missing, empty, unknown);
+    localStorage.setItem("wwm_chars_v3", JSON.stringify(data));
+    return clones.map(c => ({ charId: c.id, profileId: `${c.id}:${c.schemes[0].id}` }));
+  }, skillName);
+  await page.reload({ waitUntil: "networkidle" });
+  const solos = [];
+  for (const profile of profiles) {
+    await tools();
+    await page.getByRole("combobox", { name: "Current role", exact: true }).selectOption(profile.charId);
+    await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("wwm_chars_v3")).activeCharId)).toBe(profile.charId);
+    await page.reload({ waitUntil: "networkidle" });
+    solos.push(await page.evaluate(() => window.__WWM_SCENARIO_DIAGNOSTIC__.headlineDps));
+  }
+  expect(solos.every(dps => Number.isFinite(dps) && dps > 0)).toBe(true);
+  await page.goto(BASE + "#pve/team", { waitUntil: "networkidle" });
+  for (let i = 0; i < profiles.length; i++) {
+    const profile = page.getByLabel(`Member ${i + 1} profile`, { exact: true });
+    await profile.selectOption(profiles[i].profileId);
+    const solo = await profile.locator("..").locator("span").last().innerText();
+    expect(Number(solo.replace(/[^0-9]/g, ""))).toBe(Math.round(solos[i]));
+  }
+  const displayed = async () => Number((await page.getByTestId("team-dps").innerText()).replace(/[^0-9]/g, ""));
+  await expect.poll(displayed).toBe(Math.round(solos.reduce((sum, dps) => sum + dps, 0)));
+  const before = await displayed();
+  const vulnerability = page.getByLabel(/Vulnerability \+8%/);
+  expect((await vulnerability.boundingBox()).width).toBeLessThanOrEqual(20);
+  await vulnerability.check();
+  await expect.poll(displayed).toBe(Math.round(solos.reduce((sum, dps) => sum + dps, 0) * 1.08));
+  await vulnerability.uncheck();
+  // Change the active profile to one outside the team: saved members keep their contexts.
+  await tools(); await page.getByRole("combobox", { name: "Current role", exact: true }).selectOption({ label: "Main Hero" });
+  await page.locator('.workspace-tools > summary').click();
+  await expect.poll(displayed).toBe(before);
+  await page.getByLabel("Member 4 profile", { exact: true }).selectOption(profiles[0].profileId);
+  await expect.poll(displayed).toBe(Math.round(solos.reduce((sum, dps) => sum + dps, solos[0])));
+  await page.getByLabel("Member 4 profile", { exact: true }).selectOption("");
+  await noOverflow(page);
+  fs.writeFileSync(`${qaDir}/team-saved-${width}.json`, JSON.stringify({ profiles, solos, displayed: before }, null, 2));
+  await page.screenshot({ path: `${qaDir}/team-saved-${width}.png` });
+  await page.getByTestId("team-dps").scrollIntoViewIfNeeded();
+  await page.screenshot({ path: `${qaDir}/team-metrics-${width}.png` });
+  await page.getByLabel("Member 1 path", { exact: true }).selectOption("bamboocut-wind");
+  await expect(page.getByTestId("team-dps")).toHaveText(/Unavailable/);
+  await expect(page.getByRole("status").filter({ hasText: "Path differs" })).toBeVisible();
+  await expect(page.locator(".team-timeline")).toHaveCount(0);
+  await page.getByLabel("Member 1 path", { exact: true }).selectOption("bamboocut-dust");
+  for (const [charId, message] of [["team-missing", "save its combat context"], ["team-empty", "No equipped gear"], ["team-unknown", "target tier is unavailable"]]) {
+    await page.getByLabel("Member 4 profile", { exact: true }).selectOption(`${charId}:team-scheme-0`);
+    await expect(page.getByTestId("team-dps")).toHaveText(/Unavailable/);
+    await expect(page.getByRole("status").filter({ hasText: message })).toBeVisible();
+  }
+  await page.getByTestId("team-dps").scrollIntoViewIfNeeded();
+  await page.screenshot({ path: `${qaDir}/team-unavailable-${width}.png` });
+  await noOverflow(page);
+  expect(errors).toEqual([]);
+});
 
 test("Workspace IA separates PvE, Arena and Guild War V2 while preserving deep-link context", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
