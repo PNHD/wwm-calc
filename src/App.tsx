@@ -5113,7 +5113,7 @@ export default function App() {
 
       </>}
       {/* ── HELP / HOW-TO MODAL ── */}
-      {shellRoute.workspace === "pve" && isHelpOpen && (
+      {isHelpOpen && (
         <div className="modal" onClick={() => setIsHelpOpen(false)}>
           <div className="modal-content modal-content-large" onClick={e => e.stopPropagation()} style={{ maxHeight: '88vh', display: 'flex', flexDirection: 'column' }}>
             <div className="modal-header">
@@ -5193,7 +5193,7 @@ export default function App() {
       )}
 
       {/* ── IMPORT FROM GAME MODAL ── */}
-      {shellRoute.workspace === "pve" && isGameImportOpen && (() => {
+      {isGameImportOpen && (() => {
         const bookmarklet = `javascript:(function(){var t=localStorage.getItem('h72na_data_token');if(!t){var c=document.cookie.match(/token=([^;]+)/);if(c)t=c[1]}if(!t){alert('Not logged in to the WWM dashboard.');return}var x=new XMLHttpRequest();x.open('GET','https://s2.easebar.com/78ae9d90792a3e9b/role/roleInfo',true);x.withCredentials=true;x.setRequestHeader('access_token',t);x.onload=function(){try{var j=JSON.parse(x.responseText);if(!j.data||!j.data.wearEquipsDetailed){alert('Could not load gear data.');return}navigator.clipboard.writeText(JSON.stringify(j.data)).then(function(){alert('Gear copied! Paste it into the calculator.')}).catch(function(){prompt('Copy this:',JSON.stringify(j.data))})}catch(e){alert('Error: '+e.message)}};x.send()})()`;
         const res = gameImportResult;
         return (
@@ -7635,7 +7635,7 @@ export default function App() {
         )}
 
       {/* ── EXPORT/IMPORT MODAL ── */}
-      {shellRoute.workspace === "pve" && isExportImportModalOpen && (
+      {isExportImportModalOpen && (
         <div className="modal" onClick={() => setIsExportImportModalOpen(false)}>
           <div className="modal-content modal-content-export" onClick={e => e.stopPropagation()} style={{ height: '80vh', display: 'flex', flexDirection: 'column' }}>
             <div className="modal-header">
@@ -7772,7 +7772,7 @@ export default function App() {
       )}
 
       {/* ── BATCH OCR MODAL ── */}
-      {shellRoute.workspace === "pve" && isBatchOcrModalOpen && (
+      {isBatchOcrModalOpen && (
         <div className="modal" onClick={() => setIsBatchOcrModalOpen(false)}>
           <div className="modal-content modal-content-large" onClick={e => e.stopPropagation()} style={{ width: '900px', maxWidth: '95%', height: '80vh', display: 'flex', flexDirection: 'column' }}>
             <div className="modal-header">

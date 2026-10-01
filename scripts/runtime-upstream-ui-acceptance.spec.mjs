@@ -29,6 +29,21 @@ test("leaving PvE unmounts and closes its gear editor", async ({ page }) => {
   await expect(page.getByPlaceholder("Enter gear name")).toHaveCount(0);
 });
 
+test("shared Tools open their dialogs from Guild War and Library without mounting PvE", async ({ page }) => {
+  for (const route of ["gvg/overview", "library/pve"]) {
+    await page.goto(base + "#" + route, { waitUntil: "networkidle" });
+    for (const name of ["Help", "Import game", "Scan gear", "Data"]) {
+      await tools(page);
+      await page.getByRole("button", { name, exact: true }).click();
+      const modal = page.locator(".modal-content:visible");
+      await expect(modal).toHaveCount(1);
+      await expect(page.locator(".arsenal-workspace")).toHaveCount(0);
+      await modal.locator(".close-btn").first().click();
+      await expect(modal).toHaveCount(0);
+    }
+  }
+});
+
 test("legacy default and current set/rotation share analytic expectation and seeded sampling error", async ({ page }) => {
   await page.addInitScript(value => {
     localStorage.setItem("wwm_chars_v3", JSON.stringify({ chars: [{ id: "legacy", name: "Legacy Main Hero", schemes: [{ id: "legacy-scheme", name: "Scheme 1", ...value }] }], activeCharId: "legacy", activeSchemeId: "legacy-scheme" }));
