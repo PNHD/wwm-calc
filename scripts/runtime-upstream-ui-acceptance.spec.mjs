@@ -38,7 +38,7 @@ for (const width of [390, 1440]) test(`Data import validates before replacement,
   }
   await input.press("Escape");
   await expect(dialog).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Data", exact: true })).toBeFocused();
+  await expect(page.locator(".workspace-tools > summary")).toBeFocused();
   await open();
   const imported = JSON.parse(before);
   const char = imported.chars.find(c => c.id === imported.activeCharId);
@@ -49,7 +49,8 @@ for (const width of [390, 1440]) test(`Data import validates before replacement,
   await input.fill(JSON.stringify(imported));
   await dialog.getByRole("button", { name: "Import", exact: true }).click();
   await expect(dialog).toHaveCount(0);
-  await expect(page.getByRole("combobox", { name: "Current profile", exact: true })).toContainText(char.name);
+  await tools(page);
+  await expect(page.getByRole("combobox", { name: "Current role", exact: true })).toContainText(char.name);
   let stored = await page.evaluate(() => JSON.parse(localStorage.getItem("wwm_chars_v3")));
   expect(stored.chars.find(c => c.id === stored.activeCharId).schemes.find(s => s.id === stored.activeSchemeId).combatConfig).toEqual(scheme.combatConfig);
   expect(await page.evaluate(() => localStorage.getItem("wwm_chars_v3__recovery_backup_v1"))).toBe(before);

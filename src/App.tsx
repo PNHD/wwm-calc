@@ -1426,7 +1426,8 @@ export default function App() {
 
   useEffect(() => {
     if (!isExportImportModalOpen) return;
-    const opener = document.activeElement as HTMLElement | null;
+    const active = document.activeElement as HTMLElement | null;
+    const opener = active?.closest(".workspace-tools")?.querySelector("summary") ?? active;
     setProfileImportError("");
     document.getElementById("export-import-textarea")?.focus();
     return () => { if (opener?.isConnected) opener.focus(); };
