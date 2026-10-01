@@ -33,10 +33,10 @@ test("Training Terrace is a recoverable, separate calibration domain", async ({ 
     };
   });
   expect(headerVisual.display).toBe("block");
-  expect(headerVisual.background).toBe("rgb(17, 22, 27)");
+  expect(headerVisual.background).toBe("rgb(20, 27, 43)");
   expect(headerVisual.titleColor).toBe("rgb(233, 230, 223)");
   expect(["none", "normal", '""']).toContain(headerVisual.titleBefore);
-  await page.getByRole("button", { name: "Arena" }).click();
+  await page.getByLabel("Open Arena workspace").click();
   await expect(page.getByTestId("arena-workspace")).toBeVisible();
   await page.goto(`${BASE}#training-terrace/overview`, { waitUntil: "domcontentloaded" });
   await expect(page.getByText(/Controlled observations, not ranked Arena truth/i)).toBeVisible();
@@ -47,11 +47,11 @@ test("Training Terrace is a recoverable, separate calibration domain", async ({ 
   await page.getByLabel("Arena context being investigated").fill("Perception Forest calibration");
   await page.getByLabel("Observed Attunement state").selectOption("OBSERVED_ACTIVE");
   await page.getByLabel("HP baseline").fill("100"); await page.getByLabel("HP after").fill("125");
-  await expect(page.getByText("+25 (+25.00%)")).toBeVisible(); await expect(page.getByText("CHANGED_OBSERVED")).toBeVisible();
+  await expect(page.getByText("+25 HP (+25.00%)")).toBeVisible(); await expect(page.getByText("CHANGED_OBSERVED")).toBeVisible();
   await page.getByLabel("Physical Attack baseline").fill("20"); await page.getByLabel("Physical Attack after").fill("20");
   await expect(page.getByText("UNCHANGED_OBSERVED")).toBeVisible(); await expect(page.locator(".terrace-row b").filter({ hasText: "NOT_MEASURED" }).first()).toBeVisible();
   await page.getByLabel("Precision baseline").fill("0"); await page.getByLabel("Precision after").fill("5");
-  await expect(page.getByText("+5 (relative UNKNOWN)")).toBeVisible();
+  await expect(page.getByText("+5 pp (relative UNKNOWN)")).toBeVisible();
   await expect(page.getByText(/Attunement is categorical: OBSERVED_ACTIVE/i)).toBeVisible(); await expect(page.getByText(/does not prove cross-mode applicability/i)).toBeVisible();
   await expect(page.getByTestId("training-terrace-summary")).toContainText("Next measure:");
   await page.getByRole("button", { name: "Record calibration snapshot" }).click();
@@ -98,7 +98,7 @@ test("Training Terrace is a recoverable, separate calibration domain", async ({ 
   await expect(page.getByLabel("HP baseline")).toHaveValue("");
   await expect(page.getByLabel("Target/context type")).toHaveValue("TRAINING_DUMMY");
   await expect(page.getByLabel("Observed Attunement state")).toHaveValue("UNKNOWN / NOT_MEASURED");
-  await expect(page.getByLabel("HP baseline").locator("..").getByText("NOT_MEASURED", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("HP baseline").locator("..").locator("..").getByText("NOT_MEASURED", { exact: true })).toBeVisible();
 
   await page.setViewportSize({ width: 1440, height: 900 }); await noOverflow(page); await page.screenshot({ path: "visual-qa/training-terrace-result.png", fullPage: true }); await page.setViewportSize({ width: 390, height: 844 }); await noOverflow(page); await page.screenshot({ path: "visual-qa/training-terrace-mobile-390.png", fullPage: true });
 

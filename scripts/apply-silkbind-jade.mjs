@@ -73,7 +73,7 @@ const scenarioState=`  const starweaveDistanceBonusPct = starweaveDistance === "
     breakingPoint: selectedInnerWays.includes("breaking_point"),
     bitterSeasons: selectedInnerWays.includes("bitter_seasons"),
   }), [jadeScenarioOverrides, selectedInnerWays]);`;
-app=replaceRequired(app,scenarioAnchor,scenarioState,'Jade scenario state');
+if (!app.includes('getCustomConfig()?.jadeScenarioOverrides')) app=replaceRequired(app,scenarioAnchor,scenarioState,'Jade scenario state');
 
 const helperAnchor='  // ponytail: single source for "gear combo → in-combat panel → rotation total".';
 const helperBlock=`  const jadeAttunementsForCombo = (combo: GearItem[]) => {

@@ -3,7 +3,7 @@ import fs from "node:fs";
 const path = "src/product/ProductShell.tsx";
 let source = fs.readFileSync(path, "utf8");
 const marker = 'aria-label="Open Arena workspace"';
-if (!source.includes(marker)) {
+if (!source.includes(marker) && !source.includes("<WorkspaceHeader ")) {
   const needle = `      <button type="button" className={workspace === "gvg" ? "is-active" : ""} aria-pressed={workspace === "gvg"} onClick={() => onChange("gvg")}>
         <Shield size={15} aria-hidden="true" /><span>Guild War</span>
       </button>`;

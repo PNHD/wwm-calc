@@ -108,7 +108,7 @@ assert.ok(combatWorkspace.includes("No interpolation is assumed between 4m and 8
 
 // Cinder is a real scenario toggle: the off state removes the observed Fire
 // sources, but never applies +4% as a blanket Physical multiplier.
-assert.ok(app.includes("const [cinderAsh, setCinderAsh] = useState(true)"));
+assert.ok(app.includes("const [cinderAsh, setCinderAsh] = useState(() => getCustomConfig()?.cinderAsh ?? true)"));
 assert.ok(app.includes('!["Divinecraft - Fire", "Fire - Solid Foundation"].includes(item.name)'));
 assert.ok(app.includes("onCinderAshChange={setCinderAsh}"));
 assert.ok(combatWorkspace.includes("never blanket +4% Physical damage"));

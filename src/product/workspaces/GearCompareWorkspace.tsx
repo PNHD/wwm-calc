@@ -56,6 +56,7 @@ interface Props {
   onSlotChange: (slot: string) => void;
   onEquip: (id: string) => void;
   onEdit: (id: string) => void;
+  onAdd: () => void;
 }
 
 const candidateDps = (row: GearCompareRow): number => row.modeledDps ?? row.score ?? 0;
@@ -64,7 +65,7 @@ const candidateDeltaDps = (row: GearCompareRow): number => row.deltaDps ?? 0;
 const formatDelta = (value: number, digits = 1) => `${value >= 0 ? "+" : ""}${value.toFixed(digits)}`;
 const confidenceLabel = (value?: GearCompareRow["confidence"]) => value ?? "MODELED";
 
-export default function GearCompareWorkspace({ rows, slots, activeSlot, pathKey, onSlotChange, onEquip, onEdit }: Props) {
+export default function GearCompareWorkspace({ rows, slots, activeSlot, pathKey, onSlotChange, onEquip, onEdit, onAdd }: Props) {
   const [query, setQuery] = useState("");
   const maturity = pathKey ? PATH_MODEL_MATURITY[pathKey] : undefined;
   const candidates = rows
@@ -93,6 +94,8 @@ export default function GearCompareWorkspace({ rows, slots, activeSlot, pathKey,
       <p><strong>{maturity.ownership} · {maturity.maturity}</strong> · Evidence: {maturity.evidence.join(" + ")}. {maturity.summary}</p>
     </details>}
 
+    {!candidates.some(row => !row.equipped) && <section className="compare-empty" role="status"><strong>No replacement candidate</strong><span>Add or import another item for this slot to compare it with your current gear.</span><button type="button" onClick={onAdd}>Add / import gear</button></section>}
+
     <section className="compare-grid compare-grid-v2" aria-label="Gear comparison candidates">
       {candidates.map((row, index) => {
         const modeledDps = candidateDps(row);
@@ -116,7 +119,7 @@ export default function GearCompareWorkspace({ rows, slots, activeSlot, pathKey,
               {deltaDps > 0 ? <TrendingUp size={17} aria-hidden="true" /> : deltaDps < 0 ? <TrendingDown size={17} aria-hidden="true" /> : <ArrowRightLeft size={17} aria-hidden="true" />}
               <span><small>VS CURRENT</small><strong>{row.equipped ? "Baseline" : `${formatDelta(deltaDps, 0)} DPS · ${formatDelta(deltaPct, 2)}%`}</strong></span>
             </div>
-            <span className={`compare-confidence is-${confidenceLabel(row.confidence).toLowerCase().replaceAll(" ", "-")}`}>{confidenceLabel(row.confidence)}</span>
+            <span className={`compare-confidence is-${confidenceLabel(row.confidence).toLowerCase().replaceAll(" ", "-")}`}>{row.equipped ? "CURRENT BASELINE" : confidenceLabel(row.confidence)}</span>
           </section>
 
           {!row.equipped && <section className="compare-why">

@@ -19,6 +19,7 @@ test("Global T96 observed runtime state exposes panel, complete-build comparison
   // Workspace V2 intentionally starts at a decision-oriented PvE overview.
   // Enter Gear before exercising the unchanged T96 runtime fixture.
   await page.getByLabel("PvE navigation").getByRole("button", { name: /^Gear/ }).click();
+  if (await page.locator('.workspace-tools:not([open]) > summary').count()) await page.locator('.workspace-tools > summary').click();
   const loadObserved = page.getByRole("button", { name: "Load observed T96", exact: true });
   await expect(loadObserved).toBeVisible();
   await loadObserved.click();
@@ -120,6 +121,7 @@ test("Advanced PvE tools remain reachable with current roll units and historical
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("http://127.0.0.1:4173/#pve/gear", { waitUntil: "networkidle" });
+  if (await page.locator('.workspace-tools:not([open]) > summary').count()) await page.locator('.workspace-tools > summary').click();
   await page.getByRole("button", { name: "Load observed T96", exact: true }).click();
   await page.locator(".workspace-advanced-nav summary").click();
   await page.getByRole("button", { name: /^Stat Priority/ }).click();
@@ -153,6 +155,7 @@ test("Invalid shell storage and routes fall back without losing build data", asy
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("http://127.0.0.1:4173/#pve/gear", { waitUntil: "networkidle" });
+  if (await page.locator('.workspace-tools:not([open]) > summary').count()) await page.locator('.workspace-tools > summary').click();
   await page.getByRole("button", { name: "Load observed T96", exact: true }).click();
   const builds = await page.evaluate(() => localStorage.getItem("wwm_chars_v3"));
   for (const raw of ["null", "[]", JSON.stringify({ workspace: "missing", pveView: "missing", gvgView: "missing" })]) {

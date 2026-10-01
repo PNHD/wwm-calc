@@ -47,7 +47,7 @@ patch("src/arena/ArenaWorkspace.tsx", "V1_MODEL_ABOUT_ARENA", [
   const next = source
     .replaceAll(`<div className="arena-patch"><span>GLOBAL</span><strong>2.0</strong></div>`, `<div className="arena-patch"><span>GLOBAL</span><strong>2.1</strong></div>`)
     .replaceAll(`<div className="arena-patch"><span>GLOBAL</span><strong>2.0 V2</strong></div>`, `<div className="arena-patch"><span>GLOBAL</span><strong>2.1 V2</strong></div>`);
-  if (!next.includes(`<div className="arena-patch"><span>GLOBAL</span><strong>2.1 V2</strong></div>`) || !next.includes("V1_MODEL_ABOUT_ARENA")) {
+  if ((!next.includes(`<div className="arena-patch"><span>GLOBAL</span><strong>2.1 V2</strong></div>`) && !next.includes('<WorkspaceHeader workspace="arena"')) || !next.includes("V1_MODEL_ABOUT_ARENA")) {
     throw new Error("V1 release UI current Arena patch contract missing");
   }
   fs.writeFileSync(path, eol === "\r\n" ? next.replace(/\n/g, "\r\n") : next, "utf8");

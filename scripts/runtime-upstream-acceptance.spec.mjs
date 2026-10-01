@@ -6,6 +6,7 @@ const dir = ".local-evidence/upstream-20261001";
 fs.mkdirSync(dir, { recursive: true });
 const observed = async page => {
   await page.goto(base + "#pve/gear", { waitUntil: "networkidle" });
+  if (await page.locator('.workspace-tools:not([open]) > summary').count()) await page.locator('.workspace-tools > summary').click();
   await page.getByRole("button", { name: "Load observed T96", exact: true }).click();
 };
 const hook = page => page.evaluate(() => window.__WWM_T96_RUNTIME_ACCEPTANCE__);

@@ -43,7 +43,7 @@ test("Workspace IA separates PvE, Arena and Guild War V2 while preserving deep-l
 test("Responsive visual QA covers PvE, Arena V2 and Guild War V2", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 }); await page.goto(BASE, { waitUntil: "networkidle" });
   await page.screenshot({ path: `${qaDir}/1440-pve-overview.png`, fullPage: true });
-  await pve(page, "Gear"); await expect(page.getByText("Inventory", { exact: true }).first()).toBeVisible(); await page.screenshot({ path: `${qaDir}/1440-pve-gear.png`, fullPage: true });
+  await pve(page, "Gear"); await expect(page.getByLabel("Empty gear inventory")).toBeVisible(); await page.screenshot({ path: `${qaDir}/1440-pve-gear.png`, fullPage: true });
   await pve(page, "Compare"); await expect(page.getByText("Current vs Candidate", { exact: true })).toBeVisible(); await page.screenshot({ path: `${qaDir}/1440-pve-compare.png`, fullPage: true });
   await pve(page, "Best Build"); await expect(page.getByText(/Best build/i).first()).toBeVisible(); await page.screenshot({ path: `${qaDir}/1440-pve-best-build.png`, fullPage: true });
 

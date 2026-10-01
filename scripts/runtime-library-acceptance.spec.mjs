@@ -304,7 +304,7 @@ test("Library responsive QA at 1440, 1024 and 390 with keyboard focus and no ove
   await expectNoHorizontalOverflow(page);
   await page.screenshot({ path: `${qaDir}/390-library-build-detail.png`, fullPage: true });
 
-  const libraryButton = page.getByRole("button", { name: /^Library$/ });
+  const libraryButton = page.locator(".workspace-header").getByRole("button", { name: "Library", exact: true });
   await libraryButton.focus();
   const style = await libraryButton.evaluate((element) => {
     const computed = getComputedStyle(element);

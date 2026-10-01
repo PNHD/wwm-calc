@@ -6,7 +6,7 @@ export const STORAGE_REGISTRY = Object.freeze([
   { key: "wwm_product_shell_v2", owner: "GLOBAL", schemaVersion: 2, migration: "tolerant shell defaults", fallback: "workspace shell defaults", size: "small", corruption: "reset shell only" },
   { key: "wwm_uid", owner: "GLOBAL", schemaVersion: 1, migration: "verified {uid,name,server} access-gate record", fallback: "prompt for Player ID again", size: "tiny", corruption: "UID gate only; never clear gameplay data" },
   { key: "wwm_selected_build", owner: "PVE", schemaVersion: 1, migration: "allowlisted build fallback", fallback: "Bamboocut-Dust", size: "tiny", corruption: "reset selected build only" },
-  { key: "wwm_chars_v3", owner: "PVE", schemaVersion: 3, migration: "sanitizeChars", fallback: "factory character/scheme", size: "medium-large", corruption: "bounded PvE recovery" },
+  { key: "wwm_chars_v3", owner: "PVE", schemaVersion: 3, migration: "sanitizeChars + optional per-scheme combat context", fallback: "empty character/scheme", size: "medium-large", corruption: "backup invalid combat context + bounded PvE recovery" },
   { key: "wwm_t91_custom_config", owner: "PVE", schemaVersion: 1, migration: "legacy tolerant", fallback: "factory panel defaults", size: "small", corruption: "ignore config only" },
   { key: "wwm_t91_profiles", owner: "PVE", schemaVersion: 1, migration: "legacy tolerant", fallback: "default profiles", size: "small", corruption: "ignore profiles only" },
   { key: "wwm_skill_overrides", owner: "PVE", schemaVersion: 1, migration: "legacy tolerant", fallback: "empty overrides", size: "small", corruption: "ignore overrides only" },

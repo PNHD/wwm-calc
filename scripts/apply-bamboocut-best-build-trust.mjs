@@ -18,13 +18,16 @@ const replaceRequired = (from, to, label) => {
   app = app.includes("\r\n") ? replaced.replace(/\n/g, "\r\n") : replaced;
 };
 
+const confidenceInput = 'panelCalibrated: selectedBuild === "bamboocut-dust" || Boolean(activeScheme?.baseOverride)';
+const confidenceTarget = 'panelCalibrated: activeScheme?.panelModelSource !== "EMPTY" && (selectedBuild === "bamboocut-dust" || Boolean(activeScheme?.baseOverride))';
+app = app.replaceAll(confidenceInput, confidenceTarget);
 const helperAnchor = `                          const pathMaturity = PATH_MODEL_MATURITY[selectedBuild];
                           // Best Build recommendation confidence`;
 const helperBlock = `                          const pathMaturity = PATH_MODEL_MATURITY[selectedBuild];
                           const bestBuildTrustSummary = (entry: { gear: GearItem[]; rate: number }) => {
                             const dps = entry.rate / 100 * baselineScore / getRotationTimeForBuild(selectedBuild);
                             const deltaPct = rotationStats.dps > 0 ? (dps - rotationStats.dps) / rotationStats.dps * 100 : 0;
-                            const confidence = recommendationConfidence({ pathKey: selectedBuild, deltaPct, panelCalibrated: selectedBuild === "bamboocut-dust" || Boolean(activeScheme?.baseOverride), materialUnknowns: selectedBuild === "bamboocut-dust" ? BAMBOOCUT_MODEL_UNKNOWNS : [] });
+                            const confidence = recommendationConfidence({ pathKey: selectedBuild, deltaPct, panelCalibrated: activeScheme?.panelModelSource !== "EMPTY" && (selectedBuild === "bamboocut-dust" || Boolean(activeScheme?.baseOverride)), materialUnknowns: selectedBuild === "bamboocut-dust" ? BAMBOOCUT_MODEL_UNKNOWNS : [] });
                             const sets = detectSet4pc(entry.gear);
                             const setLabel = \`Weapon \${getSetName(sets.weaponSet)} · Armor \${getSetName(sets.armorSet)}\`;
                             const attunements = entry.gear.map(attunementSummary).filter((value) => value !== "None");

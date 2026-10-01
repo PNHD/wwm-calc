@@ -1,7 +1,7 @@
 .model-about { position: relative; }
 .model-about > summary { list-style: none; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; }
 .model-about > summary::-webkit-details-marker { display: none; }
-.model-about-popover { position: absolute; z-index: 80; right: 0; top: calc(100% + 10px); width: min(360px, calc(100vw - 24px)); padding: 16px; border: 1px solid rgba(148,163,184,.25); border-radius: 14px; background: var(--workspace-surface, #111827); box-shadow: 0 18px 50px rgba(0,0,0,.35); text-align: left; }
+.model-about-popover { position: fixed; z-index: 650; right: 12px; top: calc(var(--workspace-header-height, 62px) + 8px); width: min(420px, calc(100vw - 24px)); max-height: calc(100dvh - var(--workspace-header-height, 62px) - 24px); overflow: auto; padding: 16px; border: 1px solid rgba(148,163,184,.25); border-radius: 14px; background: var(--workspace-surface, #111827); box-shadow: 0 18px 50px rgba(0,0,0,.35); text-align: left; }
 .model-about-heading { display: flex; gap: 9px; align-items: center; margin-bottom: 12px; }
 .model-about-heading div { display: grid; gap: 2px; }
 .model-about-heading small, .model-about-popover p, .model-about-popover dd { color: #94a3b8; }

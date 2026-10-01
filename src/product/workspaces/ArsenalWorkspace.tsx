@@ -65,7 +65,6 @@ export default function ArsenalWorkspace({
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [rerollPath, setRerollPath] = useState("build");
   const equipped = slots
     .filter((slot) => slot.key !== "ALL")
     .map((slot) => ({ ...slot, item: rows.find((row) => row.slot === slot.key && row.equipped) }));
@@ -90,8 +89,7 @@ export default function ArsenalWorkspace({
     });
     return index < 0 ? priorities.length + 1 : index;
   };
-  const weakestSub = advisedItem?.subs.filter((sub) => !sub.tuned).sort((a, b) => rank(b.type) - rank(a.type))[0];
-  const bestMissing = priorities.find((priority) => !advisedItem?.subs.some((sub) => rank(sub.type) === priorities.indexOf(priority)));
+  const bestMissing = priorities.find((priority) => !selectedItem?.subs.some((sub) => rank(sub.type) === priorities.indexOf(priority)));
   useEffect(() => setPage(1), [activeSlot, query, sortBy]);
   useEffect(() => { if (page > pageCount) setPage(pageCount); }, [page, pageCount]);
 
@@ -109,7 +107,7 @@ export default function ArsenalWorkspace({
       </header>
 
       {rows.length === 0 && <section className="arsenal-empty arsenal-empty-primary" aria-label="Empty gear inventory">
-        <strong>No gear yet</strong><span>Add your first gear piece to calculate and compare your build.</span><button type="button" onClick={onAdd}><Plus size={14} aria-hidden="true" /> Add gear</button>
+        <strong>No gear yet</strong><span>Use Add gear above to enter your first piece. Damage is unavailable until gear is equipped.</span>
       </section>}
 
       <section className="arsenal-loadout" aria-label="Equipped gear">
@@ -134,7 +132,7 @@ export default function ArsenalWorkspace({
         <div className="gear-inspector-layout">
           <div className="gear-inspector-advice"><small>{selectedItem.sourceLabel ?? "Gear score"}</small><strong>{selectedItem.usefulLines ?? 0}/{selectedItem.recognizedLines ?? selectedItem.subs.length} useful verified lines</strong><span>Modeled contribution {(selectedItem.modeledContribution ?? 0).toFixed(1)}% · Build fit {(selectedItem.buildFit ?? 0).toFixed(1)}% · {selectedItem.rollQualityAvailable === false ? "Roll diagnostic N/A" : `Roll diagnostic ${(selectedItem.rollQuality ?? 0).toFixed(1)}%`}</span>{selectedItem.warnings?.map((warning) => <span key={warning}>{warning}</span>)}</div>
           <div className="gear-inspector-stats">{selectedItem.subs.slice(0, 6).map((sub, index) => <span key={`${sub.type}-${index}`}><i>{index + 1}</i><strong>{sub.type}{sub.tuned ? " (tuned)" : ""}</strong><b>{sub.value}</b></span>)}</div>
-          <div className="gear-inspector-advice"><small>Reroll calculator</small><label><span>Path</span><select value={rerollPath} onChange={(event) => setRerollPath(event.target.value)}><option value="build">{selectedItem.slotLabel} path</option><option value="bamboocut">Bamboocut path</option><option value="general">General path</option></select></label><strong>{weakestSub && bestMissing ? `${weakestSub.type} -> ${bestMissing.name}` : "No verified upgrade found"}</strong><span>{bestMissing ? `About +${Math.round(bestMissing.dps).toLocaleString()} DPS for one Global max roll.` : "Current lines already cover the ranked priorities."}</span></div>
+          <div className="gear-inspector-advice"><small>Stat increment preview</small><strong>{bestMissing?.name ?? "Current lines cover the ranked stats"}</strong><span>{bestMissing ? `Adding the displayed reference increment to the current build models +${Math.round(bestMissing.dps).toLocaleString()} DPS; this is not a replacement delta.` : "Open Stat Priority for the complete scenario."}</span><span>Legal weighted retune pools are unavailable. No success probability or attempt budget is assumed.</span></div>
           <div className="gear-inspector-actions">
             <button type="button" onClick={() => onEdit(selectedItem.id)}>Edit 6 stat lines</button>
             <button type="button" onClick={() => onEquip(selectedItem.id)}>{selectedItem.equipped ? "Unequip" : "Equip this gear"}</button>
@@ -144,7 +142,7 @@ export default function ArsenalWorkspace({
         </div>
       </section>}
 
-      <section className="arsenal-analysis" aria-label="Equipped gear analysis">
+      {rows.length > 0 && <section className="arsenal-analysis" aria-label="Equipped gear analysis">
         <div className="product-section-heading">
           <div><h2>Equipped gear analysis</h2><p>DPS lost when each equipped piece is removed from the current build.</p></div>
           <strong>{Math.round(modeledDps).toLocaleString()} modeled DPS</strong>
@@ -161,16 +159,15 @@ export default function ArsenalWorkspace({
           </div>
           <div className="arsenal-analysis-actions">
             <div><small>Weakest slot</small><strong>{analysis.at(-1)?.slot ?? "-"}</strong><span>{analysis.at(-1)?.score.toFixed(2) ?? "0.00"} T96 gear score</span></div>
-            {advisedItem && <div><small>Reroll advisor</small><strong>{advisedItem.name}</strong><span>{weakestSub && bestMissing ? `${weakestSub.type} -> ${bestMissing.name} (about +${Math.round(bestMissing.dps).toLocaleString()} DPS/roll)` : "No clear reroll upgrade from current priority data."}</span></div>}
             {advisedItem && <button type="button" onClick={() => onEdit(advisedItem.id)}>Edit selected gear</button>}
             <button type="button" onClick={onOpenCompare}>Compare one replacement</button>
             <button type="button" onClick={onOpenTransmute}>Retune advice</button>
             <button type="button" className="is-primary" onClick={onOpenOptimizer}>Optimize full inventory</button>
           </div>
         </div>
-      </section>
+      </section>}
 
-      <section className="arsenal-inventory" aria-label="Inventory">
+      {rows.length > 0 && <section className="arsenal-inventory" aria-label="Inventory">
         <div className="product-section-heading">
           <div><h2>Inventory</h2><p>{rows.length} saved pieces · filter by slot, name, set, or stat.</p></div>
         </div>
@@ -226,7 +223,7 @@ export default function ArsenalWorkspace({
           ))}
         </div>
         {pageCount > 1 && <nav className="arsenal-pagination" aria-label="Gear pages"><button type="button" aria-label="Previous page" disabled={page === 1} onClick={() => setPage((value) => value - 1)}><ChevronLeft size={17} /></button><span>Page {page} / {pageCount}</span><button type="button" aria-label="Next page" disabled={page === pageCount} onClick={() => setPage((value) => value + 1)}><ChevronRight size={17} /></button></nav>}
-      </section>
+      </section>}
     </main>
   );
 }

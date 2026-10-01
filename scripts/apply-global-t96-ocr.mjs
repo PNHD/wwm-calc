@@ -177,7 +177,7 @@ select = replaceRequired(
       setPos({ top: r.bottom + 2, left, width });`,
   "select viewport position",
 );
-select = replaceRequired(
+if (!select.includes('title={selectedLabel || placeholder}')) select = replaceRequired(
   select,
   '        placeholder={placeholder}\n        onChange={e => setSearch(e.target.value)}',
   '        placeholder={placeholder}\n        title={selectedLabel || placeholder}\n        onChange={e => setSearch(e.target.value)}',

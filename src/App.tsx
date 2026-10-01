@@ -41,7 +41,7 @@ import { simulateRotation } from "./utils/timelineEngine";
 import { evaluateScenario } from "./utils/scenarioEvaluation";
 import { simulateTimeline, buildTimelineBuffs } from "./utils/rotationTimeline";
 import { previewSkill } from "./utils/skillPreview";
-import { cloneBoundedJson, isPlainRecord, readJsonStorage } from "./product/storage-registry.js";
+import { backupDomainValue, cloneBoundedJson, isPlainRecord, readJsonStorage } from "./product/storage-registry.js";
 import { INNER_WAYS } from "./data/innerways";
 import { INNER_WAY_IMAGES, WEAPON_IMAGES_G8, MYSTIC_SKILL_IMAGES, ARMOR_SET_IMAGES } from "./data/game8Images";
 import { WWM_DATA } from "./data/wwmData";
@@ -322,6 +322,30 @@ export interface GearItem {
   weaponType?: string;
 }
 
+type StoredCombatConfig = {
+  selectedBuild: string; tierKey: string; selectedInnerWays: string[]; innerWayTiers: Record<string, number>;
+  food: boolean; bowSelect: string; datang: boolean; yishui: boolean; yishuiPen: boolean; qianying: boolean;
+  cinderAsh: boolean; starweaveDistance: "near" | "far"; customDef: number; customRes: number;
+  skillOverrides: Record<string, Partial<SkillDefinition>>;
+  timingOverrides: Record<string, Partial<{ castTime: number; hits: number; cooldown: number; duration: number }>>;
+  editedRotation: RotationItem[] | null; activeRotationPresetId: string;
+  jadeObjective: (typeof JADE_OBJECTIVES)[keyof typeof JADE_OBJECTIVES]; jadeScenarioOverrides: Record<string, any>;
+};
+const validCombatConfig = (value: unknown): value is StoredCombatConfig => {
+  if (!isPlainRecord(value)) return false;
+  const v = value as Record<string, any>;
+  return ["selectedBuild", "tierKey", "bowSelect", "activeRotationPresetId"].every(key => typeof v[key] === "string")
+  && Object.hasOwn(BUILD_PROFILES, v.selectedBuild)
+  && ["food", "datang", "yishui", "yishuiPen", "qianying", "cinderAsh"].every(key => typeof v[key] === "boolean")
+  && ["customDef", "customRes"].every(key => typeof v[key] === "number" && Number.isFinite(v[key]))
+  && (v.starweaveDistance === "near" || v.starweaveDistance === "far")
+  && Array.isArray(v.selectedInnerWays) && v.selectedInnerWays.length <= 4 && v.selectedInnerWays.every(id => typeof id === "string")
+  && isPlainRecord(v.innerWayTiers) && Object.values(v.innerWayTiers).every(tier => Number.isInteger(tier) && Number(tier) >= 1 && Number(tier) <= 6)
+  && ["skillOverrides", "timingOverrides"].every(key => isPlainRecord(v[key]) && Object.values(v[key]).every(row => isPlainRecord(row) && Object.values(row).every(field => typeof field === "number" ? Number.isFinite(field) : typeof field === "string" && field.length <= 120)))
+  && Object.values(JADE_OBJECTIVES).includes(v.jadeObjective) && isPlainRecord(v.jadeScenarioOverrides) && Object.values(v.jadeScenarioOverrides).every(field => typeof field === "number" ? Number.isFinite(field) : typeof field === "string" || typeof field === "boolean")
+  && (v.editedRotation === null || Array.isArray(v.editedRotation) && v.editedRotation.length <= 100 && v.editedRotation.every(row => isPlainRecord(row) && typeof row.name === "string" && typeof row.count === "number" && Number.isFinite(row.count) && row.count >= 0 && row.count <= 10000));
+};
+
 export interface Scheme {
   id: string;
   name: string;
@@ -332,6 +356,8 @@ export interface Scheme {
   // reference BASE_PANEL_NO_GEAR, so the panel matches the player's real in-game
   // Combat Attributes (their level/breakthrough/talent base differs from the ref).
   baseOverride?: Partial<PanelStats>;
+  panelModelSource?: "EMPTY";
+  combatConfig?: StoredCombatConfig;
   /** Version of the gear-to-panel projection used to derive baseOverride. */
   panelModelVersion?: number;
 }
@@ -874,6 +900,9 @@ const sumGearSubs = (gear: GearItem[], buildKey = "bamboocut-dust"): Partial<Rec
 // Back-calculated "no-gear" base panel: INITIAL_PANEL minus the contribution of
 // DEFAULT_GEAR's sub-stats, for every stat that SUB_MAP can derive from gear.
 // By construction, computeGearPanel(DEFAULT_GEAR) === INITIAL_PANEL exactly.
+const emptyPanel = (): PanelStats => Object.fromEntries(Object.entries(INITIAL_PANEL).map(([key, value]) => [key, typeof value === "number" ? 0 : key === "set" ? "none" : value])) as unknown as PanelStats;
+const emptyScheme = (id: string, name: string): Scheme => ({ id, name, panel: emptyPanel(), gear: [], baseOverride: emptyPanel(), panelModelVersion: PANEL_MODEL_VERSION, panelModelSource: "EMPTY" });
+
 const BASE_PANEL_NO_GEAR: PanelStats = (() => {
   const defaultSum = sumGearSubs(DEFAULT_GEAR);
   const base = { ...INITIAL_PANEL };
@@ -1305,15 +1334,12 @@ const ARMOR_SETS = {
 
 const getCustomConfig = () => {
   if (typeof window === "undefined") return null;
-  const cached = localStorage.getItem("wwm_t91_custom_config");
-  if (cached) {
-    try {
-      return JSON.parse(cached);
-    } catch (e) {
-      console.error(e);
-    }
-  }
-  return null;
+  try {
+    const defaults = JSON.parse(localStorage.getItem("wwm_t91_custom_config") || "null");
+    const saved = JSON.parse(localStorage.getItem("wwm_chars_v3") || "null");
+    const scheme = saved?.chars?.find((char: Character) => char.id === saved.activeCharId)?.schemes?.find((item: Scheme) => item.id === saved.activeSchemeId);
+    return validCombatConfig(scheme?.combatConfig) ? { ...defaults, ...scheme.combatConfig, panel: scheme.panel } : defaults;
+  } catch { return null; }
 };
 
 export default function App() {
@@ -1328,7 +1354,7 @@ export default function App() {
   });
   const [panel, setPanel] = useState<PanelStats>(() => {
     const config = getCustomConfig();
-    return config?.panel ?? INITIAL_PANEL;
+    return config?.panel ?? emptyPanel();
   });
 
   // Panel stats are ALWAYS computed from equipped gear (like spongem).
@@ -1345,15 +1371,17 @@ export default function App() {
   const [advPanelOpen, setAdvPanelOpen] = useState<boolean>(false);
   const [isGradModalOpen, setIsGradModalOpen] = useState<boolean>(false);
   const [skillOverrides, setSkillOverrides] = useState<Record<string, Partial<SkillDefinition>>>(() => {
+    if (getCustomConfig()?.skillOverrides) return getCustomConfig().skillOverrides;
     try { return JSON.parse(localStorage.getItem("wwm_skill_overrides") || "{}"); } catch { return {}; }
   });
   const [timingOverrides, setTimingOverrides] = useState<Record<string, Partial<{ castTime: number; hits: number; cooldown: number; duration: number }>>>(() => {
+    if (getCustomConfig()?.timingOverrides) return getCustomConfig().timingOverrides;
     try { return JSON.parse(localStorage.getItem("wwm_timing_overrides") || "{}"); } catch { return {}; }
   });
   const [rotationPresets, setRotationPresets] = useState<Record<string, RotationPreset[]>>(() => {
     return readJsonStorage("wwm_rotation_presets", { fallback: {}, ownerLabel: "rotation presets", maxChars: 500000, validate: value => !isPlainRecord(value) || Object.values(value).some(list => !Array.isArray(list) || list.length > 100 || list.some(p => !isPlainRecord(p) || typeof p.name !== "string" || !Array.isArray(p.rotation))) ? "Invalid preset container; original saved data was backed up." : "" }).value as Record<string, RotationPreset[]>;
   });
-  const [activeRotationPresetId, setActiveRotationPresetId] = useState<string>("");
+  const [activeRotationPresetId, setActiveRotationPresetId] = useState<string>(() => getCustomConfig()?.activeRotationPresetId ?? "");
   const [gradModalActiveTab, setGradModalActiveTab] = useState<string>("manual");
   const [isDmgStatsOpen, setIsDmgStatsOpen] = useState<boolean>(false);
   const [isSimOpen, setIsSimOpen] = useState<boolean>(false);
@@ -1367,6 +1395,7 @@ export default function App() {
   const bestBuildGeneration = useRef(0);
   const [rotationImportPreview, setRotationImportPreview] = useState<RotationPreset | null>(null);
   const [rotationImportError, setRotationImportError] = useState("");
+  const [profileRecoveryMessage, setProfileRecoveryMessage] = useState("");
   const [isGameImportOpen, setIsGameImportOpen] = useState<boolean>(false);
   const [isHelpOpen, setIsHelpOpen] = useState<boolean>(false);
   const [gameImportRaw, setGameImportRaw] = useState<string>("");
@@ -1486,7 +1515,7 @@ export default function App() {
   // Multi-build, Inner Ways, and Custom Rotation States
   const [selectedBuild, setSelectedBuild] = useState<string>(() => {
     if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("wwm_selected_build");
+      const stored = getCustomConfig()?.selectedBuild ?? localStorage.getItem("wwm_selected_build");
       if (stored) return stored;
     }
     return "bamboocut-dust";
@@ -1551,8 +1580,7 @@ export default function App() {
             {
               id: schemeId,
               name: "Scheme 1",
-              panel: INITIAL_PANEL,
-              gear: DEFAULT_GEAR
+              ...emptyScheme(schemeId, "Scheme 1")
             }
           ]
         }
@@ -1579,30 +1607,11 @@ export default function App() {
     }
   }, [charsData.activeCharId, charsData.activeSchemeId]);
 
-  // Persist manual panel edits back into the active scheme so they survive reloads
-  // (critical for shared/public use — each browser keeps its own profiles).
-  // Skip the very first run so the initial-mount panel never clobbers a saved scheme
-  // before the load effect above has applied it.
-  const panelSaveSkip = useRef(true);
-  useEffect(() => {
-    if (panelSaveSkip.current) { panelSaveSkip.current = false; return; }
-    setCharsData(prev => {
-      const updated = {
-        ...prev,
-        chars: prev.chars.map(c => c.id === prev.activeCharId ? {
-          ...c,
-          schemes: c.schemes.map(s => s.id === prev.activeSchemeId ? { ...s, panel } : s),
-        } : c),
-      };
-      try { localStorage.setItem("wwm_chars_v3", JSON.stringify(updated)); } catch (e) { /* quota */ }
-      return updated;
-    });
-  }, [panel]);
 
   const getActiveGear = (): GearItem[] => {
     // Bow/Ring is no longer an addable gear slot (handled via the Bow attribute
     // dropdown). Drop any legacy Bow/Ring items saved in older data.
-    return (activeScheme?.gear ?? DEFAULT_GEAR).filter(it => it.slot !== "Bow/Ring");
+    return (activeScheme?.gear ?? []).filter(it => it.slot !== "Bow/Ring");
   };
 
   const saveActiveGear = (newGear: GearItem[]) => {
@@ -2250,13 +2259,13 @@ export default function App() {
     const config = getCustomConfig();
     return config?.food ?? true;
   });
-  const [cinderAsh, setCinderAsh] = useState(true);
-  const [starweaveDistance, setStarweaveDistance] = useState<"near" | "far">("near");
+  const [cinderAsh, setCinderAsh] = useState(() => getCustomConfig()?.cinderAsh ?? true);
+  const [starweaveDistance, setStarweaveDistance] = useState<"near" | "far">(() => getCustomConfig()?.starweaveDistance ?? "near");
   // Current committed Global tooltip: distance component begins above 4m and
   // reaches its explicit +1% maximum at 8m. Do not invent interpolation.
   const starweaveDistanceBonusPct = starweaveDistance === "far" ? 1 : 0;
-  const [jadeObjective, setJadeObjective] = useState<(typeof JADE_OBJECTIVES)[keyof typeof JADE_OBJECTIVES]>(JADE_OBJECTIVES.EXPECTED_DPS);
-  const [jadeScenarioOverrides, setJadeScenarioOverrides] = useState<Record<string, any>>({
+  const [jadeObjective, setJadeObjective] = useState<(typeof JADE_OBJECTIVES)[keyof typeof JADE_OBJECTIVES]>(() => getCustomConfig()?.jadeObjective ?? JADE_OBJECTIVES.EXPECTED_DPS);
+  const [jadeScenarioOverrides, setJadeScenarioOverrides] = useState<Record<string, any>>(() => getCustomConfig()?.jadeScenarioOverrides ?? {
     duration: 60, strategy: "ground-jade", opening: "qhlq", firstQiBreakTime: 24,
     qiBreakDuration: 8, subsequentQiBreakInterval: 35, bossTakesQiDamage: true,
     perfectDodge: false, jadeCount: 1, lingerBridging: false, bitterSuppliedByTeammate: false,
@@ -2644,7 +2653,7 @@ export default function App() {
   // (which reads basePanel) but left scheme.panel stale — so saves/exports
   // showed old numbers that didn't match the in-game panel. Skip if unchanged.
   useEffect(() => {
-    if (!autoGearPanel || !activeScheme) return;
+    if (!autoGearPanel || !activeScheme || combatScheme.current !== activeScheme.id || (loadingCombatConfig.current && loadingCombatConfig.current !== combatConfigJson)) return;
     const cur = activeScheme.panel;
     let same = true;
     for (const k of Object.keys(basePanel) as (keyof PanelStats)[]) {
@@ -2652,6 +2661,7 @@ export default function App() {
     }
     if (same) return;
     setCharsData(prev => {
+      if (prev.activeSchemeId !== activeScheme.id) return prev;
       const updated = {
         ...prev,
         chars: prev.chars.map(c => c.id === prev.activeCharId ? {
@@ -2696,7 +2706,7 @@ export default function App() {
     });
     setCharsData(prev => {
       const updated = { ...prev, chars: prev.chars.map(c => c.id === prev.activeCharId ? {
-        ...c, schemes: c.schemes.map(s => s.id === prev.activeSchemeId ? { ...s, baseOverride: override, panelModelVersion: PANEL_MODEL_VERSION } : s),
+        ...c, schemes: c.schemes.map(s => s.id === prev.activeSchemeId ? { ...s, baseOverride: override, panelModelVersion: PANEL_MODEL_VERSION, panelModelSource: undefined } : s),
       } : c) };
       localStorage.setItem("wwm_chars_v3", JSON.stringify(updated));
       return updated;
@@ -2859,6 +2869,7 @@ export default function App() {
   // One combat evaluator for the headline, Compare, Best Build and Priority.
   // The historical graduation denominator remains the accepted fixed reference.
   function evaluateCombatPanel(p: PanelStats, combo?: GearItem[], diagnostics?: { excludedBuffIds?: string[]; disableStarweave?: boolean }, customRotation?: RotationItem[]) {
+    if (!(combo ?? getActiveGear().filter(item => isItemEquipped(item, getActiveGear()))).length) return { total: 0, dps: 0, breakdown: { crit: 0, aff: 0, normal: 0, abrasion: 0 }, samples: [], perSkill: [] };
     if (selectedBuild === "silkbind-jade") {
       const result = evaluateSilkbindJadeCached(p, jadeScenarioForCombo(combo ?? getActiveGear().filter(item => isItemEquipped(item, getActiveGear()))), jadeObjective, priceJadeEvent);
       return { total: result.totalDamage, dps: result.dps, breakdown: { crit: 0, aff: 0, normal: result.totalDamage, abrasion: 0 }, samples: [], perSkill: result.perSkill.map((row: any) => ({ name: row.name, dmg: row.damage, casts: row.events })) };
@@ -2902,12 +2913,51 @@ export default function App() {
   // engine (simulateRotation wraps the verified calcSkill — the per-hit formula is
   // untouched). Re-added as an EDITOR per user request; see CLAUDE.md #7 (distinct
   // from the old Swap/Rotation Sim that was removed).
-  const [editedRotation, setEditedRotation] = useState<RotationItem[] | null>(null);
+  const [editedRotation, setEditedRotation] = useState<RotationItem[] | null>(() => getCustomConfig()?.editedRotation ?? null);
   // Edits are build-specific — discard them when the build changes.
-  useEffect(() => { setEditedRotation(null); }, [selectedBuild]);
+  const previousRotationBuild = useRef(selectedBuild);
+  useEffect(() => { if (previousRotationBuild.current !== selectedBuild) { previousRotationBuild.current = selectedBuild; setEditedRotation(null); setActiveRotationPresetId(""); } }, [selectedBuild]);
   useEffect(() => { localStorage.setItem("wwm_skill_overrides", JSON.stringify(skillOverrides)); }, [skillOverrides]);
   useEffect(() => { localStorage.setItem("wwm_timing_overrides", JSON.stringify(timingOverrides)); }, [timingOverrides]);
   useEffect(() => { try { localStorage.setItem("wwm_rotation_presets", JSON.stringify(rotationPresets)); } catch { setRotationImportError("Preset storage is full/unavailable. Export your rotation before leaving."); } }, [rotationPresets]);
+
+  const combatConfig: StoredCombatConfig = { selectedBuild, tierKey, selectedInnerWays, innerWayTiers, food, bowSelect, datang, yishui, yishuiPen, qianying, cinderAsh, starweaveDistance, customDef, customRes, skillOverrides, timingOverrides, editedRotation, activeRotationPresetId, jadeObjective, jadeScenarioOverrides };
+  const combatConfigJson = JSON.stringify(combatConfig);
+  const combatScheme = useRef(activeScheme?.id);
+  const loadingCombatConfig = useRef<string | null>(null);
+  useEffect(() => {
+    if (combatScheme.current === activeScheme?.id) return;
+    combatScheme.current = activeScheme?.id;
+    setProfileRecoveryMessage("");
+    const saved = activeScheme?.combatConfig;
+    if (!validCombatConfig(saved)) return; // Legacy schemes retain their existing configuration.
+    loadingCombatConfig.current = JSON.stringify(saved);
+    setSelectedBuild(saved.selectedBuild); setTierKey(saved.tierKey);
+    setSelectedInnerWays(saved.selectedInnerWays); setInnerWayTiers(saved.innerWayTiers);
+    setFood(saved.food); setBowSelect(saved.bowSelect); setDatang(saved.datang); setYishui(saved.yishui);
+    setYishuiPen(saved.yishuiPen); setQianying(saved.qianying); setCinderAsh(saved.cinderAsh);
+    setStarweaveDistance(saved.starweaveDistance); setCustomDef(saved.customDef); setCustomRes(saved.customRes);
+    setSkillOverrides(saved.skillOverrides); setTimingOverrides(saved.timingOverrides);
+    setEditedRotation(saved.editedRotation); setActiveRotationPresetId(saved.activeRotationPresetId);
+    setJadeObjective(saved.jadeObjective); setJadeScenarioOverrides(saved.jadeScenarioOverrides);
+    previousRotationBuild.current = saved.selectedBuild;
+  }, [activeScheme?.id]);
+  useEffect(() => {
+    if (!activeScheme) return;
+    if (loadingCombatConfig.current && loadingCombatConfig.current !== combatConfigJson) return;
+    loadingCombatConfig.current = null;
+    if (JSON.stringify(activeScheme.combatConfig) === combatConfigJson) return;
+    setCharsData(previous => {
+      if (previous.activeSchemeId !== activeScheme.id) return previous;
+      if (activeScheme.combatConfig && !validCombatConfig(activeScheme.combatConfig)) {
+        if (!backupDomainValue("wwm_chars_v3", JSON.stringify(previous))) { setProfileRecoveryMessage("Invalid combat configuration could not be backed up. Original data was retained; export it before changing this profile."); return previous; }
+        setProfileRecoveryMessage("Invalid combat configuration was backed up; this profile uses the current controls. Export your data to retain the original.");
+      }
+      const next = { ...previous, chars: previous.chars.map(char => char.id === previous.activeCharId ? { ...char, schemes: char.schemes.map(scheme => scheme.id === previous.activeSchemeId ? { ...scheme, combatConfig } : scheme) } : char) };
+      try { localStorage.setItem("wwm_chars_v3", JSON.stringify(next)); } catch { setRotationImportError("Profile storage is full/unavailable. Export your data before leaving."); }
+      return next;
+    });
+  }, [combatConfigJson, activeScheme?.id]);
 
   // Standard Rotation Guide: the reference (wherewindsmath) canonical ability
   // sequences per build/path — read-only execution guide (NOT used for DPS, since
@@ -3157,9 +3207,10 @@ export default function App() {
     return [...RING_OPTS, { key: "none", label: "None" }].map((option) => { const dps = comboInCombat(equipped, option.key === "none" ? "" : option.key).total / duration; return { ...option, dps, delta: dps - current, active: option.key === bowSelect }; });
   }, [activeScheme?.gear, panel, food, bowSelect, iwStats, activeTier, datang, yishui, selectedBuild, jadeObjective, jadeScenario, skillOverrides, timingOverrides, cinderAsh, starweaveDistanceBonusPct, selectedInnerWays, innerWayTiers]);
   const armorSetCompare = useMemo(() => {
-    const current = (adjustedPanel.set as string) || "none"; const duration = getRotationTimeForBuild(selectedBuild);
-    const sets = ["stars", "jadeware", "ivorybloom", "rainwhisper", "eaglerise", "swallowreturn", "shakenhill", "swallowcall", "mistwillow", "none"];
+    const current = (adjustedPanel.set as string) || "none";
+    const sets = [...new Set([...WEAPON_SET_KEYS, current])];
     const score = (key: string) => {
+      if (key === current) return evaluateCombatPanel(adjustedPanel).dps;
       const candidate: any = { ...adjustedPanel, set: key, weaponStars: key === "stars" };
       const remove = (ARMOR_SETS as any)[current]?.stat2pc || {}; const add = (ARMOR_SETS as any)[key]?.stat2pc || {};
       for (const stat in remove) candidate[stat] = (candidate[stat] || 0) - remove[stat]; for (const stat in add) candidate[stat] = (candidate[stat] || 0) + add[stat];
@@ -3675,7 +3726,7 @@ export default function App() {
     }
 
     const confidence = recommendationConfidence({ pathKey: selectedBuild, deltaPct,
-      panelCalibrated: selectedBuild === "bamboocut-dust" || Boolean(activeScheme?.baseOverride),
+      panelCalibrated: activeScheme?.panelModelSource !== "EMPTY" && (selectedBuild === "bamboocut-dust" || Boolean(activeScheme?.baseOverride)),
       materialUnknowns: selectedBuild === "bamboocut-dust" ? BAMBOOCUT_MODEL_UNKNOWNS : [] });
     const fixtureKey = selectedBuild === "bamboocut-dust" && item.mastery === 1106 ? "1106" : selectedBuild === "bamboocut-dust" && item.mastery === 1129 ? "1129" : null;
     const fixture = fixtureKey ? BAMBOOCUT_AB_FIXTURES[fixtureKey] : null;
@@ -3726,6 +3777,15 @@ export default function App() {
   // CI/runtime diagnostics are derived synchronously from the same render snapshot
   // as Gear Compare. This avoids an effect-timing race after loading the observed
   // fixture and does not mutate product state or calibrate the model.
+  if (typeof window !== "undefined") {
+    const evaluation = evaluateCombatPanel(adjustedPanel);
+    (window as any).__WWM_SCENARIO_DIAGNOSTIC__ = {
+      headlineDps: rotationStats.dps,
+      currentSetDps: armorSetCompare.find(row => row.active)?.dps,
+      rotationLabDps: rotationSim.dps,
+      evaluation: { total: evaluation.total, duration: getRotationTimeForBuild(selectedBuild), samples: evaluation.samples },
+    };
+  }
   if (typeof window !== "undefined" && activeScheme?.name === GLOBAL_T96_OBSERVED_PRESET_META.scheme) {
     const candidate1129 = compareRows.find((row) => row.name === "Nightfarer Armor 1129");
     const current1106 = compareRows.find((row) => row.name === "Nightfarer Armor");
@@ -3753,6 +3813,10 @@ export default function App() {
     };
     (window as any).__WWM_T96_RUNTIME_ACCEPTANCE__ = {
       fixture: "1106-vs-1129",
+      headlineDps: rotationStats.dps,
+      currentSetDps: armorSetCompare.find(row => row.active)?.dps,
+      rotationLabDps: rotationSim.dps,
+      evaluation: { total: evaluateCombatPanel(adjustedPanel).total, duration: getRotationTimeForBuild(selectedBuild), samples: evaluateCombatPanel(adjustedPanel).samples },
       currentMenuPanel: menu,
       diagnosticCombatPanels: {
         current: comparePanelForDiagnostics(equippedGear),
@@ -3845,6 +3909,20 @@ export default function App() {
     { label: `${innerAttrName(selectedBuild)} Penetration`, menu: fmtCombatStat(basePanel.pzPen, true), combat: fmtCombatStat(adjustedPanel.pzPen, true) },
     { label: `Net ${innerAttrName(selectedBuild)} Penetration`, menu: "-", combat: fmtCombatStat(netPzPen, true), derived: true },
   ];
+  const [shellRoute, setShellRoute] = useState({ workspace: /^#(?:library|shared-build)/.test(location.hash) ? "library" : /^#gvg/.test(location.hash) ? "gvg" : "pve", page: location.hash.split("/")[1] || "overview" });
+  const pvePageActive = shellRoute.workspace === "pve" && shellRoute.page !== "overview";
+  const createEmptyProfile = (name: string) => {
+    const id = crypto.randomUUID();
+    const scheme = { ...emptyScheme(`scheme-${id}`, "Empty build"), combatConfig: { ...combatConfig, selectedInnerWays: [], innerWayTiers: {}, food: false, bowSelect: "none", datang: false, yishui: false, yishuiPen: false, qianying: false, cinderAsh: false, skillOverrides: {}, timingOverrides: {}, editedRotation: null, activeRotationPresetId: "" } };
+    const character: Character = { id: `char-${id}`, name, schemes: [scheme] };
+    const next = { ...charsData, chars: [...charsData.chars, character], activeCharId: character.id, activeSchemeId: scheme.id };
+    setCharsData(next); setPanel(scheme.panel);
+    setSelectedInnerWays([]); setInnerWayTiers({}); setFood(false); setBowSelect("none");
+    setDatang(false); setYishui(false); setYishuiPen(false); setQianying(false); setCinderAsh(false);
+    setSkillOverrides({}); setTimingOverrides({}); setEditedRotation(null);
+    setActiveRotationPresetId("");
+    localStorage.setItem("wwm_chars_v3", JSON.stringify(next));
+  };
   const openProductTab = (tab: ProductTab) => {
     setActiveProductTab(tab);
     setIsGradModalOpen(false);
@@ -3876,6 +3954,8 @@ export default function App() {
       <ProductShell
         active={activeProductTab}
         onNavigate={openProductTab}
+        onRouteChange={(workspace, page) => setShellRoute(previous => previous.workspace === workspace && previous.page === page ? previous : { workspace, page })}
+        onNewEmpty={() => createEmptyProfile("New empty profile")}
         roleControl={(
           <select
             aria-label="Current role"
@@ -3902,12 +3982,18 @@ export default function App() {
             <button type="button" onClick={() => {
               const name = prompt("New profile name:");
               if (!name?.trim()) return;
-              const now = Date.now();
-              const character: Character = { id: `char-${now}`, name: name.trim(), schemes: [{ id: `scheme-${now}`, name: "Scheme 1", panel: { ...panel }, gear: DEFAULT_GEAR.map((item) => ({ ...item })) }] };
-              const next = { ...charsData, chars: [...charsData.chars, character], activeCharId: character.id, activeSchemeId: character.schemes[0].id };
-              setCharsData(next);
-              localStorage.setItem("wwm_chars_v3", JSON.stringify(next));
+              createEmptyProfile(name.trim());
             }}>New profile</button>
+            <button type="button" onClick={() => {
+              if (!activeScheme) return;
+              const name = prompt("Clone current profile name:");
+              if (!name?.trim()) return;
+              const id = crypto.randomUUID();
+              const scheme: Scheme = { ...structuredClone(activeScheme), id: `scheme-${id}`, panel: { ...basePanel }, combatConfig: structuredClone(combatConfig) };
+              const character: Character = { id: `char-${id}`, name: name.trim(), schemes: [scheme] };
+              const next = { ...charsData, chars: [...charsData.chars, character], activeCharId: character.id, activeSchemeId: scheme.id };
+              setCharsData(next); localStorage.setItem("wwm_chars_v3", JSON.stringify(next));
+            }}>Clone current</button>
             <button type="button" onClick={() => {
               const now = Date.now();
               const observedInnerWayIds = ["phantom_rally", "morale_chant", "towline_sweep", "song_of_tang"];
@@ -3938,6 +4024,7 @@ export default function App() {
                   gear: observedGear,
                   baseOverride: observedResidual,
                   panelModelVersion: PANEL_MODEL_VERSION,
+                  combatConfig: { ...combatConfig, selectedBuild: GLOBAL_T96_OBSERVED_PRESET_META.buildKey, tierKey: GLOBAL_T96_OBSERVED_PRESET_META.tierKey, selectedInnerWays: observedInnerWayIds, innerWayTiers: observedInnerWayTiers },
                 }],
               };
               const next = { ...charsData, chars: [...charsData.chars, character], activeCharId: character.id, activeSchemeId: character.schemes[0].id };
@@ -3960,11 +4047,13 @@ export default function App() {
           build: BUILD_PROFILES[selectedBuild as keyof typeof BUILD_PROFILES]?.label ?? selectedBuild,
           scheme: activeScheme?.name ?? "Scheme",
           innerWays: selectedInnerWays.filter(Boolean).length,
-          estimate: Math.round(rotationStats.dps).toLocaleString(),
+          estimate: getActiveGear().some(item => isItemEquipped(item, getActiveGear())) ? Math.round(rotationStats.dps).toLocaleString() : "—",
         }}
       />
 
-      {workspace === "gear" && (
+      {shellRoute.workspace === "pve" && profileRecoveryMessage && <aside className="profile-recovery-message" role="alert"><span>{profileRecoveryMessage}</span><button type="button" onClick={() => setIsExportImportModalOpen(true)}>Export data</button></aside>}
+
+      {pvePageActive && workspace === "gear" && (
         <ArsenalWorkspace
           rows={arsenalRows}
           slots={[
@@ -4004,10 +4093,11 @@ export default function App() {
         />
       )}
 
-      {workspace === "compare" && (
+      {pvePageActive && workspace === "compare" && (
         <GearCompareWorkspace
           pathKey={selectedBuild}
           rows={compareRows}
+          onAdd={() => openAddModal(gearFilterSlot === "ALL" ? "Umbrella" : gearFilterSlot)}
           slots={[{ key: "Umbrella", label: "Weapon 1" }, { key: "Rope Dart", label: "Weapon 2" }, { key: "Helmet", label: "Helmet" }, { key: "Chest", label: "Chest" }, { key: "Bracers", label: "Hands" }, { key: "Greaves", label: "Legs" }, { key: "Disc", label: "Disc" }, { key: "Pendant", label: "Pendant" }]}
           activeSlot={gearFilterSlot === "ALL" ? "Umbrella" : gearFilterSlot}
           onSlotChange={setGearFilterSlot}
@@ -4016,17 +4106,17 @@ export default function App() {
         />
       )}
 
-      {workspace === "build" && (
+      {pvePageActive && workspace === "build" && (
         <BuildWorkspace
           builds={buildOptions}
           selectedBuild={selectedBuild}
-          buildNotes={BUILD_PROFILES[selectedBuild as keyof typeof BUILD_PROFILES].notes}
+          buildNotes={`Historical T91 graduation reference. Current DPS uses ${activeTier.name} and the active combat assumptions; reference targets are not current-tier caps.`}
           weaponSet={setAllWeapon}
           armorSet={setAllArmor}
           weaponSets={WEAPON_SET_KEYS.map((id) => ({ id, label: getSetName(id) }))}
           armorSets={ARMOR_SET_KEYS.map((id) => ({ id, label: getSetName(id) }))}
           ring={bowSelect}
-          calibrated={Boolean(activeScheme?.baseOverride)}
+          calibrated={Boolean(activeScheme?.baseOverride) && activeScheme?.panelModelSource !== "EMPTY"}
           food={food}
               foodMin={activeTier.foodMin}
               foodMax={activeTier.foodMax}
@@ -4063,7 +4153,7 @@ export default function App() {
         />
       )}
 
-      {workspace === "simulation" && (
+      {pvePageActive && workspace === "simulation" && !isSimOpen && (
         <CombatWorkspace
           ceiling={rotationStats.dps}
           modeled={rotationStats.dps * dpsEff}
@@ -4092,7 +4182,7 @@ export default function App() {
         />
       )}
 
-      {selectedBuild === "silkbind-jade" && (() => {
+      {pvePageActive && selectedBuild === "silkbind-jade" && (() => {
         const result = evaluateSilkbindJadeCached(adjustedPanel, jadeScenarioForCombo(getActiveGear().filter((item) => isItemEquipped(item, getActiveGear()))), jadeObjective, priceJadeEvent);
         return <JadeHealthPanel
           result={result}
@@ -4105,13 +4195,13 @@ export default function App() {
         />;
       })()}
 
-      {workspace === "analysis" && (
+      {pvePageActive && workspace === "analysis" && (
         <OptimizeWorkspace
           graduation={rotationStats.gradRate}
           modeledDps={rotationStats.dps}
           equipped={arsenalRows.filter((item) => item.equipped).length}
           innerWays={selectedInnerWays.filter(Boolean).length}
-          calibrated={Boolean(activeScheme?.baseOverride)}
+          calibrated={Boolean(activeScheme?.baseOverride) && activeScheme?.panelModelSource !== "EMPTY"}
           detailOpen={isGradModalOpen}
           activeTool={gradModalActiveTab}
           onToolOpen={(id) => {
@@ -4121,6 +4211,7 @@ export default function App() {
         />
       )}
 
+      {pvePageActive && <>
       {/* ── HEADER ── */}
       <header>
         <div className="header-title-container">
@@ -4561,7 +4652,7 @@ export default function App() {
                 const name = prompt("New scheme name:");
                 if (!name) return;
                 const sid = "scheme-" + Date.now();
-                const ns: Scheme = { id: sid, name, panel: panel, gear: DEFAULT_GEAR };
+                const ns: Scheme = emptyScheme(sid, name);
                 const uc = charsData.chars.map(c => c.id === charsData.activeCharId ? { ...c, schemes: [...c.schemes, ns] } : c);
                 const nd = { ...charsData, chars: uc, activeSchemeId: sid };
                 setCharsData(nd);
@@ -5013,6 +5104,7 @@ export default function App() {
         </aside>
       </div>
 
+      </>}
       {/* ── HELP / HOW-TO MODAL ── */}
       {isHelpOpen && (
         <div className="modal" onClick={() => setIsHelpOpen(false)}>
@@ -5278,12 +5370,12 @@ export default function App() {
       })()}
 
       {/* ── DAMAGE SIMULATION MODAL (Monte Carlo) ── */}
-      {isSimOpen && (
-        <div className="modal" onClick={() => setIsSimOpen(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 620 }}>
+      {pvePageActive && isSimOpen && (
+        <section className="analysis-workspace-detail simulation-workspace-detail" aria-label="Damage simulation">
+          <div className="modal-content analysis-sheet">
             <div className="modal-header">
               <h2>🎲 Damage Simulation</h2>
-              <span className="close-btn" onClick={() => setIsSimOpen(false)}>&times;</span>
+              <button type="button" className="close-btn" aria-label="Close damage simulation" onClick={() => { setIsSimOpen(false); location.hash = "#pve/combat"; }}>&times;</button>
             </div>
             <div className="modal-body" style={{ padding: 20 }}>
               <p style={{ fontSize: 12, color: "#8b949e", lineHeight: 1.5, marginBottom: 14 }}>
@@ -5310,7 +5402,8 @@ export default function App() {
                 <div style={{ fontSize: 12, color: "#6e7681", padding: "10px 0" }}>Set a count and click Run.</div>
               ) : (() => {
                 const sr = simResult;
-                const matched = Math.abs(sr.diffPct) <= 1;
+                const margin95 = 1.96 * sr.meanStdErrorDps;
+                const matched = Math.abs(sr.avgDps - sr.expectedDps) <= margin95;
                 const card = (label: string, val: string, color?: string) => (
                   <div style={{ flex: 1, minWidth: 120, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, padding: "8px 10px" }}>
                     <div style={{ fontSize: 9.5, color: "#8b949e", textTransform: "uppercase", letterSpacing: 0.4 }}>{label}</div>
@@ -5338,13 +5431,14 @@ export default function App() {
                       border: `1px solid ${matched ? "rgba(126,231,135,0.3)" : "rgba(245,180,0,0.3)"}`,
                       color: matched ? "#7ee787" : "#f0b400" }}>
                       {matched ? "✓ " : "⚠ "}Simulated avg {r0(sr.avgDps)} vs expected {r0(sr.expectedDps)} DPS ({sr.diffPct >= 0 ? "+" : ""}{sr.diffPct.toFixed(2)}%)
-                      {matched ? " — sampled outcomes agree with the modeled expectation." : " — sampling differs; increase runs to inspect convergence."} Seed {sr.seed}.
+                      {matched ? " — mean is within the 95% sampling band." : " — mean is outside the 95% sampling band; the analytic expectation remains unchanged."} Expected mean ±{margin95.toFixed(1)} DPS (standard error {sr.meanStdErrorDps.toFixed(1)}). Seed {sr.seed}.
                     </div>
                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
                       {card("Average DPS", r0(sr.avgDps))}
+                      {card("Analytic expectation", r0(sr.analyticDps))}
                       {card("DPS Range", `±${sr.rangePct.toFixed(1)}%`)}
-                      {card("Best Parse", r0(sr.bestDps), "#7ee787")}
-                      {card("Worst Parse", r0(sr.worstDps), "#ff7b72")}
+                      {card("Highest sampled DPS", r0(sr.bestDps), "#7ee787")}
+                      {card("Lowest sampled DPS", r0(sr.worstDps), "#ff7b72")}
                     </div>
 
                     <div style={{ fontSize: 11, color: "#8b949e", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>Percentiles</div>
@@ -5378,48 +5472,21 @@ export default function App() {
               })()}
             </div>
           </div>
-        </div>
+        </section>
       )}
 
       {/* ── GRADUATION ANALYSIS MODAL ── */}
-      {isGradModalOpen && (
-        <div className="modal analysis-workspace-detail" onClick={() => setIsGradModalOpen(false)}>
+      {pvePageActive && isGradModalOpen && (
+        <section className="analysis-workspace-detail" aria-label="Advanced PvE tool">
           <div className="modal-content modal-content-xlarge analysis-sheet" onClick={e => e.stopPropagation()} style={{ height: '90vh', display: 'flex', flexDirection: 'column' }}>
             <div className="modal-header">
-              <h2>Optimization detail</h2>
-              <button type="button" className="close-btn" aria-label="Close optimization detail" onClick={() => setIsGradModalOpen(false)}>&times;</button>
+              <h2>{gradModalActiveTab === "best-build" ? "Best Build" : gradModalActiveTab === "rotations" ? "Rotations" : gradModalActiveTab.replaceAll("-", " ")}</h2>
+              <button type="button" className="close-btn" aria-label="Close optimization detail" onClick={() => { setIsGradModalOpen(false); location.hash = "#pve/overview"; }}>&times;</button>
             </div>
             <div className="modal-body grad-layout-container grad-layout-container-inline analysis-sheet-body" style={{ display: 'flex', flex: 1, minHeight: 0, padding: 0 }}>
-              {/* Left Panel */}
-              <div className="grad-left-panel analysis-sheet-sidebar" style={{ width: '280px', flexShrink: 0, borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
-                <div className="current-rate-box">
-                  <div className="label">Graduation Rate</div>
-                  <div className="value">{rotationStats.gradRate.toFixed(2)}%</div>
-                </div>
-                <div className="grad-meta-info-inline">
-                  <div className="grad-meta-text">
-                    <div className="grad-meta-item">Edition: <span className="text-white">Global 2.1 · Tier 96</span></div>
-                    <div className="grad-meta-item">Author: <span className="text-white">Wonton</span></div>
-                  </div>
-                </div>
-                <div className="current-equip-list" style={{ padding: '10px' }}>
-                  {SLOTS.map(slot => {
-                    const item = getActiveGear().find(it => it.slot === slot.name && isItemEquipped(it, getActiveGear()));
-                    const isActive = selectedSlot === slot.name;
-                    return (
-                      <div key={slot.name} className={`grad-equip-item${isActive ? " active" : ""}`} onClick={() => { setSelectedSlot(slot.name); setTransmuteSlot(slot.name); setTransmuteSubIndex(null); }}>
-                        <div className="grad-equip-info">
-                          <div className="grad-equip-name">{item ? item.name : "— Empty Slot —"}</div>
-                          <div className="grad-equip-sub">{getSlotLabel(slot.name)}</div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
               {/* Right Panel */}
               <div className="grad-right-panel" style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
-                <div className="grad-tabs">
+                <details className="advanced-tool-switcher"><summary>Other advanced tools</summary><nav aria-label="Advanced PvE tools">
                   {[
                     { key: "manual", label: "Manual Sheet", tip: "View and manually edit the full combat-attribute panel. Inputs are read-only when panel auto-computes from gear." },
                     { key: "priority", label: "Stat Priority", tip: "Simulate displayed increments and compare modeled DPS plus historical graduation percentage-point changes." },
@@ -5433,17 +5500,17 @@ export default function App() {
                     { key: "skill-editor", label: "Skill Editor", tip: "Tweak a skill's coefficients and preview its per-hit damage. Calculator only — does not change rotation DPS." },
                     { key: "team", label: "Team", tip: "Compare saved builds side by side." },
                   ].map(tab => (
-                    <div
+                    <button type="button"
                       key={tab.key}
                       className={`grad-tab ${gradModalActiveTab === tab.key ? "active" : ""}`}
-                      onClick={() => setGradModalActiveTab(tab.key)}
+                      onClick={event => { setGradModalActiveTab(tab.key); location.hash = `#pve/${tab.key}`; const menu = event.currentTarget.closest("details"); if (menu) menu.open = false; }}
                       title={tab.tip}
                     >
                       {tab.label}
                       <span title={tab.tip} style={{ marginLeft: 4, opacity: 0.55, fontSize: '0.85em', cursor: 'help' }}>ⓘ</span>
-                    </div>
+                    </button>
                   ))}
-                </div>
+                </nav></details>
                 <div className="grad-tab-content" style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
                   {/* Tab Panes */}
                   {gradModalActiveTab === "rotations" && (() => {
@@ -5513,8 +5580,8 @@ export default function App() {
                           </p>
 
                           <div className="rotsim-stats">
-                            <div><div className="rotsim-stat-lbl">Realistic DPS · ramp</div><div className="rotsim-stat-big">{Math.round(ts.dps).toLocaleString()}<span className="rotsim-unit">/s</span></div></div>
-                            <div><div className="rotsim-stat-lbl">Full-uptime · verified</div><div className="rotsim-stat-mid">{Math.round(ts.fullUptimeDps).toLocaleString()}</div></div>
+                            <div><div className="rotsim-stat-lbl">Modeled DPS · ramp</div><div className="rotsim-stat-big">{Math.round(ts.dps).toLocaleString()}<span className="rotsim-unit">/s</span></div></div>
+                            <div><div className="rotsim-stat-lbl">Full uptime · hypothetical</div><div className="rotsim-stat-mid">{Math.round(ts.fullUptimeDps).toLocaleString()}</div></div>
                             <div><div className="rotsim-stat-lbl">Lost to ramp</div><div className="rotsim-stat-mid" style={{ color: ts.uptimeLoss > 0.001 ? 'var(--neg)' : 'var(--ink2)' }}>{ts.uptimeLoss > 0.001 ? '−' + (ts.uptimeLoss*100).toFixed(1) + '%' : '—'}</div></div>
                             <div><div className="rotsim-stat-lbl">Window · casts</div><div className="rotsim-stat-mid">{win.toFixed(1)}s · {ts.casts.length}</div></div>
                           </div>
@@ -5533,7 +5600,7 @@ export default function App() {
                               ))}
                             </div>
                           ) : (
-                            <p className="rotsim-hint">Select inner-way buffs in the <b>Panel Simulator</b> to see them ramp on the timeline. With none selected, realistic = full-uptime.</p>
+                            <p className="rotsim-hint">Configure Inner Ways in <b>Build</b> to model their ramp. With none selected, the ramp and hypothetical full-uptime outputs are equal.</p>
                           )}
 
                           <div className="rotsim-tl">
@@ -5646,7 +5713,7 @@ export default function App() {
                         >Reset to build default</button>
                       </div>
 
-                      <div className="bg-[#141619] border border-[#23262c] rounded-xl overflow-hidden">
+                      <div className="rotation-table bg-[#141619] border border-[#23262c] rounded-xl overflow-x-auto" role="region" aria-label="Rotation skills — scroll horizontally for all controls" tabIndex={0}>
                         <table className="w-full text-[12.5px]">
                           <thead>
                             <tr className="text-[10px] uppercase tracking-wider text-[#a19683] font-mono border-b border-[#23262c]">
@@ -7159,12 +7226,12 @@ export default function App() {
                           const best = bestBuildResult[0];
                           const bestModeledDps = best ? best.rate / 100 * baselineScore / getRotationTimeForBuild(selectedBuild) : 0;
                           const bestDeltaPct = rotationStats.dps > 0 ? (bestModeledDps - rotationStats.dps) / rotationStats.dps * 100 : 0;
-                          const bestConfidence = recommendationConfidence({ pathKey: selectedBuild, deltaPct: bestDeltaPct, panelCalibrated: selectedBuild === "bamboocut-dust" || Boolean(activeScheme?.baseOverride), materialUnknowns: selectedBuild === "bamboocut-dust" ? BAMBOOCUT_MODEL_UNKNOWNS : [] });
+                          const bestConfidence = recommendationConfidence({ pathKey: selectedBuild, deltaPct: bestDeltaPct, panelCalibrated: activeScheme?.panelModelSource !== "EMPTY" && (selectedBuild === "bamboocut-dust" || Boolean(activeScheme?.baseOverride)), materialUnknowns: selectedBuild === "bamboocut-dust" ? BAMBOOCUT_MODEL_UNKNOWNS : [] });
                           const pathMaturity = PATH_MODEL_MATURITY[selectedBuild];
                           const bestBuildTrustSummary = (entry: { gear: GearItem[]; rate: number }) => {
                             const dps = entry.rate / 100 * baselineScore / getRotationTimeForBuild(selectedBuild);
                             const deltaPct = rotationStats.dps > 0 ? (dps - rotationStats.dps) / rotationStats.dps * 100 : 0;
-                            const confidence = recommendationConfidence({ pathKey: selectedBuild, deltaPct, panelCalibrated: selectedBuild === "bamboocut-dust" || Boolean(activeScheme?.baseOverride), materialUnknowns: selectedBuild === "bamboocut-dust" ? BAMBOOCUT_MODEL_UNKNOWNS : [] });
+                            const confidence = recommendationConfidence({ pathKey: selectedBuild, deltaPct, panelCalibrated: activeScheme?.panelModelSource !== "EMPTY" && (selectedBuild === "bamboocut-dust" || Boolean(activeScheme?.baseOverride)), materialUnknowns: selectedBuild === "bamboocut-dust" ? BAMBOOCUT_MODEL_UNKNOWNS : [] });
                             const sets = detectSet4pc(entry.gear);
                             const setLabel = `Weapon ${getSetName(sets.weaponSet)} · Armor ${getSetName(sets.armorSet)}`;
                             const attunements = entry.gear.map(attunementSummary).filter((value) => value !== "None");
@@ -7252,7 +7319,7 @@ export default function App() {
               </div>
             </div>
           </div>
-        </div>
+        </section>
       )}
 
       {/* ── EDIT ITEM MODAL ── */}

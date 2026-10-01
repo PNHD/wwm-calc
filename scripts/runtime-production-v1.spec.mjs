@@ -65,6 +65,7 @@ test("production is exact main SHA and V1 critical surfaces pass", async ({ page
   await expect(page.getByTestId("model-about")).toBeVisible();
   await page.goto(`${base}#pve/gear`, { waitUntil: "networkidle" });
   await expect(page.getByLabel("PvE navigation").getByRole("button", { name: /^Gear/ })).toHaveAttribute("aria-current", "page");
+  if (await page.locator('.workspace-tools:not([open]) > summary').count()) await page.locator('.workspace-tools > summary').click();
   const observed = page.getByRole("button", { name: /Load observed T96/i });
   if (await observed.count()) { await observed.click(); await page.waitForTimeout(250); }
   await page.goto(`${base}#pve/best-build`, { waitUntil: "networkidle" });

@@ -16,9 +16,17 @@ export function simulateDamage(job: DamageJob, progress: (percent: number) => vo
   if (!Number.isInteger(job.runs) || job.runs < 1 || job.runs > 2000 || !Number.isFinite(job.duration) || job.duration <= 0 || !Number.isFinite(job.expected) || job.expected <= 0 || !Number.isInteger(job.seed)) throw new Error("Invalid simulation inputs");
   if (!job.samples.length || job.samples.length > 10000) throw new Error("Outcome samples unavailable for this model");
   for (const s of job.samples) {
-    if (Object.values(s).some(v => !Number.isFinite(v) || v < 0) || s.casts > 10000 || Math.abs(s.pCrit + s.pAff + s.pGraze + s.pWhite - 1) > 1e-9) throw new Error("Invalid outcome sample");
+    if ([s.casts, s.pCrit, s.pAff, s.pGraze, s.pWhite, s.critHit, s.affHit, s.normHit, s.grazeHit].some(v => !Number.isFinite(v) || v < 0) || Object.values(s).some(v => !Number.isFinite(v) || v < 0) || s.casts > 10000 || Math.abs(s.pCrit + s.pAff + s.pGraze + s.pWhite - 1) > 1e-9) throw new Error("Invalid outcome sample");
   }
   if (job.runs * job.samples.reduce((sum, s) => sum + Math.ceil(s.casts), 0) > 20000000) throw new Error("Simulation exceeds the 20 million outcome budget; reduce runs/counts");
+  let analyticTotal = 0, variance = 0;
+  for (const s of job.samples) {
+    const mean = s.pCrit * s.critHit + s.pAff * s.affHit + s.pGraze * s.grazeHit + s.pWhite * s.normHit;
+    const second = s.pCrit * s.critHit ** 2 + s.pAff * s.affHit ** 2 + s.pGraze * s.grazeHit ** 2 + s.pWhite * s.normHit ** 2;
+    analyticTotal += s.casts * mean;
+    variance += (Math.floor(s.casts) + (s.casts % 1) ** 2) * Math.max(0, second - mean ** 2);
+  }
+  if (Math.abs(analyticTotal - job.expected) > Math.max(1e-7, job.expected * 1e-10)) throw new Error("Priced outcome expectation does not match the active evaluator");
   let state = job.seed >>> 0;
   const random = () => {
     state = (state + 0x6D2B79F5) >>> 0;
@@ -50,6 +58,7 @@ export function simulateDamage(job: DamageJob, progress: (percent: number) => vo
   return {
     seed: job.seed, runs: job.runs, hitsPerRun: hits / job.runs, duration: job.duration,
     expectedDps: job.expected / job.duration, avgDps: mean / job.duration,
+    analyticDps: analyticTotal / job.duration, meanStdErrorDps: Math.sqrt(variance / job.runs) / job.duration,
     bestDps: totals.at(-1)! / job.duration, worstDps: totals[0] / job.duration,
     p25: percentile(.25), p50: percentile(.5), p75: percentile(.75),
     diffPct: percent(mean - job.expected, job.expected), rangePct: percent((totals.at(-1)! - totals[0]) / 2, mean),

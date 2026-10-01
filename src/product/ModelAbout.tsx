@@ -1,7 +1,7 @@
 import { ExternalLink, Info, ShieldCheck } from "lucide-react";
 import "./model-about.css";
 
-type Workspace = "PVE" | "ARENA" | "GUILD_WAR" | "LIBRARY";
+type Workspace = "PVE" | "ARENA" | "GUILD_WAR" | "LIBRARY" | "TRAINING";
 
 const PATCH = "Global 2.1";
 const MODEL_EVIDENCE_REVIEWED = "2026-08-24";
@@ -31,10 +31,10 @@ ${JSON.stringify(context, null, 2)}
 `);
   const issueUrl = `https://github.com/PNHD/wwm-calc/issues/new?title=${title}&body=${body}`;
 
-  return <details className="model-about" data-testid="model-about">
-    <summary><Info size={14} aria-hidden="true" /><span>Model & About</span></summary>
+  return <details className="model-about" data-testid="model-about" onKeyDown={event => { if (event.key === "Escape") { const details = event.currentTarget; details.open = false; details.querySelector('summary')?.focus(); } }}>
+    <summary aria-label="Model and About"><Info size={14} aria-hidden="true" /><span>Model & About</span></summary>
     <div className="model-about-popover">
-      <div className="model-about-heading"><ShieldCheck size={18} aria-hidden="true" /><div><strong>WWM Calc V1.1</strong><small>{PATCH} · model evidence reviewed {MODEL_EVIDENCE_REVIEWED} · official news checked {OFFICIAL_NEWS_CHECKED}</small></div></div>
+      <div className="model-about-heading"><ShieldCheck size={18} aria-hidden="true" /><div><strong>WWM Build Lab</strong><small>{PATCH} · model evidence reviewed {MODEL_EVIDENCE_REVIEWED} · official news checked {OFFICIAL_NEWS_CHECKED}</small></div></div>
       <dl>
         <div><dt>CALIBRATED DATA</dt><dd>Bamboocut-Dust PvE T96 acceptance fixtures.</dd></div>
         <div><dt>MODELED OUTPUT</dt><dd>PvE outputs beyond calibrated fixtures, Arena matchup dimensions, and Guild War role/objective scenarios.</dd></div>
