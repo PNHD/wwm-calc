@@ -177,10 +177,10 @@ for (const [width, height] of [[390, 844], [1024, 768], [1363, 936], [1440, 900]
     await reportLink.click({ trial: true });
     await page.screenshot({ path: `${dir}/model-${width}.png`, fullPage: true });
     await page.getByTestId("model-about").locator('summary').click();
-    const routes = ["build", "gear", "compare", "best-build", "combat", "simulation", "rotations", "priority", "cultivate", "transmute", "bis", "skill-editor", "team", "manual", "dps-compare"];
+    const routes = ["overview", "build", "gear", "compare", "best-build", "combat", "simulation", "rotations", "priority", "cultivate", "transmute", "bis", "skill-editor", "team", "manual", "dps-compare"];
     for (const route of routes) {
       await page.goto(base + `#pve/${route}`, { waitUntil: "networkidle" });
-      const main = page.locator('.analysis-workspace-detail, .build-workspace, .arsenal-workspace, .compare-workspace, .combat-workspace').filter({ visible: true });
+      const main = page.locator('[data-testid="pve-overview"], .analysis-workspace-detail, .build-workspace, .arsenal-workspace, .compare-workspace, .combat-workspace').filter({ visible: true });
       await expect(main).toHaveCount(1);
       await expect(page.locator('.analysis-sheet-sidebar')).toHaveCount(0);
       if (route !== "gear") expect(await page.locator('.arsenal-workspace').count()).toBe(0);
@@ -215,7 +215,7 @@ for (const [width, height] of [[390, 844], [1024, 768], [1363, 936], [1440, 900]
       await page.evaluate(() => { document.querySelectorAll('.rotation-table').forEach(el => el.scrollLeft = 0); document.body.scrollTop = 0; document.documentElement.scrollTop = 0; window.scrollTo(0, 0); });
       await page.screenshot({ path: `${dir}/${route}-${width}.png`, fullPage: false });
     }
-    for (const workspace of ["pve/gear", "gvg/overview", "arena/overview"]) {
+    for (const workspace of ["pve/gear", "gvg/overview", "arena/overview", "training-terrace/overview"]) {
       await page.goto(base + "#" + workspace, { waitUntil: "networkidle" });
       await page.getByRole("button", { name: "Library", exact: true }).click();
       await expect(page.locator('.library-page')).toBeVisible();
