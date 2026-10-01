@@ -188,6 +188,7 @@
 .rotation-table button{min-width:44px;min-height:44px}
 .rotation-table table{min-width:620px}.rotation-table input[type=number]{width:72px;min-width:72px;min-height:44px}
 .analysis-workspace-detail input,.analysis-workspace-detail select,.analysis-workspace-detail textarea,.library-page input,.library-page select{background:#121a31!important;color:#e9effa!important;border-color:#2a3c60!important;color-scheme:dark}
+.analysis-workspace-detail input::placeholder,.analysis-workspace-detail textarea::placeholder,.library-page input::placeholder{color:#aabbdb!important;opacity:1}
 .analysis-workspace-detail .primary-btn{background:#6477f0!important;color:#fff!important}
 .app-root>.modal{z-index:3000}.app-root>.modal .close-btn{width:44px;min-height:44px;background:transparent;border:0;color:inherit}
 
