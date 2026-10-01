@@ -83,7 +83,7 @@ test("production is exact main SHA and V1 critical surfaces pass", async ({ page
   await page.getByLabel("Target or dummy label").fill("Production training dummy");
   await page.getByLabel("HP baseline").fill("100");
   await page.getByLabel("HP after").fill("125");
-  await expect(page.getByText("+25 (+25.00%)")).toBeVisible();
+  await expect(page.getByText("+25 HP (+25.00%)")).toBeVisible();
   await page.reload({ waitUntil: "networkidle" });
   await expect(page.getByLabel("Target or dummy label")).toHaveValue("Production training dummy");
   expect(await page.evaluate(() => localStorage.getItem("wwm_arena_state_v1"))).toBe(arenaBeforeTraining);

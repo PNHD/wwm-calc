@@ -1,6 +1,6 @@
 import { GLOBAL_T96_ROLL_CAPS } from "./data/globalT96Rules";
 import { BAMBOOCUT_AB_FIXTURES, BAMBOOCUT_MODEL_UNKNOWNS, BAMBOOCUT_SKILL_EVIDENCE, PATH_MODEL_MATURITY, recommendationConfidence } from "./data/modelTrust";
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import {
   Shield,
   HelpCircle,
@@ -39,7 +39,7 @@ import { PanelStats, TierConstants, RotationItem, SkillDefinition } from "./type
 import { TIERS, calcSkill, calcBaseline, getRotationForBuild, getRotationTimeForBuild, getSkillDefinition } from "./utils/calc";
 import { simulateRotation } from "./utils/timelineEngine";
 import { evaluateScenario } from "./utils/scenarioEvaluation";
-import { simulateTimeline, buildTimelineBuffs } from "./utils/rotationTimeline";
+import { simulateTimeline, buildTimelineBuffs, applyDelta } from "./utils/rotationTimeline";
 import { previewSkill } from "./utils/skillPreview";
 import { backupDomainValue, cloneBoundedJson, isPlainRecord, readJsonStorage } from "./product/storage-registry.js";
 import { INNER_WAYS } from "./data/innerways";
@@ -345,6 +345,31 @@ const validCombatConfig = (value: unknown): value is StoredCombatConfig => {
   && ["skillOverrides", "timingOverrides"].every(key => isPlainRecord(v[key]) && Object.values(v[key]).every(row => isPlainRecord(row) && Object.values(row).every(field => typeof field === "number" ? Number.isFinite(field) : typeof field === "string" && field.length <= 120)))
   && Object.values(JADE_OBJECTIVES).includes(v.jadeObjective) && isPlainRecord(v.jadeScenarioOverrides) && Object.values(v.jadeScenarioOverrides).every(field => typeof field === "number" ? Number.isFinite(field) : typeof field === "string" || typeof field === "boolean")
   && (v.editedRotation === null || Boolean(normalizePreset({ id: "profile-rotation", name: "Profile rotation", buildKey: v.selectedBuild, rotation: v.editedRotation })) && v.editedRotation.every(row => isPlainRecord(row) && typeof row.isDingyin === "boolean" && [row.generalBonus, row.yishui, row.tiaozhan].every(Number.isFinite)));
+};
+
+const resolveTarget = (tierKey: string, customDef: number, customRes: number): TierConstants | undefined => {
+  if (tierKey === "custom") {
+    return {
+      def: customDef,
+      judgeRes: customRes,
+      foodMin: 90,
+      foodMax: 180,
+      baseMinOuter: 894.89,
+      baseMaxOuter: 1648.08,
+      baseCrit: 30.41,
+      baseAff: 15.205,
+      basePrec: 94.0,
+      armoryMin: 114,
+      armoryMax: 229,
+      hiddenAttr: 129.2,
+      pzPenBase: 10.8,
+      pzDmgBase: 5.4,
+      physRes: 20,
+      attrRes: 24,
+      name: "Custom Dungeon Target",
+    };
+  }
+  return Object.hasOwn(TIERS, tierKey) ? TIERS[tierKey] : undefined;
 };
 
 export interface Scheme {
@@ -2446,28 +2471,7 @@ export default function App() {
 
   // 1. Resolve Active Tier Constants
   const activeTier = useMemo((): TierConstants => {
-    if (tierKey === "custom") {
-      return {
-        def: customDef,
-        judgeRes: customRes,
-        foodMin: 90,
-        foodMax: 180,
-        baseMinOuter: 894.89,
-        baseMaxOuter: 1648.08,
-        baseCrit: 30.41,
-        baseAff: 15.205,
-        basePrec: 94.0,
-        armoryMin: 114,
-        armoryMax: 229,
-        hiddenAttr: 129.2,
-        pzPenBase: 10.8,
-        pzDmgBase: 5.4,
-        physRes: 20,
-        attrRes: 24,
-        name: "Custom Dungeon Target",
-      };
-    }
-    return TIERS[tierKey] || TIERS["405|0.65b"];
+    return resolveTarget(tierKey, customDef, customRes) || TIERS["405|0.65b"];
   }, [tierKey, customDef, customRes]);
 
   // Load profiles from storage or populate default sets
@@ -2867,32 +2871,32 @@ export default function App() {
     }));
     return bonuses;
   };
-  const jadeScenarioForCombo = (combo: GearItem[]) => {
-    const objectiveScenario = jadeObjective === JADE_OBJECTIVES.SHORT_FIGHT_BURST
+  const jadeScenarioForCombo = (combo: GearItem[], context = { scenario: jadeScenario, objective: jadeObjective, cacheSalt: JSON.stringify([activeTier.name, food, bowSelect, selectedInnerWays, innerWayTiers, skillOverrides, timingOverrides]) }) => {
+    const objectiveScenario = context.objective === JADE_OBJECTIVES.SHORT_FIGHT_BURST
       ? {
-          duration: Math.min(Number((jadeScenario as Record<string, any>).duration || 60), 20),
-          firstQiBreakTime: Math.min(Number((jadeScenario as Record<string, any>).firstQiBreakTime ?? 5), 5),
-          qiBreakDuration: Math.min(Number((jadeScenario as Record<string, any>).qiBreakDuration || 8), 8),
+          duration: Math.min(Number((context.scenario as Record<string, any>).duration || 60), 20),
+          firstQiBreakTime: Math.min(Number((context.scenario as Record<string, any>).firstQiBreakTime ?? 5), 5),
+          qiBreakDuration: Math.min(Number((context.scenario as Record<string, any>).qiBreakDuration || 8), 8),
         }
       : {};
     const gearSignature = combo.map((gear) => gear.id).sort().join(",");
     return {
-      ...jadeScenario,
+      ...context.scenario,
       ...objectiveScenario,
       attunementBonuses: jadeAttunementsForCombo(combo),
       // Candidate identity is intentionally part of the cache key because two
       // pieces can aggregate to the same visible panel while differing in set /
       // Attunement semantics that are consumed by event pricing.
-      cacheSalt: JSON.stringify([activeTier.name, food, bowSelect, selectedInnerWays, innerWayTiers, gearSignature, skillOverrides, timingOverrides]),
+      cacheSalt: `${context.cacheSalt}|${gearSignature}`,
     };
   };
-  const priceJadeEvent = (event: any, eventPanel: PanelStats) => {
+  const priceJadeEvent = (event: any, eventPanel: PanelStats, target = activeTier, overrides = skillOverrides) => {
     const appSkill = JADE_SKILL_TEMPLATES[event.id]?.appSkill;
     if (!appSkill) return 0;
     return calcSkill(
       { name: appSkill, count: 1, isDingyin: false, generalBonus: 0, yishui: 0, tiaozhan: 1 },
       eventPanel,
-      activeTier,
+      target,
       {
         set: eventPanel.set || adjustedPanel.set,
         datang: false,
@@ -2900,7 +2904,7 @@ export default function App() {
         buildKey: "silkbind-jade",
         weaponStars: (eventPanel as any).weaponStars ?? (adjustedPanel as any).weaponStars,
         armorSet: (eventPanel as any).armorSet ?? (adjustedPanel as any).armorSet,
-        skillOverride: skillOverrides[appSkill],
+        skillOverride: overrides[appSkill],
       } as any,
     ).total;
   };
@@ -2964,7 +2968,7 @@ export default function App() {
   const combatConfigJson = JSON.stringify(combatConfig);
   const combatScheme = useRef(activeScheme?.id);
   const loadingCombatConfig = useRef<string | null>(null);
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (combatScheme.current === activeScheme?.id) return;
     combatScheme.current = activeScheme?.id;
     setProfileRecoveryMessage("");
@@ -2981,8 +2985,9 @@ export default function App() {
     setJadeObjective(saved.jadeObjective); setJadeScenarioOverrides(saved.jadeScenarioOverrides);
     previousRotationBuild.current = saved.selectedBuild;
   }, [activeScheme?.id]);
-  useEffect(() => {
-    if (!activeScheme) return;
+  // Persist visible combat controls before paint; an immediate refresh must use them.
+  useLayoutEffect(() => {
+    if (!activeScheme || combatScheme.current !== activeScheme.id) return;
     if (loadingCombatConfig.current && loadingCombatConfig.current !== combatConfigJson) return;
     loadingCombatConfig.current = null;
     if (JSON.stringify(activeScheme.combatConfig) === combatConfigJson) return;
@@ -3474,38 +3479,44 @@ export default function App() {
     };
   }, [adjustedPanel, activeTier, datang, yishui, selectedBuild, baselineScore, rotationStats.gradRate, rotationStats.totalDmg, selectedInnerWays, innerWayTiers, cinderAsh, starweaveDistanceBonusPct, jadeObjective, jadeScenario, activeScheme?.gear, skillOverrides, timingOverrides]);
 
-  // Helper to dynamically calculate stats for any stored profile
+  // Saved members own their combat context; the current profile is not a template.
   const getDynamicProfileStats = (prof: typeof profiles[0], buildKey = selectedBuild) => {
-    const profPanel = { ...prof.panel };
-    profPanel.iwGeneralDmg = iwStats.generalDmg;
-    profPanel.iwOuterPen = iwStats.outerPen;
-    profPanel.iwPzPen = iwStats.pzPen;
-    profPanel.iwPzDmg = iwStats.pzDmg;
-
-    let totalDmg = 0;
-    getRotationForBuild(buildKey).forEach((item) => {
-      const { total } = calcSkill(item, profPanel, activeTier, {
-        set: profPanel.set || "gold",
-        datang,
-        yishui,
-        buildKey,
-      });
-      totalDmg += total;
+    const scheme = charsData.chars.flatMap(c => c.schemes.map(s => ({ ...s, profileId: `${c.id}:${s.id}` }))).find(s => s.profileId === prof.id);
+    const unavailable = (reason: string) => ({ dps: null, reason });
+    const config = scheme?.combatConfig;
+    if (!scheme || !validCombatConfig(config)) return unavailable("Open this profile in Build to save its combat context.");
+    if (buildKey !== config.selectedBuild) return unavailable("Path differs from the saved profile. Configure that Path in Build first.");
+    const gear = scheme.gear.filter(item => item.slot !== "Bow/Ring" && isItemEquipped(item, scheme.gear));
+    if (!gear.length) return unavailable("No equipped gear in this profile.");
+    if (prof.id === `${charsData.activeCharId}:${charsData.activeSchemeId}`) return { dps: rotationStats.dps, reason: "" };
+    const target = resolveTarget(config.tierKey, config.customDef, config.customRes);
+    if (!target) return unavailable("Saved target tier is unavailable.");
+    const p = computeGearPanel(scheme.panel, gear, scheme.baseOverride, innerAttrName(buildKey), buildKey);
+    if (config.food) { p.minOuter += target.foodMin; p.maxOuter += target.foodMax; }
+    if (config.bowSelect === "crit") p.crit += 3.7;
+    else if (config.bowSelect === "prec") p.prec += 3.3;
+    else if (config.bowSelect === "aff") p.aff += 1.8;
+    const sets = detectSet4pc(gear);
+    p.set = sets.weaponSet; (p as any).armorSet = sets.armorSet; (p as any).weaponStars = sets.weaponSet === "stars";
+    p.iwGeneralDmg = 0; p.iwOuterPen = 0; p.iwPzPen = 0; p.iwPzDmg = 0;
+    const buffs = buildTimelineBuffs(config.selectedInnerWays, config.innerWayTiers);
+    for (const buff of buffs.filter(b => b.id.endsWith(":static"))) applyDelta(p, buff.maxDelta, 1);
+    if (buildKey === "bamboocut-dust") { p.iwGeneralDmg = 0; p.iwOuterPen = 0; p.iwPzPen = 0; p.iwPzDmg = 0; }
+    if (buildKey === "silkbind-jade") {
+      const scenario = { ...config.jadeScenarioOverrides, ...Object.fromEntries([['blossomBarrage', 'blossom_barrage'], ['starReacher', 'star_reacher'], ['thunderousBloom', 'thunderous_bloom'], ['moraleChant', 'morale_chant'], ['breakingPoint', 'breaking_point'], ['bitterSeasons', 'bitter_seasons']].map(([key, id]) => [key, config.selectedInnerWays.includes(id)])) } as typeof jadeScenario;
+      const result = evaluateSilkbindJadeCached(p, jadeScenarioForCombo(gear, { scenario, objective: config.jadeObjective, cacheSalt: JSON.stringify(config) }), config.jadeObjective, (event: any, eventPanel: PanelStats) => priceJadeEvent(event, eventPanel, target, config.skillOverrides));
+      return { dps: result.dps, reason: "" };
+    }
+    const result = evaluateScenario(p, {
+      rotation: getRotationForBuild(buildKey).filter(item => config.cinderAsh || !["Divinecraft - Fire", "Fire - Solid Foundation"].includes(item.name)), duration: getRotationTimeForBuild(buildKey), tier: target,
+      opts: { set: p.set, datang: config.datang, yishui: config.yishui, buildKey, starweaveDistanceBonusPct: config.starweaveDistance === "far" ? 1 : 0 } as any,
+      buffs: buffs.filter(b => !b.id.endsWith(":static")), skillOverrides: config.skillOverrides, timingOverrides: config.timingOverrides,
     });
-
-    const dps = totalDmg / getRotationTimeForBuild(buildKey);
-    const gradRate = (totalDmg / calcBaseline(activeTier, buildKey)) * 100;
-
-    return {
-      dps,
-      gradRate
-    };
+    return { dps: result.dps, reason: "" };
   };
 
   // ── Team builder (Phase 4) ──────────────────────────────────────────────────
-  // Team DPS = sum of each member's solo DPS (their saved profile panel run through
-  // the current build's rotation) × optional team-wide buff multipliers. Kill time =
-  // boss HP / team DPS. Placed AFTER getDynamicProfileStats (TDZ).
+  // Sum saved-profile solo estimates, then apply idealized team modifiers.
   const characterProfiles = useMemo<SavedProfile[]>(() => charsData.chars.flatMap((character) => character.schemes.map((scheme) => ({
     id: `${character.id}:${scheme.id}`,
     name: `${character.name} / ${scheme.name}`,
@@ -3522,20 +3533,22 @@ export default function App() {
   const [teamPoisonQi, setTeamPoisonQi] = useState<boolean>(false);
   const [bossHp, setBossHp] = useState<number>(3500000);
   const teamSim = useMemo(() => {
-    const active = teamMemberIds.map((id, index) => {
+    const selected = teamMemberIds.map((id, index) => {
       const prof = id ? characterProfiles.find(p => p.id === id) : undefined;
       const buildKey = teamBuilds[index] || selectedBuild;
-      return prof ? { id, name: prof.name, buildKey, dps: getDynamicProfileStats(prof, buildKey).dps } : null;
-    }).filter(Boolean) as { id: string; name: string; buildKey: string; dps: number }[];
+      return prof ? { id, index, name: prof.name, buildKey, ...getDynamicProfileStats(prof, buildKey) } : null;
+    }).filter(Boolean) as { id: string; index: number; name: string; buildKey: string; dps: number | null; reason: string }[];
+    const unavailable = selected.filter(member => member.dps === null);
+    const active = selected.filter(member => member.dps !== null) as (typeof selected[number] & { dps: number })[];
     const soloSum = active.reduce((s, m) => s + m.dps, 0);
     const modifiers = applyTeamModifiers(active, { vulnerability: teamVuln, revelryUptime: teamRevelry ? teamRevelryUptime : 0 });
     const teamDps = modifiers.total;
     const buffMult = soloSum > 0 ? teamDps / soloSum : 1;
     const killTime = teamDps > 0 ? bossHp / teamDps : 0;
     const qiBreak = qiBreakBonus(active.map((member) => member.buildKey), teamPoisonQi);
-    return { active: modifiers.members, soloSum, buffMult, teamDps, killTime, qiBreak };
+    return { active: modifiers.members, selected, unavailable, soloSum, buffMult, teamDps, killTime, qiBreak };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [teamMemberIds, teamBuilds, characterProfiles, teamVuln, teamRevelry, teamRevelryUptime, teamPoisonQi, bossHp, adjustedPanel, activeTier, datang, yishui, selectedBuild, iwStats, baselineScore]);
+  }, [teamMemberIds, teamBuilds, characterProfiles, teamVuln, teamRevelry, teamRevelryUptime, teamPoisonQi, bossHp, rotationStats.dps, selectedBuild]);
 
   // Handle OCR fast load
   const handleOcrResult = (scanned: Partial<PanelStats>) => {
@@ -5987,24 +6000,29 @@ export default function App() {
                       <div className="bg-[#1e1a12] border border-[#f0b400]/30 rounded-xl p-4">
                         <h3 className="text-sm font-bold text-[#f0b400] mb-2 flex items-center gap-2">👥 Team Builder <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#f0b400]/15 text-[#f0b400]/80">beta</span></h3>
                         <p className="text-[12px] text-slate-300 leading-relaxed">
-                          Pick up to 5 members from your <b>saved profiles</b>. Team DPS = sum of each member's solo DPS (their saved panel run through this build's rotation) × team buffs. Kill time = boss HP / team DPS.
+                          Pick up to 5 members from your <b>saved profiles</b>. Each member uses their own saved Path, gear, target and combat settings. Team DPS = solo DPS sum × idealized team modifiers. Kill time = boss HP / team DPS.
                         </p>
                       </div>
 
                       <div className="bg-[#141619] border border-[#23262c] rounded-xl p-4 space-y-2">
                         <span className="text-[10px] uppercase tracking-widest text-[#a19683] font-mono">Members</span>
                         {teamMemberIds.map((id, i) => {
-                          const m = teamSim.active.find(a => a.id === id);
+                          const m = teamSim.active.find(a => a.index === i);
                           return (
-                            <div key={i} className="flex items-center gap-3">
+                            <div key={i} className="grid grid-cols-[1.25rem_minmax(0,1fr)_auto] sm:flex items-center gap-2">
                               <span className="w-5 text-center text-[12px] text-[#a19683] font-mono">{i + 1}</span>
-                              <select value={id} onChange={e => setTeamMemberIds(prev => prev.map((x, j) => j === i ? e.target.value : x))}
-                                className="flex-1 bg-[#111316] border border-[#23262c] rounded px-2 py-1 text-slate-100 text-[12.5px]">
+                              <select aria-label={`Member ${i + 1} profile`} value={id} onChange={e => {
+                                const profileId = e.target.value;
+                                setTeamMemberIds(prev => prev.map((x, j) => j === i ? profileId : x));
+                                const config = charsData.chars.flatMap(c => c.schemes.map(s => ({ ...s, profileId: `${c.id}:${s.id}` }))).find(s => s.profileId === profileId)?.combatConfig;
+                                if (validCombatConfig(config)) setTeamBuilds(prev => prev.map((value, j) => j === i ? config.selectedBuild : value));
+                              }}
+                                className="col-span-2 sm:col-span-1 flex-1 min-w-0 bg-[#111316] border border-[#23262c] rounded px-2 py-1 text-slate-100 text-[12.5px]">
                                 <option value="">— empty —</option>
                                 {characterProfiles.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                               </select>
                               <select aria-label={`Member ${i + 1} path`} value={teamBuilds[i] || selectedBuild} onChange={e => setTeamBuilds(prev => prev.map((value, j) => j === i ? e.target.value : value))}
-                                className="max-w-40 bg-[#111316] border border-[#23262c] rounded px-2 py-1 text-slate-100 text-[11px]">
+                                className="col-start-2 max-w-40 bg-[#111316] border border-[#23262c] rounded px-2 py-1 text-slate-100 text-[11px]">
                                 {Object.entries(BUILD_PROFILES).map(([key, build]) => <option key={key} value={key}>{build.label}</option>)}
                               </select>
                               <span className="w-28 text-right text-[12.5px] font-bold text-slate-200">{m ? Math.round(m.dps).toLocaleString() + " /s" : "—"}</span>
@@ -6014,11 +6032,12 @@ export default function App() {
                       </div>
 
                       <div className="bg-[#141619] border border-[#23262c] rounded-xl p-4 space-y-2">
+                        {teamSim.unavailable.length > 0 && <p role="status">Team estimate unavailable: {teamSim.unavailable.map(member => `Member ${member.index + 1}: ${member.reason}`).join(" ")}</p>}
                         <span className="text-[10px] uppercase tracking-widest text-[#a19683] font-mono">Team buffs <span className="text-slate-500 normal-case">(idealized full-uptime — don't double-count with per-member settings)</span></span>
-                        <label className="flex items-center gap-2 text-[12.5px] text-slate-300"><input type="checkbox" checked={teamVuln} onChange={e => setTeamVuln(e.target.checked)} /> Vulnerability +8% (Stonesplit-Might receives +16%)</label>
-                        <label className="flex items-center gap-2 text-[12.5px] text-slate-300"><input type="checkbox" checked={teamRevelry} onChange={e => setTeamRevelry(e.target.checked)} /> Revelry Script +20% for 12s / 30s</label>
+                        <label className="flex items-center gap-2 min-h-11 text-[12.5px] text-slate-300"><input type="checkbox" style={{ width: 16, flexShrink: 0 }} checked={teamVuln} onChange={e => setTeamVuln(e.target.checked)} /> Vulnerability +8% (Stonesplit-Might receives +16%)</label>
+                        <label className="flex items-center gap-2 min-h-11 text-[12.5px] text-slate-300"><input type="checkbox" style={{ width: 16, flexShrink: 0 }} checked={teamRevelry} onChange={e => setTeamRevelry(e.target.checked)} /> Revelry Script +20% for 12s / 30s</label>
                         {teamRevelry && <label className="flex items-center gap-2 text-[12px] text-slate-300">Revelry uptime <input type="number" min="0" max="100" value={Math.round(teamRevelryUptime * 100)} onChange={e => setTeamRevelryUptime(Math.min(1, Math.max(0, Number(e.target.value) / 100 || 0)))} className="w-16 bg-[#111316] border border-[#23262c] rounded px-2 py-1 text-slate-100" />%</label>}
-                        <label className="flex items-center gap-2 text-[12.5px] text-slate-300"><input type="checkbox" checked={teamPoisonQi} onChange={e => setTeamPoisonQi(e.target.checked)} /> Divinecraft poison: +5% Qi break</label>
+                        <label className="flex items-center gap-2 min-h-11 text-[12.5px] text-slate-300"><input type="checkbox" style={{ width: 16, flexShrink: 0 }} checked={teamPoisonQi} onChange={e => setTeamPoisonQi(e.target.checked)} /> Divinecraft poison: +5% Qi break</label>
                         <small className="block text-slate-500">Team Qi break: +{teamSim.qiBreak}% (Dust +5%, Nameless +10%, poison +5%).</small>
                       </div>
 
@@ -6034,7 +6053,7 @@ export default function App() {
                       <div className="grid grid-cols-3 gap-3">
                         <div className="bg-[#141619] border border-[#23262c] rounded-xl p-3 text-center">
                           <div className="text-[10px] uppercase tracking-widest text-[#a19683] font-mono">Team DPS</div>
-                          <div className="text-[20px] font-bold text-[#f0b400] leading-tight">{Math.round(teamSim.teamDps).toLocaleString()}<span className="text-[11px] text-slate-400 font-normal"> /s</span></div>
+                          <div data-testid="team-dps" className="text-[20px] font-bold text-[#f0b400] leading-tight">{teamSim.unavailable.length ? <span className="text-[12px]">Unavailable</span> : <>{Math.round(teamSim.teamDps).toLocaleString()}<span className="text-[11px] text-slate-400 font-normal"> /s</span></>}</div>
                           {teamSim.buffMult > 1 && <div className="text-[11px] text-[#7ee787]">+{Math.round((teamSim.buffMult - 1) * 100)}% buffs</div>}
                         </div>
                         <div className="bg-[#141619] border border-[#23262c] rounded-xl p-3 text-center">
@@ -6044,12 +6063,12 @@ export default function App() {
                         </div>
                         <div className="bg-[#141619] border border-[#23262c] rounded-xl p-3 text-center">
                           <div className="text-[10px] uppercase tracking-widest text-[#a19683] font-mono">Kill time</div>
-                          <div className="text-[20px] font-bold text-slate-100 leading-tight">{teamSim.killTime > 0 ? teamSim.killTime.toFixed(1) + "s" : "—"}</div>
+                          <div className="text-[20px] font-bold text-slate-100 leading-tight">{!teamSim.unavailable.length && teamSim.killTime > 0 ? teamSim.killTime.toFixed(1) + "s" : "—"}</div>
                           <div className="text-[11px] text-slate-400">boss {(bossHp / 1e6).toFixed(2)}M</div>
                         </div>
                       </div>
 
-                      <div className="team-timeline">
+                      {!teamSim.unavailable.length && teamSim.teamDps > 0 && <div className="team-timeline">
                         <div><strong>Team damage over time</strong><small>Cumulative damage against the selected boss</small></div>
                         <div className="team-timeline-bars">
                           {[0, .2, .4, .6, .8, 1].map((point) => {
@@ -6058,10 +6077,10 @@ export default function App() {
                             return <span key={point}><i style={{ height: `${Math.max(2, point * 100)}%` }} /><b>{seconds.toFixed(1)}s</b><small>{(damage / 1e6).toFixed(2)}M</small></span>;
                           })}
                         </div>
-                      </div>
+                      </div>}
 
                       <p className="text-[11px] text-slate-500 leading-snug">
-                        Each member's DPS uses their saved panel run through <b>this build's</b> rotation. Buffs are flat idealized multipliers (no Qi-break window / buff-ramp timeline — that needs a real per-second engine, hence no DPS-over-time chart).
+                        Each member uses their own saved combat context and this Path's standard rotation. Different saved targets are separate solo scenarios. Team modifiers and cumulative damage are steady-state estimates; coordinated buff timing and Qi-break windows are not modeled.
                       </p>
                     </div>
                   )}

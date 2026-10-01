@@ -37,8 +37,8 @@ const after = `  const jadeScenarioForCombo = (combo: GearItem[]) => {
     };
   };`;
 
-const hasCurrentObjectiveCacheHelper = hasNormalized(source, 'const jadeScenarioForCombo = (combo: GearItem[]) => {')
-  && hasNormalized(source, 'const objectiveScenario = jadeObjective === JADE_OBJECTIVES.SHORT_FIGHT_BURST')
+const hasCurrentObjectiveCacheHelper = hasNormalized(source, 'const jadeScenarioForCombo = (combo: GearItem[]')
+  && (hasNormalized(source, 'const objectiveScenario = jadeObjective === JADE_OBJECTIVES.SHORT_FIGHT_BURST') || hasNormalized(source, 'const objectiveScenario = context.objective === JADE_OBJECTIVES.SHORT_FIGHT_BURST'))
   && hasNormalized(source, 'const gearSignature = combo.map((gear) => gear.id).sort().join(",")')
   && (hasNormalized(source, '|${gearSignature}`') || hasNormalized(source, 'cacheSalt: JSON.stringify([activeTier.name, food, bowSelect, selectedInnerWays, innerWayTiers, gearSignature, skillOverrides, timingOverrides])'));
 
@@ -49,7 +49,7 @@ if (!hasCurrentObjectiveCacheHelper) {
 if (!hasNormalized(source, 'const gearSignature = combo.map((gear) => gear.id).sort().join(",")')) {
   throw new Error('[jade-objectives-cache] Gear signature cache key missing.');
 }
-if (!hasNormalized(source, 'jadeObjective === JADE_OBJECTIVES.SHORT_FIGHT_BURST')) {
+if (!hasNormalized(source, 'jadeObjective === JADE_OBJECTIVES.SHORT_FIGHT_BURST') && !hasNormalized(source, 'context.objective === JADE_OBJECTIVES.SHORT_FIGHT_BURST')) {
   throw new Error('[jade-objectives-cache] Short-fight objective scenario missing.');
 }
 

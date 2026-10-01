@@ -110,9 +110,9 @@ const helperBlock=`  const jadeAttunementsForCombo = (combo: GearItem[]) => {
   };
 
   // ponytail: single source for "gear combo → in-combat panel → rotation total".`;
-const hasCurrentJadeCompleteBuildHelpers = app.includes('const jadeScenarioForCombo = (combo: GearItem[]) => {')
+const hasCurrentJadeCompleteBuildHelpers = app.includes('const jadeScenarioForCombo = (combo: GearItem[]')
   && app.includes('const gearSignature = combo.map((gear) => gear.id).sort().join(",")')
-  && app.includes('const priceJadeEvent = (event: any, eventPanel: PanelStats) => {');
+  && app.includes('const priceJadeEvent = (event: any, eventPanel: PanelStats');
 if (!hasCurrentJadeCompleteBuildHelpers) {
   app=replaceRequired(app,helperAnchor,helperBlock,'Jade complete-build helpers');
 }
