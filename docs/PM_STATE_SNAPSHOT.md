@@ -1,5 +1,20 @@
 # WWM-BUILD PM_STATE_SNAPSHOT
 
+## Superseding navigation checkpoint — Global source gate
+
+Timestamp: 2026-10-01T13:15:07Z. Version: source qualification / operational PM recovery. Supersedes the previous next-task and runtime fields below; accepted Team/UI evidence is retained. Navigation only; reverify mutable state.
+GOAL / CURRENT GATE: WWM-BUILD upstream milestone remains PARTIAL / SOURCE_BLOCKED after bounded public-source reconciliation. PR54 Team release remains PASS_WITH_CONDITIONS.
+REPO / WORKTREE: PNHD/wwm-calc; D:/WWM Calc-upstream-20261001 / feat/upstream-20261001, reused without reset. Recovered docsHEADc8b46002; main/Pages61ca3b5624873ba70425a04e4fa2dfdafe19faaf freshly verified, main CI36864050611 SUCCESS.
+ACCEPTED EVIDENCE: RELEASE_TEAM_20261001.md and original8/8 production receipts inspected; no new browser rerun claimed. Current app code equals the accepted release.
+NEW EVIDENCE: GLOBAL_SOURCE_GATE_20261001.md; five Umbra references/336steps/22distinct IDs; pinned weights lack raw Global identity; Umbra CN110 lineage and Piercing Dart upstream-local level100 source recovered. Official rules confirmed separately from numerical calibration.
+BLOCKERS / UNKNOWNs: Matching Global raw client/build identity, complete weighted legal pools and ordered hit/cancel/DoT/effect mappings. Whole milestone cannot be completed from the inspected public sources. PO acceptance/separate independent review remain unclaimed.
+SCOPE / PERMISSIONS: Research/docs/tracker only this pass; standing release authorization retained. No application coefficients, formulas, defaults or source support changed. Existing generated/untracked work preserved; no subagents/installs/spend/destructive Git.
+SOURCE DOCS: PROJECT_STATE.md, GLOBAL_SOURCE_GATE_20261001.md, RELEASE_TEAM_20261001.md, AGENTS.md.
+NEXT TASK: Identify/provide a versioned Global source packet for one supported Path/tier/slot, then qualify it before numerical integration.
+CONTROL: ACCOUNT_POLICY AUTO_HEADROOM; NEXT_LAUNCH ORCA_CODEX:AUTO_HEADROOM:NONE; SESSION_ACTION WAIT_FOR_D3; current SESSION_REF01a0f790-08a6-7042-a834-0afc1be39513. Continue this current session/worktree after the fact gate clears; prior provider transcript remains read-only.
+
+## Retained Team release snapshot
+
 Timestamp: 2026-10-01T12:52:25.862193+00:00. Version: Team release verified. Supersedes the corrected PR54 candidate snapshot. Navigation only; reverify mutable state.
 
 GOAL: Complete WWM-BUILD in reviewed, tested increments published for owner testing.

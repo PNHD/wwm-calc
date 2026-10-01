@@ -1,4 +1,30 @@
-# WWM-BUILD PM_STATE_SNAPSHOT
+# WWM-BUILD PROJECT_STATE
+
+## Current operational state — source gate
+
+LAST_VERIFIED: 2026-10-01T13:15:07Z. This section supersedes the operational next-task/runtime fields in the retained Team release snapshot below; released evidence remains accepted.
+GOAL: Finish WWM-BUILD in reviewed increments while preserving verified Global calculations.
+CURRENT_MILESTONE: WWM-BUILD-UPSTREAM-20261001 / Global source qualification.
+ACCEPTANCE: PARTIAL / SOURCE_BLOCKED; released UI/Team slice PASS_WITH_CONDITIONS.
+CANONICAL_SOURCE: PNHD/wwm-calc Git/CI, canonical Pages build-info, version-identified Global client evidence; source report docs/GLOBAL_SOURCE_GATE_20261001.md.
+PM_OWNER / MUTABLE_OWNERS: Current Codex operational parent; one writer in existing worktree; no subagents.
+VERIFIED_STATE: Recovered documentation HEAD c8b46002bf04c855d149c8359261451f0cda84d0; remote main and Pages 61ca3b5624873ba70425a04e4fa2dfdafe19faaf. PR54 merged; main Validate36864050611 SUCCESS. Prior production8/8 receipts inspected, not rerun. Current app code equals the accepted release; generated library flag is byte-identical to HEAD and retained.
+SOURCE_RESULT: Official Sword Energy condition and scoped retune rules confirmed; numerical mapping/weights not qualified. MIT Umbra extraction explicitly originates from CN Lv110 workbook; GPL Piercing Dart curves use upstream-local export at level100 with unverified Global identity. Five saved references contain336 steps/22 distinct IDs and remain numerical-unavailable. No numerical edit or source upgrade.
+BLOCKERS / D3_GATES: Missing version-identified Global mappings/calibration and full weighted legal pools after bounded public-source reconciliation. A client-owned raw source packet or a Product Owner scope decision is needed; deployment permission is already authorized.
+NEXT_ACTION: Obtain the path/link to a version-identified Global source packet for one supported Path/tier/slot, then qualify mappings or weighted pools per GLOBAL_SOURCE_GATE_20261001.md before integration.
+NEXT_LAUNCH: ORCA_CODEX:AUTO_HEADROOM:NONE
+ACCOUNT_POLICY: AUTO_HEADROOM
+SESSION_ACTION: WAIT_FOR_D3
+SESSION_REF: 01a0f790-08a6-7042-a834-0afc1be39513 (current continuation; never resume the prior read-only transcript session).
+WORKTREE: D:/WWM Calc-upstream-20261001 / feat/upstream-20261001; SAME after evidence gate clears.
+USER_ACTION: Identify/provide the versioned Global source packet, or decide a smaller scope while unsupported numerics remain reference/unavailable.
+RESUME_PROMPT: NONE; continue this session when the source input arrives.
+RUNTIME_RECOVERY: NONE
+MODEL / EFFORT / ACCOUNT / QUOTA: Actual provider values not exposed here: UNKNOWN. No model/account switch requested or performed.
+PERMISSIONS: Existing incremental push/PR/required CI/ordinary merge/Pages and tracker writeback authorization retained. No destructive Git, protection bypass, installs, spend, credentials or subagents.
+LAST_ACCEPTED_EVIDENCE: docs/RELEASE_TEAM_20261001.md and ignored .local-evidence/upstream-20261001/team-takeover/; current source provenance and recovery receipts in .local-evidence/upstream-20261001/source-gate/.
+
+## Retained Team release snapshot
 
 Timestamp: 2026-10-01T12:52:25.862193+00:00. Version: Team release verified. Supersedes the corrected PR54 candidate snapshot. Navigation only; reverify mutable state.
 
