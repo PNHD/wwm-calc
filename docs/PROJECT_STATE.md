@@ -1,28 +1,27 @@
 # WWM-BUILD PROJECT_STATE
 
-## Current operational state — full audit and supported release
+## Current operational state - audit release verified
 
-LAST_VERIFIED: 2026-10-01. Product Owner renewed autonomous audit/research/fix/publication scope. This section supersedes the prior WAIT_FOR_D3 operational checkpoint; accepted Team release evidence is retained.
-GOAL: Finish WWM-BUILD in reviewed increments while preserving verified Global calculations.
-CURRENT_MILESTONE: WWM-BUILD-UPSTREAM-20261001 / full audit and supported correction increment.
-ACCEPTANCE: IN_PROGRESS; first audit candidate 31 static checks and 46 browser checks PASS. Final layout/lockfile delta and release are pending. Remaining Global numerical coverage stays PARTIAL / SOURCE_BLOCKED.
-CANONICAL_SOURCE: PNHD/wwm-calc Git/CI, canonical Pages build-info, version-identified Global client evidence; source report docs/GLOBAL_SOURCE_GATE_20261001.md.
-PM_OWNER / MUTABLE_OWNERS: Current Codex operational parent; one writer in existing worktree; no subagents.
-VERIFIED_STATE: Recovered documentation HEAD f75064c512014246c1d99ef1c1397f2312807d1b; freshly verified remote main 61ca3b5624873ba70425a04e4fa2dfdafe19faaf. PR54 remains merged. Current dirty changes repair game import unit/precision/validation/stale-preview handling, update reviewed news disclosure and fix dev-tool lockfile advisories. Node22.23.2 used; generated artifacts and original checkout preserved.
-SOURCE_RESULT: Official Sword Energy condition and scoped retune rules confirmed; numerical mapping/weights not qualified. MIT Umbra extraction explicitly originates from CN Lv110 workbook; GPL Piercing Dart curves use upstream-local export at level100 with unverified Global identity. Five saved references contain336 steps/22 distinct IDs and remain numerical-unavailable. No numerical edit or source upgrade.
-BLOCKERS / D3_GATES: No routine approval needed for this supported increment. Version-identified Global mappings/calibration and full weighted legal pools remain missing and numerical apply/probabilities remain unavailable. Their absence does not block independent verified corrections.
-NEXT_ACTION: Finish final candidate review/validation, normal task-branch PR/required CI/merge/Pages, then exact-SHA desktop/mobile production smoke and tracker readback.
-NEXT_LAUNCH: ORCA_CODEX:AUTO_HEADROOM:RESUME
+LAST_VERIFIED: 2026-10-01T14:23:17Z. Supersedes the renewed-audit in-progress checkpoint and prior source-gate launcher. Navigation only; reverify mutable refs.
+GOAL: WWM Global build calculator with truthful source support and reviewed, tested incremental publication.
+CURRENT_MILESTONE: Full audit and supported correction/publication increment CLOSED / PASS_WITH_CONDITIONS. Whole WWM-BUILD-UPSTREAM-20261001 numerical coverage remains PARTIAL/SOURCE_BLOCKED.
+CANONICAL_SOURCE: PNHD/wwm-calc Git/CI and https://wonton-wwm.pages.dev/build-info.json. Calibration remains accepted Global2.1/T96; Global2.2 news alone does not authorize numerical calibration changes.
+VERIFIED_STATE: Immutable candidate 8a49be6000f82c28b5d8f4a86fd65644da00571d; PR55 merged normally to main/Pages 8716ec74f4ce98998ee32d760ebcf4f552f9f84b, builtAt2026-10-01T14:20:17.670Z. PR CI36874319753 and main CI36875472250 SUCCESS. Node22.23.2 build/typecheck/31 checks and migration byte changes[]/[]; full exact-candidate browser46/46 PASS. Fresh exact-SHA production import2/2 at390/1440 PASS; CI Arena/V1 production receipts success=true, errors=[], exactSha=true and main stable. All-dependency lockfile audit zero; changed dependency versions dev-only; shared node_modules preserved, clean CI install verified.
+CHANGES: Confirmed-stat import units/precision, bounded own-key parser, stale preview invalidation and explicit inferred-slot/stat review; keyboard/clipboard recovery, reviewed September23/30 image disclosure, dev tooling advisories and native Vite preview/docs. Verified formulas/default calibration preserved.
+SOURCE_CONDITIONS: Complete version-matched Global action/hit/cancel/DoT/effect mappings and weighted legal pools remain unqualified; five Umbra references336steps/22IDs remain reference-only/numerical-unavailable. No invented coefficients or probabilities. Public-source search limits recorded in GLOBAL_SOURCE_GATE_20261001.md and DEEP_AUDIT_20261001.md.
+ACCEPTANCE_LIMITS: Executor review and raw checks verified; separate independent reviewer, subjective PO acceptance and authenticated bookmarklet extraction unclaimed.
+NEXT_ACTION: NONE for the closed supported audit/release increment. Qualify new versioned Global raw mappings or complete weighted pools before future numerical integration. No later milestone or recurring research loop started.
+NEXT_LAUNCH: ORCA_CODEX:AUTO_HEADROOM:NONE
 ACCOUNT_POLICY: AUTO_HEADROOM
-SESSION_ACTION: CONTINUE_SAME_SESSION
-SESSION_REF: 01a0f790-08a6-7042-a834-0afc1be39513 (current continuation; never resume the prior read-only transcript session).
-WORKTREE: D:/WWM Calc-upstream-20261001 / feat/upstream-20261001; SAME.
-USER_ACTION: NONE for audit/correction/publication; continue autonomously.
-RESUME_PROMPT: NONE.
+SESSION_ACTION: MILESTONE_COMPLETE for this supported audit/release increment only; whole numerical upstream milestone remains PARTIAL.
+SESSION_REF: 01a0f790-08a6-7042-a834-0afc1be39513, current continuation; prior provider transcript never resumed or modified.
+WORKTREE: D:/WWM Calc-upstream-20261001 / feat/upstream-20261001; SAME. Local code candidate is 8a49be6000f82c28b5d8f4a86fd65644da00571d; later evidence-only documentation HEAD is separate from the application release SHA.
+USER_ACTION: NONE for completed audit/release.
+RESUME_PROMPT: NONE
 RUNTIME_RECOVERY: NONE
-MODEL / EFFORT / ACCOUNT / QUOTA: Actual provider values not exposed here: UNKNOWN. No model/account switch requested or performed.
-PERMISSIONS: Existing incremental push/PR/required CI/ordinary merge/Pages and tracker writeback authorization retained. No destructive Git, protection bypass, installs, spend, credentials or subagents.
-LAST_ACCEPTED_EVIDENCE: docs/RELEASE_TEAM_20261001.md and ignored .local-evidence/upstream-20261001/team-takeover/; current source provenance and recovery receipts in .local-evidence/upstream-20261001/source-gate/.
+PM_OWNER / MUTABLE_OWNERS: Current Codex operational parent; one writer, no subagents. Actual runtime model/effort/account/quota not exposed: UNKNOWN.
+PERMISSIONS / PRESERVATION: Standing normal push/PR/CI/merge/Pages and tracker writeback authorization. No destructive Git, protection bypass, spend, credential changes or shared installs. Original checkout, transcript hash and generated/untracked artifacts preserved.
+EVIDENCE: docs/DEEP_AUDIT_20261001.md; ignored .local-evidence/upstream-20261001/deep-audit/ including exact-candidate logs, source-image hashes, reviewed screenshots, GitHub receipts, production-import-final.log and downloaded ci-production/ artifacts. Prior RELEASE_TEAM_20261001.md evidence retained.
 
 ## Retained Team release snapshot
 

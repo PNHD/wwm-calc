@@ -1,5 +1,18 @@
 # WWM-BUILD PM_STATE_SNAPSHOT
 
+## Superseding navigation checkpoint - audit release closed
+
+Timestamp 2026-10-01T14:23:17Z; version2026-10-01.7. Supersedes all earlier launcher/next-task fields; accepted history retained.
+GOAL / CLOSED GATE: Full audit and supported correction increment PASS_WITH_CONDITIONS, published. Whole numerical upstream coverage PARTIAL/SOURCE_BLOCKED.
+REPO / REFS: PNHD/wwm-calc; SAME D:/WWM Calc-upstream-20261001 / feat/upstream-20261001. Candidate 8a49be6000f82c28b5d8f4a86fd65644da00571d; PR55 merged/main/Pages 8716ec74f4ce98998ee32d760ebcf4f552f9f84b; base61ca3b5624873ba70425a04e4fa2dfdafe19faaf. Later docs-only HEAD is separate.
+ACCEPTED EVIDENCE: Node22 build/typecheck31 checks, repeated migrations[]/[], exact-candidate browser46/46, PR CI36874319753 and main CI36875472250 SUCCESS, Pages builtAt2026-10-01T14:20:17.670Z, exact-SHA production import2/2 and CI Arena/V1 receipts success/errors[]/stable main. Lockfile audit zero, dev-only version changes.
+CONDITIONS: Version-matched Global numerical mappings/weighted pools still missing; reference/unavailable support unchanged. Independent review, subjective PO acceptance and authenticated extraction unclaimed.
+SCOPE / PERMISSIONS: Authorized audit/corrections/normal release/tracker writeback completed; no subagents, destructive Git, paid actions or credential changes. Original checkout/transcript/generated work preserved.
+SOURCE DOCS: PROJECT_STATE.md, DEEP_AUDIT_20261001.md, GLOBAL_SOURCE_GATE_20261001.md, AGENTS.md. Raw ignored deep-audit/ receipts/artifacts retained.
+NEXT TASK: NONE in this closed supported increment; new attributable Global evidence must be qualified before future numerical integration.
+CONTROL: MILESTONE_COMPLETE for this supported increment only; USER_ACTION NONE; NEXT_LAUNCH ORCA_CODEX:AUTO_HEADROOM:NONE; SESSION_REF01a0f790-08a6-7042-a834-0afc1be39513.
+
+
 ## Superseding navigation checkpoint — renewed full audit
 
 2026-10-01: Product Owner renewed autonomous audit/research/correction and live-publication scope. Supersedes the source-gate WAIT_FOR_D3 next action below; unsupported numerics remain unavailable. Same session/worktree/branch, one writer, no subagents.
