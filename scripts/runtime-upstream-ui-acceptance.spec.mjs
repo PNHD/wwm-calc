@@ -299,6 +299,7 @@ for (const [width, height] of [[390, 844], [1024, 768], [1363, 936], [1440, 900]
     await page.goto(base + "#training-terrace/overview", { waitUntil: "networkidle" });
     await expect(page.getByText("Before", { exact: true }).first()).toBeVisible();
     await expect(page.getByText("After", { exact: true }).first()).toBeVisible();
+    expect(await page.locator('.training-terrace').evaluate(el => [el, ...el.querySelectorAll('h2, label, input')].every(node => getComputedStyle(node).fontFamily.startsWith('system-ui')))).toBe(true);
     await expect(page.locator('.workspace-header')).toHaveCount(1);
     await page.screenshot({ path: `${dir}/training-${width}.png`, fullPage: false });
     expect(errors).toEqual([]);
