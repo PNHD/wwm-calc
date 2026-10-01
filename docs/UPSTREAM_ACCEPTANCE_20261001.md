@@ -2,7 +2,7 @@
 
 Work item: WWM-BUILD-UPSTREAM-20261001. Date: 2026-10-01.
 Base: 4debf129fe9353c058020129dae0712b6befe29e. Branch: feat/upstream-20261001.
-Workspace: D:/WWM Calc-upstream-20261001. Immutable code ref is recorded in PROJECT_STATE.md after checkpoint.
+Workspace: D:/WWM Calc-upstream-20261001. Immutable tested/built code ref: 8631b88a814bb2d935c684f797cf6c0b33bf5a89. Subsequent checkpoint commit changes documentation only.
 
 Milestone acceptance: PARTIAL; SOURCE_BLOCKED. No push, PR, merge or deploy. Existing live main is preserved. Local validation is separate from Product Owner acceptance.
 
@@ -21,10 +21,10 @@ Raw evidence: `.local-evidence/upstream-20261001/kernel-contract-report.json`, `
 
 ## Verification and limits
 
-- Final build: npm run build (full prebuild migrations plus Vite); exit0. Existing >500kB bundle warning remains.
+- Candidate build: npm run build (full prebuild migrations plus Vite); exit0 in candidate-build.log. dist/build-info.json identifies code ref8631b88. SHA-256 artifact and changed-file manifest: candidate-manifest.json. Existing >500kB bundle warning remains.
 - Static gate: 30 checks, zero failures in final-checks.log/checks-summary.json; includes lint/typecheck, compiled OCR suite, formula/model, panel/Global/path, storage security/registry, library, Arena/GVG and source validators.
 - Migration determinism: two successive full migrations; changed-file arrays both empty in migration-determinism.json. Compatibility guards preserve new call graph while retaining existing legality checks.
-- Browser result: final-browser.log is authoritative; result recorded in PROJECT_STATE.md once the final run closes. Suites cover existing release/library/Arena/GVG/Attunement/training/workspace and upstream equip/override, reference/preset roundtrip, unsupported preview, seed/late-worker/cancel and Best Build navigation cancellation.
+- Candidate browser result: 33/33 PASS, exit0, candidate-browser.log (1.8 minutes). Suites cover existing release/library/Arena/GVG/Attunement/training/workspace and upstream equip/override, reference/preset roundtrip, unsupported preview, seed/late-worker/cancel and Best Build navigation cancellation. Earlier full run had 32 PASS and an invalid cancellation fixture; fixed the fixture to use legal positive physical-only lines, preserving production legality guards and failed logs.
 - Layout evidence: rotation-390.png (390x844), rotation-1024.png, rotation-1440.png; explicit no horizontal overflow and desktop fixed-rail bounds checks. Existing mobile count editing, refresh and back/forward exercised.
 - Performance: Chromium 6x CPU slowdown measured the old immutable synchronous 2,000-run loop blocking for 218-314ms (browser-profile.json). New Monte Carlo runs in a worker. Scale gate covers 50/100/250 inventory items; bounded per-render cache removes duplicate panel repricing. Fixture includes repeated items; this does not prove arbitrary distinct inventory search complexity. Best Build retains exact<=120k / beam1500 limits.
 - Focused self-review: bounded JSON cloning/shape validation; finite counts/Qi/stacks; own-key skill lookup; worker generation plus complete input fingerprint; termination/reset on input, path/tab changes, cancel and unmount; historical records preserved. No independent reviewer or Product Owner acceptance is claimed.
