@@ -5118,7 +5118,7 @@ export default function App() {
           <div className="modal-content modal-content-large" onClick={e => e.stopPropagation()} style={{ maxHeight: '88vh', display: 'flex', flexDirection: 'column' }}>
             <div className="modal-header">
               <h2><HelpCircle className="w-4 h-4" style={{ display: 'inline', verticalAlign: '-2px', marginRight: 6 }} />How to use this calculator</h2>
-              <span className="close-btn" onClick={() => setIsHelpOpen(false)}>&times;</span>
+              <button type="button" className="close-btn" aria-label="Close help" onClick={() => setIsHelpOpen(false)}>&times;</button>
             </div>
             <div className="modal-body" style={{ lineHeight: 1.55, fontSize: '0.86rem' }}>
               <div style={{ background: 'rgba(240,180,0,0.08)', border: '1px solid rgba(240,180,0,0.25)', borderRadius: 8, padding: '12px 14px', marginBottom: 16 }}>
@@ -5201,7 +5201,7 @@ export default function App() {
             <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 620, maxHeight: "88vh", display: "flex", flexDirection: "column" }}>
               <div className="modal-header">
                 <h2>📥 Import Equipped Gear from Game <span style={{ fontSize: 11, color: "#f0b400", fontWeight: 600 }}>(Beta)</span></h2>
-                <span className="close-btn" onClick={() => setIsGameImportOpen(false)}>&times;</span>
+                <button type="button" className="close-btn" aria-label="Close game import" onClick={() => setIsGameImportOpen(false)}>&times;</button>
               </div>
               <div className="modal-body" style={{ padding: 20, overflowY: "auto" }}>
                 <div style={{ fontSize: 12.5, color: "#c9d1d9", lineHeight: 1.6, marginBottom: 12 }}>
@@ -5302,7 +5302,7 @@ export default function App() {
             <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 560 }}>
               <div className="modal-header">
                 <h2>📊 Damage Statistics</h2>
-                <span className="close-btn" onClick={() => setIsDmgStatsOpen(false)}>&times;</span>
+                <button type="button" className="close-btn" aria-label="Close damage composition" onClick={() => setIsDmgStatsOpen(false)}>&times;</button>
               </div>
               <div className="modal-body" style={{ padding: 20 }}>
                 <div style={{ display: "flex", alignItems: "baseline", gap: 16, marginBottom: 4 }}>
@@ -5720,6 +5720,7 @@ export default function App() {
                         >Reset to build default</button>
                       </div>
 
+                      <p className="text-[12px] text-slate-300 mb-2">Scroll horizontally for all columns on narrow screens.</p>
                       <div className="rotation-table bg-[#141619] border border-[#23262c] rounded-xl overflow-x-auto" role="region" aria-label="Rotation skills — scroll horizontally for all controls" tabIndex={0}>
                         <table className="w-full text-[12.5px]">
                           <thead>
@@ -7335,7 +7336,7 @@ export default function App() {
           <div className="modal-content" onClick={e => e.stopPropagation()} style={{ width: '560px', maxWidth: '95%' }}>
             <div className="modal-header">
               <h2>{editingItem ? "Edit Gear Item" : "Add Gear Item"}</h2>
-              <span className="close-btn" onClick={() => setIsItemModalOpen(false)}>&times;</span>
+              <button type="button" className="close-btn" aria-label="Close gear editor" onClick={() => setIsItemModalOpen(false)}>&times;</button>
             </div>
             <div className="modal-body" style={{ textAlign: 'left' }}>
               <div className="form-row">
@@ -7640,7 +7641,7 @@ export default function App() {
           <div className="modal-content modal-content-export" onClick={e => e.stopPropagation()} style={{ height: '80vh', display: 'flex', flexDirection: 'column' }}>
             <div className="modal-header">
               <h2>Export / Import Data</h2>
-              <span className="close-btn" onClick={() => setIsExportImportModalOpen(false)}>&times;</span>
+              <button type="button" className="close-btn" aria-label="Close data" onClick={() => setIsExportImportModalOpen(false)}>&times;</button>
             </div>
             <div className="modal-body export-import-body" style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
               <div className="profile-manager">
@@ -7777,7 +7778,7 @@ export default function App() {
           <div className="modal-content modal-content-large" onClick={e => e.stopPropagation()} style={{ width: '900px', maxWidth: '95%', height: '80vh', display: 'flex', flexDirection: 'column' }}>
             <div className="modal-header">
               <h2>Batch OCR (Text Recognition)</h2>
-              <span className="close-btn" onClick={() => setIsBatchOcrModalOpen(false)}>&times;</span>
+              <button type="button" className="close-btn" aria-label="Close gear scanner" onClick={() => setIsBatchOcrModalOpen(false)}>&times;</button>
             </div>
             <div className="modal-body" style={{ flex: 1, overflowY: 'auto' }}>
               <OcrScanner
@@ -7846,7 +7847,7 @@ export default function App() {
           <div className="modal-content modal-content-large" onClick={e => e.stopPropagation()} style={{ width: '900px', maxWidth: '95%', height: '80vh', display: 'flex', flexDirection: 'column' }}>
             <div className="modal-header">
               <h2>Select Inner Way (Xinfa)</h2>
-              <span className="close-btn" onClick={() => setIsXinfaModalOpen(false)}>&times;</span>
+              <button type="button" className="close-btn" aria-label="Close Inner Ways" onClick={() => setIsXinfaModalOpen(false)}>&times;</button>
             </div>
             <div className="modal-body" style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '15px' }}>
               <div className="flex gap-4">

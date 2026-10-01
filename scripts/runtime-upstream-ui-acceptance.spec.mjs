@@ -38,7 +38,9 @@ test("shared Tools open their dialogs from Guild War and Library without mountin
       const modal = page.locator(".modal-content:visible");
       await expect(modal).toHaveCount(1);
       await expect(page.locator(".arsenal-workspace")).toHaveCount(0);
-      await modal.locator(".close-btn").first().click();
+      const close = modal.getByRole("button", { name: /^Close / }).first();
+      await close.click({ trial: true });
+      await close.focus(); await close.press("Enter");
       await expect(modal).toHaveCount(0);
     }
   }
@@ -202,6 +204,15 @@ for (const [width, height] of [[390, 844], [1024, 768], [1363, 936], [1440, 900]
         return [];
       }));
       expect(clipped.filter(item => !item.scrollable), route).toEqual([]);
+      if (route === "rotations") {
+        const contrast = await main.locator('.rotation-table input').first().evaluate(el => {
+          const style = getComputedStyle(el);
+          const luminance = colour => colour.match(/[\d.]+/g).slice(0, 3).map(Number).map(v => { const c = v / 255; return c <= .04045 ? c / 12.92 : ((c + .055) / 1.055) ** 2.4; }).reduce((sum, v, i) => sum + v * [.2126, .7152, .0722][i], 0);
+          const values = [luminance(style.color), luminance(style.backgroundColor)].sort((a, b) => a - b);
+          return (values[1] + .05) / (values[0] + .05);
+        });
+        expect(contrast).toBeGreaterThanOrEqual(4.5);
+      }
       // A native scrolling table is acceptable only when its named controls can actually be reached.
       for (const item of clipped.filter(item => item.scrollable)) {
         const target = controls.nth(item.index);
