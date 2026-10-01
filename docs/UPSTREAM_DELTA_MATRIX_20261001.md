@@ -1,3 +1,5 @@
+> Historical phase evidence below. Earlier publication HOLD and source-first next actions are superseded by the owner incremental-release policy in AGENTS.md and PROJECT_STATE.md (2026-10-01). See RELEASE_UI_20261001.md for the current release gate.
+
 # Upstream delta / execution plan
 Date: 2026-10-01. Baseline: 4debf129fe9353c058020129dae0712b6befe29e.
 Goal: complete the upstream correctness/features candidate; preserve accepted calibration.

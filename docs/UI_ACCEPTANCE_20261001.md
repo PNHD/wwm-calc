@@ -1,3 +1,5 @@
+> Historical phase evidence below. Earlier publication HOLD and source-first next actions are superseded by the owner incremental-release policy in AGENTS.md and PROJECT_STATE.md (2026-10-01). See RELEASE_UI_20261001.md for the current release gate.
+
 # WWM-BUILD local UI/state/evaluator acceptance
 
 2026-10-01T09:04:09Z. Work item WWM-BUILD-UPSTREAM-20261001. Same worktree `D:/WWM Calc-upstream-20261001`, branch `feat/upstream-20261001`.

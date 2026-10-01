@@ -1,3 +1,5 @@
+> Historical phase evidence below. Earlier publication HOLD and source-first next actions are superseded by the owner incremental-release policy in AGENTS.md and PROJECT_STATE.md (2026-10-01). See RELEASE_UI_20261001.md for the current release gate.
+
 # WWM-BUILD-UPSTREAM-20261001
 
 Authoritative acceptance contract read from AI Ops Hub record rec49T2GAoZoFgSTa on 2026-10-01.
