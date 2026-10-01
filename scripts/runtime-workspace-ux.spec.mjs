@@ -190,10 +190,13 @@ test("changing character invalidates jobs even when its scheme is byte-identical
   await dialog.getByLabel("Data Content:", { exact: true }).fill(JSON.stringify(settled));
   await Promise.all([page.waitForEvent("load"), dialog.getByRole("button", { name: "Import", exact: true }).click()]);
   await page.waitForLoadState("networkidle");
-  expect(await page.evaluate(aId => {
+  const persistedSchemes = await page.evaluate(aId => {
     const root = JSON.parse(localStorage.getItem("wwm_chars_v3"));
-    return JSON.stringify(root.chars.find(char => char.id === aId).schemes) === JSON.stringify(root.chars.find(char => char.id === "job-twin").schemes);
-  }, fixture.aId)).toBe(true);
+    return { owner: root.chars.find(char => char.id === aId).schemes, twin: root.chars.find(char => char.id === "job-twin").schemes };
+  }, fixture.aId);
+  // Report differing persisted fields if hydration fails, then require byte identity.
+  expect(persistedSchemes.twin).toEqual(persistedSchemes.owner);
+  expect(JSON.stringify(persistedSchemes.twin)).toBe(JSON.stringify(persistedSchemes.owner));
   await page.goto(BASE + "#pve/simulation", { waitUntil: "networkidle" });
   await page.evaluate(() => {
     window.Worker = class {
