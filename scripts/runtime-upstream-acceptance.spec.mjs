@@ -138,6 +138,13 @@ test("seeded worker repeats and a superseded worker cannot return to the current
   await page.getByRole("button", { name: "Cancel simulation" }).click();
   await page.evaluate(() => window.__lateWorker());
   await expect(page.locator('body')).not.toContainText("STALE_WORKER_RETURNED");
+  await page.getByRole("button", { name: /Run Simulation/ }).click();
+  await page.getByRole("button", { name: "Library", exact: true }).click();
+  await expect(page.locator('.library-page')).toBeVisible();
+  await page.evaluate(() => window.__lateWorker());
+  await page.goto(base + "#pve/simulation", { waitUntil: "networkidle" });
+  await expect(page.getByRole("button", { name: "Cancel simulation" })).toHaveCount(0);
+  await expect(page.locator('body')).not.toContainText("STALE_WORKER_RETURNED");
   fs.writeFileSync(`${dir}/worker-browser.txt`, first);
   expect(errors).toEqual([]);
 });
@@ -166,6 +173,12 @@ test("Best Build cancellation and navigation invalidate an active inventory sear
   await page.getByRole("button", { name: "Find best build", exact: true }).click();
   await page.getByLabel("PvE navigation").getByRole("button", { name: /^Build/ }).click();
   await page.getByLabel("PvE navigation").getByRole("button", { name: /^Best Build/ }).click();
+  await expect(page.getByRole("button", { name: "Cancel search" })).toHaveCount(0);
+  await expect(page.locator('body')).not.toContainText("Best combination");
+  await page.getByRole("button", { name: "Find best build", exact: true }).click();
+  await page.getByRole("button", { name: "Library", exact: true }).click();
+  await expect(page.locator('.library-page')).toBeVisible();
+  await page.goto(base + "#pve/best-build", { waitUntil: "networkidle" });
   await expect(page.getByRole("button", { name: "Cancel search" })).toHaveCount(0);
   await expect(page.locator('body')).not.toContainText("Best combination");
   expect(errors).toEqual([]);

@@ -1363,6 +1363,7 @@ export default function App() {
 
   const [activeTab, setActiveTab ] = useState<"calculator" | "priority" | "gear" | "compare" | "simulators" | "ocr" | "profiles" | "rot-sim" | "cultivate">("calculator");
   const [workspace, setWorkspace] = useState<Workspace>("gear");
+  const [shellRoute, setShellRoute] = useState({ workspace: /^#(?:library|shared-build)/.test(location.hash) ? "library" : /^#gvg/.test(location.hash) ? "gvg" : "pve", page: location.hash.split("/")[1] || "overview" });
   const [activeProductTab, setActiveProductTab] = useState<ProductTab>("gear-analyzer");
 
   // ── NEW STATES & HELPERS FOR REDESIGNED LAYOUT ──
@@ -3223,7 +3224,7 @@ export default function App() {
     const subPriority = Object.entries(counts).filter(([, value]) => value > 0).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([key]) => BIS_STAT_LABELS[key] || key);
     return SLOTS.map((slot) => ({ slot: slot.name, mainStat: BIS_STAT_LABELS[SLOT_MAIN_STAT[slot.name]] || SLOT_MAIN_STAT[slot.name], subPriority }));
   }, [cultivateClass]);
-  const jobFingerprint = JSON.stringify([selectedBuild, adjustedPanel, activeTier, activeScheme, selectedInnerWays, innerWayTiers, food, bowSelect, datang, yishui, cinderAsh, starweaveDistanceBonusPct, jadeObjective, jadeScenario, skillOverrides, timingOverrides, editedRotation, workspace, activeTab, activeProductTab, gradModalActiveTab, isSimOpen, simRuns, simSeed]);
+  const jobFingerprint = JSON.stringify([selectedBuild, adjustedPanel, activeTier, activeScheme, selectedInnerWays, innerWayTiers, food, bowSelect, datang, yishui, cinderAsh, starweaveDistanceBonusPct, jadeObjective, jadeScenario, skillOverrides, timingOverrides, editedRotation, shellRoute, workspace, activeTab, activeProductTab, gradModalActiveTab, isSimOpen, simRuns, simSeed]);
   const currentJobFingerprint = useRef(jobFingerprint);
   currentJobFingerprint.current = jobFingerprint;
   const cancelSimulation = () => {
@@ -3909,7 +3910,6 @@ export default function App() {
     { label: `${innerAttrName(selectedBuild)} Penetration`, menu: fmtCombatStat(basePanel.pzPen, true), combat: fmtCombatStat(adjustedPanel.pzPen, true) },
     { label: `Net ${innerAttrName(selectedBuild)} Penetration`, menu: "-", combat: fmtCombatStat(netPzPen, true), derived: true },
   ];
-  const [shellRoute, setShellRoute] = useState({ workspace: /^#(?:library|shared-build)/.test(location.hash) ? "library" : /^#gvg/.test(location.hash) ? "gvg" : "pve", page: location.hash.split("/")[1] || "overview" });
   const pvePageActive = shellRoute.workspace === "pve" && shellRoute.page !== "overview";
   const createEmptyProfile = (name: string) => {
     const id = crypto.randomUUID();
