@@ -1,5 +1,21 @@
 # WWM-BUILD PROJECT_STATE
 
+## Current operational checkpoint — published profile ownership and modal repair
+
+LAST_VERIFIED: 2026-10-01, production verified at 2026-10-01T17:53:27.319186Z. This supersedes operational next actions below; prior audit/source-gate/Team release snapshots remain historical evidence.
+GOAL: Finish supported WWM-BUILD corrections in tested increments published for owner testing.
+REPO / CANONICAL: PNHD/wwm-calc; https://wonton-wwm.pages.dev/.
+INDEPENDENT_REVIEW: A separate delegated source reviewer and root live-browser reviewer reproduced cross-character combat-context overwrite when distinct character IDs shared a scheme ID, plus focus escaping Data/Game dialogs. The earlier no-pending-supported-fix conclusion was superseded by those reproducible supported defects.
+RELEASE: PR56 normally merged to ee90ff41e23214a9bb62dfb989f551f484b3d73c from tested candidate fbd3302a545cdd912f5077eb0e9f337d579f62ed. Composite character/scheme ownership now guards combat load/save, derived panel persistence and async job fingerprints. Shared Data/Game modal logic contains focus, isolates background controls and restores visible Tools focus. No formulas, source coefficients, dependencies or workflow changed.
+CANDIDATE_VALIDATION: Required Validate 36901426973 / build 110501274474 SUCCESS; 34/34 required Chromium tests PASS (T96 4, Guild War 1, workspace UX 7, Library 9, Arena 1, Training 1, V1 11). Ownership/panel/refresh/Team and modal regressions execute at 390/1440; byte-identical scheme owner-switch test covers Simulation stale results and Best Build cancellation. Fresh install, lint, model/storage/OCR/build and deterministic migrations PASS. Earlier failed test-selector/custom-checkbox/readiness attempts retained and excluded from passing counts.
+PRODUCTION_VALIDATION: Main Validate 36902366560 SUCCESS; canonical Pages exact SHA ee90ff41e23214a9bb62dfb989f551f484b3d73c, builtAt 2026-10-01T17:50:49.408Z. Root inspected raw Arena/V1 receipts: exactShaMatch=true, empty error arrays; mainStableAfterSmoke=true. Production ownership and Data/Game focus assertions PASS at 390/1440. Root independently verified same-ID profile export/reload preservation and Data keyboard closure on desktop. Full receipt details: docs/RELEASE_PROFILE_OWNER_MODAL_20261001.md.
+STATE: SUPPORTED_INCREMENT_PUBLISHED_AND_VERIFIED; full numerical upstream milestone remains PARTIAL / SOURCE_BLOCKED; subjective owner acceptance is separate.
+CONTROL / PRESERVATION: Explicit owner delegation authorized this bounded isolated writer on fix/profile-owner-modal-20261002; root remained independent release reviewer and merger. Existing feat/upstream-20261001 Windows worktree and generated artifacts preserved. This docs-only evidence checkpoint stays on the closed task branch and does not publish another main deployment.
+BLOCKERS / UNKNOWNs: Version-identified Global ordered skill/hit/cancel/DoT/effect mappings and disputed calibration; complete legal weighted slot/Path/tier retune pools. Public upstream CN Lv110 or local level100 lineage does not qualify Global numerics. Unsupported numerical apply/probabilities remain unavailable/reference. No provider model/account/quota values or subjective PO acceptance inferred.
+NEXT_ACTION: Owner can test the published increment; qualify one attributable Global source packet before unsupported numerical integration. Do not repeat accepted profile/modal repairs without a new reproducible defect.
+EVIDENCE: docs/RELEASE_PROFILE_OWNER_MODAL_20261001.md; candidate runtime-smoke artifact 11182355671 (run 36901426973, SHA-256 341258e2475b565a07b3a9e4abeb783a998465dd81722b4d3ce25fa04bd3fb4c); production-verification artifact 11182102465 (run 36902366560, ZIP SHA-256 725b1d7a29ed13c352c3919487f8e5dfdf6ab29f11268dd87c0f4f514911c6b9). Historical source/release documents retained.
+
+
 ## Current operational state — full audit and supported release
 
 LAST_VERIFIED: 2026-10-01. Product Owner renewed autonomous audit/research/fix/publication scope. This section supersedes the prior WAIT_FOR_D3 operational checkpoint; accepted Team release evidence is retained.
